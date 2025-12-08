@@ -1,11 +1,11 @@
 <?php
-$pageTitle = "PachaFamily – Family Calendar";
+$pageTitle = "PachaFamily - Family Calendar";
 $activePage = "family-calendar";
 require __DIR__ . '/partials/header.php';
 ?>
 
 <h1>Family Calendar</h1>
-<p>Planning annuel de septembre à août – Carole (assistante maternelle), Alex &amp; Laia (CP / RTT / JA).</p>
+<p>Planning annuel de septembre à août - Carole (assistante maternelle), Alex &amp; Laia (CP / RTT / JA).</p>
 
 <section class="pf-section pf-section--panel">
   <div class="pf-flex pf-flex--wrap pf-gap-lg">
@@ -67,12 +67,12 @@ require __DIR__ . '/partials/header.php';
         <tr>
           <th>Mois</th>
           <th>Semaine</th>
-          <th>Dates (lun–dim)</th>
+          <th>Dates (lun-dim)</th>
           <th># Off Carole</th>
           <th>Vacances scolaires</th>
           <th>Bank holiday</th>
-          <th colspan="3">Alex – jours posés (semaine)</th>
-          <th colspan="3">Laia – jours posés (semaine)</th>
+          <th colspan="3">Alex - jours posés (semaine)</th>
+          <th colspan="3">Laia - jours posés (semaine)</th>
         </tr>
         <tr>
           <th></th><th></th><th></th>
