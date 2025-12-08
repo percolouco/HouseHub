@@ -2,7 +2,7 @@
 
   <footer class="pf-footer">
     <div class="pf-container">
-      <small>&copy; <?= date('Y') ?> PachaFamily</small>
+      <small>&copy; <?php echo date('Y'); ?> PachaFamily</small>
     </div>
   </footer>
 </body>

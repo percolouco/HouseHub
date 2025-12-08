@@ -1,11 +1,16 @@
 <?php
+// debug temporaire si besoin
+// ini_set('display_errors', 1);
+// ini_set('display_startup_errors', 1);
+// error_reporting(E_ALL);
+
 $pageTitle = "PachaFamily - Family Calendar";
 $activePage = "family-calendar";
-require __DIR__ . '/partials/header.php';
+require __DIR__ . '/header.php';
 ?>
 
 <h1>Family Calendar</h1>
-<p>Planning annuel de septembre à août - Carole (assistante maternelle), Alex &amp; Laia (CP / RTT / JA).</p>
+<p>Planning annuel de septembre a aout - Carole (assistante maternelle), Alex et Laia (CP / RTT / JA).</p>
 
 <section class="pf-section pf-section--panel">
   <div class="pf-flex pf-flex--wrap pf-gap-lg">
@@ -41,7 +46,7 @@ require __DIR__ . '/partials/header.php';
       <div class="pf-card-body">
         <label>
           <input id="showOnlyCaroleOff" type="checkbox">
-          Voir uniquement les semaines où Carole est en congés
+          Voir uniquement les semaines ou Carole est en conges
         </label><br>
         <label>
           <input id="showOnlySchoolHoliday" type="checkbox">
@@ -51,7 +56,7 @@ require __DIR__ . '/partials/header.php';
     </div>
 
     <div class="pf-card pf-card--small">
-      <h2 class="pf-card-title">Résumé</h2>
+      <h2 class="pf-card-title">Resume</h2>
       <div class="pf-card-body" id="summaryText">
         <!-- Rempli par JS -->
       </div>
@@ -71,8 +76,8 @@ require __DIR__ . '/partials/header.php';
           <th># Off Carole</th>
           <th>Vacances scolaires</th>
           <th>Bank holiday</th>
-          <th colspan="3">Alex - jours posés (semaine)</th>
-          <th colspan="3">Laia - jours posés (semaine)</th>
+          <th colspan="3">Alex - jours poses (semaine)</th>
+          <th colspan="3">Laia - jours poses (semaine)</th>
         </tr>
         <tr>
           <th></th><th></th><th></th>
@@ -88,7 +93,7 @@ require __DIR__ . '/partials/header.php';
   </div>
 </section>
 
-<script src="/assets/js/family-calendar.js"></script>
+<script src="/pachafamily/assets/js/family-calendar.js"></script>
 
 <?php
-require __DIR__ . '/partials/footer.php';
+require __DIR__ . '/footer.php';
