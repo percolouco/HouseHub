@@ -93,7 +93,8 @@ require __DIR__ . '/header.php';
   </div>
 </section>
 
-<script src="/pachafamily/assets/js/family-calendar.js"></script>
+<!-- IMPORTANT : plus de /pachafamily ici -->
+<script src="/assets/js/family-calendar.js"></script>
 
 <?php
 require __DIR__ . '/footer.php';
