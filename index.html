@@ -1,43 +1,18 @@
-<!DOCTYPE html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <title>PachaFamily - Accueil</title>
-    <link rel="stylesheet" href="assets/css/style.css" />
-  </head>
-  <body>
-    <header class="pf-header">
-      <div class="pf-container pf-header-content">
-        <div class="pf-logo">PachaFamily</div>
-        <nav class="pf-nav">
-          <a href="index.php" class="pf-nav-link pf-nav-link--active"
-            >Accueil</a
-          >
-          <a href="family-calendar.php" class="pf-nav-link">Family calendar</a>
-        </nav>
-      </div>
-    </header>
+<?php
+$pageTitle = "PachaFamily - Accueil";
+$activePage = "home";
+require __DIR__ . '/header.php';
+?>
 
-    <main class="pf-container pf-main">
-      <h1>Bienvenue sur PachaFamily</h1>
-      <p>Centre de controle de l'organisation familiale.</p>
+<h1>Bienvenue sur PachaFamily</h1>
+<p>Centre de controle de l'organisation familiale.</p>
 
-      <section class="pf-section">
-        <h2>Modules</h2>
-        <ul>
-          <li>
-            <a href="family-calendar.php"
-              >Family calendar (conges, vacances, garde)</a
-            >
-          </li>
-        </ul>
-      </section>
-    </main>
+<section class="pf-section">
+  <h2>Modules</h2>
+  <ul>
+    <li><a href="/pachafamily/family-calendar.php">Family calendar (conges, vacances, garde)</a></li>
+  </ul>
+</section>
 
-    <footer class="pf-footer">
-      <div class="pf-container">
-        <small>&copy; PachaFamily</small>
-      </div>
-    </footer>
-  </body>
-</html>
+<?php
+require __DIR__ . '/footer.php';

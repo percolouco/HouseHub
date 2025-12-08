@@ -1,6 +1,4 @@
 <?php
-// header.php
-// $pageTitle et $activePage peuvent être définis avant l'include dans chaque page.
 if (!isset($pageTitle)) {
     $pageTitle = "PachaFamily";
 }
@@ -12,18 +10,18 @@ if (!isset($activePage)) {
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title><?= htmlspecialchars($pageTitle) ?></title>
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <title><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
+  <link rel="stylesheet" href="/pachafamily/assets/css/style.css">
 </head>
 <body>
   <header class="pf-header">
     <div class="pf-container pf-header-content">
       <div class="pf-logo">PachaFamily</div>
       <nav class="pf-nav">
-        <a href="/index.php"
-           class="pf-nav-link <?= $activePage === 'home' ? 'pf-nav-link--active' : '' ?>">Accueil</a>
-        <a href="/family-calendar.php"
-           class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : '' ?>">Family calendar</a>
+        <a href="/pachafamily/index.php"
+           class="pf-nav-link <?php echo $activePage === 'home' ? 'pf-nav-link--active' : ''; ?>">Accueil</a>
+        <a href="/pachafamily/family-calendar.php"
+           class="pf-nav-link <?php echo $activePage === 'family-calendar' ? 'pf-nav-link--active' : ''; ?>">Family calendar</a>
       </nav>
     </div>
   </header>
