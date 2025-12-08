@@ -1,0 +1,37 @@
+name: Deploy to Staging and Production
+on:
+  push:
+    branches: [main, deploiement-staging]
+
+jobs:
+  deploy-staging:
+    if: github.ref == 'refs/heads/deploiement-staging'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to Staging
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER_PERCOLOUCO }}
+        username: ${{ secrets.FTP_USERNAME_PERCOLOUCO }}
+        password: ${{ secrets.FTP_PASSWORD_PERCOLOUCO }}
+        local-dir: ./
+        server-dir: /www/staging/  # ← Nouveau chemin
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to Production
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER_PERCOLOUCO }}
+        username: ${{ secrets.FTP_USERNAME_PERCOLOUCO }}
+        password: ${{ secrets.FTP_PASSWORD_PERCOLOUCO }}
+        local-dir: ./
+        server-dir: /www/mh/  # ← Production reste ici
