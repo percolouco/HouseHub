@@ -72,18 +72,34 @@ require __DIR__ . '/header.php';
         <tr>
           <th>Mois</th>
           <th>Semaine</th>
-          <th>Dates (lun-dim)</th>
+          <th>Lundi</th>
+          <th>Mardi</th>
+          <th>Mercredi</th>
+          <th>Jeudi</th>
+          <th>Vendredi</th>
           <th># Off Carole</th>
-          <th>Vacances scolaires</th>
-          <th>Bank holiday</th>
-          <th colspan="3">Alex - jours poses (semaine)</th>
-          <th colspan="3">Laia - jours poses (semaine)</th>
+          <th># Extra off Carole</th>
+          <th>#Centre</th>
+          <th>#Avis</th>
+          <th colspan="2">Alex</th>
+          <th colspan="2">Laia</th>
         </tr>
         <tr>
-          <th></th><th></th><th></th>
-          <th></th><th></th><th></th>
-          <th>CP</th><th>RTT</th><th>JA</th>
-          <th>CP</th><th>RTT</th><th>JA</th>
+          <th></th>
+          <th></th>
+          <th>jj/mm</th>
+          <th>jj/mm</th>
+          <th>jj/mm</th>
+          <th>jj/mm</th>
+          <th>jj/mm</th>
+          <th>jours</th>
+          <th>jours</th>
+          <th>jours</th>
+          <th>jours</th>
+          <th>Total</th>
+          <th>Détail</th>
+          <th>Total</th>
+          <th>Détail</th>
         </tr>
       </thead>
       <tbody id="planningBody">
@@ -93,7 +109,6 @@ require __DIR__ . '/header.php';
   </div>
 </section>
 
-<!-- IMPORTANT : plus de /pachafamily ici -->
 <script src="/assets/js/family-calendar.js"></script>
 
 <?php
