@@ -4,8 +4,7 @@ on:
     branches: [main]
 
 jobs:
-  deploy-production:
-    if: github.ref == 'refs/heads/main'
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
