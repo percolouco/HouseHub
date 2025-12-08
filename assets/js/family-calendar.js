@@ -4,7 +4,7 @@ const weeks = [
   {
     month: "September",
     code: "W36",
-    dates: "01/09 – 07/09",
+    dates: "01/09 - 07/09",
     caroleOffDays: 0,
     isSchoolHoliday: false,
     isBankHoliday: false,
@@ -14,7 +14,7 @@ const weeks = [
   {
     month: "September",
     code: "W38",
-    dates: "15/09 – 21/09",
+    dates: "15/09 - 21/09",
     caroleOffDays: 2,
     isSchoolHoliday: false,
     isBankHoliday: false,
@@ -24,7 +24,7 @@ const weeks = [
   {
     month: "October",
     code: "W40",
-    dates: "29/09 – 05/10",
+    dates: "29/09 - 05/10",
     caroleOffDays: 0,
     isSchoolHoliday: false,
     isBankHoliday: false,
@@ -34,7 +34,7 @@ const weeks = [
   {
     month: "August",
     code: "W32",
-    dates: "03/08 – 09/08",
+    dates: "03/08 - 09/08",
     caroleOffDays: 5,
     isSchoolHoliday: true,
     isBankHoliday: false,
