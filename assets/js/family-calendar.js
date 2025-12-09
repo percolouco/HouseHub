@@ -129,17 +129,16 @@ function generateWeeks() {
 }
 
 const weeks = generateWeeks();
+const events = []; // tous les evenements (vacances, off Carole, centre, etc.)
 
-// === 3. Événements & vacances scolaires ===
-
-const events = []; // on pourra y ajouter OFF_CAROLE, CENTRE, etc. plus tard
+// === 3. Vacances scolaires (API gouv) ===
 
 async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
   const baseUrl =
     "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records";
 
-  // On filtre uniquement sur l'année scolaire et la zone
-  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%' AND population in ('Élèves', '-')`;
+  // Filtre: année scolaire + zone C, pas de filtre population (dataset est incohérent sur ce champ)
+  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%'`;
 
   const params = new URLSearchParams({
     where,
@@ -160,37 +159,35 @@ async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
 }
 
 /**
- * Ajoute les vacances scolaires comme événements de type VACANCES_SCOLAIRES
- * ET remplit le tableau recap.
+ * Regroupe les records par période (start_date, end_date, description),
+ * remplit le tableau recap, et crée les événements VACANCES_SCOLAIRES.
  */
 function addSchoolHolidayEventsFromRecords(records, events) {
   const tbody = document.querySelector("#schoolHolidaysTable tbody");
   if (tbody) tbody.innerHTML = "";
 
-  // 1) Normaliser et regrouper par periode (start_date, end_date, description)
+  // 1) Regrouper par (start_date, end_date, description)
   const groups = new Map();
 
   records.forEach((record) => {
-    const startIso = record.start_date; // ISO string
+    const startIso = record.start_date;
     const endIso = record.end_date;
     const desc = record.description || "";
     const zones = record.zones || "";
 
     const key = `${startIso}|${endIso}|${desc}`;
 
-    const existing = groups.get(key);
-    if (!existing) {
+    if (!groups.has(key)) {
       groups.set(key, {
         startIso,
         endIso,
         description: desc,
-        zones, // pour Zone C, ça suffira
+        zones,
       });
     }
-    // on ignore les académies (location) pour le tableau recap
   });
 
-  // 2) Construire le tableau recap avec un seul record par groupe
+  // 2) Tableau récap (une ligne par période, dates telles que fournies par l'API)
   if (tbody) {
     Array.from(groups.values())
       .sort((a, b) => new Date(a.startIso) - new Date(b.startIso))
@@ -212,28 +209,31 @@ function addSchoolHolidayEventsFromRecords(records, events) {
   }
 
   // 3) Créer les événements jour par jour (VACANCES_SCOLAIRES)
+  //    end = date de reprise => on s'arrête la veille (current < end)
   groups.forEach((g) => {
     const start = new Date(g.startIso);
     const end = new Date(g.endIso);
+
     let current = new Date(start);
-    // end = date de reprise -> on s'arrête la veille
     while (current < end) {
       const year = current.getFullYear();
       const month = String(current.getMonth() + 1).padStart(2, "0");
       const day = String(current.getDate()).padStart(2, "0");
       const isoDate = `${year}-${month}-${day}`;
+
       events.push({
         date: isoDate,
         type: "VACANCES_SCOLAIRES",
         duration: 1,
       });
+
       current.setDate(current.getDate() + 1);
     }
   });
 }
 
 /**
- * Marque les jours & semaines de vacances scolaires dans weeks.
+ * Marque les jours et les semaines de vacances scolaires dans weeks.
  */
 function markSchoolHolidayDaysAndWeeks(weeks, events) {
   // reset
@@ -285,7 +285,7 @@ function computeMonthSpans(weeks) {
 
 const monthSpans = computeMonthSpans(weeks);
 
-// === 5. Rendu du tableau ===
+// === 5. Rendu du tableau principal ===
 
 function renderTable() {
   const planningBody = document.getElementById("planningBody");
@@ -374,7 +374,7 @@ function renderTable() {
   updateSummary();
 }
 
-// === 6. Résumé (toujours 0 utilisés pour l'instant) ===
+// === 6. Résumé (pour l'instant, 0 utilisés) ===
 
 function updateSummary() {
   const summaryDiv = document.getElementById("summaryText");
@@ -469,7 +469,7 @@ async function initFamilyCalendar() {
     showOnlySchoolHoliday.addEventListener("change", renderTable);
   }
 
-  // Charger vacances scolaires 2025-2026, Zone C
+  // Charger les vacances scolaires 2025-2026, Zone C
   const holidaysRecords = await fetchSchoolHolidays("2025-2026", "Zone C");
   addSchoolHolidayEventsFromRecords(holidaysRecords, events);
   markSchoolHolidayDaysAndWeeks(weeks, events);
