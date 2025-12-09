@@ -176,12 +176,12 @@ input[type="number"] {
 
 /* Ligne de semaine contenant au moins un jour de vacances scolaires */
 .fc-row--school-holiday {
-  background-color: #fff5cc;
+  background-color: #fff8d5; /* jaune clair uniforme */
 }
 
 /* Jour individuel en vacances scolaires (cellule) */
 .fc-day--school-holiday {
-  background-color: #ffe9a6;
+  background-color: #ffe9a6; /* un ton un peu plus marqué mais pas orange vif */
 }
 
 /* Tableau recap vacances scolaires */
@@ -201,4 +201,8 @@ input[type="number"] {
 
 .fc-holidays-table th {
   background-color: #f0f4f8;
+}
+
+.fc-row--school-holiday td:first-child {
+  background-color: #ffffff;
 }
