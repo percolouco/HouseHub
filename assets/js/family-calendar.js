@@ -139,7 +139,7 @@ async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
     "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records";
 
   // On filtre uniquement sur l'année scolaire et la zone
-  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%'`;
+  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%' AND population in ('Élèves', '-')`;
 
   const params = new URLSearchParams({
     where,
