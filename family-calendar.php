@@ -10,7 +10,6 @@ require __DIR__ . '/header.php';
 ?>
 
 <h1>Family Calendar</h1>
-<p>Planning annuel de septembre a aout - Carole (assistante maternelle), Alex et Laia (CP / RTT / JA).</p>
 
 <section class="pf-section pf-section--panel">
   <div class="pf-flex pf-flex--wrap pf-gap-lg">
@@ -87,11 +86,11 @@ require __DIR__ . '/header.php';
         <tr>
           <th></th>
           <th></th>
-          <th>jj/mm</th>
-          <th>jj/mm</th>
-          <th>jj/mm</th>
-          <th>jj/mm</th>
-          <th>jj/mm</th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
           <th>jours</th>
           <th>jours</th>
           <th>jours</th>
