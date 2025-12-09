@@ -105,6 +105,18 @@ require __DIR__ . '/header.php';
         <!-- Rempli par family-calendar.js -->
       </tbody>
     </table>
+    <div id="selectionMenu" class="fc-selection-menu">
+      <div class="fc-menu-section">
+        <strong>Congé Carole</strong>
+        <button data-type="OFF_CAROLE"># Off Carole</button>
+        <button data-type="EXTRA_OFF_CAROLE"># Extra off Carole</button>
+      </div>
+      <div class="fc-menu-section">
+        <strong>Mode de Garde</strong>
+        <button data-type="CENTRE"># Centre</button>
+        <button data-type="AVIS"># Avis</button>
+      </div>
+    </div>
   </div>
 </section>
 
