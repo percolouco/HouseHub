@@ -175,11 +175,6 @@ input[type="number"] {
   background: #d9f7be;
 }
 
-/* Jour individuel en vacances scolaires (cellule) */
-.fc-day--school-holiday {
-  background-color: #ffe9a6; /* un ton un peu plus marqué mais pas orange vif */
-}
-
 /* Tableau recap vacances scolaires */
 .fc-holidays-table {
   width: 100%;
