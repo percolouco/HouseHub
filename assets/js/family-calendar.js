@@ -1,7 +1,12 @@
 // assets/js/family-calendar.js
 
-// === 1. Utilitaires dates ===
+// === VARIABLES GLOBALES POUR LA SÉLECTION ===
+let isSelecting = false;
+let selectedCells = [];
+const events = []; // Contient TOUS les événements (vacances, off carole, centre, avis)
 
+// === 1. Utilitaires dates ===
+// ... (garder les fonctions formatDayMonth, getMonthNameFr, getWeekOfYear)
 function formatDayMonth(date) {
   const d = String(date.getDate()).padStart(2, "0");
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -26,38 +31,26 @@ function getMonthNameFr(monthIndex) {
   return map[monthIndex] || "";
 }
 
-/**
- * Calcule le n° de semaine dans l'année (1..),
- * Semaine 1 = semaine contenant le 1er janvier, début au lundi.
- */
 function getWeekOfYear(date) {
   const year = date.getFullYear();
   const startOfYear = new Date(year, 0, 1);
-  const dayOfWeek = startOfYear.getDay() || 7; // dimanche = 0 -> 7
+  const dayOfWeek = startOfYear.getDay() || 7;
   const diffToMonday = dayOfWeek === 1 ? 0 : dayOfWeek - 1;
   const firstWeekMonday = new Date(year, 0, 1 - diffToMonday);
-
   const diffMillis = date - firstWeekMonday;
   const diffDays = Math.floor(diffMillis / (1000 * 60 * 60 * 24));
   return Math.floor(diffDays / 7) + 1;
 }
 
 // === 2. Génération des semaines ===
-
 function generateWeeks() {
   const weeks = [];
-
-  const start = new Date(2025, 8, 1); // 1er sept 2025
-  const end = new Date(2026, 7, 31); // 31 aout 2026
-
+  const start = new Date(2025, 8, 1);
+  const end = new Date(2026, 7, 31);
   let current = new Date(start);
-
-  // se placer sur le premier lundi >= 1er septembre 2025
   while (current.getDay() !== 1) {
-    // 1 = lundi
     current.setDate(current.getDate() + 1);
   }
-
   while (current <= end) {
     const monday = new Date(current);
     const tuesday = new Date(current);
@@ -68,21 +61,17 @@ function generateWeeks() {
     thursday.setDate(monday.getDate() + 3);
     const friday = new Date(current);
     friday.setDate(monday.getDate() + 4);
-
     const year = monday.getFullYear();
     const weekOfYear = getWeekOfYear(monday);
     const weekId = `${year}-W${String(weekOfYear).padStart(2, "0")}`;
-
     const monthIndex = monday.getMonth();
     const monthKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
-    const monthName = getMonthNameFr(monthIndex);
-
     weeks.push({
       id: weekId,
       year,
       weekOfYear,
       monthKey,
-      monthName,
+      monthName: getMonthNameFr(monthIndex),
       weekLabel: `W${weekOfYear}`,
       days: {
         mon: formatDayMonth(monday),
@@ -105,135 +94,86 @@ function generateWeeks() {
         thu: { schoolHoliday: false },
         fri: { schoolHoliday: false },
       },
-      totals: {
-        offCarole: 0,
-        extraOffCarole: 0,
-        centre: 0,
-        avis: 0,
-      },
+      totals: { offCarole: 0, extraOffCarole: 0, centre: 0, avis: 0 },
       isSchoolHolidayWeek: false,
-      alex: {
-        total: 0,
-        detail: "",
-      },
-      laia: {
-        total: 0,
-        detail: "",
-      },
+      alex: { total: 0, detail: "" },
+      laia: { total: 0, detail: "" },
     });
-
     current.setDate(current.getDate() + 7);
   }
-
   return weeks;
 }
-
 const weeks = generateWeeks();
-const events = []; // tous les evenements (vacances, off Carole, centre, etc.)
 
-// === 3. Vacances scolaires (API gouv) ===
+// === 3. Gestion des événements (Vacances, Off, Centre, Avis) ===
 
 async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
   const baseUrl =
     "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records";
-
   const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%'`;
-
   const params = new URLSearchParams({
     where,
     limit: "100",
     order_by: "start_date",
   });
-
   const url = `${baseUrl}?${params.toString()}`;
-
   const res = await fetch(url);
   if (!res.ok) {
     console.error("Erreur API vacances scolaires", res.status, res.statusText);
     return [];
   }
-
   const data = await res.json();
   return data.results || [];
 }
 
-/**
- * Regroupe les records par période, remplit le tableau recap,
- * et crée les événements VACANCES_SCOLAIRES.
- * Version corrigée pour gérer les fuseaux horaires de manière robuste.
- */
 function addSchoolHolidayEventsFromRecords(records, events) {
   const tbody = document.querySelector("#schoolHolidaysTable tbody");
   if (tbody) tbody.innerHTML = "";
-
-  // 1) Regrouper par période pour éviter les doublons d'académies
   const groups = new Map();
-
   records.forEach((record) => {
-    const startIso = record.start_date;
-    const endIso = record.end_date;
-    const desc = record.description || "";
-    const zones = record.zones || "";
-    const key = `${startIso}|${endIso}|${desc}`;
-
+    const key = `${record.start_date}|${record.end_date}|${record.description}`;
     if (!groups.has(key)) {
-      groups.set(key, { startIso, endIso, description: desc, zones });
+      groups.set(key, {
+        startIso: record.start_date,
+        endIso: record.end_date,
+        description: record.description || "",
+        zones: record.zones || "",
+      });
     }
   });
-
-  // 2) Remplir le tableau récap ET créer les événements pour la coloration
   if (tbody) {
     Array.from(groups.values())
       .sort((a, b) => new Date(a.startIso) - new Date(b.startIso))
       .forEach((g) => {
-        // --- Logique de dates explicite et robuste ---
-
-        // On extrait la partie YYYY-MM-DD pour éviter les bugs de fuseau horaire
-        const startDateString = g.startIso.substring(0, 10); // ex: "2025-10-17"
-        const endDateString = g.endIso.substring(0, 10); // ex: "2025-11-02"
-
-        // On crée les dates en spécifiant T00:00:00 pour qu'elles soient interprétées comme locales
-        const firstDayVacation = new Date(startDateString + "T00:00:00");
-        firstDayVacation.setDate(firstDayVacation.getDate() + 1); // Le 1er jour est le lendemain du "vendredi soir"
-
-        const lastDayVacation = new Date(endDateString + "T00:00:00");
-
-        // La date de reprise est le lendemain du dernier jour de vacances
+        const firstDayVacation = new Date(
+          g.startIso.substring(0, 10) + "T00:00:00"
+        );
+        firstDayVacation.setDate(firstDayVacation.getDate() + 1);
+        const lastDayVacation = new Date(
+          g.endIso.substring(0, 10) + "T00:00:00"
+        );
         const repriseDate = new Date(lastDayVacation);
         repriseDate.setDate(repriseDate.getDate() + 1);
-
-        // --- Affichage dans le tableau récap ---
         const startStr =
           formatDayMonth(firstDayVacation) +
           "/" +
           firstDayVacation.getFullYear();
         const endStr =
           formatDayMonth(repriseDate) + "/" + repriseDate.getFullYear();
-
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${g.description}</td>
-          <td>${startStr}</td>
-          <td>${endStr}</td>
-          <td>${g.zones}</td>
-        `;
+        tr.innerHTML = `<td>${g.description}</td><td>${startStr}</td><td>${endStr}</td><td>${g.zones}</td>`;
         tbody.appendChild(tr);
 
-        // --- Création des événements pour la coloration du calendrier ---
-        // On boucle du premier jour de vacances jusqu'au dernier jour INCLUS.
         let current = new Date(firstDayVacation);
         while (current <= lastDayVacation) {
-          const year = current.getFullYear();
-          const month = String(current.getMonth() + 1).padStart(2, "0");
-          const day = String(current.getDate()).padStart(2, "0");
-          const isoDate = `${year}-${month}-${day}`;
-
+          const isoDate = `${current.getFullYear()}-${String(
+            current.getMonth() + 1
+          ).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
           events.push({
             date: isoDate,
             type: "VACANCES_SCOLAIRES",
             duration: 1,
           });
-
           current.setDate(current.getDate() + 1);
         }
       });
@@ -241,47 +181,59 @@ function addSchoolHolidayEventsFromRecords(records, events) {
 }
 
 /**
- * Marque les jours et les semaines de vacances scolaires dans weeks.
+ * Marque les jours de vacances et recalcule les totaux pour Off Carole, Centre, Avis
  */
-function markSchoolHolidayDaysAndWeeks(weeks, events) {
-  // reset
+function reprocessEvents(weeks, events) {
+  // Reset all flags and totals
   weeks.forEach((w) => {
     w.isSchoolHolidayWeek = false;
-    Object.keys(w.dayFlags).forEach((dayKey) => {
-      w.dayFlags[dayKey].schoolHoliday = false;
-    });
+    Object.keys(w.dayFlags).forEach(
+      (dayKey) => (w.dayFlags[dayKey].schoolHoliday = false)
+    );
+    w.totals = { offCarole: 0, extraOffCarole: 0, centre: 0, avis: 0 };
   });
 
+  // Apply each event to the corresponding week
   events.forEach((evt) => {
-    if (evt.type !== "VACANCES_SCOLAIRES") return;
-
     const [y, m, d] = evt.date.split("-").map(Number);
     const evtDate = new Date(y, m - 1, d);
 
-    weeks.forEach((w) => {
-      const dayKeys = ["mon", "tue", "wed", "thu", "fri"];
-      let hasHolidayInWeek = false;
+    const week = weeks.find(
+      (w) => evtDate >= w.dayDates.mon && evtDate <= w.dayDates.fri
+    );
+    if (!week) return;
 
-      dayKeys.forEach((dayKey) => {
-        const dayDate = w.dayDates[dayKey];
-        if (
-          dayDate.getFullYear() === evtDate.getFullYear() &&
-          dayDate.getMonth() === evtDate.getMonth() &&
-          dayDate.getDate() === evtDate.getDate()
-        ) {
-          w.dayFlags[dayKey].schoolHoliday = true;
-          hasHolidayInWeek = true;
+    const dur = evt.duration || 1;
+
+    switch (evt.type) {
+      case "VACANCES_SCOLAIRES":
+        const dayKey = Object.keys(week.dayDates).find(
+          (key) => week.dayDates[key].toDateString() === evtDate.toDateString()
+        );
+        if (dayKey) {
+          week.dayFlags[dayKey].schoolHoliday = true;
+          week.isSchoolHolidayWeek = true;
         }
-      });
-
-      if (hasHolidayInWeek) {
-        w.isSchoolHolidayWeek = true;
-      }
-    });
+        break;
+      case "OFF_CAROLE":
+        week.totals.offCarole += dur;
+        break;
+      case "EXTRA_OFF_CAROLE":
+        week.totals.extraOffCarole += dur;
+        break;
+      case "CENTRE":
+        week.totals.centre += dur;
+        break;
+      case "AVIS":
+        week.totals.avis += dur;
+        break;
+      default:
+        break;
+    }
   });
 }
 
-// === 4. Calcul des rowspans pour la colonne Mois ===
+// === 4. Rendu et logique d'affichage ===
 
 function computeMonthSpans(weeks) {
   const counts = {};
@@ -290,15 +242,11 @@ function computeMonthSpans(weeks) {
   });
   return counts;
 }
-
 const monthSpans = computeMonthSpans(weeks);
-
-// === 5. Rendu du tableau principal ===
 
 function renderTable() {
   const planningBody = document.getElementById("planningBody");
   if (!planningBody) return;
-
   planningBody.innerHTML = "";
 
   const showOnlyCaroleOff =
@@ -306,7 +254,6 @@ function renderTable() {
   const showOnlySchoolHoliday = document.getElementById(
     "showOnlySchoolHoliday"
   )?.checked;
-
   const monthRowRendered = {};
 
   weeks.forEach((week) => {
@@ -315,7 +262,6 @@ function renderTable() {
 
     const tr = document.createElement("tr");
 
-    // Colonne Mois
     if (!monthRowRendered[week.monthKey]) {
       monthRowRendered[week.monthKey] = true;
       const tdMonth = document.createElement("td");
@@ -324,14 +270,17 @@ function renderTable() {
       tr.appendChild(tdMonth);
     }
 
-    // Colonne Semaine
     const tdWeek = document.createElement("td");
     tdWeek.textContent = week.weekLabel;
     tr.appendChild(tdWeek);
 
-    // Jours (Lun -> Ven) avec coloration jours de vacances
     ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey) => {
       const td = document.createElement("td");
+      const dayDate = week.dayDates[dayKey];
+      const isoDate = `${dayDate.getFullYear()}-${String(
+        dayDate.getMonth() + 1
+      ).padStart(2, "0")}-${String(dayDate.getDate()).padStart(2, "0")}`;
+      td.dataset.date = isoDate; // IMPORTANT: on ajoute la date pour la retrouver
       td.textContent = week.days[dayKey];
       if (week.dayFlags[dayKey].schoolHoliday) {
         td.classList.add("fc-day--school-holiday");
@@ -339,121 +288,71 @@ function renderTable() {
       tr.appendChild(td);
     });
 
-    // Totaux # Off / Extra / Centre / Avis (pour l'instant à 0)
-    const tdOff = document.createElement("td");
-    tdOff.textContent = week.totals.offCarole.toFixed(2).replace(/\.00$/, "");
-    tr.appendChild(tdOff);
-
-    const tdExtraOff = document.createElement("td");
-    tdExtraOff.textContent = week.totals.extraOffCarole
-      .toFixed(2)
-      .replace(/\.00$/, "");
-    tr.appendChild(tdExtraOff);
-
-    const tdCentre = document.createElement("td");
-    tdCentre.textContent = week.totals.centre.toFixed(2).replace(/\.00$/, "");
-    tr.appendChild(tdCentre);
-
-    const tdAvis = document.createElement("td");
-    tdAvis.textContent = week.totals.avis.toFixed(2).replace(/\.00$/, "");
-    tr.appendChild(tdAvis);
-
-    // Alex total & détail
-    const tdAlexTotal = document.createElement("td");
-    tdAlexTotal.textContent = week.alex.total.toFixed(2).replace(/\.00$/, "");
-    tr.appendChild(tdAlexTotal);
-
-    const tdAlexDetail = document.createElement("td");
-    tdAlexDetail.textContent = week.alex.detail || "";
-    tr.appendChild(tdAlexDetail);
-
-    // Laia total & détail
-    const tdLaiaTotal = document.createElement("td");
-    tdLaiaTotal.textContent = week.laia.total.toFixed(2).replace(/\.00$/, "");
-    tr.appendChild(tdLaiaTotal);
-
-    const tdLaiaDetail = document.createElement("td");
-    tdLaiaDetail.textContent = week.laia.detail || "";
-    tr.appendChild(tdLaiaDetail);
+    const formatTotal = (total) =>
+      total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "";
+    tr.innerHTML += `
+      <td>${formatTotal(week.totals.offCarole)}</td>
+      <td>${formatTotal(week.totals.extraOffCarole)}</td>
+      <td>${formatTotal(week.totals.centre)}</td>
+      <td>${formatTotal(week.totals.avis)}</td>
+      <td>${formatTotal(week.alex.total)}</td>
+      <td>${week.alex.detail || ""}</td>
+      <td>${formatTotal(week.laia.total)}</td>
+      <td>${week.laia.detail || ""}</td>
+    `;
 
     planningBody.appendChild(tr);
   });
-
   updateSummary();
 }
 
-// === 6. Résumé (pour l'instant, 0 utilisés) ===
-
 function updateSummary() {
-  const summaryDiv = document.getElementById("summaryText");
-  if (!summaryDiv) return;
-
-  const alexCpInit = parseFloat(
-    document.getElementById("alexCpInit")?.value || "0"
-  );
-  const alexRttInit = parseFloat(
-    document.getElementById("alexRttInit")?.value || "0"
-  );
-  const alexJaInit = parseFloat(
-    document.getElementById("alexJaInit")?.value || "0"
-  );
-
-  const laiaCpInit = parseFloat(
-    document.getElementById("laiaCpInit")?.value || "0"
-  );
-  const laiaRttInit = parseFloat(
-    document.getElementById("laiaRttInit")?.value || "0"
-  );
-  const laiaJaInit = parseFloat(
-    document.getElementById("laiaJaInit")?.value || "0"
-  );
-
-  const alexCpUsed = 0;
-  const alexRttUsed = 0;
-  const alexJaUsed = 0;
-
-  const laiaCpUsed = 0;
-  const laiaRttUsed = 0;
-  const laiaJaUsed = 0;
-
-  const alexCpLeft = alexCpInit - alexCpUsed;
-  const alexRttLeft = alexRttInit - alexRttUsed;
-  const alexJaLeft = alexJaInit - alexJaUsed;
-
-  const laiaCpLeft = laiaCpInit - laiaCpUsed;
-  const laiaRttLeft = laiaRttInit - laiaRttUsed;
-  const laiaJaLeft = laiaJaInit - laiaJaUsed;
-
-  summaryDiv.innerHTML = `
-    <p><strong>Alex</strong><br>
-    CP utilises : ${alexCpUsed.toFixed(2)} / ${alexCpInit.toFixed(
-    2
-  )} (reste ${alexCpLeft.toFixed(2)})<br>
-    RTT utilises : ${alexRttUsed.toFixed(2)} / ${alexRttInit.toFixed(
-    2
-  )} (reste ${alexRttLeft.toFixed(2)})<br>
-    JA utilises : ${alexJaUsed.toFixed(2)} / ${alexJaInit.toFixed(
-    2
-  )} (reste ${alexJaLeft.toFixed(2)})</p>
-
-    <p><strong>Laia</strong><br>
-    CP utilises : ${laiaCpUsed.toFixed(2)} / ${laiaCpInit.toFixed(
-    2
-  )} (reste ${laiaCpLeft.toFixed(2)})<br>
-    RTT utilises : ${laiaRttUsed.toFixed(2)} / ${laiaRttInit.toFixed(
-    2
-  )} (reste ${laiaRttLeft.toFixed(2)})<br>
-    JA utilises : ${laiaJaUsed.toFixed(2)} / ${laiaJaInit.toFixed(
-    2
-  )} (reste ${laiaJaLeft.toFixed(2)})</p>
-  `;
+  // ... (garder la fonction updateSummary telle quelle)
 }
 
-// === 7. Init ===
+// === 5. Logique de sélection et menu contextuel ===
+
+function clearSelection() {
+  const menu = document.getElementById("selectionMenu");
+  if (menu) menu.style.display = "none";
+  selectedCells.forEach((cell) => cell.classList.remove("fc-day--selected"));
+  selectedCells = [];
+}
+
+function showSelectionMenu(e) {
+  const menu = document.getElementById("selectionMenu");
+  if (!menu) return;
+  menu.style.left = `${e.pageX + 5}px`;
+  menu.style.top = `${e.pageY + 5}px`;
+  menu.style.display = "block";
+}
+
+function applyEventTypeToSelection(eventType) {
+  if (selectedCells.length === 0) return;
+
+  selectedCells.forEach((cell) => {
+    const date = cell.dataset.date;
+    if (date) {
+      // Pour l'instant, on ajoute un événement par jour. On pourrait optimiser plus tard.
+      events.push({
+        date: date,
+        type: eventType,
+        duration: 1,
+      });
+    }
+  });
+
+  reprocessEvents(weeks, events);
+  renderTable(); // Redessine la table avec les nouveaux totaux
+  clearSelection();
+}
+
+// === 6. Init ===
 
 async function initFamilyCalendar() {
   if (!document.getElementById("planningBody")) return;
 
+  // Écouteurs pour les soldes et filtres
   [
     "alexCpInit",
     "alexRttInit",
@@ -465,23 +364,67 @@ async function initFamilyCalendar() {
     const el = document.getElementById(id);
     if (el) el.addEventListener("change", updateSummary);
   });
+  ["showOnlyCaroleOff", "showOnlySchoolHoliday"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", renderTable);
+  });
 
-  const showOnlyCaroleOff = document.getElementById("showOnlyCaroleOff");
-  if (showOnlyCaroleOff) {
-    showOnlyCaroleOff.addEventListener("change", renderTable);
-  }
-  const showOnlySchoolHoliday = document.getElementById(
-    "showOnlySchoolHoliday"
-  );
-  if (showOnlySchoolHoliday) {
-    showOnlySchoolHoliday.addEventListener("change", renderTable);
+  // Écouteurs pour la sélection par cliquer-glisser
+  const planningBody = document.getElementById("planningBody");
+  planningBody.addEventListener("mousedown", (e) => {
+    if (e.target.tagName === "TD" && e.target.dataset.date) {
+      isSelecting = true;
+      clearSelection();
+      e.target.classList.add("fc-day--selected");
+      selectedCells.push(e.target);
+      e.preventDefault();
+    }
+  });
+
+  planningBody.addEventListener("mousemove", (e) => {
+    if (isSelecting && e.target.tagName === "TD" && e.target.dataset.date) {
+      if (!selectedCells.includes(e.target)) {
+        e.target.classList.add("fc-day--selected");
+        selectedCells.push(e.target);
+      }
+    }
+  });
+
+  document.addEventListener("mouseup", (e) => {
+    if (isSelecting) {
+      isSelecting = false;
+      if (selectedCells.length > 0) {
+        showSelectionMenu(e);
+      }
+    }
+  });
+
+  // Écouteur pour les clics hors du menu pour le fermer
+  document.addEventListener("click", (e) => {
+    const menu = document.getElementById("selectionMenu");
+    if (menu && !menu.contains(e.target) && selectedCells.length > 0) {
+      // Si on clique hors du menu APRES une sélection, on la nettoie
+      if (menu.style.display === "block") {
+        clearSelection();
+      }
+    }
+  });
+
+  // Écouteur pour les boutons du menu
+  const menu = document.getElementById("selectionMenu");
+  if (menu) {
+    menu.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON" && e.target.dataset.type) {
+        const eventType = e.target.dataset.type;
+        applyEventTypeToSelection(eventType);
+      }
+    });
   }
 
-  // Charger les vacances scolaires 2025-2026, Zone C
+  // Initialisation des données
   const holidaysRecords = await fetchSchoolHolidays("2025-2026", "Zone C");
   addSchoolHolidayEventsFromRecords(holidaysRecords, events);
-  markSchoolHolidayDaysAndWeeks(weeks, events);
-
+  reprocessEvents(weeks, events); // Appliquer aussi les vacances aux totaux si besoin (ici juste la couleur)
   renderTable();
 }
 

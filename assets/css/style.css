@@ -193,3 +193,52 @@ input[type="number"] {
 .fc-holidays-table th {
   background-color: #f0f4f8;
 }
+
+/* Cellule de jour sélectionnée dans le calendrier */
+.fc-day--selected {
+  background-color: #bde4ff !important; /* Une couleur de sélection claire, !important pour forcer le style */
+  cursor: pointer;
+}
+
+/* Le menu contextuel flottant */
+.fc-selection-menu {
+  display: none; /* Caché par défaut */
+  position: absolute; /* Permet de le positionner près de la souris */
+  z-index: 100;
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+}
+
+.fc-selection-menu .fc-menu-section {
+  margin-bottom: 8px;
+}
+.fc-selection-menu .fc-menu-section:last-child {
+  margin-bottom: 0;
+}
+
+.fc-selection-menu strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.fc-selection-menu button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-top: 4px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fc-selection-menu button:hover {
+  background-color: #f0f4f8;
+  border-color: #b0c4de;
+}
