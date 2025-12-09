@@ -137,7 +137,6 @@ async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
   const baseUrl =
     "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records";
 
-  // Filtre: année scolaire + zone C, pas de filtre population (dataset est incohérent sur ce champ)
   const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%'`;
 
   const params = new URLSearchParams({
@@ -159,8 +158,8 @@ async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
 }
 
 /**
- * Regroupe les records par période (start_date, end_date, description),
- * remplit le tableau recap, et crée les événements VACANCES_SCOLAIRES.
+ * Regroupe les records par période, remplit le tableau recap,
+ * et crée les événements VACANCES_SCOLAIRES.
  */
 function addSchoolHolidayEventsFromRecords(records, events) {
   const tbody = document.querySelector("#schoolHolidaysTable tbody");
@@ -235,29 +234,6 @@ function addSchoolHolidayEventsFromRecords(records, events) {
       });
   }
 }
-
-// 3) Créer les événements jour par jour (VACANCES_SCOLAIRES)
-//    end = date de reprise => on s'arrête la veille (current < end)
-groups.forEach((g) => {
-  const start = new Date(g.startIso);
-  const end = new Date(g.endIso);
-
-  let current = new Date(start);
-  while (current < end) {
-    const year = current.getFullYear();
-    const month = String(current.getMonth() + 1).padStart(2, "0");
-    const day = String(current.getDate()).padStart(2, "0");
-    const isoDate = `${year}-${month}-${day}`;
-
-    events.push({
-      date: isoDate,
-      type: "VACANCES_SCOLAIRES",
-      duration: 1,
-    });
-
-    current.setDate(current.getDate() + 1);
-  }
-});
 
 /**
  * Marque les jours et les semaines de vacances scolaires dans weeks.
