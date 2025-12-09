@@ -164,27 +164,55 @@ function addSchoolHolidayEventsFromRecords(records, events) {
   const tbody = document.querySelector("#schoolHolidaysTable tbody");
   if (tbody) tbody.innerHTML = "";
 
+  // 1) Normaliser et regrouper par periode (start_date, end_date, description)
+  const groups = new Map();
+
   records.forEach((record) => {
-    const start = new Date(record.start_date);
-    const end = new Date(record.end_date);
+    const startIso = record.start_date; // ISO string
+    const endIso = record.end_date;
+    const desc = record.description || "";
+    const zones = record.zones || "";
 
-    // Remplir le tableau recap
-    if (tbody) {
-      const tr = document.createElement("tr");
-      const startStr = formatDayMonth(start) + "/" + start.getFullYear();
-      const endStr = formatDayMonth(end) + "/" + end.getFullYear();
+    const key = `${startIso}|${endIso}|${desc}`;
 
-      tr.innerHTML = `
-        <td>${record.description || ""}</td>
-        <td>${startStr}</td>
-        <td>${endStr}</td>
-        <td>${record.zones || ""}</td>
-        <td>${record.location || ""}</td>
-      `;
-      tbody.appendChild(tr);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        startIso,
+        endIso,
+        description: desc,
+        zones, // pour Zone C, ça suffira
+      });
     }
+    // on ignore les académies (location) pour le tableau recap
+  });
 
-    // Chaque jour de la plage -> event VACANCES_SCOLAIRES
+  // 2) Construire le tableau recap avec un seul record par groupe
+  if (tbody) {
+    Array.from(groups.values())
+      .sort((a, b) => new Date(a.startIso) - new Date(b.startIso))
+      .forEach((g) => {
+        const start = new Date(g.startIso);
+        const end = new Date(g.endIso);
+        const startStr = formatDayMonth(start) + "/" + start.getFullYear();
+        const endStr = formatDayMonth(end) + "/" + end.getFullYear();
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${g.description}</td>
+          <td>${startStr}</td>
+          <td>${endStr}</td>
+          <td>${g.zones}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+  }
+
+  // 3) Créer les événements jour par jour (VACANCES_SCOLAIRES)
+  groups.forEach((g) => {
+    const start = new Date(g.startIso);
+    const end = new Date(g.endIso);
+
     let current = new Date(start);
     while (current <= end) {
       const year = current.getFullYear();

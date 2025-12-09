@@ -114,19 +114,18 @@ require __DIR__ . '/header.php';
   <p>Source : data.education.gouv.fr - calendrier officiel.</p>
   <div class="pf-table-wrapper">
     <table id="schoolHolidaysTable" class="fc-holidays-table">
-      <thead>
-        <tr>
-          <th>Période</th>
-          <th>Du</th>
-          <th>Au</th>
-          <th>Zones</th>
-          <th>Académies</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Rempli par JS -->
-      </tbody>
-    </table>
+  <thead>
+    <tr>
+      <th>Période</th>
+      <th>Du</th>
+      <th>Au</th>
+      <th>Zones</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Rempli par JS -->
+  </tbody>
+</table>
   </div>
 </section>
 
