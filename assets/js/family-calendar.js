@@ -166,7 +166,7 @@ function addSchoolHolidayEventsFromRecords(records, events) {
   const tbody = document.querySelector("#schoolHolidaysTable tbody");
   if (tbody) tbody.innerHTML = "";
 
-  // 1) Regrouper par (start_date, end_date, description)
+  // 1) Regrouper par période pour éviter les doublons d'académies
   const groups = new Map();
 
   records.forEach((record) => {
@@ -174,28 +174,37 @@ function addSchoolHolidayEventsFromRecords(records, events) {
     const endIso = record.end_date;
     const desc = record.description || "";
     const zones = record.zones || "";
-
     const key = `${startIso}|${endIso}|${desc}`;
 
     if (!groups.has(key)) {
-      groups.set(key, {
-        startIso,
-        endIso,
-        description: desc,
-        zones,
-      });
+      groups.set(key, { startIso, endIso, description: desc, zones });
     }
   });
 
-  // 2) Tableau récap (une ligne par période, dates telles que fournies par l'API)
+  // 2) Remplir le tableau récap ET créer les événements pour la coloration
   if (tbody) {
     Array.from(groups.values())
       .sort((a, b) => new Date(a.startIso) - new Date(b.startIso))
       .forEach((g) => {
-        const start = new Date(g.startIso);
-        const end = new Date(g.endIso);
-        const startStr = formatDayMonth(start) + "/" + start.getFullYear();
-        const endStr = formatDayMonth(end) + "/" + end.getFullYear();
+        // On travaille avec des dates UTC pour éviter les décalages de fuseau horaire
+        const startDate = new Date(g.startIso);
+        const endDate = new Date(g.endIso);
+
+        // --- Logique pour le tableau récap ---
+        // Le 1er jour de vacances est le lendemain de start_date (ex: "vendredi soir" -> samedi)
+        const displayStartDate = new Date(startDate);
+        displayStartDate.setUTCDate(startDate.getUTCDate() + 1);
+
+        // La date de reprise est le lendemain de end_date
+        const repriseDate = new Date(endDate);
+        repriseDate.setUTCDate(endDate.getUTCDate() + 1);
+
+        const startStr =
+          formatDayMonth(displayStartDate) +
+          "/" +
+          displayStartDate.getFullYear();
+        const endStr =
+          formatDayMonth(repriseDate) + "/" + repriseDate.getFullYear();
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -205,32 +214,50 @@ function addSchoolHolidayEventsFromRecords(records, events) {
           <td>${g.zones}</td>
         `;
         tbody.appendChild(tr);
+
+        // --- Logique pour la coloration du calendrier ---
+        // On boucle du 1er jour de vacances (start_date + 1) au dernier jour inclus (end_date)
+        let current = new Date(displayStartDate);
+        while (current <= endDate) {
+          const year = current.getFullYear();
+          const month = String(current.getMonth() + 1).padStart(2, "0");
+          const day = String(current.getDate()).padStart(2, "0");
+          const isoDate = `${year}-${month}-${day}`;
+
+          events.push({
+            date: isoDate,
+            type: "VACANCES_SCOLAIRES",
+            duration: 1,
+          });
+
+          current.setDate(current.getDate() + 1);
+        }
       });
   }
-
-  // 3) Créer les événements jour par jour (VACANCES_SCOLAIRES)
-  //    end = date de reprise => on s'arrête la veille (current < end)
-  groups.forEach((g) => {
-    const start = new Date(g.startIso);
-    const end = new Date(g.endIso);
-
-    let current = new Date(start);
-    while (current < end) {
-      const year = current.getFullYear();
-      const month = String(current.getMonth() + 1).padStart(2, "0");
-      const day = String(current.getDate()).padStart(2, "0");
-      const isoDate = `${year}-${month}-${day}`;
-
-      events.push({
-        date: isoDate,
-        type: "VACANCES_SCOLAIRES",
-        duration: 1,
-      });
-
-      current.setDate(current.getDate() + 1);
-    }
-  });
 }
+
+// 3) Créer les événements jour par jour (VACANCES_SCOLAIRES)
+//    end = date de reprise => on s'arrête la veille (current < end)
+groups.forEach((g) => {
+  const start = new Date(g.startIso);
+  const end = new Date(g.endIso);
+
+  let current = new Date(start);
+  while (current < end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    const isoDate = `${year}-${month}-${day}`;
+
+    events.push({
+      date: isoDate,
+      type: "VACANCES_SCOLAIRES",
+      duration: 1,
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+});
 
 /**
  * Marque les jours et les semaines de vacances scolaires dans weeks.
