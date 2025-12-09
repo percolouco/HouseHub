@@ -137,7 +137,7 @@ const events = []; // on pourra y ajouter OFF_CAROLE, CENTRE, etc. plus tard
 async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
   const baseUrl =
     "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records";
-  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%' AND population<>'Enseignants'`;
+  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%' AND population='-'`;
   const params = new URLSearchParams({
     where,
     limit: "100",
