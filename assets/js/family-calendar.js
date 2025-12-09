@@ -27,18 +27,17 @@ function getMonthNameFr(monthIndex) {
 }
 
 /**
- * Calcule le numéro de semaine dans l'année (1..52/53),
- * en prenant le lundi comme début de semaine.
+ * Calcule le n° de semaine dans l'année (1..),
+ * Semaine 1 = semaine contenant le 1er janvier, début au lundi.
  */
 function getWeekOfYear(date) {
   const year = date.getFullYear();
   const startOfYear = new Date(year, 0, 1);
-  // se placer au lundi de la semaine contenant le 1er janvier
-  const day = startOfYear.getDay() || 7; // dimanche=0 => 7
-  const diffToMonday = day > 1 ? day - 1 : 0;
-  const firstMonday = new Date(year, 0, 1 - diffToMonday);
+  const dayOfWeek = startOfYear.getDay() || 7; // dimanche = 0 -> 7
+  const diffToMonday = dayOfWeek === 1 ? 0 : dayOfWeek - 1;
+  const firstWeekMonday = new Date(year, 0, 1 - diffToMonday);
 
-  const diffMillis = date - firstMonday;
+  const diffMillis = date - firstWeekMonday;
   const diffDays = Math.floor(diffMillis / (1000 * 60 * 60 * 24));
   return Math.floor(diffDays / 7) + 1;
 }
@@ -99,12 +98,20 @@ function generateWeeks() {
         thu: thursday,
         fri: friday,
       },
+      dayFlags: {
+        mon: { schoolHoliday: false },
+        tue: { schoolHoliday: false },
+        wed: { schoolHoliday: false },
+        thu: { schoolHoliday: false },
+        fri: { schoolHoliday: false },
+      },
       totals: {
         offCarole: 0,
         extraOffCarole: 0,
         centre: 0,
         avis: 0,
       },
+      isSchoolHolidayWeek: false,
       alex: {
         total: 0,
         detail: "",
@@ -123,68 +130,119 @@ function generateWeeks() {
 
 const weeks = generateWeeks();
 
-// === 3. Événements calendrier (exemple, plus tard ce sera ton UI/DB) ===
+// === 3. Événements & vacances scolaires ===
 
-/**
- * Exemple de liste d'événements. Plus tard :
- * - tu auras une UI pour ajouter/supprimer ces événements
- * - tu les chargeras depuis/vers la DB.
- */
-const events = [
-  // Exemple : Carole off le 15/09/2025
-  { date: "2025-09-15", type: "OFF_CAROLE", duration: 1 },
-  // Exemple : Centre le 20/10/2025
-  { date: "2025-10-20", type: "CENTRE", duration: 1 },
-  // etc.
-];
+const events = []; // on pourra y ajouter OFF_CAROLE, CENTRE, etc. plus tard
 
-/**
- * Recalcule les totaux par semaine à partir des events.
- */
-function recomputeTotalsFromEvents(weeks, events) {
-  // reset
-  weeks.forEach((w) => {
-    w.totals.offCarole = 0;
-    w.totals.extraOffCarole = 0;
-    w.totals.centre = 0;
-    w.totals.avis = 0;
+async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
+  const baseUrl =
+    "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records";
+  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%'`;
+  const params = new URLSearchParams({
+    where,
+    limit: "100",
+    order_by: "start_date",
   });
 
-  events.forEach((evt) => {
-    const [y, m, d] = evt.date.split("-").map(Number);
-    const evtDate = new Date(y, m - 1, d);
+  const url = `${baseUrl}?${params.toString()}`;
 
-    // trouver la semaine qui contient evtDate (entre lundi et vendredi)
-    const week = weeks.find((w) => {
-      const md = w.dayDates.mon;
-      const fd = w.dayDates.fri;
-      return evtDate >= md && evtDate <= fd;
-    });
-    if (!week) return;
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.error("Erreur API vacances scolaires", res.status, res.statusText);
+    return [];
+  }
 
-    const dur = evt.duration || 1;
+  const data = await res.json();
+  return data.results || [];
+}
 
-    switch (evt.type) {
-      case "OFF_CAROLE":
-        week.totals.offCarole += dur;
-        break;
-      case "EXTRA_OFF_CAROLE":
-        week.totals.extraOffCarole += dur;
-        break;
-      case "CENTRE":
-        week.totals.centre += dur;
-        break;
-      case "AVIS":
-        week.totals.avis += dur;
-        break;
-      default:
-        break;
+/**
+ * Ajoute les vacances scolaires comme événements de type VACANCES_SCOLAIRES
+ * ET remplit le tableau recap.
+ */
+function addSchoolHolidayEventsFromRecords(records, events) {
+  const tbody = document.querySelector("#schoolHolidaysTable tbody");
+  if (tbody) tbody.innerHTML = "";
+
+  records.forEach((record) => {
+    const start = new Date(record.start_date);
+    const end = new Date(record.end_date);
+
+    // Remplir le tableau recap
+    if (tbody) {
+      const tr = document.createElement("tr");
+      const startStr = formatDayMonth(start) + "/" + start.getFullYear();
+      const endStr = formatDayMonth(end) + "/" + end.getFullYear();
+
+      tr.innerHTML = `
+        <td>${record.description || ""}</td>
+        <td>${startStr}</td>
+        <td>${endStr}</td>
+        <td>${record.zones || ""}</td>
+        <td>${record.location || ""}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    // Chaque jour de la plage -> event VACANCES_SCOLAIRES
+    let current = new Date(start);
+    while (current <= end) {
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, "0");
+      const day = String(current.getDate()).padStart(2, "0");
+      const isoDate = `${year}-${month}-${day}`;
+
+      events.push({
+        date: isoDate,
+        type: "VACANCES_SCOLAIRES",
+        duration: 1,
+      });
+
+      current.setDate(current.getDate() + 1);
     }
   });
 }
 
-// première agrégation
-recomputeTotalsFromEvents(weeks, events);
+/**
+ * Marque les jours & semaines de vacances scolaires dans weeks.
+ */
+function markSchoolHolidayDaysAndWeeks(weeks, events) {
+  // reset
+  weeks.forEach((w) => {
+    w.isSchoolHolidayWeek = false;
+    Object.keys(w.dayFlags).forEach((dayKey) => {
+      w.dayFlags[dayKey].schoolHoliday = false;
+    });
+  });
+
+  events.forEach((evt) => {
+    if (evt.type !== "VACANCES_SCOLAIRES") return;
+
+    const [y, m, d] = evt.date.split("-").map(Number);
+    const evtDate = new Date(y, m - 1, d);
+
+    weeks.forEach((w) => {
+      const dayKeys = ["mon", "tue", "wed", "thu", "fri"];
+      let hasHolidayInWeek = false;
+
+      dayKeys.forEach((dayKey) => {
+        const dayDate = w.dayDates[dayKey];
+        if (
+          dayDate.getFullYear() === evtDate.getFullYear() &&
+          dayDate.getMonth() === evtDate.getMonth() &&
+          dayDate.getDate() === evtDate.getDate()
+        ) {
+          w.dayFlags[dayKey].schoolHoliday = true;
+          hasHolidayInWeek = true;
+        }
+      });
+
+      if (hasHolidayInWeek) {
+        w.isSchoolHolidayWeek = true;
+      }
+    });
+  });
+}
 
 // === 4. Calcul des rowspans pour la colonne Mois ===
 
@@ -208,16 +266,23 @@ function renderTable() {
 
   const showOnlyCaroleOff =
     document.getElementById("showOnlyCaroleOff")?.checked;
-  // showOnlySchoolHoliday est ignoré pour l'instant
+  const showOnlySchoolHoliday = document.getElementById(
+    "showOnlySchoolHoliday"
+  )?.checked;
 
   const monthRowRendered = {};
 
   weeks.forEach((week) => {
     if (showOnlyCaroleOff && week.totals.offCarole === 0) return;
+    if (showOnlySchoolHoliday && !week.isSchoolHolidayWeek) return;
 
     const tr = document.createElement("tr");
 
-    // Colonne Mois (rowspan sur toutes les semaines du mois)
+    if (week.isSchoolHolidayWeek) {
+      tr.classList.add("fc-row--school-holiday");
+    }
+
+    // Colonne Mois
     if (!monthRowRendered[week.monthKey]) {
       monthRowRendered[week.monthKey] = true;
       const tdMonth = document.createElement("td");
@@ -226,19 +291,22 @@ function renderTable() {
       tr.appendChild(tdMonth);
     }
 
-    // Semaine
+    // Colonne Semaine
     const tdWeek = document.createElement("td");
     tdWeek.textContent = week.weekLabel;
     tr.appendChild(tdWeek);
 
-    // Jours
+    // Jours (Lun -> Ven) avec coloration jours de vacances
     ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey) => {
       const td = document.createElement("td");
       td.textContent = week.days[dayKey];
+      if (week.dayFlags[dayKey].schoolHoliday) {
+        td.classList.add("fc-day--school-holiday");
+      }
       tr.appendChild(td);
     });
 
-    // Totaux # Off Carole, # Extra off, #Centre, #Avis
+    // Totaux # Off / Extra / Centre / Avis (pour l'instant à 0)
     const tdOff = document.createElement("td");
     tdOff.textContent = week.totals.offCarole.toFixed(2).replace(/\.00$/, "");
     tr.appendChild(tdOff);
@@ -257,7 +325,7 @@ function renderTable() {
     tdAvis.textContent = week.totals.avis.toFixed(2).replace(/\.00$/, "");
     tr.appendChild(tdAvis);
 
-    // Alex total & détail (pour l'instant, juste placeholders)
+    // Alex total & détail
     const tdAlexTotal = document.createElement("td");
     tdAlexTotal.textContent = week.alex.total.toFixed(2).replace(/\.00$/, "");
     tr.appendChild(tdAlexTotal);
@@ -281,7 +349,7 @@ function renderTable() {
   updateSummary();
 }
 
-// === 6. Résumé (encore 0 utilisés pour l’instant) ===
+// === 6. Résumé (toujours 0 utilisés pour l'instant) ===
 
 function updateSummary() {
   const summaryDiv = document.getElementById("summaryText");
@@ -350,7 +418,7 @@ function updateSummary() {
 
 // === 7. Init ===
 
-function initFamilyCalendar() {
+async function initFamilyCalendar() {
   if (!document.getElementById("planningBody")) return;
 
   [
@@ -376,7 +444,14 @@ function initFamilyCalendar() {
     showOnlySchoolHoliday.addEventListener("change", renderTable);
   }
 
+  // Charger vacances scolaires 2025-2026, Zone C
+  const holidaysRecords = await fetchSchoolHolidays("2025-2026", "Zone C");
+  addSchoolHolidayEventsFromRecords(holidaysRecords, events);
+  markSchoolHolidayDaysAndWeeks(weeks, events);
+
   renderTable();
 }
 
-document.addEventListener("DOMContentLoaded", initFamilyCalendar);
+document.addEventListener("DOMContentLoaded", () => {
+  initFamilyCalendar().catch((err) => console.error(err));
+});

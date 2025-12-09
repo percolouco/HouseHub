@@ -173,3 +173,32 @@ input[type="number"] {
 .fc-row--bank-holiday {
   background: #d9f7be;
 }
+
+/* Ligne de semaine contenant au moins un jour de vacances scolaires */
+.fc-row--school-holiday {
+  background-color: #fff5cc;
+}
+
+/* Jour individuel en vacances scolaires (cellule) */
+.fc-day--school-holiday {
+  background-color: #ffe9a6;
+}
+
+/* Tableau recap vacances scolaires */
+.fc-holidays-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.fc-holidays-table th,
+.fc-holidays-table td {
+  border: 1px solid #d9e2ec;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.fc-holidays-table th {
+  background-color: #f0f4f8;
+}

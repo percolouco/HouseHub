@@ -109,6 +109,28 @@ require __DIR__ . '/header.php';
   </div>
 </section>
 
+<section class="pf-section">
+  <h2>Vacances scolaires - Zone C (2025-2026)</h2>
+  <p>Source : data.education.gouv.fr - calendrier officiel.</p>
+  <div class="pf-table-wrapper">
+    <table id="schoolHolidaysTable" class="fc-holidays-table">
+      <thead>
+        <tr>
+          <th>Période</th>
+          <th>Du</th>
+          <th>Au</th>
+          <th>Zones</th>
+          <th>Académies</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Rempli par JS -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
 <script src="/assets/js/family-calendar.js"></script>
 
 
