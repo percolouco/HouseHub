@@ -306,10 +306,6 @@ function renderTable() {
 
     const tr = document.createElement("tr");
 
-    if (week.isSchoolHolidayWeek) {
-      tr.classList.add("fc-row--school-holiday");
-    }
-
     // Colonne Mois
     if (!monthRowRendered[week.monthKey]) {
       monthRowRendered[week.monthKey] = true;

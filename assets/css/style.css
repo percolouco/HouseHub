@@ -166,17 +166,13 @@ input[type="number"] {
   background: #ffe0e0;
 }
 
-.fc-row--school-holiday {
-  background: #fff5cc;
+/* Jour de vacances scolaires dans le calendrier */
+.fc-day--school-holiday {
+  background-color: #fff5cc; /* choisis le jaune qui te convient */
 }
 
 .fc-row--bank-holiday {
   background: #d9f7be;
-}
-
-/* Ligne de semaine contenant au moins un jour de vacances scolaires */
-.fc-row--school-holiday {
-  background-color: #fff8d5; /* jaune clair uniforme */
 }
 
 /* Jour individuel en vacances scolaires (cellule) */
@@ -201,8 +197,4 @@ input[type="number"] {
 
 .fc-holidays-table th {
   background-color: #f0f4f8;
-}
-
-.fc-row--school-holiday td:first-child {
-  background-color: #ffffff;
 }
