@@ -212,20 +212,18 @@ function addSchoolHolidayEventsFromRecords(records, events) {
   groups.forEach((g) => {
     const start = new Date(g.startIso);
     const end = new Date(g.endIso);
-
     let current = new Date(start);
-    while (current <= end) {
+    // end = date de reprise -> on s'arrête la veille
+    while (current < end) {
       const year = current.getFullYear();
       const month = String(current.getMonth() + 1).padStart(2, "0");
       const day = String(current.getDate()).padStart(2, "0");
       const isoDate = `${year}-${month}-${day}`;
-
       events.push({
         date: isoDate,
         type: "VACANCES_SCOLAIRES",
         duration: 1,
       });
-
       current.setDate(current.getDate() + 1);
     }
   });
