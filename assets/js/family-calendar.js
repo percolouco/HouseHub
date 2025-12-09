@@ -160,6 +160,7 @@ async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
 /**
  * Regroupe les records par période, remplit le tableau recap,
  * et crée les événements VACANCES_SCOLAIRES.
+ * Version corrigée pour gérer les fuseaux horaires de manière robuste.
  */
 function addSchoolHolidayEventsFromRecords(records, events) {
   const tbody = document.querySelector("#schoolHolidaysTable tbody");
@@ -185,23 +186,27 @@ function addSchoolHolidayEventsFromRecords(records, events) {
     Array.from(groups.values())
       .sort((a, b) => new Date(a.startIso) - new Date(b.startIso))
       .forEach((g) => {
-        // On travaille avec des dates UTC pour éviter les décalages de fuseau horaire
-        const startDate = new Date(g.startIso);
-        const endDate = new Date(g.endIso);
+        // --- Logique de dates explicite et robuste ---
 
-        // --- Logique pour le tableau récap ---
-        // Le 1er jour de vacances est le lendemain de start_date (ex: "vendredi soir" -> samedi)
-        const displayStartDate = new Date(startDate);
-        displayStartDate.setUTCDate(startDate.getUTCDate() + 1);
+        // On extrait la partie YYYY-MM-DD pour éviter les bugs de fuseau horaire
+        const startDateString = g.startIso.substring(0, 10); // ex: "2025-10-17"
+        const endDateString = g.endIso.substring(0, 10); // ex: "2025-11-02"
 
-        // La date de reprise est le lendemain de end_date
-        const repriseDate = new Date(endDate);
-        repriseDate.setUTCDate(endDate.getUTCDate() + 1);
+        // On crée les dates en spécifiant T00:00:00 pour qu'elles soient interprétées comme locales
+        const firstDayVacation = new Date(startDateString + "T00:00:00");
+        firstDayVacation.setDate(firstDayVacation.getDate() + 1); // Le 1er jour est le lendemain du "vendredi soir"
 
+        const lastDayVacation = new Date(endDateString + "T00:00:00");
+
+        // La date de reprise est le lendemain du dernier jour de vacances
+        const repriseDate = new Date(lastDayVacation);
+        repriseDate.setDate(repriseDate.getDate() + 1);
+
+        // --- Affichage dans le tableau récap ---
         const startStr =
-          formatDayMonth(displayStartDate) +
+          formatDayMonth(firstDayVacation) +
           "/" +
-          displayStartDate.getFullYear();
+          firstDayVacation.getFullYear();
         const endStr =
           formatDayMonth(repriseDate) + "/" + repriseDate.getFullYear();
 
@@ -214,10 +219,10 @@ function addSchoolHolidayEventsFromRecords(records, events) {
         `;
         tbody.appendChild(tr);
 
-        // --- Logique pour la coloration du calendrier ---
-        // On boucle du 1er jour de vacances (start_date + 1) au dernier jour inclus (end_date)
-        let current = new Date(displayStartDate);
-        while (current <= endDate) {
+        // --- Création des événements pour la coloration du calendrier ---
+        // On boucle du premier jour de vacances jusqu'au dernier jour INCLUS.
+        let current = new Date(firstDayVacation);
+        while (current <= lastDayVacation) {
           const year = current.getFullYear();
           const month = String(current.getMonth() + 1).padStart(2, "0");
           const day = String(current.getDate()).padStart(2, "0");
