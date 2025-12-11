@@ -218,6 +218,7 @@ label {
   border: 1px solid #d9e2ec;
   padding: 4px 6px;
   text-align: center;
+  position: relative;
 }
 
 .pf-table thead th {
@@ -333,13 +334,31 @@ input[type="number"] {
   box-sizing: border-box;
 }
 
-/* Bordure verte pour Centre */
+/* Picto pour Centre (toboggan/balançoire) */
 .fc-day--has-guard.fc-day--centre {
-  border: 2px solid #4caf50;
+  position: relative;
 }
-/* Bordure bleue pour Avis */
+.fc-day--has-guard.fc-day--centre::after {
+  content: "🎢";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 14px;
+  line-height: 1;
+  z-index: 2;
+}
+/* Picto pour Avis (FC Barcelone) */
 .fc-day--has-guard.fc-day--avis {
-  border: 2px solid #2196f3;
+  position: relative;
+}
+.fc-day--has-guard.fc-day--avis::after {
+  content: "⚽";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 14px;
+  line-height: 1;
+  z-index: 2;
 }
 
 /* --- Combinaisons avec dégradés --- */
@@ -534,11 +553,28 @@ input[type="number"] {
 }
 
 .fc-month-table .fc-day--has-guard.fc-day--centre {
-  border: 2px solid #4caf50;
+  position: relative;
 }
-
+.fc-month-table .fc-day--has-guard.fc-day--centre::after {
+  content: "🎢";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 12px;
+  line-height: 1;
+  z-index: 2;
+}
 .fc-month-table .fc-day--has-guard.fc-day--avis {
-  border: 2px solid #2196f3;
+  position: relative;
+}
+.fc-month-table .fc-day--has-guard.fc-day--avis::after {
+  content: "⚽";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 12px;
+  line-height: 1;
+  z-index: 2;
 }
 
 /* Combinaisons avec dégradés pour le calendrier mensuel */
