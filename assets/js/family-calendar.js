@@ -14,6 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
       this.schoolHolidaysTableBody = document.querySelector(
         "#schoolHolidaysTable tbody"
       );
+      this.monthCalendar = document.getElementById("fc-month-calendar");
+      this.monthSelectionMenu = document.getElementById(
+        "fc-month-selectionMenu"
+      );
+      this.currentMonth = new Date();
+      this.currentMonth.setDate(1); // Premier jour du mois
 
       if (!this.planningBody || !this.selectionMenu) {
         console.error("planningBody ou selectionMenu manquant");
@@ -22,6 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       this.isSelecting = false;
       this.selectedCells = [];
+      this.monthSelectedCells = [];
+      this.isMonthSelecting = false;
       this.dbEvents = [];
       this.fixedEvents = [];
       this.events = [];
@@ -41,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
       this.events = [...this.dbEvents, ...this.fixedEvents];
 
       this.reprocessAndRender();
+      this.renderMonthCalendar();
     }
 
     loadDbEvents() {
@@ -161,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
       this.reprocessEvents();
       this.renderTable();
       this.updateGlobalSummary();
+      this.renderMonthCalendar();
     }
 
     reprocessEvents() {
@@ -349,6 +359,32 @@ document.addEventListener("DOMContentLoaded", () => {
       this.selectionMenu.addEventListener("click", (e) =>
         this.handleMenuClick(e)
       );
+
+      // Événements pour le calendrier mensuel
+      if (this.monthCalendar) {
+        this.monthCalendar.addEventListener("mousedown", (e) =>
+          this.handleMonthMouseDown(e)
+        );
+        document.addEventListener("mousemove", (e) =>
+          this.handleMonthMouseMove(e)
+        );
+        document.addEventListener("mouseup", (e) => this.handleMonthMouseUp(e));
+        if (this.monthSelectionMenu) {
+          this.monthSelectionMenu.addEventListener("click", (e) =>
+            this.handleMonthMenuClick(e)
+          );
+        }
+      }
+
+      // Navigation du calendrier mensuel
+      const prevBtn = document.getElementById("fc-prev-month");
+      const nextBtn = document.getElementById("fc-next-month");
+      if (prevBtn) {
+        prevBtn.addEventListener("click", () => this.navigateMonth(-1));
+      }
+      if (nextBtn) {
+        nextBtn.addEventListener("click", () => this.navigateMonth(1));
+      }
     }
 
     handleMouseDown(e) {
@@ -401,10 +437,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       if (
+        this.selectionMenu &&
         this.selectionMenu.style.display === "block" &&
         !this.selectionMenu.contains(e.target)
       ) {
         this.clearSelection();
+      }
+      if (
+        this.monthSelectionMenu &&
+        this.monthSelectionMenu.style.display === "block" &&
+        !this.monthSelectionMenu.contains(e.target)
+      ) {
+        this.clearMonthSelection();
       }
     }
 
@@ -753,9 +797,470 @@ document.addEventListener("DOMContentLoaded", () => {
         this.events = [...this.dbEvents, ...this.fixedEvents];
 
         this.reprocessAndRender();
+        this.renderMonthCalendar();
       } catch (error) {
         console.error("Erreur manageEvent :", error);
         alert("Erreur: " + error.message);
+      }
+    }
+
+    // ================== CALENDRIER MENSUEL ==================
+    navigateMonth(direction) {
+      this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+      this.renderMonthCalendar();
+    }
+
+    renderMonthCalendar() {
+      if (!this.monthCalendar) return;
+
+      const year = this.currentMonth.getFullYear();
+      const month = this.currentMonth.getMonth();
+      const monthName = getMonthNameFr(month);
+
+      // Mettre à jour le titre
+      const monthTitle = document.getElementById("fc-current-month-year");
+      if (monthTitle) {
+        monthTitle.textContent = `${monthName} ${year}`;
+      }
+
+      // Premier jour du mois et dernier jour
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startDayOfWeek =
+        firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Lundi = 0
+
+      // Noms des jours
+      const dayNames = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+      let html = '<table class="fc-month-table"><thead><tr>';
+      dayNames.forEach((day) => {
+        html += `<th>${day}</th>`;
+      });
+      html += "</tr></thead><tbody>";
+
+      // Jours du mois précédent (si nécessaire)
+      let dayCount = 0;
+      html += "<tr>";
+      for (let i = 0; i < startDayOfWeek; i++) {
+        html += '<td class="fc-day--other-month"></td>';
+        dayCount++;
+      }
+
+      // Jours du mois actuel
+      for (let day = 1; day <= daysInMonth; day++) {
+        if (dayCount % 7 === 0 && day > 1) {
+          html += "</tr><tr>";
+        }
+
+        const date = new Date(year, month, day);
+        const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+          day
+        ).padStart(2, "0")}`;
+
+        // Trouver les événements pour ce jour
+        const dayEvents = this.events.filter((evt) => evt.date === isoDate);
+
+        let classes = "fc-month-day";
+        let hasGarde = false;
+        let gardeType = null;
+
+        dayEvents.forEach((evt) => {
+          const classMap = {
+            VACANCES_SCOLAIRES: "fc-day--school-holiday",
+            PUBLIC_HOLIDAY: "fc-day--public-holiday",
+            OFF_CAROLE: "fc-day--off-carole",
+            EXTRA_OFF_CAROLE: "fc-day--extra-off-carole",
+          };
+
+          if (classMap[evt.type]) {
+            classes += " " + classMap[evt.type];
+          }
+
+          if (GUARDE_TYPES.includes(evt.type)) {
+            hasGarde = true;
+            gardeType = evt.type;
+          }
+        });
+
+        if (hasGarde) {
+          classes += " fc-day--has-guard";
+          if (gardeType === "CENTRE") classes += " fc-day--centre";
+          if (gardeType === "AVIS") classes += " fc-day--avis";
+        }
+
+        // Week-end
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          classes += " fc-day--weekend";
+        }
+
+        html += `<td class="${classes}" data-date="${isoDate}">${day}</td>`;
+        dayCount++;
+      }
+
+      // Jours du mois suivant (pour compléter la dernière ligne)
+      const remainingDays = 7 - (dayCount % 7);
+      if (remainingDays < 7) {
+        for (let i = 0; i < remainingDays; i++) {
+          html += '<td class="fc-day--other-month"></td>';
+        }
+      }
+      html += "</tr></tbody></table>";
+
+      this.monthCalendar.innerHTML = html;
+    }
+
+    handleMonthMouseDown(e) {
+      const cell = e.target.closest("td[data-date]");
+      if (!cell) return;
+      e.preventDefault();
+      this.clearMonthSelection();
+
+      this.isMonthSelecting = true;
+      cell.classList.add("fc-day--selected");
+      this.monthSelectedCells.push(cell);
+    }
+
+    handleMonthMouseMove(e) {
+      if (!this.isMonthSelecting) return;
+      const cell = e.target.closest("td[data-date]");
+      if (cell && !this.monthSelectedCells.includes(cell)) {
+        cell.classList.add("fc-day--selected");
+        this.monthSelectedCells.push(cell);
+      }
+    }
+
+    handleMonthMouseUp(e) {
+      if (!this.isMonthSelecting) return;
+      this.isMonthSelecting = false;
+      if (this.monthSelectedCells.length === 0) return;
+
+      if (this.monthSelectedCells.length === 1) {
+        const date = this.monthSelectedCells[0].dataset.date;
+        const eventsOnDay = this.events.filter(
+          (evt) => evt.date === date && MODIFIABLE_TYPES.includes(evt.type)
+        );
+        const conge = eventsOnDay.find((e) => CONGE_TYPES.includes(e.type));
+        const garde = eventsOnDay.find((e) => GUARDE_TYPES.includes(e.type));
+
+        if (!conge && !garde) {
+          this.showMonthAddMenu(e);
+        } else {
+          this.showMonthEditMenuForDay(e, { conge, garde, date });
+        }
+      } else {
+        this.showMonthAddMenu(e);
+      }
+    }
+
+    clearMonthSelection() {
+      if (this.monthSelectionMenu) {
+        this.monthSelectionMenu.style.display = "none";
+      }
+      this.monthSelectedCells.forEach((cell) =>
+        cell.classList.remove("fc-day--selected")
+      );
+      this.monthSelectedCells = [];
+    }
+
+    showMonthAddMenu(e) {
+      if (!this.monthSelectionMenu) return;
+      this.monthSelectionMenu.innerHTML = `
+        <div class="fc-menu-section"><strong>Ajouter</strong></div>
+        <button data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off Carole</button>
+        <button data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra Off Carole</button>
+        <div class="fc-menu-section"><strong>Mode de Garde</strong></div>
+        <button data-action="add" data-type="CENTRE">Centre</button>
+        <button data-action="add" data-type="AVIS">Avis</button>
+      `;
+      this.positionAndShowMonthMenu(e);
+    }
+
+    showMonthEditMenuForDay(e, { conge, garde, date }) {
+      if (!this.monthSelectionMenu) return;
+      let congeSection = "";
+      if (conge) {
+        const oppositeConge =
+          conge.type === "OFF_CAROLE" ? "EXTRA_OFF_CAROLE" : "OFF_CAROLE";
+        congeSection = `
+          <div class="fc-menu-section"><strong>Congé Carole</strong></div>
+          <button data-action="update" data-event-id="${
+            conge.id
+          }" data-new-type="${oppositeConge}">
+            Remplacer par ${oppositeConge.replace(/_/g, " ")}
+          </button>
+          <button data-action="delete" data-event-id="${conge.id}">
+            Supprimer le congé
+          </button>
+        `;
+      } else {
+        congeSection = `
+          <div class="fc-menu-section"><strong>Ajouter un congé</strong></div>
+          <button data-action="add-single" data-type="OFF_CAROLE" data-date="${date}" data-person="Carole">
+            Off Carole
+          </button>
+          <button data-action="add-single" data-type="EXTRA_OFF_CAROLE" data-date="${date}" data-person="Carole">
+            Extra Off Carole
+          </button>
+        `;
+      }
+
+      let gardeSection = "";
+      if (garde) {
+        const oppositeGarde = garde.type === "CENTRE" ? "AVIS" : "CENTRE";
+        gardeSection = `
+          <div class="fc-menu-section"><strong>Mode de garde</strong></div>
+          <button data-action="update" data-event-id="${garde.id}" data-new-type="${oppositeGarde}">
+            Remplacer par ${oppositeGarde}
+          </button>
+          <button data-action="delete" data-event-id="${garde.id}">
+            Supprimer le mode de garde
+          </button>
+        `;
+      } else {
+        gardeSection = `
+          <div class="fc-menu-section"><strong>Ajouter mode de garde</strong></div>
+          <button data-action="add-single" data-type="CENTRE" data-date="${date}">
+            Centre
+          </button>
+          <button data-action="add-single" data-type="AVIS" data-date="${date}">
+            Avis
+          </button>
+        `;
+      }
+
+      this.monthSelectionMenu.innerHTML = congeSection + gardeSection;
+      this.positionAndShowMonthMenu(e);
+    }
+
+    positionAndShowMonthMenu(e) {
+      if (!this.monthSelectionMenu) return;
+      this.monthSelectionMenu.style.display = "block";
+      this.monthSelectionMenu.style.left = `${e.pageX + 5}px`;
+      this.monthSelectionMenu.style.top = `${e.pageY + 5}px`;
+      this.menuJustOpened = true;
+    }
+
+    async handleMonthMenuClick(e) {
+      const button = e.target.closest("button[data-action]");
+      if (!button) return;
+
+      const { action, eventId, newType, type, person, date } = button.dataset;
+
+      // Réutiliser la même logique que handleMenuClick mais avec monthSelectedCells
+      if (action === "add") {
+        const selectedDates = this.monthSelectedCells.map(
+          (c) => c.dataset.date
+        );
+        const existingOnDates = this.dbEvents.filter((evt) =>
+          selectedDates.includes(evt.date)
+        );
+
+        if (CONGE_TYPES.includes(type)) {
+          const hasCongeConflict = existingOnDates.some((evt) =>
+            CONGE_TYPES.includes(evt.type)
+          );
+          if (hasCongeConflict) {
+            alert(
+              "Impossible d'ajouter un congé : au moins une date a déjà un congé (Off/Extra Off)."
+            );
+            this.clearMonthSelection();
+            return;
+          }
+        } else if (GUARDE_TYPES.includes(type)) {
+          const hasGardeConflict = existingOnDates.some((evt) =>
+            GUARDE_TYPES.includes(evt.type)
+          );
+          if (hasGardeConflict) {
+            alert(
+              "Impossible d'ajouter un mode de garde : au moins une date a déjà Centre/Avis."
+            );
+            this.clearMonthSelection();
+            return;
+          }
+        }
+
+        const newEvents = this.monthSelectedCells.map((cell) => ({
+          date: cell.dataset.date,
+          type,
+          person,
+          duration: 1.0,
+        }));
+
+        this.clearMonthSelection();
+
+        try {
+          const response = await fetch("/api/save-events.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newEvents),
+          });
+          if (!response.ok) {
+            throw new Error("Erreur HTTP " + response.status);
+          }
+
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error(err);
+          alert("Erreur lors de l'ajout.");
+        }
+        return;
+      }
+
+      if (action === "add-single") {
+        const targetDate = date;
+        const existingOnDate = this.dbEvents.filter(
+          (evt) => evt.date === targetDate
+        );
+
+        if (CONGE_TYPES.includes(type)) {
+          const hasCongeConflict = existingOnDate.some((evt) =>
+            CONGE_TYPES.includes(evt.type)
+          );
+          if (hasCongeConflict) {
+            alert("Un congé existe déjà ce jour-là.");
+            this.clearMonthSelection();
+            return;
+          }
+        } else if (GUARDE_TYPES.includes(type)) {
+          const hasGardeConflict = existingOnDate.some((evt) =>
+            GUARDE_TYPES.includes(evt.type)
+          );
+          if (hasGardeConflict) {
+            alert("Un mode de garde existe déjà ce jour-là.");
+            this.clearMonthSelection();
+            return;
+          }
+        }
+
+        const newEvent = {
+          date: targetDate,
+          type,
+          person,
+          duration: 1.0,
+        };
+
+        this.clearMonthSelection();
+
+        try {
+          const response = await fetch("/api/save-events.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify([newEvent]),
+          });
+          if (!response.ok) {
+            throw new Error("Erreur HTTP " + response.status);
+          }
+
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error(err);
+          alert("Erreur lors de l'ajout.");
+        }
+        return;
+      }
+
+      if (action === "delete") {
+        if (!eventId) {
+          this.clearMonthSelection();
+          return;
+        }
+
+        this.clearMonthSelection();
+
+        try {
+          const response = await fetch("/api/manage-event.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete", event_id: eventId }),
+          });
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(
+              errData.message || "Erreur HTTP " + response.status
+            );
+          }
+
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error(err);
+          alert("Erreur lors de la suppression : " + err.message);
+        }
+        return;
+      }
+
+      if (action === "update") {
+        if (!eventId) {
+          this.clearMonthSelection();
+          return;
+        }
+
+        this.clearMonthSelection();
+
+        try {
+          const response = await fetch("/api/manage-event.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "update",
+              event_id: eventId,
+              new_type: newType,
+            }),
+          });
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(
+              errData.message || "Erreur HTTP " + response.status
+            );
+          }
+
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("[UPDATE] Erreur lors de la modification :", err);
+          alert("Erreur lors de la modification : " + err.message);
+        }
+        return;
       }
     }
   }

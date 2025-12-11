@@ -91,6 +91,25 @@ require __DIR__ . '/header.php';
 
 
 <!-- ===================================================================== -->
+<!--  CALENDRIER MENSUEL                                                   -->
+<!-- ===================================================================== -->
+<section class="pf-section">
+  <h2>Calendrier mensuel</h2>
+  <div class="fc-month-calendar-wrapper">
+    <div class="fc-month-header">
+      <button id="fc-prev-month" class="fc-nav-button">‹</button>
+      <h3 id="fc-current-month-year"></h3>
+      <button id="fc-next-month" class="fc-nav-button">›</button>
+    </div>
+    <div id="fc-month-calendar" class="fc-month-calendar">
+      <!-- Le calendrier mensuel sera généré par JavaScript -->
+    </div>
+    <!-- Le menu contextuel pour le calendrier mensuel -->
+    <div id="fc-month-selectionMenu" class="fc-selection-menu"></div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
 <!--  PLANNING PRINCIPAL                                                   -->
 <!-- ===================================================================== -->
 <section class="pf-section">
