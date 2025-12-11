@@ -1,68 +1,98 @@
 <?php
-// debug temporaire si besoin
-// ini_set('display_errors', 1);
-// ini_set('display_startup_errors', 1);
-// error_reporting(E_ALL);
+// Active l'affichage des erreurs pour le développement
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
+// On se connecte à la base de données
+require __DIR__ . '/includes/db.php';
+
+// --- On récupère TOUS les événements sauvegardés en base ---
+$stmt_events = $pdo->query("SELECT * FROM pf_events");
+$dbEvents = $stmt_events->fetchAll();
+
+// --- Configuration de la page ---
 $pageTitle = "PachaFamily - Family Calendar";
 $activePage = "family-calendar";
 require __DIR__ . '/header.php';
 ?>
 
+<!-- ===================================================================== -->
+<!--  INJECTION DES DONNÉES DU SERVEUR VERS JAVASCRIPT                     -->
+<!--  Cette variable `serverData` sera lue par le script JS au démarrage.  -->
+<!-- ===================================================================== -->
+<script>
+  const serverData = <?php echo json_encode($dbEvents, JSON_NUMERIC_CHECK); ?>;
+</script>
+
 <h1>Family Calendar</h1>
 
+
+<!-- ===================================================================== -->
+<!--  PANNEAU DE CONTRÔLE : Légende, Récapitulatif et Vacances             -->
+<!-- ===================================================================== -->
 <section class="pf-section pf-section--panel">
   <div class="pf-flex pf-flex--wrap pf-gap-lg">
+    
+    <!-- LÉGENDE -->
     <div class="pf-card pf-card--small">
-      <h2 class="pf-card-title">Soldes initiaux</h2>
+      <h2 class="pf-card-title">Légende</h2>
       <div class="pf-card-body">
-        <p><strong>Alex</strong></p>
-        <label>CP :
-          <input id="alexCpInit" type="number" step="0.25" value="24.5">
-        </label><br>
-        <label>RTT :
-          <input id="alexRttInit" type="number" step="0.25" value="1.5">
-        </label><br>
-        <label>JA :
-          <input id="alexJaInit" type="number" step="0.25" value="1">
-        </label>
-
-        <p><strong>Laia</strong></p>
-        <label>CP :
-          <input id="laiaCpInit" type="number" step="0.25" value="19">
-        </label><br>
-        <label>RTT :
-          <input id="laiaRttInit" type="number" step="0.25" value="4">
-        </label><br>
-        <label>JA :
-          <input id="laiaJaInit" type="number" step="0.25" value="4">
-        </label>
+        <div class="pf-legend-item">
+          <div class="pf-legend-color fc-day--school-holiday"></div>
+          <span>Vacances scolaires</span>
+        </div>
+        <div class="pf-legend-item">
+          <div class="pf-legend-color fc-day--public-holiday"></div>
+          <span>Jour férié</span>
+        </div>
+        <div class="pf-legend-item">
+          <div class="pf-legend-color fc-day--off-carole"></div>
+          <span>Off Carole</span>
+        </div>
+        <div class="pf-legend-item">
+          <div class="pf-legend-color fc-day--extra-off-carole"></div>
+          <span>Extra Off Carole</span>
+        </div>
       </div>
     </div>
 
+    <!-- RÉCAPITULATIF ANNUEL -->
     <div class="pf-card pf-card--small">
-      <h2 class="pf-card-title">Filtres</h2>
-      <div class="pf-card-body">
-        <label>
-          <input id="showOnlyCaroleOff" type="checkbox">
-          Voir uniquement les semaines ou Carole est en conges
-        </label><br>
-        <label>
-          <input id="showOnlySchoolHoliday" type="checkbox">
-          Voir uniquement les vacances scolaires
-        </label>
+      <h2 class="pf-card-title">Récapitulatif annuel</h2>
+      <div class="pf-card-body" id="globalSummary">
+        <!-- Rempli par le JavaScript -->
       </div>
     </div>
 
-    <div class="pf-card pf-card--small">
-      <h2 class="pf-card-title">Resume</h2>
-      <div class="pf-card-body" id="summaryText">
-        <!-- Rempli par JS -->
-      </div>
+    <!-- VACANCES SCOLAIRES -->
+<div class="pf-card pf-card--small pf-card--wide">
+  <h2 class="pf-card-title">Vacances scolaires - Zone C (2025-2026)</h2>
+  <div class="pf-card-body">
+    <div class="pf-table-wrapper">
+      <table id="schoolHolidaysTable" class="fc-holidays-table">
+        <thead>
+          <tr>
+            <th>Période</th>
+            <th>Du</th>
+            <th>Au</th>
+            <th>Zones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rempli par JS -->
+        </tbody>
+      </table>
     </div>
   </div>
+</div>
+
 </section>
 
+
+
+<!-- ===================================================================== -->
+<!--  PLANNING PRINCIPAL                                                   -->
+<!-- ===================================================================== -->
 <section class="pf-section">
   <h2>Planning par semaine</h2>
   <div class="pf-table-wrapper">
@@ -80,69 +110,26 @@ require __DIR__ . '/header.php';
           <th># Extra off Carole</th>
           <th>#Centre</th>
           <th>#Avis</th>
-          <th colspan="2">Alex</th>
-          <th colspan="2">Laia</th>
-        </tr>
-        <tr>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th></th>
-          <th>jours</th>
-          <th>jours</th>
-          <th>jours</th>
-          <th>jours</th>
-          <th>Total</th>
-          <th>Détail</th>
-          <th>Total</th>
-          <th>Détail</th>
         </tr>
       </thead>
       <tbody id="planningBody">
-        <!-- Rempli par family-calendar.js -->
+        <!-- Le contenu de ce tableau est entièrement généré par family-calendar.js -->
       </tbody>
     </table>
-    <div id="selectionMenu" class="fc-selection-menu">
-      <div class="fc-menu-section">
-        <strong>Congé Carole</strong>
-        <button data-type="OFF_CAROLE"># Off Carole</button>
-        <button data-type="EXTRA_OFF_CAROLE"># Extra off Carole</button>
-      </div>
-      <div class="fc-menu-section">
-        <strong>Mode de Garde</strong>
-        <button data-type="CENTRE"># Centre</button>
-        <button data-type="AVIS"># Avis</button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="pf-section">
-  <h2>Vacances scolaires - Zone C (2025-2026)</h2>
-  <p>Source : data.education.gouv.fr - calendrier officiel.</p>
-  <div class="pf-table-wrapper">
-    <table id="schoolHolidaysTable" class="fc-holidays-table">
-  <thead>
-    <tr>
-      <th>Période</th>
-      <th>Du</th>
-      <th>Au</th>
-      <th>Zones</th>
-    </tr>
-  </thead>
-  <tbody>
-    <!-- Rempli par JS -->
-  </tbody>
-</table>
+    
+    <!-- Le menu contextuel est caché par défaut et son contenu est généré par JS -->
+    <div id="selectionMenu" class="fc-selection-menu"></div>
   </div>
 </section>
 
 
+<!-- ===================================================================== -->
+<!--  CHARGEMENT DU SCRIPT JAVASCRIPT PRINCIPAL                            -->
+<!-- ===================================================================== -->
 <script src="/assets/js/family-calendar.js"></script>
 
 
 <?php
+// Inclusion du pied de page
 require __DIR__ . '/footer.php';
+?>

@@ -1,433 +1,792 @@
-// assets/js/family-calendar.js
-
-// === VARIABLES GLOBALES POUR LA SÉLECTION ===
-let isSelecting = false;
-let selectedCells = [];
-const events = []; // Contient TOUS les événements (vacances, off carole, centre, avis)
-
-// === 1. Utilitaires dates ===
-// ... (garder les fonctions formatDayMonth, getMonthNameFr, getWeekOfYear)
-function formatDayMonth(date) {
-  const d = String(date.getDate()).padStart(2, "0");
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  return `${d}/${m}`;
-}
-
-function getMonthNameFr(monthIndex) {
-  const map = {
-    0: "Janvier",
-    1: "Fevrier",
-    2: "Mars",
-    3: "Avril",
-    4: "Mai",
-    5: "Juin",
-    6: "Juillet",
-    7: "Aout",
-    8: "Septembre",
-    9: "Octobre",
-    10: "Novembre",
-    11: "Decembre",
-  };
-  return map[monthIndex] || "";
-}
-
-function getWeekOfYear(date) {
-  const year = date.getFullYear();
-  const startOfYear = new Date(year, 0, 1);
-  const dayOfWeek = startOfYear.getDay() || 7;
-  const diffToMonday = dayOfWeek === 1 ? 0 : dayOfWeek - 1;
-  const firstWeekMonday = new Date(year, 0, 1 - diffToMonday);
-  const diffMillis = date - firstWeekMonday;
-  const diffDays = Math.floor(diffMillis / (1000 * 60 * 60 * 24));
-  return Math.floor(diffDays / 7) + 1;
-}
-
-// === 2. Génération des semaines ===
-function generateWeeks() {
-  const weeks = [];
-  const start = new Date(2025, 8, 1);
-  const end = new Date(2026, 7, 31);
-  let current = new Date(start);
-  while (current.getDay() !== 1) {
-    current.setDate(current.getDate() + 1);
-  }
-  while (current <= end) {
-    const monday = new Date(current);
-    const tuesday = new Date(current);
-    tuesday.setDate(monday.getDate() + 1);
-    const wednesday = new Date(current);
-    wednesday.setDate(monday.getDate() + 2);
-    const thursday = new Date(current);
-    thursday.setDate(monday.getDate() + 3);
-    const friday = new Date(current);
-    friday.setDate(monday.getDate() + 4);
-    const year = monday.getFullYear();
-    const weekOfYear = getWeekOfYear(monday);
-    const weekId = `${year}-W${String(weekOfYear).padStart(2, "0")}`;
-    const monthIndex = monday.getMonth();
-    const monthKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
-    weeks.push({
-      id: weekId,
-      year,
-      weekOfYear,
-      monthKey,
-      monthName: getMonthNameFr(monthIndex),
-      weekLabel: `W${weekOfYear}`,
-      days: {
-        mon: formatDayMonth(monday),
-        tue: formatDayMonth(tuesday),
-        wed: formatDayMonth(wednesday),
-        thu: formatDayMonth(thursday),
-        fri: formatDayMonth(friday),
-      },
-      dayDates: {
-        mon: monday,
-        tue: tuesday,
-        wed: wednesday,
-        thu: thursday,
-        fri: friday,
-      },
-      dayFlags: {
-        mon: { schoolHoliday: false },
-        tue: { schoolHoliday: false },
-        wed: { schoolHoliday: false },
-        thu: { schoolHoliday: false },
-        fri: { schoolHoliday: false },
-      },
-      totals: { offCarole: 0, extraOffCarole: 0, centre: 0, avis: 0 },
-      isSchoolHolidayWeek: false,
-      alex: { total: 0, detail: "" },
-      laia: { total: 0, detail: "" },
-    });
-    current.setDate(current.getDate() + 7);
-  }
-  return weeks;
-}
-const weeks = generateWeeks();
-
-// === 3. Gestion des événements (Vacances, Off, Centre, Avis) ===
-
-async function fetchSchoolHolidays(anneeScolaire, zoneLabel) {
-  const baseUrl =
-    "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records";
-  const where = `annee_scolaire='${anneeScolaire}' AND zones LIKE '%${zoneLabel}%'`;
-  const params = new URLSearchParams({
-    where,
-    limit: "100",
-    order_by: "start_date",
-  });
-  const url = `${baseUrl}?${params.toString()}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    console.error("Erreur API vacances scolaires", res.status, res.statusText);
-    return [];
-  }
-  const data = await res.json();
-  return data.results || [];
-}
-
-function addSchoolHolidayEventsFromRecords(records, events) {
-  const tbody = document.querySelector("#schoolHolidaysTable tbody");
-  if (tbody) tbody.innerHTML = "";
-  const groups = new Map();
-  records.forEach((record) => {
-    const key = `${record.start_date}|${record.end_date}|${record.description}`;
-    if (!groups.has(key)) {
-      groups.set(key, {
-        startIso: record.start_date,
-        endIso: record.end_date,
-        description: record.description || "",
-        zones: record.zones || "",
-      });
-    }
-  });
-  if (tbody) {
-    Array.from(groups.values())
-      .sort((a, b) => new Date(a.startIso) - new Date(b.startIso))
-      .forEach((g) => {
-        const firstDayVacation = new Date(
-          g.startIso.substring(0, 10) + "T00:00:00"
-        );
-        firstDayVacation.setDate(firstDayVacation.getDate() + 1);
-        const lastDayVacation = new Date(
-          g.endIso.substring(0, 10) + "T00:00:00"
-        );
-        const repriseDate = new Date(lastDayVacation);
-        repriseDate.setDate(repriseDate.getDate() + 1);
-        const startStr =
-          formatDayMonth(firstDayVacation) +
-          "/" +
-          firstDayVacation.getFullYear();
-        const endStr =
-          formatDayMonth(repriseDate) + "/" + repriseDate.getFullYear();
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${g.description}</td><td>${startStr}</td><td>${endStr}</td><td>${g.zones}</td>`;
-        tbody.appendChild(tr);
-
-        let current = new Date(firstDayVacation);
-        while (current <= lastDayVacation) {
-          const isoDate = `${current.getFullYear()}-${String(
-            current.getMonth() + 1
-          ).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
-          events.push({
-            date: isoDate,
-            type: "VACANCES_SCOLAIRES",
-            duration: 1,
-          });
-          current.setDate(current.getDate() + 1);
-        }
-      });
-  }
-}
-
 /**
- * Marque les jours de vacances et recalcule les totaux pour Off Carole, Centre, Avis
+ * family-calendar.js
+ * Distinction congés / modes de garde + modif/suppression locales.
  */
-function reprocessEvents(weeks, events) {
-  // Reset all flags and totals
-  weeks.forEach((w) => {
-    w.isSchoolHolidayWeek = false;
-    Object.keys(w.dayFlags).forEach(
-      (dayKey) => (w.dayFlags[dayKey].schoolHoliday = false)
-    );
-    w.totals = { offCarole: 0, extraOffCarole: 0, centre: 0, avis: 0 };
-  });
+document.addEventListener("DOMContentLoaded", () => {
+  const CONGE_TYPES = ["OFF_CAROLE", "EXTRA_OFF_CAROLE"];
+  const GUARDE_TYPES = ["CENTRE", "AVIS"];
+  const MODIFIABLE_TYPES = [...CONGE_TYPES, ...GUARDE_TYPES];
 
-  // Apply each event to the corresponding week
-  events.forEach((evt) => {
-    const [y, m, d] = evt.date.split("-").map(Number);
-    const evtDate = new Date(y, m - 1, d);
+  class FamilyCalendar {
+    constructor() {
+      this.planningBody = document.getElementById("planningBody");
+      this.selectionMenu = document.getElementById("selectionMenu");
+      this.schoolHolidaysTableBody = document.querySelector(
+        "#schoolHolidaysTable tbody"
+      );
 
-    const week = weeks.find(
-      (w) => evtDate >= w.dayDates.mon && evtDate <= w.dayDates.fri
-    );
-    if (!week) return;
+      if (!this.planningBody || !this.selectionMenu) {
+        console.error("planningBody ou selectionMenu manquant");
+        return;
+      }
 
-    const dur = evt.duration || 1;
+      this.isSelecting = false;
+      this.selectedCells = [];
+      this.dbEvents = [];
+      this.fixedEvents = [];
+      this.events = [];
+      this.menuJustOpened = false;
 
-    switch (evt.type) {
-      case "VACANCES_SCOLAIRES":
+      this.init();
+      window.cal = this;
+    }
+
+    // ================== INIT ==================
+    async init() {
+      this.setupEventListeners();
+      this.weeks = this.generateWeeksStructure();
+
+      this.dbEvents = this.loadDbEvents();
+      this.fixedEvents = await this.fetchPublicAndSchoolHolidays();
+      this.events = [...this.dbEvents, ...this.fixedEvents];
+
+      this.reprocessAndRender();
+    }
+
+    loadDbEvents() {
+      if (typeof serverData !== "undefined" && Array.isArray(serverData)) {
+        return serverData.map((evt) => ({
+          id: evt.id,
+          date: evt.event_date,
+          type: evt.event_type,
+          duration: parseFloat(evt.duration),
+          person_id: evt.person_id,
+        }));
+      }
+      return [];
+    }
+
+    async fetchPublicAndSchoolHolidays() {
+      // 1. Jours fériés (fixes)
+      const publicHolidays = [
+        { date: "2025-11-01", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2025-11-11", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2025-12-25", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2026-01-01", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2026-04-06", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2026-05-01", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2026-05-08", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2026-05-14", type: "PUBLIC_HOLIDAY", duration: 1 },
+        { date: "2026-05-25", type: "PUBLIC_HOLIDAY", duration: 1 },
+      ].map((e, idx) => ({
+        id: `ph-${idx}`,
+        ...e,
+      }));
+
+      // 2. Vacances scolaires (API)
+      const schoolHolidayEvents = [];
+      let holidayRecords = [];
+
+      try {
+        const response = await fetch(
+          "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='2025-2026' AND zones LIKE '%Zone C%'&limit=100"
+        );
+        const schoolHolidaysData = await response.json();
+        holidayRecords = schoolHolidaysData.results || [];
+
+        holidayRecords.forEach((record, index) => {
+          let current = new Date(record.start_date);
+          let end = new Date(record.end_date);
+
+          while (current < end) {
+            const isoDate = `${current.getFullYear()}-${String(
+              current.getMonth() + 1
+            ).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`;
+
+            schoolHolidayEvents.push({
+              id: `sh-${isoDate}-${index}`,
+              date: isoDate,
+              type: "VACANCES_SCOLAIRES",
+              duration: 1,
+            });
+
+            current.setDate(current.getDate() + 1);
+          }
+        });
+
+        // Remplir le tableau HTML des vacances
+        this.renderSchoolHolidaysTable(holidayRecords);
+      } catch (error) {
+        console.error("Impossible de charger les vacances scolaires.", error);
+      }
+
+      // 3. Retourne tous les événements "fixes"
+      return [...publicHolidays, ...schoolHolidayEvents];
+    }
+
+    generateWeeksStructure() {
+      const weeks = [];
+      const start = new Date(2025, 8, 1); // 1er septembre 2025
+      const end = new Date(2026, 7, 31); // 31 août 2026
+      let current = new Date(start);
+
+      // Remonter au lundi le plus proche <= start
+      while (current.getDay() !== 1) current.setDate(current.getDate() - 1);
+
+      while (current <= end) {
+        const monday = new Date(current);
+
+        // C’est CETTE date qui doit servir de référence pour le mois
+        const weekMonthDate = monday;
+
+        const weekData = {
+          id: `${monday.getFullYear()}-W${getWeekOfYear(monday)}`,
+          monthKey: `${weekMonthDate.getFullYear()}-${String(
+            weekMonthDate.getMonth() + 1
+          ).padStart(2, "0")}`,
+          monthName: getMonthNameFr(weekMonthDate.getMonth()),
+          weekLabel: `W${getWeekOfYear(monday)}`,
+          dayDates: {},
+          dayFlags: {},
+        };
+
+        ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey, index) => {
+          const dayDate = new Date(monday);
+          dayDate.setDate(monday.getDate() + index);
+          weekData.dayDates[dayKey] = dayDate;
+          weekData.dayFlags[dayKey] = { eventsOnDay: [] };
+        });
+
+        weeks.push(weekData);
+        current.setDate(current.getDate() + 7);
+      }
+
+      // Juste pour verrouiller l’ordre si un jour tu modifies current ailleurs
+      weeks.sort((a, b) => a.dayDates.mon - b.dayDates.mon);
+
+      return weeks;
+    }
+
+    reprocessAndRender() {
+      this.reprocessEvents();
+      this.renderTable();
+      this.updateGlobalSummary();
+    }
+
+    reprocessEvents() {
+      this.weeks.forEach((w) => {
+        w.totals = { offCarole: 0, extraOffCarole: 0, centre: 0, avis: 0 };
+        Object.values(w.dayFlags).forEach((df) => (df.eventsOnDay = []));
+      });
+
+      this.events.forEach((evt) => {
+        const evtDate = new Date(evt.date + "T00:00:00");
+        const week = this.weeks.find(
+          (w) => evtDate >= w.dayDates.mon && evtDate <= w.dayDates.fri
+        );
+        if (!week) return;
+
         const dayKey = Object.keys(week.dayDates).find(
-          (key) => week.dayDates[key].toDateString() === evtDate.toDateString()
+          (k) => week.dayDates[k].toDateString() === evtDate.toDateString()
         );
         if (dayKey) {
-          week.dayFlags[dayKey].schoolHoliday = true;
-          week.isSchoolHolidayWeek = true;
+          week.dayFlags[dayKey].eventsOnDay.push(evt);
         }
-        break;
-      case "OFF_CAROLE":
-        week.totals.offCarole += dur;
-        break;
-      case "EXTRA_OFF_CAROLE":
-        week.totals.extraOffCarole += dur;
-        break;
-      case "CENTRE":
-        week.totals.centre += dur;
-        break;
-      case "AVIS":
-        week.totals.avis += dur;
-        break;
-      default:
-        break;
-    }
-  });
-}
 
-// === 4. Rendu et logique d'affichage ===
-
-function computeMonthSpans(weeks) {
-  const counts = {};
-  weeks.forEach((w) => {
-    counts[w.monthKey] = (counts[w.monthKey] || 0) + 1;
-  });
-  return counts;
-}
-const monthSpans = computeMonthSpans(weeks);
-
-function renderTable() {
-  const planningBody = document.getElementById("planningBody");
-  if (!planningBody) return;
-  planningBody.innerHTML = "";
-
-  const showOnlyCaroleOff =
-    document.getElementById("showOnlyCaroleOff")?.checked;
-  const showOnlySchoolHoliday = document.getElementById(
-    "showOnlySchoolHoliday"
-  )?.checked;
-  const monthRowRendered = {};
-
-  weeks.forEach((week) => {
-    if (showOnlyCaroleOff && week.totals.offCarole === 0) return;
-    if (showOnlySchoolHoliday && !week.isSchoolHolidayWeek) return;
-
-    const tr = document.createElement("tr");
-
-    if (!monthRowRendered[week.monthKey]) {
-      monthRowRendered[week.monthKey] = true;
-      const tdMonth = document.createElement("td");
-      tdMonth.rowSpan = monthSpans[week.monthKey] || 1;
-      tdMonth.textContent = week.monthName;
-      tr.appendChild(tdMonth);
-    }
-
-    const tdWeek = document.createElement("td");
-    tdWeek.textContent = week.weekLabel;
-    tr.appendChild(tdWeek);
-
-    ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey) => {
-      const td = document.createElement("td");
-      const dayDate = week.dayDates[dayKey];
-      const isoDate = `${dayDate.getFullYear()}-${String(
-        dayDate.getMonth() + 1
-      ).padStart(2, "0")}-${String(dayDate.getDate()).padStart(2, "0")}`;
-      td.dataset.date = isoDate; // IMPORTANT: on ajoute la date pour la retrouver
-      td.textContent = week.days[dayKey];
-      if (week.dayFlags[dayKey].schoolHoliday) {
-        td.classList.add("fc-day--school-holiday");
-      }
-      tr.appendChild(td);
-    });
-
-    const formatTotal = (total) =>
-      total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "";
-    tr.innerHTML += `
-      <td>${formatTotal(week.totals.offCarole)}</td>
-      <td>${formatTotal(week.totals.extraOffCarole)}</td>
-      <td>${formatTotal(week.totals.centre)}</td>
-      <td>${formatTotal(week.totals.avis)}</td>
-      <td>${formatTotal(week.alex.total)}</td>
-      <td>${week.alex.detail || ""}</td>
-      <td>${formatTotal(week.laia.total)}</td>
-      <td>${week.laia.detail || ""}</td>
-    `;
-
-    planningBody.appendChild(tr);
-  });
-  updateSummary();
-}
-
-function updateSummary() {
-  // ... (garder la fonction updateSummary telle quelle)
-}
-
-// === 5. Logique de sélection et menu contextuel ===
-
-function clearSelection() {
-  const menu = document.getElementById("selectionMenu");
-  if (menu) menu.style.display = "none";
-  selectedCells.forEach((cell) => cell.classList.remove("fc-day--selected"));
-  selectedCells = [];
-}
-
-function showSelectionMenu(e) {
-  const menu = document.getElementById("selectionMenu");
-  if (!menu) return;
-  menu.style.left = `${e.pageX + 5}px`;
-  menu.style.top = `${e.pageY + 5}px`;
-  menu.style.display = "block";
-}
-
-function applyEventTypeToSelection(eventType) {
-  if (selectedCells.length === 0) return;
-
-  selectedCells.forEach((cell) => {
-    const date = cell.dataset.date;
-    if (date) {
-      // Pour l'instant, on ajoute un événement par jour. On pourrait optimiser plus tard.
-      events.push({
-        date: date,
-        type: eventType,
-        duration: 1,
+        const dur = parseFloat(evt.duration) || 1;
+        switch (evt.type) {
+          case "OFF_CAROLE":
+            week.totals.offCarole += dur;
+            break;
+          case "EXTRA_OFF_CAROLE":
+            week.totals.extraOffCarole += dur;
+            break;
+          case "CENTRE":
+            week.totals.centre += dur;
+            break;
+          case "AVIS":
+            week.totals.avis += dur;
+            break;
+        }
       });
     }
-  });
 
-  reprocessEvents(weeks, events);
-  renderTable(); // Redessine la table avec les nouveaux totaux
-  clearSelection();
-}
+    updateGlobalSummary() {
+      const summaryDiv = document.getElementById("globalSummary");
+      if (!summaryDiv) return;
 
-// === 6. Init ===
+      // On filtre uniquement sur les événements "DB" pour le récap (pas les vacances/fériés)
+      const allEvents = this.dbEvents || [];
 
-async function initFamilyCalendar() {
-  if (!document.getElementById("planningBody")) return;
+      const totalOff = allEvents
+        .filter((e) => e.type === "OFF_CAROLE")
+        .reduce((sum, e) => sum + Number(e.duration || 1), 0);
 
-  // Écouteurs pour les soldes et filtres
-  [
-    "alexCpInit",
-    "alexRttInit",
-    "alexJaInit",
-    "laiaCpInit",
-    "laiaRttInit",
-    "laiaJaInit",
-  ].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("change", updateSummary);
-  });
-  ["showOnlyCaroleOff", "showOnlySchoolHoliday"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("change", renderTable);
-  });
+      const totalExtraOff = allEvents
+        .filter((e) => e.type === "EXTRA_OFF_CAROLE")
+        .reduce((sum, e) => sum + Number(e.duration || 1), 0);
 
-  // Écouteurs pour la sélection par cliquer-glisser
-  const planningBody = document.getElementById("planningBody");
-  planningBody.addEventListener("mousedown", (e) => {
-    if (e.target.tagName === "TD" && e.target.dataset.date) {
-      isSelecting = true;
-      clearSelection();
-      e.target.classList.add("fc-day--selected");
-      selectedCells.push(e.target);
+      summaryDiv.innerHTML = `
+    <p><strong>Off Carole :</strong> ${totalOff} jours</p>
+    <p><strong>Extra Off Carole :</strong> ${totalExtraOff} jours</p>
+  `;
+    }
+
+    renderSchoolHolidaysTable(holidayRecords) {
+      if (!this.schoolHolidaysTableBody) return;
+      this.schoolHolidaysTableBody.innerHTML = "";
+
+      const uniqueHolidays = new Map();
+      holidayRecords.forEach((r) =>
+        uniqueHolidays.set(`${r.start_date}|${r.end_date}`, r)
+      );
+
+      [...uniqueHolidays.values()]
+        .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+        .forEach((record) => {
+          const tr = document.createElement("tr");
+          const startDate = new Date(record.start_date);
+          const endDate = new Date(record.end_date);
+          tr.innerHTML = `
+            <td>${record.description}</td>
+            <td>${startDate.toLocaleDateString("fr-FR")}</td>
+            <td>${endDate.toLocaleDateString("fr-FR")}</td>
+            <td>${record.zones}</td>
+          `;
+          this.schoolHolidaysTableBody.appendChild(tr);
+        });
+    }
+
+    renderTable() {
+      this.planningBody.innerHTML = "";
+      const monthSpans = this.weeks.reduce(
+        (acc, w) => ({ ...acc, [w.monthKey]: (acc[w.monthKey] || 0) + 1 }),
+        {}
+      );
+      const monthRowRendered = {};
+      const formatTotal = (total) =>
+        total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "";
+
+      this.weeks.forEach((week) => {
+        const tr = document.createElement("tr");
+
+        if (!monthRowRendered[week.monthKey]) {
+          monthRowRendered[week.monthKey] = true;
+          const tdMonth = document.createElement("td");
+          tdMonth.rowSpan = monthSpans[week.monthKey] || 1;
+          tdMonth.textContent = week.monthName;
+          tr.appendChild(tdMonth);
+        }
+
+        const tdWeek = document.createElement("td");
+        tdWeek.textContent = week.weekLabel;
+        tr.appendChild(tdWeek);
+
+        ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey) => {
+          const td = document.createElement("td");
+          const dayDate = week.dayDates[dayKey];
+          td.dataset.date = `${dayDate.getFullYear()}-${String(
+            dayDate.getMonth() + 1
+          ).padStart(2, "0")}-${String(dayDate.getDate()).padStart(2, "0")}`;
+          td.textContent = `${String(dayDate.getDate()).padStart(
+            2,
+            "0"
+          )}/${String(dayDate.getMonth() + 1).padStart(2, "0")}`;
+
+          td.className = "";
+          let hasGarde = false;
+          let gardeType = null;
+
+          week.dayFlags[dayKey].eventsOnDay.forEach((evt) => {
+            const classMap = {
+              VACANCES_SCOLAIRES: "fc-day--school-holiday",
+              PUBLIC_HOLIDAY: "fc-day--public-holiday",
+              OFF_CAROLE: "fc-day--off-carole",
+              EXTRA_OFF_CAROLE: "fc-day--extra-off-carole",
+            };
+
+            if (classMap[evt.type]) {
+              td.classList.add(classMap[evt.type]);
+            }
+
+            if (GUARDE_TYPES.includes(evt.type)) {
+              hasGarde = true;
+              gardeType = evt.type;
+            }
+          });
+
+          if (hasGarde) {
+            td.classList.add("fc-day--has-guard");
+            if (gardeType === "CENTRE") td.classList.add("fc-day--centre");
+            if (gardeType === "AVIS") td.classList.add("fc-day--avis");
+          }
+
+          tr.appendChild(td);
+        });
+
+        const tdOff = document.createElement("td");
+        tdOff.textContent = formatTotal(week.totals.offCarole);
+        tr.appendChild(tdOff);
+
+        const tdExtra = document.createElement("td");
+        tdExtra.textContent = formatTotal(week.totals.extraOffCarole);
+        tr.appendChild(tdExtra);
+
+        const tdCentre = document.createElement("td");
+        tdCentre.textContent = formatTotal(week.totals.centre);
+        tr.appendChild(tdCentre);
+
+        const tdAvis = document.createElement("td");
+        tdAvis.textContent = formatTotal(week.totals.avis);
+        tr.appendChild(tdAvis);
+
+        this.planningBody.appendChild(tr);
+      });
+    }
+
+    // ================== INTERACTIONS ==================
+    setupEventListeners() {
+      this.planningBody.addEventListener("mousedown", (e) =>
+        this.handleMouseDown(e)
+      );
+      document.addEventListener("mousemove", (e) => this.handleMouseMove(e));
+      document.addEventListener("mouseup", (e) => this.handleMouseUp(e));
+      document.addEventListener(
+        "click",
+        (e) => this.handleClickOutsideMenu(e),
+        true
+      );
+      this.selectionMenu.addEventListener("click", (e) =>
+        this.handleMenuClick(e)
+      );
+    }
+
+    handleMouseDown(e) {
+      const cell = e.target.closest("td[data-date]");
+      if (!cell) return;
       e.preventDefault();
-    }
-  });
+      this.clearSelection();
 
-  planningBody.addEventListener("mousemove", (e) => {
-    if (isSelecting && e.target.tagName === "TD" && e.target.dataset.date) {
-      if (!selectedCells.includes(e.target)) {
-        e.target.classList.add("fc-day--selected");
-        selectedCells.push(e.target);
+      this.isSelecting = true;
+      cell.classList.add("fc-day--selected");
+      this.selectedCells.push(cell);
+    }
+
+    handleMouseMove(e) {
+      if (!this.isSelecting) return;
+      const cell = e.target.closest("td[data-date]");
+      if (cell && !this.selectedCells.includes(cell)) {
+        cell.classList.add("fc-day--selected");
+        this.selectedCells.push(cell);
       }
     }
-  });
 
-  document.addEventListener("mouseup", (e) => {
-    if (isSelecting) {
-      isSelecting = false;
-      if (selectedCells.length > 0) {
-        showSelectionMenu(e);
+    handleMouseUp(e) {
+      if (!this.isSelecting) return;
+      this.isSelecting = false;
+      if (this.selectedCells.length === 0) return;
+
+      if (this.selectedCells.length === 1) {
+        const date = this.selectedCells[0].dataset.date;
+        const eventsOnDay = this.events.filter(
+          (evt) => evt.date === date && MODIFIABLE_TYPES.includes(evt.type)
+        );
+        const conge = eventsOnDay.find((e) => CONGE_TYPES.includes(e.type));
+        const garde = eventsOnDay.find((e) => GUARDE_TYPES.includes(e.type));
+
+        if (!conge && !garde) {
+          this.showAddMenu(e);
+        } else {
+          this.showEditMenuForDay(e, { conge, garde, date });
+        }
+      } else {
+        // Multi-jours : on reste en mode ajout, avec contrôles plus tard
+        this.showAddMenu(e);
       }
     }
-  });
 
-  // Écouteur pour les clics hors du menu pour le fermer
-  document.addEventListener("click", (e) => {
-    const menu = document.getElementById("selectionMenu");
-    if (menu && !menu.contains(e.target) && selectedCells.length > 0) {
-      // Si on clique hors du menu APRES une sélection, on la nettoie
-      if (menu.style.display === "block") {
-        clearSelection();
+    handleClickOutsideMenu(e) {
+      if (this.menuJustOpened) {
+        this.menuJustOpened = false;
+        return;
+      }
+      if (
+        this.selectionMenu.style.display === "block" &&
+        !this.selectionMenu.contains(e.target)
+      ) {
+        this.clearSelection();
       }
     }
-  });
 
-  // Écouteur pour les boutons du menu
-  const menu = document.getElementById("selectionMenu");
-  if (menu) {
-    menu.addEventListener("click", (e) => {
-      if (e.target.tagName === "BUTTON" && e.target.dataset.type) {
-        const eventType = e.target.dataset.type;
-        applyEventTypeToSelection(eventType);
+    clearSelection() {
+      this.selectionMenu.style.display = "none";
+      this.selectedCells.forEach((cell) =>
+        cell.classList.remove("fc-day--selected")
+      );
+      this.selectedCells = [];
+    }
+
+    showAddMenu(e) {
+      this.selectionMenu.innerHTML = `
+        <div class="fc-menu-section"><strong>Ajouter</strong></div>
+        <button data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off Carole</button>
+        <button data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra Off Carole</button>
+        <div class="fc-menu-section"><strong>Mode de Garde</strong></div>
+        <button data-action="add" data-type="CENTRE">Centre</button>
+        <button data-action="add" data-type="AVIS">Avis</button>
+      `;
+      this.positionAndShowMenu(e);
+    }
+
+    showEditMenuForDay(e, { conge, garde, date }) {
+      console.log(
+        "[EDIT MENU] pour date",
+        date,
+        "conge =",
+        conge,
+        "garde =",
+        garde
+      );
+      let congeSection = "";
+      if (conge) {
+        const oppositeConge =
+          conge.type === "OFF_CAROLE" ? "EXTRA_OFF_CAROLE" : "OFF_CAROLE";
+        congeSection = `
+          <div class="fc-menu-section"><strong>Congé Carole</strong></div>
+          <button data-action="update" data-event-id="${
+            conge.id
+          }" data-new-type="${oppositeConge}">
+            Remplacer par ${oppositeConge.replace(/_/g, " ")}
+          </button>
+          <button data-action="delete" data-event-id="${conge.id}">
+            Supprimer le congé
+          </button>
+        `;
+      } else {
+        congeSection = `
+          <div class="fc-menu-section"><strong>Ajouter un congé</strong></div>
+          <button data-action="add-single" data-type="OFF_CAROLE" data-date="${date}" data-person="Carole">
+            Off Carole
+          </button>
+          <button data-action="add-single" data-type="EXTRA_OFF_CAROLE" data-date="${date}" data-person="Carole">
+            Extra Off Carole
+          </button>
+        `;
       }
-    });
+
+      let gardeSection = "";
+      if (garde) {
+        const oppositeGarde = garde.type === "CENTRE" ? "AVIS" : "CENTRE";
+        gardeSection = `
+          <div class="fc-menu-section"><strong>Mode de garde</strong></div>
+          <button data-action="update" data-event-id="${garde.id}" data-new-type="${oppositeGarde}">
+            Remplacer par ${oppositeGarde}
+          </button>
+          <button data-action="delete" data-event-id="${garde.id}">
+            Supprimer le mode de garde
+          </button>
+        `;
+      } else {
+        gardeSection = `
+          <div class="fc-menu-section"><strong>Ajouter mode de garde</strong></div>
+          <button data-action="add-single" data-type="CENTRE" data-date="${date}">
+            Centre
+          </button>
+          <button data-action="add-single" data-type="AVIS" data-date="${date}">
+            Avis
+          </button>
+        `;
+      }
+
+      this.selectionMenu.innerHTML = congeSection + gardeSection;
+      this.positionAndShowMenu(e);
+    }
+
+    positionAndShowMenu(e) {
+      this.selectionMenu.style.display = "block";
+      this.selectionMenu.style.left = `${e.pageX + 5}px`;
+      this.selectionMenu.style.top = `${e.pageY + 5}px`;
+      this.menuJustOpened = true;
+    }
+
+    async handleMenuClick(e) {
+      const button = e.target.closest("button[data-action]");
+      if (!button) return;
+
+      const { action, eventId, newType, type, person, date } = button.dataset;
+
+      // === AJOUT MULTI-JOURS (sélection de plusieurs cellules) ===
+      if (action === "add") {
+        const selectedDates = this.selectedCells.map((c) => c.dataset.date);
+        const existingOnDates = this.dbEvents.filter((evt) =>
+          selectedDates.includes(evt.date)
+        );
+
+        // Contrôles métier : pas de double congé / pas de double mode de garde
+        if (CONGE_TYPES.includes(type)) {
+          const hasCongeConflict = existingOnDates.some((evt) =>
+            CONGE_TYPES.includes(evt.type)
+          );
+          if (hasCongeConflict) {
+            alert(
+              "Impossible d'ajouter un congé : au moins une date a déjà un congé (Off/Extra Off)."
+            );
+            this.clearSelection();
+            return;
+          }
+        } else if (GUARDE_TYPES.includes(type)) {
+          const hasGardeConflict = existingOnDates.some((evt) =>
+            GUARDE_TYPES.includes(evt.type)
+          );
+          if (hasGardeConflict) {
+            alert(
+              "Impossible d'ajouter un mode de garde : au moins une date a déjà Centre/Avis."
+            );
+            this.clearSelection();
+            return;
+          }
+        }
+
+        const newEvents = this.selectedCells.map((cell) => ({
+          date: cell.dataset.date,
+          type,
+          person,
+          duration: 1.0,
+        }));
+
+        this.clearSelection();
+
+        try {
+          const response = await fetch("/api/save-events.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newEvents),
+          });
+          if (!response.ok) {
+            throw new Error("Erreur HTTP " + response.status);
+          }
+
+          // Resync DB events
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+        } catch (err) {
+          console.error(err);
+          alert("Erreur lors de l'ajout.");
+        }
+
+        return;
+      }
+
+      // === AJOUT SUR UNE SEULE DATE (menu combiné d'un jour) ===
+      if (action === "add-single") {
+        const targetDate = date;
+        const existingOnDate = this.dbEvents.filter(
+          (evt) => evt.date === targetDate
+        );
+
+        if (CONGE_TYPES.includes(type)) {
+          const hasCongeConflict = existingOnDate.some((evt) =>
+            CONGE_TYPES.includes(evt.type)
+          );
+          if (hasCongeConflict) {
+            alert("Un congé existe déjà ce jour-là.");
+            this.clearSelection();
+            return;
+          }
+        } else if (GUARDE_TYPES.includes(type)) {
+          const hasGardeConflict = existingOnDate.some((evt) =>
+            GUARDE_TYPES.includes(evt.type)
+          );
+          if (hasGardeConflict) {
+            alert("Un mode de garde existe déjà ce jour-là.");
+            this.clearSelection();
+            return;
+          }
+        }
+
+        const newEvent = {
+          date: targetDate,
+          type,
+          person,
+          duration: 1.0,
+        };
+
+        this.clearSelection();
+
+        try {
+          const response = await fetch("/api/save-events.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify([newEvent]),
+          });
+          if (!response.ok) {
+            throw new Error("Erreur HTTP " + response.status);
+          }
+
+          // Resync DB events
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+        } catch (err) {
+          console.error(err);
+          alert("Erreur lors de l'ajout.");
+        }
+
+        return;
+      }
+
+      // === SUPPRESSION ===
+      if (action === "delete") {
+        if (!eventId) {
+          console.warn("Bouton delete sans eventId, action ignorée.");
+          this.clearSelection();
+          return;
+        }
+
+        this.clearSelection();
+
+        try {
+          const response = await fetch("/api/manage-event.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete", event_id: eventId }),
+          });
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(
+              errData.message || "Erreur HTTP " + response.status
+            );
+          }
+
+          // Resync DB events
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+        } catch (err) {
+          console.error(err);
+          alert("Erreur lors de la suppression : " + err.message);
+        }
+
+        return;
+      }
+
+      // === MODIFICATION (change OFF <-> EXTRA ou CENTRE <-> AVIS) ===
+      if (action === "update") {
+        console.log("[UPDATE] click sur bouton update", { eventId, newType });
+
+        if (!eventId) {
+          console.warn("Bouton update sans eventId, action ignorée.");
+          this.clearSelection();
+          return;
+        }
+
+        this.clearSelection();
+
+        try {
+          const response = await fetch("/api/manage-event.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "update",
+              event_id: eventId,
+              new_type: newType,
+            }),
+          });
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(
+              errData.message || "Erreur HTTP " + response.status
+            );
+          }
+
+          // Resync DB events
+          const resEvents = await fetch("/api/get-events.php");
+          if (!resEvents.ok) {
+            throw new Error("Erreur lors du rechargement des événements.");
+          }
+          const dataEvents = await resEvents.json();
+
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+        } catch (err) {
+          console.error("[UPDATE] Erreur lors de la modification :", err);
+          alert("Erreur lors de la modification : " + err.message);
+        }
+
+        return;
+      }
+    }
+
+    async manageEvent(payload) {
+      try {
+        const response = await fetch("/api/manage-event.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.message || "Erreur HTTP " + response.status);
+        }
+
+        const resEvents = await fetch("/api/get-events.php");
+        if (!resEvents.ok) {
+          throw new Error("Erreur lors du rechargement des événements.");
+        }
+        const dataEvents = await resEvents.json();
+
+        this.dbEvents = dataEvents.events || [];
+        this.events = [...this.dbEvents, ...this.fixedEvents];
+
+        this.reprocessAndRender();
+      } catch (error) {
+        console.error("Erreur manageEvent :", error);
+        alert("Erreur: " + error.message);
+      }
+    }
   }
 
-  // Initialisation des données
-  const holidaysRecords = await fetchSchoolHolidays("2025-2026", "Zone C");
-  addSchoolHolidayEventsFromRecords(holidaysRecords, events);
-  reprocessEvents(weeks, events); // Appliquer aussi les vacances aux totaux si besoin (ici juste la couleur)
-  renderTable();
-}
+  function getWeekOfYear(date) {
+    const d = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  }
 
-document.addEventListener("DOMContentLoaded", () => {
-  initFamilyCalendar().catch((err) => console.error(err));
+  function getMonthNameFr(monthIndex) {
+    return (
+      [
+        "Janvier",
+        "Fevrier",
+        "Mars",
+        "Avril",
+        "Mai",
+        "Juin",
+        "Juillet",
+        "Aout",
+        "Septembre",
+        "Octobre",
+        "Novembre",
+        "Decembre",
+      ][monthIndex] || ""
+    );
+  }
+
+  new FamilyCalendar();
 });
