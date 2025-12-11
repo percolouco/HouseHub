@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       this.currentMonth = new Date();
       this.currentMonth.setDate(1); // Premier jour du mois
+      this.viewMode = "1month"; // "1month", "2months", "year"
 
       if (!this.planningBody || !this.selectionMenu) {
         console.error("planningBody ou selectionMenu manquant");
@@ -385,6 +386,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (nextBtn) {
         nextBtn.addEventListener("click", () => this.navigateMonth(1));
       }
+
+      // Boutons de changement de vue
+      const viewButtons = document.querySelectorAll(".fc-view-button");
+      viewButtons.forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const view = e.target.dataset.view;
+          this.setViewMode(view);
+        });
+      });
     }
 
     handleMouseDown(e) {
@@ -805,24 +815,105 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ================== CALENDRIER MENSUEL ==================
+    setViewMode(mode) {
+      this.viewMode = mode;
+      // Mettre à jour les boutons actifs
+      document.querySelectorAll(".fc-view-button").forEach((btn) => {
+        btn.classList.remove("fc-view-button--active");
+        if (btn.dataset.view === mode) {
+          btn.classList.add("fc-view-button--active");
+        }
+      });
+      this.renderMonthCalendar();
+    }
+
     navigateMonth(direction) {
-      this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+      if (this.viewMode === "year") {
+        this.currentMonth.setFullYear(
+          this.currentMonth.getFullYear() + direction
+        );
+      } else if (this.viewMode === "2months") {
+        this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+      } else {
+        this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+      }
       this.renderMonthCalendar();
     }
 
     renderMonthCalendar() {
       if (!this.monthCalendar) return;
 
-      const year = this.currentMonth.getFullYear();
-      const month = this.currentMonth.getMonth();
-      const monthName = getMonthNameFr(month);
-
-      // Mettre à jour le titre
+      // Mettre à jour le titre selon le mode
       const monthTitle = document.getElementById("fc-current-month-year");
       if (monthTitle) {
-        monthTitle.textContent = `${monthName} ${year}`;
+        const year = this.currentMonth.getFullYear();
+        if (this.viewMode === "year") {
+          monthTitle.textContent = year;
+        } else if (this.viewMode === "2months") {
+          const month = this.currentMonth.getMonth();
+          const monthName = getMonthNameFr(month);
+          const nextMonth = new Date(year, month + 1, 1);
+          const nextMonthName = getMonthNameFr(nextMonth.getMonth());
+          monthTitle.textContent = `${monthName} - ${nextMonthName} ${year}`;
+        } else {
+          const month = this.currentMonth.getMonth();
+          const monthName = getMonthNameFr(month);
+          monthTitle.textContent = `${monthName} ${year}`;
+        }
       }
 
+      // Appeler la fonction appropriée selon le mode
+      if (this.viewMode === "year") {
+        this.renderYearView();
+      } else if (this.viewMode === "2months") {
+        this.renderTwoMonthsView();
+      } else {
+        this.renderSingleMonthView();
+      }
+    }
+
+    renderSingleMonthView() {
+      const year = this.currentMonth.getFullYear();
+      const month = this.currentMonth.getMonth();
+      this.monthCalendar.innerHTML = this.generateMonthHTML(year, month);
+    }
+
+    renderTwoMonthsView() {
+      const year = this.currentMonth.getFullYear();
+      const month = this.currentMonth.getMonth();
+      const nextMonth = month + 1;
+      const nextYear = nextMonth > 11 ? year + 1 : year;
+      const nextMonthIndex = nextMonth > 11 ? 0 : nextMonth;
+
+      let html = '<div class="fc-two-months-container">';
+      html += `<div class="fc-month-container">${this.generateMonthHTML(
+        year,
+        month
+      )}</div>`;
+      html += `<div class="fc-month-container">${this.generateMonthHTML(
+        nextYear,
+        nextMonthIndex
+      )}</div>`;
+      html += "</div>";
+      this.monthCalendar.innerHTML = html;
+    }
+
+    renderYearView() {
+      const year = this.currentMonth.getFullYear();
+      let html = '<div class="fc-year-container">';
+      for (let month = 0; month < 12; month++) {
+        html += `<div class="fc-year-month">`;
+        html += `<div class="fc-year-month-title">${getMonthNameFr(
+          month
+        )}</div>`;
+        html += this.generateMonthHTML(year, month);
+        html += `</div>`;
+      }
+      html += "</div>";
+      this.monthCalendar.innerHTML = html;
+    }
+
+    generateMonthHTML(year, month) {
       // Premier jour du mois et dernier jour
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
@@ -908,7 +999,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       html += "</tr></tbody></table>";
 
-      this.monthCalendar.innerHTML = html;
+      return html;
     }
 
     handleMonthMouseDown(e) {

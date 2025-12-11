@@ -97,9 +97,16 @@ require __DIR__ . '/header.php';
   <h2>Calendrier mensuel</h2>
   <div class="fc-month-calendar-wrapper">
     <div class="fc-month-header">
-      <button id="fc-prev-month" class="fc-nav-button">‹</button>
-      <h3 id="fc-current-month-year"></h3>
-      <button id="fc-next-month" class="fc-nav-button">›</button>
+      <div class="fc-view-controls">
+        <button id="fc-view-1month" class="fc-view-button fc-view-button--active" data-view="1month">1 mois</button>
+        <button id="fc-view-2months" class="fc-view-button" data-view="2months">2 mois</button>
+        <button id="fc-view-year" class="fc-view-button" data-view="year">Année</button>
+      </div>
+      <div class="fc-nav-controls">
+        <button id="fc-prev-month" class="fc-nav-button">‹</button>
+        <h3 id="fc-current-month-year"></h3>
+        <button id="fc-next-month" class="fc-nav-button">›</button>
+      </div>
     </div>
     <div id="fc-month-calendar" class="fc-month-calendar">
       <!-- Le calendrier mensuel sera généré par JavaScript -->
