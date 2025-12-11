@@ -382,6 +382,46 @@ input[type="number"] {
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 2px solid #d9e2ec;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.fc-view-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.fc-view-button {
+  background: #f0f4f8;
+  border: 1px solid #d9e2ec;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #243b53;
+  transition: all 0.2s;
+}
+
+.fc-view-button:hover {
+  background: #d9e2ec;
+  border-color: #bcccdc;
+}
+
+.fc-view-button--active {
+  background: #243b53;
+  color: #fff;
+  border-color: #243b53;
+}
+
+.fc-view-button--active:hover {
+  background: #102a43;
+  border-color: #102a43;
+}
+
+.fc-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .fc-month-header h3 {
@@ -389,6 +429,8 @@ input[type="number"] {
   font-size: 18px;
   font-weight: 600;
   color: #243b53;
+  min-width: 200px;
+  text-align: center;
 }
 
 .fc-nav-button {
@@ -504,4 +546,84 @@ input[type="number"] {
 .fc-month-table .fc-day--selected {
   background-color: #bde4ff !important;
   cursor: pointer;
+}
+
+/* === VUE 2 MOIS === */
+.fc-two-months-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.fc-month-container {
+  width: 100%;
+}
+
+/* === VUE ANNÉE === */
+.fc-year-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.fc-year-month {
+  background: #f8fafc;
+  border: 1px solid #d9e2ec;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.fc-year-month-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #243b53;
+  margin-bottom: 8px;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.fc-year-month .fc-month-table {
+  font-size: 11px;
+}
+
+.fc-year-month .fc-month-table thead th {
+  padding: 4px 2px;
+  font-size: 10px;
+}
+
+.fc-year-month .fc-month-table tbody td {
+  padding: 4px 2px;
+  height: 32px;
+  font-size: 11px;
+}
+
+/* Responsive pour la vue année */
+@media (max-width: 1200px) {
+  .fc-year-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .fc-two-months-container {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-year-container {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-month-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fc-view-controls {
+    justify-content: center;
+  }
+
+  .fc-nav-controls {
+    justify-content: center;
+  }
 }
