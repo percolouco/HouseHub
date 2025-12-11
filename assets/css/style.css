@@ -375,6 +375,13 @@ input[type="number"] {
   border: 1px solid #d9e2ec;
 }
 
+.fc-calendar-and-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: start;
+}
+
 .fc-month-header {
   display: flex;
   align-items: center;
@@ -546,6 +553,69 @@ input[type="number"] {
 .fc-month-table .fc-day--selected {
   background-color: #bde4ff !important;
   cursor: pointer;
+}
+
+/* === TABLEAU RÉCAPITULATIF === */
+.fc-month-summary {
+  min-width: 300px;
+}
+
+.fc-summary-table-wrapper {
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #d9e2ec;
+}
+
+.fc-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.fc-summary-table thead th {
+  background: #f0f4f8;
+  padding: 8px 6px;
+  text-align: center;
+  font-weight: 600;
+  color: #243b53;
+  border: 1px solid #d9e2ec;
+  white-space: nowrap;
+}
+
+.fc-summary-table tbody td {
+  border: 1px solid #d9e2ec;
+  padding: 6px 8px;
+  text-align: center;
+  background: #fff;
+}
+
+.fc-summary-table tbody td:first-child {
+  text-align: left;
+  font-weight: 500;
+  color: #243b53;
+}
+
+.fc-summary-total-row {
+  background: #f0f4f8 !important;
+  border-top: 2px solid #243b53;
+}
+
+.fc-summary-total-row td {
+  background: #f0f4f8 !important;
+  font-weight: 600;
+  color: #243b53;
+}
+
+/* Responsive pour le calendrier et le récapitulatif */
+@media (max-width: 1200px) {
+  .fc-calendar-and-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-month-summary {
+    min-width: 100%;
+  }
 }
 
 /* === VUE 2 MOIS === */
