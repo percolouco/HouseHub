@@ -18,7 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
       this.monthSelectionMenu = document.getElementById(
         "fc-month-selectionMenu"
       );
+      // Initialiser avec septembre (mois 8, car 0-indexé) pour l'année scolaire
       this.currentMonth = new Date();
+      const currentMonthIndex = this.currentMonth.getMonth();
+      // Si on est avant septembre, on affiche l'année scolaire précédente
+      if (currentMonthIndex < 8) {
+        this.currentMonth.setFullYear(this.currentMonth.getFullYear() - 1);
+      }
+      this.currentMonth.setMonth(8); // Septembre
       this.currentMonth.setDate(1); // Premier jour du mois
       this.viewMode = "1month"; // "1month", "2months", "year"
 
@@ -829,15 +836,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
     navigateMonth(direction) {
       if (this.viewMode === "year") {
+        // Navigation par année scolaire (septembre à août)
         this.currentMonth.setFullYear(
           this.currentMonth.getFullYear() + direction
         );
       } else if (this.viewMode === "2months") {
         this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+        // S'assurer qu'on reste dans une année scolaire valide
+        this.adjustToSchoolYear();
       } else {
         this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+        // S'assurer qu'on reste dans une année scolaire valide
+        this.adjustToSchoolYear();
       }
       this.renderMonthCalendar();
+    }
+
+    adjustToSchoolYear() {
+      const month = this.currentMonth.getMonth();
+      const year = this.currentMonth.getFullYear();
+      // Si on dépasse août (mois 7), on passe à septembre de l'année suivante
+      if (month > 7) {
+        this.currentMonth.setFullYear(year + 1);
+        this.currentMonth.setMonth(8); // Septembre
+      }
+      // Si on est avant septembre (mois 8), on reste dans l'année scolaire
+      // mais on pourrait vouloir revenir à septembre de l'année en cours
+      if (month < 8) {
+        // On garde l'année mais on pourrait vouloir ajuster
+        // Pour l'instant, on laisse comme ça car ça peut être août de l'année scolaire
+      }
     }
 
     renderMonthCalendar() {
@@ -848,17 +876,29 @@ document.addEventListener("DOMContentLoaded", () => {
       if (monthTitle) {
         const year = this.currentMonth.getFullYear();
         if (this.viewMode === "year") {
-          monthTitle.textContent = year;
+          // Afficher l'année scolaire (ex: 2025-2026)
+          monthTitle.textContent = `${year}-${year + 1}`;
         } else if (this.viewMode === "2months") {
           const month = this.currentMonth.getMonth();
           const monthName = getMonthNameFr(month);
           const nextMonth = new Date(year, month + 1, 1);
           const nextMonthName = getMonthNameFr(nextMonth.getMonth());
-          monthTitle.textContent = `${monthName} - ${nextMonthName} ${year}`;
+          // Ajuster l'année si on passe de décembre à janvier
+          const displayYear = month >= 8 ? year : year + 1;
+          monthTitle.textContent = `${monthName} - ${nextMonthName} ${displayYear}`;
         } else {
           const month = this.currentMonth.getMonth();
           const monthName = getMonthNameFr(month);
-          monthTitle.textContent = `${monthName} ${year}`;
+          // Afficher l'année scolaire si on est après août
+          if (month >= 8) {
+            monthTitle.textContent = `${monthName} ${year} (${year}-${
+              year + 1
+            })`;
+          } else {
+            monthTitle.textContent = `${monthName} ${year} (${
+              year - 1
+            }-${year})`;
+          }
         }
       }
 
@@ -886,14 +926,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const nextMonthIndex = nextMonth > 11 ? 0 : nextMonth;
 
       let html = '<div class="fc-two-months-container">';
-      html += `<div class="fc-month-container">${this.generateMonthHTML(
-        year,
-        month
-      )}</div>`;
-      html += `<div class="fc-month-container">${this.generateMonthHTML(
-        nextYear,
-        nextMonthIndex
-      )}</div>`;
+      html += `<div class="fc-month-container">`;
+      html += `<div class="fc-month-title">${getMonthNameFr(month)} ${
+        month >= 8 ? year : year + 1
+      }</div>`;
+      html += this.generateMonthHTML(year, month);
+      html += `</div>`;
+      html += `<div class="fc-month-container">`;
+      html += `<div class="fc-month-title">${getMonthNameFr(nextMonthIndex)} ${
+        nextMonthIndex >= 8 ? nextYear : nextYear + 1
+      }</div>`;
+      html += this.generateMonthHTML(nextYear, nextMonthIndex);
+      html += `</div>`;
       html += "</div>";
       this.monthCalendar.innerHTML = html;
     }
@@ -901,14 +945,25 @@ document.addEventListener("DOMContentLoaded", () => {
     renderYearView() {
       const year = this.currentMonth.getFullYear();
       let html = '<div class="fc-year-container">';
-      for (let month = 0; month < 12; month++) {
+      // Année scolaire : septembre (8) à août (7) de l'année suivante
+      const schoolYearMonths = [];
+      // Septembre à décembre de l'année en cours
+      for (let month = 8; month < 12; month++) {
+        schoolYearMonths.push({ year, month });
+      }
+      // Janvier à août de l'année suivante
+      for (let month = 0; month < 8; month++) {
+        schoolYearMonths.push({ year: year + 1, month });
+      }
+
+      schoolYearMonths.forEach(({ year: monthYear, month }) => {
         html += `<div class="fc-year-month">`;
         html += `<div class="fc-year-month-title">${getMonthNameFr(
           month
-        )}</div>`;
-        html += this.generateMonthHTML(year, month);
+        )} ${monthYear}</div>`;
+        html += this.generateMonthHTML(monthYear, month);
         html += `</div>`;
-      }
+      });
       html += "</div>";
       this.monthCalendar.innerHTML = html;
     }
@@ -918,11 +973,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
-      const startDayOfWeek =
+      // Calculer le premier lundi du mois (ou avant si le 1er n'est pas un lundi)
+      const firstDayOfWeek =
         firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Lundi = 0
+      const startDayOfWeek = firstDayOfWeek; // 0 = Lundi, 4 = Vendredi
 
-      // Noms des jours
-      const dayNames = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+      // Noms des jours (uniquement semaine : Lun-Ven)
+      const dayNames = ["Lun", "Mar", "Mer", "Jeu", "Ven"];
 
       let html = '<table class="fc-month-table"><thead><tr>';
       dayNames.forEach((day) => {
@@ -930,21 +987,31 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       html += "</tr></thead><tbody>";
 
-      // Jours du mois précédent (si nécessaire)
+      // Jours du mois précédent (si nécessaire) - seulement les jours de semaine
       let dayCount = 0;
       html += "<tr>";
-      for (let i = 0; i < startDayOfWeek; i++) {
+      // On ne remplit que jusqu'à vendredi (5 jours max)
+      const daysToFill = Math.min(startDayOfWeek, 5);
+      for (let i = 0; i < daysToFill; i++) {
         html += '<td class="fc-day--other-month"></td>';
         dayCount++;
       }
 
-      // Jours du mois actuel
+      // Jours du mois actuel (uniquement lundi à vendredi)
       for (let day = 1; day <= daysInMonth; day++) {
-        if (dayCount % 7 === 0 && day > 1) {
+        const date = new Date(year, month, day);
+        const dayOfWeek = date.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+
+        // Ignorer les samedi (6) et dimanche (0)
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          continue;
+        }
+
+        // Nouvelle ligne chaque lundi (quand dayCount est un multiple de 5)
+        if (dayCount > 0 && dayCount % 5 === 0) {
           html += "</tr><tr>";
         }
 
-        const date = new Date(year, month, day);
         const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
           day
         ).padStart(2, "0")}`;
@@ -980,19 +1047,13 @@ document.addEventListener("DOMContentLoaded", () => {
           if (gardeType === "AVIS") classes += " fc-day--avis";
         }
 
-        // Week-end
-        const dayOfWeek = date.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) {
-          classes += " fc-day--weekend";
-        }
-
         html += `<td class="${classes}" data-date="${isoDate}">${day}</td>`;
         dayCount++;
       }
 
-      // Jours du mois suivant (pour compléter la dernière ligne)
-      const remainingDays = 7 - (dayCount % 7);
-      if (remainingDays < 7) {
+      // Jours du mois suivant (pour compléter la dernière ligne) - seulement jusqu'à vendredi
+      const remainingDays = 5 - (dayCount % 5);
+      if (remainingDays < 5 && remainingDays > 0) {
         for (let i = 0; i < remainingDays; i++) {
           html += '<td class="fc-day--other-month"></td>';
         }
