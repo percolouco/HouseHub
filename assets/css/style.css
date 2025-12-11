@@ -83,6 +83,31 @@ body {
 }
 
 /* === CARDS & FLEX === */
+
+.pf-card.pf-card--wide {
+  min-width: 400px; /* tu peux monter à 500 ou 600 selon ton goût */
+  flex: 1 1 400px; /* laisse la carte prendre plus de place dans la ligne */
+}
+/* Le tableau des vacances occupe toute la largeur disponible */
+#schoolHolidaysTable {
+  width: auto;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+.pf-card.pf-card--wide .pf-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+/* En-têtes et cellules sans retour à la ligne */
+#schoolHolidaysTable th,
+#schoolHolidaysTable td {
+  white-space: nowrap; /* pas de retour à la ligne dans les cellules */
+  overflow: visible; /* pas de tronquage */
+  padding: 4px 8px;
+  text-align: center;
+}
+
 .pf-flex {
   display: flex;
 }
@@ -121,6 +146,59 @@ label {
 }
 
 /* === TABLES === */
+
+/* Appliquer un layout fixe pour harmoniser la largeur des colonnes */
+#planningTable {
+  table-layout: fixed;
+  width: 100%; /* le tableau prend toute la largeur disponible */
+}
+
+/* Colonnes : texte centré et césures possibles */
+#planningTable th,
+#planningTable td {
+  text-align: center;
+  white-space: nowrap; /* évite les retours à la ligne sauvages */
+  overflow: hidden;
+  text-overflow: ellipsis; /* coupe avec "..." si le texte déborde */
+}
+
+/* Colonnes "Mois" et "Semaine" un peu plus étroites */
+#planningTable th:nth-child(1),
+#planningTable td:nth-child(1) {
+  width: 2%; /* Mois */
+}
+
+#planningTable th:nth-child(2),
+#planningTable td:nth-child(2) {
+  width: 2%; /* Semaine */
+}
+
+/* Colonnes jours (Lundi à Vendredi) réparties sur une largeur raisonnable */
+#planningTable th:nth-child(3),
+#planningTable td:nth-child(3),
+#planningTable th:nth-child(4),
+#planningTable td:nth-child(4),
+#planningTable th:nth-child(5),
+#planningTable td:nth-child(5),
+#planningTable th:nth-child(6),
+#planningTable td:nth-child(6),
+#planningTable th:nth-child(7),
+#planningTable td:nth-child(7) {
+  width: 2%; /* ajustable selon ton rendu */
+}
+
+/* Colonnes de totaux (Off / Extra / Centre / Avis) un peu plus compactes */
+#planningTable th:nth-child(8),
+#planningTable td:nth-child(8),
+#planningTable th:nth-child(9),
+#planningTable td:nth-child(9),
+#planningTable th:nth-child(10),
+#planningTable td:nth-child(10),
+#planningTable th:nth-child(11),
+#planningTable td:nth-child(11) {
+  width: 4%;
+}
+
 .pf-table-wrapper {
   max-height: 600px;
   overflow: auto;
@@ -164,11 +242,6 @@ input[type="number"] {
 /* === COLOR CODING POUR LE FAMILY CALENDAR === */
 .fc-row--carole-off {
   background: #ffe0e0;
-}
-
-/* Jour de vacances scolaires dans le calendrier */
-.fc-day--school-holiday {
-  background-color: #fff5cc; /* choisis le jaune qui te convient */
 }
 
 .fc-row--bank-holiday {
@@ -241,4 +314,54 @@ input[type="number"] {
 .fc-selection-menu button:hover {
   background-color: #f0f4f8;
   border-color: #b0c4de;
+}
+
+/* --- Couleurs de base pour la légende et les jours --- */
+.fc-day--school-holiday {
+  background-color: #e5d9f2;
+}
+.fc-day--public-holiday {
+  background-color: #e0e0e0;
+}
+.fc-day--off-carole {
+  background-color: #ffe9a7;
+}
+.fc-day--extra-off-carole {
+  background-color: #ffd59b;
+}
+.fc-day--has-guard {
+  box-sizing: border-box;
+}
+
+/* Bordure verte pour Centre */
+.fc-day--has-guard.fc-day--centre {
+  border: 2px solid #4caf50;
+}
+/* Bordure bleue pour Avis */
+.fc-day--has-guard.fc-day--avis {
+  border: 2px solid #2196f3;
+}
+
+/* --- Combinaisons avec dégradés --- */
+/* Combinaison Vacances + Off Carole */
+.fc-day--school-holiday.fc-day--off-carole {
+  background-image: linear-gradient(45deg, #e5d9f2 49%, #ffe9a7 51%);
+}
+/* Combinaison Vacances + Extra Off Carole */
+.fc-day--school-holiday.fc-day--extra-off-carole {
+  background-image: linear-gradient(45deg, #e5d9f2 49%, #ffd59b 51%);
+}
+
+/* Eléments pour la légende */
+.pf-legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.pf-legend-color {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #ccc;
+  margin-right: 10px;
+  flex-shrink: 0;
 }
