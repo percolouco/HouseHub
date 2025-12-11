@@ -910,12 +910,200 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         this.renderSingleMonthView();
       }
+
+      // Afficher le tableau récapitulatif
+      this.renderMonthSummary();
     }
 
     renderSingleMonthView() {
       const year = this.currentMonth.getFullYear();
       const month = this.currentMonth.getMonth();
       this.monthCalendar.innerHTML = this.generateMonthHTML(year, month);
+    }
+
+    calculateMonthTotals(year, month) {
+      // Calculer le premier et dernier jour du mois (uniquement jours de semaine)
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const totals = {
+        offCarole: 0,
+        extraOffCarole: 0,
+        centre: 0,
+        avis: 0,
+      };
+
+      // Parcourir tous les jours du mois
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const date = new Date(year, month, day);
+        const dayOfWeek = date.getDay();
+
+        // Ignorer les samedi (6) et dimanche (0)
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          continue;
+        }
+
+        const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+          day
+        ).padStart(2, "0")}`;
+
+        // Trouver les événements pour ce jour
+        const dayEvents = this.dbEvents.filter((evt) => evt.date === isoDate);
+
+        dayEvents.forEach((evt) => {
+          const dur = parseFloat(evt.duration) || 1;
+          switch (evt.type) {
+            case "OFF_CAROLE":
+              totals.offCarole += dur;
+              break;
+            case "EXTRA_OFF_CAROLE":
+              totals.extraOffCarole += dur;
+              break;
+            case "CENTRE":
+              totals.centre += dur;
+              break;
+            case "AVIS":
+              totals.avis += dur;
+              break;
+          }
+        });
+      }
+
+      return totals;
+    }
+
+    renderMonthSummary() {
+      const summaryDiv = document.getElementById("fc-month-summary");
+      if (!summaryDiv) return;
+
+      let html = '<div class="fc-summary-table-wrapper">';
+      html += '<table class="fc-summary-table">';
+      html += "<thead><tr>";
+      html += "<th>Mois</th>";
+      html += "<th># Off Carole</th>";
+      html += "<th># Extra off Carole</th>";
+      html += "<th># Centre</th>";
+      html += "<th># Avis</th>";
+      html += "</tr></thead><tbody>";
+
+      const formatTotal = (total) =>
+        total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "";
+
+      if (this.viewMode === "year") {
+        // Afficher tous les mois de l'année scolaire
+        const year = this.currentMonth.getFullYear();
+        const schoolYearMonths = [];
+        for (let month = 8; month < 12; month++) {
+          schoolYearMonths.push({ year, month });
+        }
+        for (let month = 0; month < 8; month++) {
+          schoolYearMonths.push({ year: year + 1, month });
+        }
+
+        schoolYearMonths.forEach(({ year: monthYear, month }) => {
+          const totals = this.calculateMonthTotals(monthYear, month);
+          html += "<tr>";
+          html += `<td>${getMonthNameFr(month)} ${monthYear}</td>`;
+          html += `<td>${formatTotal(totals.offCarole)}</td>`;
+          html += `<td>${formatTotal(totals.extraOffCarole)}</td>`;
+          html += `<td>${formatTotal(totals.centre)}</td>`;
+          html += `<td>${formatTotal(totals.avis)}</td>`;
+          html += "</tr>";
+        });
+
+        // Ligne de total
+        const yearTotals = schoolYearMonths.reduce(
+          (acc, { year: monthYear, month }) => {
+            const totals = this.calculateMonthTotals(monthYear, month);
+            acc.offCarole += totals.offCarole;
+            acc.extraOffCarole += totals.extraOffCarole;
+            acc.centre += totals.centre;
+            acc.avis += totals.avis;
+            return acc;
+          },
+          { offCarole: 0, extraOffCarole: 0, centre: 0, avis: 0 }
+        );
+        html += '<tr class="fc-summary-total-row">';
+        html += `<td><strong>Total ${year}-${year + 1}</strong></td>`;
+        html += `<td><strong>${formatTotal(
+          yearTotals.offCarole
+        )}</strong></td>`;
+        html += `<td><strong>${formatTotal(
+          yearTotals.extraOffCarole
+        )}</strong></td>`;
+        html += `<td><strong>${formatTotal(yearTotals.centre)}</strong></td>`;
+        html += `<td><strong>${formatTotal(yearTotals.avis)}</strong></td>`;
+        html += "</tr>";
+      } else if (this.viewMode === "2months") {
+        // Afficher les 2 mois
+        const year = this.currentMonth.getFullYear();
+        const month = this.currentMonth.getMonth();
+        const nextMonth = month + 1;
+        const nextYear = nextMonth > 11 ? year + 1 : year;
+        const nextMonthIndex = nextMonth > 11 ? 0 : nextMonth;
+
+        // Premier mois
+        const totals1 = this.calculateMonthTotals(year, month);
+        html += "<tr>";
+        html += `<td>${getMonthNameFr(month)} ${
+          month >= 8 ? year : year + 1
+        }</td>`;
+        html += `<td>${formatTotal(totals1.offCarole)}</td>`;
+        html += `<td>${formatTotal(totals1.extraOffCarole)}</td>`;
+        html += `<td>${formatTotal(totals1.centre)}</td>`;
+        html += `<td>${formatTotal(totals1.avis)}</td>`;
+        html += "</tr>";
+
+        // Deuxième mois
+        const totals2 = this.calculateMonthTotals(nextYear, nextMonthIndex);
+        html += "<tr>";
+        html += `<td>${getMonthNameFr(nextMonthIndex)} ${
+          nextMonthIndex >= 8 ? nextYear : nextYear + 1
+        }</td>`;
+        html += `<td>${formatTotal(totals2.offCarole)}</td>`;
+        html += `<td>${formatTotal(totals2.extraOffCarole)}</td>`;
+        html += `<td>${formatTotal(totals2.centre)}</td>`;
+        html += `<td>${formatTotal(totals2.avis)}</td>`;
+        html += "</tr>";
+
+        // Ligne de total
+        const combinedTotals = {
+          offCarole: totals1.offCarole + totals2.offCarole,
+          extraOffCarole: totals1.extraOffCarole + totals2.extraOffCarole,
+          centre: totals1.centre + totals2.centre,
+          avis: totals1.avis + totals2.avis,
+        };
+        html += '<tr class="fc-summary-total-row">';
+        html += "<td><strong>Total</strong></td>";
+        html += `<td><strong>${formatTotal(
+          combinedTotals.offCarole
+        )}</strong></td>`;
+        html += `<td><strong>${formatTotal(
+          combinedTotals.extraOffCarole
+        )}</strong></td>`;
+        html += `<td><strong>${formatTotal(
+          combinedTotals.centre
+        )}</strong></td>`;
+        html += `<td><strong>${formatTotal(combinedTotals.avis)}</strong></td>`;
+        html += "</tr>";
+      } else {
+        // Afficher 1 mois
+        const year = this.currentMonth.getFullYear();
+        const month = this.currentMonth.getMonth();
+        const totals = this.calculateMonthTotals(year, month);
+        html += "<tr>";
+        html += `<td>${getMonthNameFr(month)} ${
+          month >= 8 ? year : year + 1
+        }</td>`;
+        html += `<td>${formatTotal(totals.offCarole)}</td>`;
+        html += `<td>${formatTotal(totals.extraOffCarole)}</td>`;
+        html += `<td>${formatTotal(totals.centre)}</td>`;
+        html += `<td>${formatTotal(totals.avis)}</td>`;
+        html += "</tr>";
+      }
+
+      html += "</tbody></table>";
+      html += "</div>";
+      summaryDiv.innerHTML = html;
     }
 
     renderTwoMonthsView() {

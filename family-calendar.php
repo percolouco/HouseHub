@@ -108,8 +108,13 @@ require __DIR__ . '/header.php';
         <button id="fc-next-month" class="fc-nav-button">›</button>
       </div>
     </div>
-    <div id="fc-month-calendar" class="fc-month-calendar">
-      <!-- Le calendrier mensuel sera généré par JavaScript -->
+    <div class="fc-calendar-and-summary">
+      <div id="fc-month-calendar" class="fc-month-calendar">
+        <!-- Le calendrier mensuel sera généré par JavaScript -->
+      </div>
+      <div id="fc-month-summary" class="fc-month-summary">
+        <!-- Le tableau récapitulatif sera généré par JavaScript -->
+      </div>
     </div>
     <!-- Le menu contextuel pour le calendrier mensuel -->
     <div id="fc-month-selectionMenu" class="fc-selection-menu"></div>
