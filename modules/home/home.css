@@ -35,7 +35,7 @@ body.pf-home > * {
 
 /* Descendre légèrement le contenu sous le header sur la home */
 body.pf-home .pf-main {
-  padding-top: 60px; /* au lieu de 24px défini dans global.css */
+  padding-top: 80px;
 }
 
 /* === HOME / MODULES CARDS === */
@@ -137,4 +137,25 @@ body.pf-home .pf-user-info,
 body.pf-home .pf-section > h2 {
   text-align: left;
   color: #f9fafb;
+}
+/* === ALIGNEMENT À DROITE DU BLOC INTRO SUR LA HOME === */
+
+/* On aligne à droite uniquement le bloc d'intro */
+body.pf-home .pf-container > h1,
+body.pf-home .pf-container > p,
+body.pf-home .pf-container > .pf-user-info {
+  text-align: right;
+}
+
+/* On garde le titre "Modules" à gauche, sauf si tu veux aussi le mettre à droite */
+body.pf-home .pf-section > h2 {
+  text-align: left;
+}
+
+/* Image de fond spécifique pour le mobile */
+@media (max-width: 768px) {
+  body.pf-home {
+    background-image: url("/modules/home/assets/img/background_m.jpg");
+    background-position: center center;
+  }
 }
