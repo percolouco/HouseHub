@@ -3,17 +3,22 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-// On se connecte à la base de données
+require __DIR__ . '/includes/auth.php';
+require_login('/family-calendar.php');
+
 require __DIR__ . '/includes/db.php';
 
 // --- On récupère TOUS les événements sauvegardés en base ---
 $stmt_events = $pdo->query("SELECT * FROM pf_events");
 $dbEvents = $stmt_events->fetchAll();
 
-// --- Configuration de la page ---
-$pageTitle = "PachaFamily - Family Calendar";
+$pageTitle  = "PachaFamily - Family Calendar";
 $activePage = "family-calendar";
+$bodyClass  = "pf-family-calendar"; 
+$pageCss    = "/modules/family-calendar/family-calendar.css"; 
+
 require __DIR__ . '/header.php';
+
 ?>
 
 <!-- ===================================================================== -->
@@ -26,7 +31,6 @@ require __DIR__ . '/header.php';
 
 <h1>Family Calendar</h1>
 
-
 <!-- ===================================================================== -->
 <!--  PANNEAU DE CONTRÔLE : Légende, Récapitulatif et Vacances             -->
 <!-- ===================================================================== -->
@@ -38,23 +42,32 @@ require __DIR__ . '/header.php';
       <h2 class="pf-card-title">Légende</h2>
       <div class="pf-card-body">
         <div class="pf-legend-item">
-          <div class="pf-legend-color fc-day--school-holiday"></div>
+          <div class="pf-legend-color fc-legend-school-holiday"></div>
           <span>Vacances scolaires</span>
         </div>
         <div class="pf-legend-item">
-          <div class="pf-legend-color fc-day--public-holiday"></div>
+          <div class="pf-legend-color fc-legend-public-holiday"></div>
           <span>Jour férié</span>
         </div>
         <div class="pf-legend-item">
-          <div class="pf-legend-color fc-day--off-carole"></div>
+          <div class="pf-legend-color fc-legend-off-carole"></div>
           <span>Off Carole</span>
         </div>
         <div class="pf-legend-item">
-          <div class="pf-legend-color fc-day--extra-off-carole"></div>
+          <div class="pf-legend-color fc-legend-extra-off-carole"></div>
           <span>Extra Off Carole</span>
+        </div>
+        <div class="pf-legend-item">
+          <div class="pf-legend-color fc-legend-centre"></div>
+          <span>Centre</span>
+        </div>
+        <div class="pf-legend-item">
+          <div class="pf-legend-color fc-legend-avis"></div>
+          <span>Avis</span>
         </div>
       </div>
     </div>
+
 
     <!-- RÉCAPITULATIF ANNUEL -->
     <div class="pf-card pf-card--small">
@@ -65,30 +78,29 @@ require __DIR__ . '/header.php';
     </div>
 
     <!-- VACANCES SCOLAIRES -->
-<div class="pf-card pf-card--small pf-card--wide">
-  <h2 class="pf-card-title">Vacances scolaires - Zone C (2025-2026)</h2>
-  <div class="pf-card-body">
-    <div class="pf-table-wrapper">
-      <table id="schoolHolidaysTable" class="fc-holidays-table">
-        <thead>
-          <tr>
-            <th>Période</th>
-            <th>Du</th>
-            <th>Au</th>
-            <th>Zones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Rempli par JS -->
-        </tbody>
-      </table>
+    <div class="pf-card pf-card--small pf-card--wide">
+      <h2 class="pf-card-title">Vacances scolaires - Zone C (2025-2026)</h2>
+      <div class="pf-card-body">
+        <div class="pf-table-wrapper">
+          <table id="schoolHolidaysTable" class="fc-holidays-table">
+            <thead>
+              <tr>
+                <th>Période</th>
+                <th>Du</th>
+                <th>Au</th>
+                <th>Zones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rempli par JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+
   </div>
-</div>
-
 </section>
-
-
 
 <!-- ===================================================================== -->
 <!--  CALENDRIER MENSUEL                                                   -->
@@ -110,15 +122,11 @@ require __DIR__ . '/header.php';
     </div>
     <div class="fc-calendar-and-summary">
       <div id="fc-month-calendar" class="fc-month-calendar">
-        <!-- Le calendrier mensuel sera généré par JavaScript -->
-      </div>
-      <div id="fc-month-summary" class="fc-month-summary">
-        <!-- Le tableau récapitulatif sera généré par JavaScript -->
-      </div>
     </div>
     <!-- Le menu contextuel pour le calendrier mensuel -->
     <div id="fc-month-selectionMenu" class="fc-selection-menu"></div>
   </div>
+    </div>
 </section>
 
 <!-- ===================================================================== -->
@@ -153,12 +161,10 @@ require __DIR__ . '/header.php';
   </div>
 </section>
 
-
 <!-- ===================================================================== -->
 <!--  CHARGEMENT DU SCRIPT JAVASCRIPT PRINCIPAL                            -->
 <!-- ===================================================================== -->
-<script src="/assets/js/family-calendar.js"></script>
-
+<script src="/modules/family-calendar/family-calendar.js"></script>
 
 <?php
 // Inclusion du pied de page

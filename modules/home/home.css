@@ -1,0 +1,117 @@
+/* === HOME : fond et overlay === */
+
+/* Fond image + overlay uniquement pour la home */
+body.pf-home {
+  position: relative;
+  background-image: url("/modules/home/assets/img/background.jpg");
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+}
+
+/* Header translucide par-dessus l'image sur la home */
+.pf-home .pf-header {
+  background: rgba(36, 59, 83, 0.85);
+  backdrop-filter: blur(4px); /* optionnel, si supporté */
+}
+
+/* Voile sombre sur toute la page home */
+body.pf-home::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: -1;
+}
+
+/* S'assurer que le contenu passe au-dessus du voile */
+body.pf-home > * {
+  position: relative;
+  z-index: 0;
+}
+
+/* === HOME / MODULES CARDS === */
+
+/* Container des cartes de modules */
+.pf-modules-cards {
+  margin-top: 16px;
+}
+
+/* Card module : réutilise .pf-card mais plus "clicable" */
+.pf-card--module {
+  min-width: 240px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  background: #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+    border-color 0.15s ease, background-color 0.15s ease;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.pf-card--module:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+  border-color: #bcccdc;
+  background-color: #f8fafc;
+}
+
+/* Désactivation / "à venir" */
+.pf-card--disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.pf-card--disabled:hover {
+  transform: none;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  border-color: #d9e2ec;
+  background-color: #f8fafc;
+}
+
+/* Icône dans la card */
+.pf-card-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+/* CTA (texte en bas de card) */
+.pf-card-cta {
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #243b53;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pf-card-cta::after {
+  content: "→";
+  font-size: 12px;
+}
+
+/* Assure que le CTA reste en bas quand le texte est plus long */
+.pf-card--module .pf-card-body {
+  flex: 1;
+}
+
+/* Bloc user info */
+.pf-user-info {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.pf-user-info a {
+  color: #c81e1e;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.pf-user-info a:hover {
+  text-decoration: underline;
+}
