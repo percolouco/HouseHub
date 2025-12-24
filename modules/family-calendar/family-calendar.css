@@ -1,94 +1,6 @@
-/* === RESET SIMPLE === */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* === TABLES SPÉCIFIQUES AU FAMILY CALENDAR === */
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  background: #f5f5f5;
-  color: #222;
-}
-
-/* === LAYOUT GLOBAL === */
-.pf-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-.pf-header {
-  background: #243b53;
-  color: #fff;
-  padding: 8px 0;
-}
-
-.pf-header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.pf-logo {
-  font-weight: 600;
-  font-size: 18px;
-}
-
-.pf-nav {
-  display: flex;
-  gap: 16px;
-}
-
-.pf-nav-link {
-  color: #d9e2ec;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.pf-nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.pf-nav-link--active {
-  background: #102a43;
-  color: #f0f4f8;
-}
-
-.pf-main {
-  padding: 24px 10px 48px;
-}
-
-.pf-section {
-  margin-top: 24px;
-}
-
-.pf-section--panel {
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px 16px 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-.pf-footer {
-  border-top: 1px solid #d9e2ec;
-  padding: 8px 0;
-  font-size: 12px;
-  color: #627d98;
-  background: #f0f4f8;
-}
-
-/* === CARDS & FLEX === */
-
-.pf-card.pf-card--wide {
-  min-width: 400px; /* tu peux monter à 500 ou 600 selon ton goût */
-  flex: 1 1 400px; /* laisse la carte prendre plus de place dans la ligne */
-}
-/* Le tableau des vacances occupe toute la largeur disponible */
+/* Tableau des vacances scolaires */
 #schoolHolidaysTable {
   width: auto;
   table-layout: auto;
@@ -99,81 +11,39 @@ body {
   width: 100%;
   overflow-x: auto;
 }
+
 /* En-têtes et cellules sans retour à la ligne */
 #schoolHolidaysTable th,
 #schoolHolidaysTable td {
-  white-space: nowrap; /* pas de retour à la ligne dans les cellules */
-  overflow: visible; /* pas de tronquage */
+  white-space: nowrap;
+  overflow: visible;
   padding: 4px 8px;
   text-align: center;
 }
 
-.pf-flex {
-  display: flex;
-}
-
-.pf-flex--wrap {
-  flex-wrap: wrap;
-}
-
-.pf-gap-lg {
-  gap: 24px;
-}
-
-.pf-card {
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #d9e2ec;
-  padding: 12px 14px;
-}
-
-.pf-card--small {
-  min-width: 240px;
-  max-width: 260px;
-}
-
-.pf-card-title {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
-
-.pf-card-body {
-  font-size: 13px;
-}
-
-label {
-  font-size: 12px;
-}
-
-/* === TABLES === */
-
-/* Appliquer un layout fixe pour harmoniser la largeur des colonnes */
+/* Planning hebdomadaire principal */
 #planningTable {
   table-layout: fixed;
-  width: 100%; /* le tableau prend toute la largeur disponible */
+  width: 100%;
 }
 
-/* Colonnes : texte centré et césures possibles */
 #planningTable th,
 #planningTable td {
   text-align: center;
-  white-space: nowrap; /* évite les retours à la ligne sauvages */
+  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; /* coupe avec "..." si le texte déborde */
+  text-overflow: ellipsis;
 }
 
-/* Colonnes "Mois" et "Semaine" un peu plus étroites */
+/* Colonnes "Mois" et "Semaine" plus étroites */
 #planningTable th:nth-child(1),
-#planningTable td:nth-child(1) {
-  width: 2%; /* Mois */
-}
-
+#planningTable td:nth-child(1),
 #planningTable th:nth-child(2),
 #planningTable td:nth-child(2) {
-  width: 2%; /* Semaine */
+  width: 2%;
 }
 
-/* Colonnes jours (Lundi à Vendredi) réparties sur une largeur raisonnable */
+/* Colonnes jours (Lundi à Vendredi) */
 #planningTable th:nth-child(3),
 #planningTable td:nth-child(3),
 #planningTable th:nth-child(4),
@@ -184,10 +54,10 @@ label {
 #planningTable td:nth-child(6),
 #planningTable th:nth-child(7),
 #planningTable td:nth-child(7) {
-  width: 2%; /* ajustable selon ton rendu */
+  width: 2%;
 }
 
-/* Colonnes de totaux (Off / Extra / Centre / Avis) un peu plus compactes */
+/* Colonnes de totaux */
 #planningTable th:nth-child(8),
 #planningTable td:nth-child(8),
 #planningTable th:nth-child(9),
@@ -199,48 +69,8 @@ label {
   width: 4%;
 }
 
-.pf-table-wrapper {
-  max-height: 600px;
-  overflow: auto;
-  border-radius: 8px;
-  background: #fff;
-  border: 1px solid #d9e2ec;
-}
+/* === COLOR CODING / LÉGENDE === */
 
-.pf-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.pf-table th,
-.pf-table td {
-  border: 1px solid #d9e2ec;
-  padding: 4px 6px;
-  text-align: center;
-  position: relative;
-}
-
-.pf-table thead th {
-  position: sticky;
-  top: 0;
-  background: #f0f4f8;
-  z-index: 1;
-}
-
-.pf-table--compact th,
-.pf-table--compact td {
-  padding: 3px 4px;
-}
-
-/* === INPUTS === */
-input[type="number"] {
-  width: 3.1rem;
-  font-size: 11px;
-  padding: 2px 3px;
-}
-
-/* === COLOR CODING POUR LE FAMILY CALENDAR === */
 .fc-row--carole-off {
   background: #ffe0e0;
 }
@@ -254,30 +84,41 @@ input[type="number"] {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .fc-holidays-table th,
 .fc-holidays-table td {
-  border: 1px solid #d9e2ec;
-  padding: 4px 6px;
-  text-align: left;
+  border: none;
+  padding: 4px 4px;
 }
 
-.fc-holidays-table th {
-  background-color: #f0f4f8;
+.fc-holidays-table thead th {
+  background: none;
+  font-weight: 600;
+  color: #243b53;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.fc-holidays-table tbody tr:nth-child(odd) td {
+  background: #f8fafc;
+}
+
+.fc-holidays-table tbody tr:nth-child(even) td {
+  background: transparent;
 }
 
 /* Cellule de jour sélectionnée dans le calendrier */
 .fc-day--selected {
-  background-color: #bde4ff !important; /* Une couleur de sélection claire, !important pour forcer le style */
+  background-color: #bde4ff !important;
   cursor: pointer;
 }
 
 /* Le menu contextuel flottant */
 .fc-selection-menu {
-  display: none; /* Caché par défaut */
-  position: absolute; /* Permet de le positionner près de la souris */
+  display: none;
+  position: absolute;
   z-index: 100;
   background-color: white;
   border: 1px solid #ccc;
@@ -290,6 +131,7 @@ input[type="number"] {
 .fc-selection-menu .fc-menu-section {
   margin-bottom: 8px;
 }
+
 .fc-selection-menu .fc-menu-section:last-child {
   margin-bottom: 0;
 }
@@ -334,25 +176,12 @@ input[type="number"] {
   box-sizing: border-box;
 }
 
-/* Picto pour Centre (toboggan/balançoire) */
+/* Picto pour Centre */
 .fc-day--has-guard.fc-day--centre {
   position: relative;
 }
 .fc-day--has-guard.fc-day--centre::after {
-  content: "🎢";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 14px;
-  line-height: 1;
-  z-index: 2;
-}
-/* Picto pour Avis (FC Barcelone) */
-.fc-day--has-guard.fc-day--avis {
-  position: relative;
-}
-.fc-day--has-guard.fc-day--avis::after {
-  content: "⚽";
+  content: "🏫";
   position: absolute;
   top: 2px;
   right: 2px;
@@ -361,31 +190,131 @@ input[type="number"] {
   z-index: 2;
 }
 
-/* --- Combinaisons avec dégradés --- */
-/* Combinaison Vacances + Off Carole */
+/* Combinaisons avec dégradés */
 .fc-day--school-holiday.fc-day--off-carole {
   background-image: linear-gradient(45deg, #e5d9f2 49%, #ffe9a7 51%);
 }
-/* Combinaison Vacances + Extra Off Carole */
 .fc-day--school-holiday.fc-day--extra-off-carole {
   background-image: linear-gradient(45deg, #e5d9f2 49%, #ffd59b 51%);
 }
 
-/* Eléments pour la légende */
+/* Légende */
 .pf-legend-item {
   display: flex;
   align-items: center;
   margin-bottom: 5px;
 }
+
 .pf-legend-color {
-  width: 20px;
-  height: 20px;
-  border: 1px solid #ccc;
-  margin-right: 10px;
-  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid #d9e2ec;
+  margin-right: 8px;
+}
+
+.pf-legend-item span {
+  font-size: 12px;
+  color: #334e68;
+}
+
+.fc-legend-school-holiday {
+  background-color: #e5d9f2;
+}
+
+.fc-legend-public-holiday {
+  background-color: #e0e0e0;
+}
+
+.fc-legend-off-carole {
+  background-color: #ffe9a7;
+}
+
+.fc-legend-extra-off-carole {
+  background-color: #ffd59b;
+}
+
+.fc-legend-centre {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  background: none;
+  border: none;
+}
+
+.fc-legend-centre::before {
+  content: "🏫";
+}
+
+/* Avis indicateur */
+.fc-legend-avis {
+  border-radius: 2px;
+  width: 24px;
+  height: 16px;
+  background: linear-gradient(
+    to bottom,
+    #ffcc00 0%,
+    #ffcc00 11%,
+    #c8102e 11%,
+    #c8102e 22%,
+    #ffcc00 22%,
+    #ffcc00 33%,
+    #c8102e 33%,
+    #c8102e 44%,
+    #ffcc00 44%,
+    #ffcc00 55%,
+    #c8102e 55%,
+    #c8102e 66%,
+    #ffcc00 66%,
+    #ffcc00 77%,
+    #c8102e 77%,
+    #c8102e 88%,
+    #ffcc00 88%,
+    #ffcc00 100%
+  );
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 /* === CALENDRIER MENSUEL === */
+
+.fc-day--has-guard.fc-day--avis {
+  position: relative;
+}
+
+.fc-day--has-guard.fc-day--avis::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    #ffcc00 0%,
+    #ffcc00 11%,
+    #c8102e 11%,
+    #c8102e 22%,
+    #ffcc00 22%,
+    #ffcc00 33%,
+    #c8102e 33%,
+    #c8102e 44%,
+    #ffcc00 44%,
+    #ffcc00 55%,
+    #c8102e 55%,
+    #c8102e 66%,
+    #ffcc00 66%,
+    #ffcc00 77%,
+    #c8102e 77%,
+    #c8102e 88%,
+    #ffcc00 88%,
+    #ffcc00 100%
+  );
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
 .fc-month-calendar-wrapper {
   background: #fff;
   border-radius: 8px;
@@ -395,10 +324,7 @@ input[type="number"] {
 }
 
 .fc-calendar-and-summary {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 24px;
-  align-items: start;
+  display: block;
 }
 
 .fc-month-header {
@@ -506,6 +432,36 @@ input[type="number"] {
   transition: background-color 0.2s;
 }
 
+.fc-month-summary-inline {
+  margin-top: 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #d9e2ec;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.fc-month-summary-inline table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fc-month-summary-inline th,
+.fc-month-summary-inline td {
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.fc-month-summary-inline th {
+  font-weight: 600;
+  color: #243b53;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.fc-month-summary-inline td:first-child {
+  text-align: left;
+}
+
 .fc-month-day {
   background: #fff;
 }
@@ -515,9 +471,9 @@ input[type="number"] {
 }
 
 .fc-day--other-month {
-  background: #f8fafc;
+  background: #f0f4f8;
   color: #9fb3c8;
-  cursor: default;
+  box-shadow: none;
 }
 
 .fc-day--weekend {
@@ -555,8 +511,9 @@ input[type="number"] {
 .fc-month-table .fc-day--has-guard.fc-day--centre {
   position: relative;
 }
+
 .fc-month-table .fc-day--has-guard.fc-day--centre::after {
-  content: "🎢";
+  content: "🏫";
   position: absolute;
   top: 2px;
   right: 2px;
@@ -564,26 +521,42 @@ input[type="number"] {
   line-height: 1;
   z-index: 2;
 }
+
 .fc-month-table .fc-day--has-guard.fc-day--avis {
   position: relative;
 }
+
 .fc-month-table .fc-day--has-guard.fc-day--avis::after {
-  content: "⚽";
+  content: "";
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 12px;
-  line-height: 1;
+  width: 12px;
+  height: 7px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    #ffcc00 0%,
+    #ffcc00 11%,
+    #c8102e 11%,
+    #c8102e 22%,
+    #ffcc00 22%,
+    #ffcc00 33%,
+    #c8102e 33%,
+    #c8102e 44%,
+    #ffcc00 44%,
+    #ffcc00 55%,
+    #c8102e 55%,
+    #c8102e 66%,
+    #ffcc00 66%,
+    #ffcc00 77%,
+    #c8102e 77%,
+    #c8102e 88%,
+    #ffcc00 88%,
+    #ffcc00 100%
+  );
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
   z-index: 2;
-}
-
-/* Combinaisons avec dégradés pour le calendrier mensuel */
-.fc-month-table .fc-day--school-holiday.fc-day--off-carole {
-  background-image: linear-gradient(45deg, #e5d9f2 49%, #ffe9a7 51%);
-}
-
-.fc-month-table .fc-day--school-holiday.fc-day--extra-off-carole {
-  background-image: linear-gradient(45deg, #e5d9f2 49%, #ffd59b 51%);
 }
 
 .fc-month-table .fc-day--selected {
@@ -591,45 +564,53 @@ input[type="number"] {
   cursor: pointer;
 }
 
+.fc-leaves-label-container {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  z-index: 2;
+}
+
+.fc-leaves-label {
+  font-size: 8px;
+  font-weight: 600;
+  color: #1f2933;
+  line-height: 1;
+}
+
 /* === TABLEAU RÉCAPITULATIF === */
+
 .fc-month-summary {
   min-width: 300px;
 }
 
 .fc-summary-table-wrapper {
   background: #f8fafc;
-  border-radius: 6px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 10px 10px 12px;
   border: 1px solid #d9e2ec;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
 }
 
 .fc-summary-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .fc-summary-table thead th {
-  background: #f0f4f8;
-  padding: 8px 6px;
-  text-align: center;
-  font-weight: 600;
-  color: #243b53;
-  border: 1px solid #d9e2ec;
-  white-space: nowrap;
+  background: transparent;
+  border-bottom: 1px solid #d9e2ec;
 }
 
 .fc-summary-table tbody td {
-  border: 1px solid #d9e2ec;
-  padding: 6px 8px;
-  text-align: center;
-  background: #fff;
+  border: none;
+  border-bottom: 1px solid #edf2f7;
 }
 
-.fc-summary-table tbody td:first-child {
-  text-align: left;
-  font-weight: 500;
-  color: #243b53;
+.fc-summary-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .fc-summary-total-row {

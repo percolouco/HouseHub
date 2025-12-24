@@ -1,0 +1,68 @@
+<?php
+// Protection de la page : nécessite d'être connecté
+require __DIR__ . '/includes/auth.php';
+require_login('/index.php');
+
+// Configuration de la page
+$pageTitle  = "PachaFamily - Accueil";
+$activePage = "home";
+$bodyClass  = "pf-home"; 
+$pageCss    = "/modules/home/home.css"; 
+
+require __DIR__ . '/header.php';
+?>
+
+
+
+<div class="pf-container">
+  <h1>Bienvenue sur PachaFamily</h1>
+  <p>Centre de contrôle de l'organisation familiale.</p>
+
+  <?php if (isset($_SESSION['user'])): ?>
+    <div class="pf-user-info">
+      Connecté en tant que 
+      <strong><?= htmlspecialchars($_SESSION['user']['display_name'] ?? $_SESSION['user']['username']) ?></strong>
+      – <a href="/logout.php">Se déconnecter</a>
+    </div>
+  <?php endif; ?>
+
+  <section class="pf-section">
+    <h2>Modules</h2>
+
+    <div class="pf-flex pf-flex--wrap pf-gap-lg pf-modules-cards">
+      <!-- Card : Family calendar -->
+      <a href="/family-calendar.php" class="pf-card pf-card--module">
+        <div class="pf-card-icon">📅</div>
+        <h3 class="pf-card-title">Family calendar</h3>
+        <div class="pf-card-body">
+          Gérez les congés, vacances et la garde sur un calendrier partagé
+          pour toute la famille.
+        </div>
+        <span class="pf-card-cta">Accéder au module</span>
+      </a>
+
+      <!-- Exemple de futur module -->
+      <div class="pf-card pf-card--module pf-card--disabled">
+        <div class="pf-card-icon">💰</div>
+        <h3 class="pf-card-title">Budget familial</h3>
+        <div class="pf-card-body">
+          Bientôt disponible : suivi des dépenses, catégories et budget mensuel.
+        </div>
+        <span class="pf-card-cta">À venir</span>
+      </div>
+
+      <!-- Autre exemple -->
+      <div class="pf-card pf-card--module pf-card--disabled">
+        <div class="pf-card-icon">📦</div>
+        <h3 class="pf-card-title">Liste de courses</h3>
+        <div class="pf-card-body">
+          Centralisez les listes de courses et les partages entre membres.
+        </div>
+        <span class="pf-card-cta">À venir</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<?php
+require __DIR__ . '/footer.php';
