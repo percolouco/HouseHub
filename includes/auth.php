@@ -5,15 +5,18 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function require_login(string $redirectTarget = null): void
+function require_login(?string $redirectTarget = '/index.php'): void
 {
-    if (!isset($_SESSION['user'])) {
-        if ($redirectTarget === null) {
-            $redirectTarget = $_SERVER['REQUEST_URI'] ?? '/index.php';
-        }
+    // Exemple d’implémentation typique
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-        $redirect = urlencode($redirectTarget);
-        header("Location: /login.php?redirect=$redirect");
+    if (empty($_SESSION['user'])) {
+        // Si null → on choisit un fallback (par exemple index)
+        $target = $redirectTarget ?? '/index.php';
+        header('Location: ' . $target);
         exit;
     }
 }
+
