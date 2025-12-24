@@ -1,0 +1,221 @@
+/* Christmas list : vue synthétique avec bouton + et menu flottant */
+
+.pf-christmas-list h1 {
+  margin-bottom: 4px;
+}
+
+.pf-christmas-list p {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+/* Grille principale */
+.cl-grid-wrapper {
+  overflow-x: auto; /* sécurité pour petits écrans */
+}
+
+.cl-grid-table {
+  font-size: 11px;
+}
+
+/* En-têtes */
+.cl-grid-table thead th {
+  padding: 6px 4px;
+}
+
+.cl-child-header {
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cl-header-adult {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cl-header-occ {
+  text-align: center;
+  font-weight: 500;
+  color: #627d98;
+}
+
+/* Colonne adulte */
+.cl-adult-cell {
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 8px 6px;
+}
+
+/* Cellules cadeau */
+.cl-gift-cell {
+  min-width: 120px;
+  vertical-align: top;
+  padding: 6px 4px;
+}
+
+/* Contenu de la cellule : colonne verticale */
+.cl-gift-cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Liste des cadeaux : alignée à gauche */
+.cl-gift-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.cl-gift-list li {
+  margin-bottom: 2px;
+}
+
+/* Montant par cadeau */
+.cl-gift-amount {
+  font-size: 10px;
+  color: #627d98;
+  margin-left: 2px;
+}
+
+/* Cellule vide */
+.cl-empty {
+  display: inline-block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  color: #9fb3c8;
+}
+
+/* Ligne Total + bouton + */
+.cl-total-and-add {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Total à gauche, + à droite */
+  gap: 4px;
+  margin-top: 2px;
+}
+
+/* Texte Total */
+.cl-gift-total {
+  font-size: 10px;
+  font-weight: 600;
+  color: #243b53;
+}
+
+/* Bouton + */
+.cl-add-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #d9e2ec;
+  background: #f0f4f8;
+  color: #243b53;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.cl-add-btn:hover {
+  background: #d9e2ec;
+}
+
+/* Menu d'ajout (caché par défaut) */
+.cl-add-menu {
+  display: none;
+  margin-top: 4px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #d9e2ec;
+  background: #f8fafc;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+/* Classe pour afficher le menu */
+.cl-add-menu--open {
+  display: block;
+}
+
+/* Formulaire dans le menu */
+.cl-gift-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Ligne du formulaire (lien + montant) */
+.cl-gift-form-row {
+  display: flex;
+  gap: 4px;
+}
+
+/* Champs du formulaire */
+.cl-gift-form input[type="text"],
+.cl-gift-form input[type="url"],
+.cl-gift-form input[type="number"] {
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid #d9e2ec;
+}
+
+.cl-gift-form input[type="text"] {
+  width: 100%;
+}
+
+.cl-gift-form input[type="url"] {
+  flex: 1 1 auto;
+}
+
+.cl-gift-form input[type="number"] {
+  width: 60px;
+}
+
+/* Boutons OK / Cancel */
+.cl-gift-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.cl-gift-form-actions button {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #d9e2ec;
+  background: #f0f4f8;
+  cursor: pointer;
+}
+
+.cl-gift-form-actions button:hover {
+  background: #d9e2ec;
+}
+
+.cl-ok-btn {
+  font-weight: 600;
+  color: #1f2933;
+}
+
+.cl-cancel-btn {
+  color: #9fb3c8;
+}
+
+/* Récap global en bas */
+.cl-budget-wrapper {
+  margin-top: 4px;
+}
+
+.cl-budget-wrapper .pf-table {
+  font-size: 11px;
+}
+
+.cl-budget-wrapper .pf-table th,
+.cl-budget-wrapper .pf-table td {
+  padding: 4px 4px;
+}

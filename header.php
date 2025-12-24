@@ -38,6 +38,9 @@ if (!isset($activePage)) {
 
           <a href="/family-calendar.php"
              class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : ''; ?>">Family calendar</a>
+             
+          <a href="/christmas-list.php"
+             class="pf-nav-link <?= $activePage === 'Christmas-list' ? 'pf-nav-link--active' : ''; ?>">Christmas list</a>
 
           <?php if (isset($_SESSION['user'])): ?>
             <span class="pf-nav-user">

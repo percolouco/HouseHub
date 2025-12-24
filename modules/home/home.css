@@ -1,12 +1,15 @@
 /* === HOME : fond et overlay === */
 
-/* Fond image + overlay uniquement pour la home */
+/* Fond image uniquement pour la home */
 body.pf-home {
   position: relative;
   background-image: url("/modules/home/assets/img/background.jpg");
   background-size: cover;
-  background-position: top center;
+  background-position: center center;
   background-repeat: no-repeat;
+
+  /* Texte global plutôt clair sur la home (sur l'image) */
+  color: #f9fafb;
 }
 
 /* Header translucide par-dessus l'image sur la home */
@@ -28,6 +31,11 @@ body.pf-home::before {
 body.pf-home > * {
   position: relative;
   z-index: 0;
+}
+
+/* Descendre légèrement le contenu sous le header sur la home */
+body.pf-home .pf-main {
+  padding-top: 60px; /* au lieu de 24px défini dans global.css */
 }
 
 /* === HOME / MODULES CARDS === */
@@ -103,15 +111,30 @@ body.pf-home > * {
 .pf-user-info {
   margin-top: 12px;
   font-size: 13px;
-  color: #4b5563;
+  color: #f9fafb; /* lisible sur le fond */
 }
 
 .pf-user-info a {
-  color: #c81e1e;
+  color: #ffb4b4;
   text-decoration: none;
   font-weight: 500;
 }
 
 .pf-user-info a:hover {
   text-decoration: underline;
+}
+
+/* Dans les cards (fond clair) : texte foncé */
+body.pf-home .pf-card,
+body.pf-home .pf-section--panel {
+  color: #222;
+}
+
+/* S’assurer que les titres / textes intro sont bien à gauche et lisibles */
+body.pf-home h1,
+body.pf-home .pf-container > p,
+body.pf-home .pf-user-info,
+body.pf-home .pf-section > h2 {
+  text-align: left;
+  color: #f9fafb;
 }

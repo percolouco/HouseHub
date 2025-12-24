@@ -6,13 +6,11 @@ require_login('/index.php');
 // Configuration de la page
 $pageTitle  = "PachaFamily - Accueil";
 $activePage = "home";
-$bodyClass  = "pf-home"; 
-$pageCss    = "/modules/home/home.css"; 
+$bodyClass  = "pf-home";
+$pageCss    = "/modules/home/home.css";
 
 require __DIR__ . '/header.php';
 ?>
-
-
 
 <div class="pf-container">
   <h1>Bienvenue sur PachaFamily</h1>
@@ -51,15 +49,16 @@ require __DIR__ . '/header.php';
         <span class="pf-card-cta">À venir</span>
       </div>
 
-      <!-- Autre exemple -->
-      <div class="pf-card pf-card--module pf-card--disabled">
-        <div class="pf-card-icon">📦</div>
-        <h3 class="pf-card-title">Liste de courses</h3>
+            <!-- Module : Christmas list -->
+      <a href="/christmas-list.php" class="pf-card pf-card--module">
+        <div class="pf-card-icon">🎄</div>
+        <h3 class="pf-card-title">Christmas list</h3>
         <div class="pf-card-body">
-          Centralisez les listes de courses et les partages entre membres.
+          Planifica els regals de cada nen, per al Tió, el Nadal i els Reis.
         </div>
-        <span class="pf-card-cta">À venir</span>
-      </div>
+        <span class="pf-card-cta">Accedir al mòdul</span>
+      </a>
+
     </div>
   </section>
 </div>
