@@ -1,7 +1,7 @@
 <?php
 // Protection de la page : nécessite d'être connecté
 require __DIR__ . '/includes/auth.php';
-require_login('/index.php');
+require_login('/login.php');
 
 // Configuration de la page
 $pageTitle  = "PachaFamily - Accueil";
