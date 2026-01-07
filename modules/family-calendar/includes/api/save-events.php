@@ -1,8 +1,17 @@
 <?php
 header('Content-Type: application/json');
-require __DIR__ . '/../includes/db.php';
+require __DIR__ . '/../../../../includes/db.php';
 
 $eventsToSave = json_decode(file_get_contents('php://input'), true);
+$rawInput = file_get_contents('php://input');
+file_put_contents(
+    __DIR__ . '/events-debug.log',
+    "[" . date('c') . "] RAW INPUT: " . $rawInput . PHP_EOL,
+    FILE_APPEND
+);
+
+$eventsToSave = json_decode($rawInput, true);
+
 
 if (empty($eventsToSave) || !is_array($eventsToSave)) {
     http_response_code(400);

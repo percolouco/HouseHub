@@ -5,7 +5,8 @@
 document.addEventListener("DOMContentLoaded", () => {
   const CONGE_TYPES = ["OFF_CAROLE", "EXTRA_OFF_CAROLE"];
   const GUARDE_TYPES = ["CENTRE", "AVIS"];
-  const MODIFIABLE_TYPES = [...CONGE_TYPES, ...GUARDE_TYPES];
+  const PEP_TYPES = ["PEP_SICK"];
+  const MODIFIABLE_TYPES = [...CONGE_TYPES, ...GUARDE_TYPES, ...PEP_TYPES];
 
   class FamilyCalendar {
     constructor() {
@@ -58,6 +59,13 @@ document.addEventListener("DOMContentLoaded", () => {
       this.events = [...this.dbEvents, ...this.fixedEvents];
       this.leaves = await this.fetchLeaves();
 
+      // Nouveau : set des jours fériés (dates ISO)
+      this.publicHolidayDates = new Set(
+        this.fixedEvents
+          .filter((e) => e.type === "PUBLIC_HOLIDAY")
+          .map((e) => e.date)
+      );
+
       this.reprocessAndRender();
       this.renderMonthCalendar();
     }
@@ -77,7 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async fetchLeaves() {
       try {
-        const res = await fetch("/api/get-leaves.php");
+        const res = await fetch(
+          "/modules/family-calendar/includes/api/get-leaves.php"
+        );
         if (!res.ok) {
           throw new Error("Erreur HTTP " + res.status);
         }
@@ -199,7 +209,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     reprocessEvents() {
       this.weeks.forEach((w) => {
-        w.totals = { offCarole: 0, extraOffCarole: 0, centre: 0, avis: 0 };
+        w.totals = {
+          offCarole: 0,
+          extraOffCarole: 0,
+          centre: 0,
+          avis: 0,
+          pepSick: 0,
+          presencePep: 0,
+        };
         Object.values(w.dayFlags).forEach((df) => (df.eventsOnDay = []));
       });
 
@@ -231,7 +248,37 @@ document.addEventListener("DOMContentLoaded", () => {
           case "AVIS":
             week.totals.avis += dur;
             break;
+          case "PEP_SICK":
+            week.totals.pepSick += dur;
+            break;
         }
+      });
+
+      // Calcul présence Pep par semaine
+      this.weeks.forEach((w) => {
+        // Calcul du nombre de jours potentiels d'accueil Pep dans la semaine
+        let workingDays = 0;
+        ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey) => {
+          const d = w.dayDates[dayKey];
+          const isoDate = `${d.getFullYear()}-${String(
+            d.getMonth() + 1
+          ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+          const isPublicHoliday =
+            this.publicHolidayDates && this.publicHolidayDates.has(isoDate);
+
+          if (!isPublicHoliday) {
+            workingDays++;
+          }
+        });
+
+        const absencesPep =
+          (w.totals.offCarole || 0) +
+          (w.totals.extraOffCarole || 0) +
+          (w.totals.pepSick || 0);
+
+        w.totals.presencePep = Math.max(0, workingDays - absencesPep);
+        w.totals.workingDays = workingDays; // si tu veux l'afficher un jour
       });
     }
 
@@ -239,7 +286,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const summaryDiv = document.getElementById("globalSummary");
       if (!summaryDiv) return;
 
-      // On filtre uniquement sur les événements "DB" pour le récap (pas les vacances/fériés)
       const allEvents = this.dbEvents || [];
 
       const totalOff = allEvents
@@ -250,9 +296,38 @@ document.addEventListener("DOMContentLoaded", () => {
         .filter((e) => e.type === "EXTRA_OFF_CAROLE")
         .reduce((sum, e) => sum + Number(e.duration || 1), 0);
 
+      const totalPepSick = allEvents
+        .filter((e) => e.type === "PEP_SICK")
+        .reduce((sum, e) => sum + Number(e.duration || 1), 0);
+
+      // Calculer les jours ouvrés & présence Pep sur l'année scolaire
+      let totalWorkingDays = 0;
+      let totalPresencePep = 0;
+
+      // On parcourt l'année scolaire en mois, en réutilisant calculateMonthTotals
+      const start = new Date(2025, 8, 1); // 1 sept 2025
+      const end = new Date(2026, 7, 31); // 31 août 2026
+
+      const current = new Date(start);
+      while (current <= end) {
+        const y = current.getFullYear();
+        const m = current.getMonth();
+        const monthTotals = this.calculateMonthTotals(y, m);
+
+        totalWorkingDays += monthTotals.workingDays || 0;
+        totalPresencePep += monthTotals.presencePep || 0;
+
+        // Passer au 1er du mois suivant
+        current.setMonth(current.getMonth() + 1);
+        current.setDate(1);
+      }
+
       summaryDiv.innerHTML = `
     <p><strong>Off Carole :</strong> ${totalOff} jours</p>
     <p><strong>Extra Off Carole :</strong> ${totalExtraOff} jours</p>
+    <p><strong>Pep malade :</strong> ${totalPepSick} jours</p>
+    <p><strong>Jours potentiels d'accueil Pep (année scolaire, hors fériés) :</strong> ${totalWorkingDays}</p>
+    <p><strong>Présence Pep (année scolaire) :</strong> ${totalPresencePep} jours</p>
   `;
     }
 
@@ -294,20 +369,27 @@ document.addEventListener("DOMContentLoaded", () => {
       this.weeks.forEach((week) => {
         const tr = document.createElement("tr");
 
+        // Mois
         if (!monthRowRendered[week.monthKey]) {
           monthRowRendered[week.monthKey] = true;
           const tdMonth = document.createElement("td");
           tdMonth.rowSpan = monthSpans[week.monthKey] || 1;
           tdMonth.textContent = week.monthName;
+          tdMonth.classList.add("col-month");
           tr.appendChild(tdMonth);
         }
 
+        // Semaine
         const tdWeek = document.createElement("td");
         tdWeek.textContent = week.weekLabel;
+        tdWeek.classList.add("col-month");
         tr.appendChild(tdWeek);
 
+        // Jours Lundi–Vendredi
         ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey) => {
           const td = document.createElement("td");
+          td.classList.add("col-day");
+
           const dayDate = week.dayDates[dayKey];
           td.dataset.date = `${dayDate.getFullYear()}-${String(
             dayDate.getMonth() + 1
@@ -317,9 +399,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "0"
           )}/${String(dayDate.getMonth() + 1).padStart(2, "0")}`;
 
-          td.className = "";
           let hasGarde = false;
           let gardeType = null;
+          let hasPepSick = false;
 
           week.dayFlags[dayKey].eventsOnDay.forEach((evt) => {
             const classMap = {
@@ -327,6 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
               PUBLIC_HOLIDAY: "fc-day--public-holiday",
               OFF_CAROLE: "fc-day--off-carole",
               EXTRA_OFF_CAROLE: "fc-day--extra-off-carole",
+              // pas de couleur pour PEP_SICK dans l'hebdo
             };
 
             if (classMap[evt.type]) {
@@ -337,6 +420,10 @@ document.addEventListener("DOMContentLoaded", () => {
               hasGarde = true;
               gardeType = evt.type;
             }
+
+            if (evt.type === "PEP_SICK") {
+              hasPepSick = true;
+            }
           });
 
           if (hasGarde) {
@@ -345,7 +432,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (gardeType === "AVIS") td.classList.add("fc-day--avis");
           }
 
-          // Indicateur congés Alex/Laia
+          if (hasPepSick) {
+            const pepSpan = document.createElement("span");
+            pepSpan.className = "fc-pep-sick-emoji";
+            pepSpan.textContent = "🤒";
+            td.appendChild(pepSpan);
+          }
+
+          // Congés Alex/Laia
           const isoDate = td.dataset.date;
           const leavesOnDay = this.leaves.filter(
             (lv) => lv.leave_date === isoDate
@@ -355,8 +449,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const container = document.createElement("div");
             container.className = "fc-leaves-label-container";
 
-            const hasAlex = leavesOnDay.some((lv) => lv.person_id === 2); // Alex
-            const hasLaia = leavesOnDay.some((lv) => lv.person_id === 3); // Laia
+            const hasAlex = leavesOnDay.some((lv) => lv.person_id === 2);
+            const hasLaia = leavesOnDay.some((lv) => lv.person_id === 3);
 
             if (hasAlex) {
               const alexSpan = document.createElement("span");
@@ -378,21 +472,52 @@ document.addEventListener("DOMContentLoaded", () => {
           tr.appendChild(td);
         });
 
+        // Totaux
         const tdOff = document.createElement("td");
         tdOff.textContent = formatTotal(week.totals.offCarole);
+        tdOff.classList.add("col-total");
         tr.appendChild(tdOff);
 
         const tdExtra = document.createElement("td");
         tdExtra.textContent = formatTotal(week.totals.extraOffCarole);
+        tdExtra.classList.add("col-total");
         tr.appendChild(tdExtra);
 
         const tdCentre = document.createElement("td");
         tdCentre.textContent = formatTotal(week.totals.centre);
+        tdCentre.classList.add("col-total");
         tr.appendChild(tdCentre);
 
         const tdAvis = document.createElement("td");
         tdAvis.textContent = formatTotal(week.totals.avis);
+        tdAvis.classList.add("col-total");
         tr.appendChild(tdAvis);
+
+        const tdPepSick = document.createElement("td");
+        tdPepSick.textContent = formatTotal(week.totals.pepSick);
+        tdPepSick.classList.add("col-total");
+        tr.appendChild(tdPepSick);
+
+        const tdPresencePep = document.createElement("td");
+        tdPresencePep.textContent = formatTotal(week.totals.presencePep);
+        tdPresencePep.classList.add("col-total");
+        tr.appendChild(tdPresencePep);
+
+        // 6 colonnes ALEX
+        for (let i = 0; i < 6; i++) {
+          const td = document.createElement("td");
+          td.textContent = "";
+          td.classList.add("col-alex-sub");
+          tr.appendChild(td);
+        }
+
+        // 6 colonnes LAIA
+        for (let i = 0; i < 6; i++) {
+          const td = document.createElement("td");
+          td.textContent = "";
+          td.classList.add("col-laia-sub");
+          tr.appendChild(td);
+        }
 
         this.planningBody.appendChild(tr);
       });
@@ -427,11 +552,6 @@ document.addEventListener("DOMContentLoaded", () => {
           // Gestion add / add-single / delete / update sur le calendrier mensuel
           this.monthSelectionMenu.addEventListener("click", (e) =>
             this.handleMonthMenuClick(e)
-          );
-
-          // Gestion des actions bulk (bulk-update*, bulk-delete*) via handleMenuClick
-          this.monthSelectionMenu.addEventListener("click", (e) =>
-            this.handleMenuClick(e)
           );
         }
       }
@@ -512,12 +632,14 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         const conge = eventsOnDay.find((ev) => CONGE_TYPES.includes(ev.type));
         const garde = eventsOnDay.find((ev) => GUARDE_TYPES.includes(ev.type));
+        const pep = eventsOnDay.find((ev) => PEP_TYPES.includes(ev.type));
 
-        if (!conge && !garde) {
+        if (!conge && !garde && !pep) {
           this.showAddMenu(e);
         } else {
-          this.showEditMenuForDay(e, { conge, garde, date });
+          this.showEditMenuForDay(e, { conge, garde, pep, date });
         }
+
         return;
       }
 
@@ -662,11 +784,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="fc-menu-section"><strong>Mode de Garde</strong></div>
         <button data-action="add" data-type="CENTRE">Centre</button>
         <button data-action="add" data-type="AVIS">Avis</button>
+        <div class="fc-menu-section"><strong>Pep</strong></div>
+        <button data-action="add" data-type="PEP_SICK">Pep malade</button>
       `;
       this.positionAndShowMenu(e);
     }
 
-    showEditMenuForDay(e, { conge, garde, date }) {
+    showEditMenuForDay(e, { conge, garde, pep, date }) {
       console.log(
         "[EDIT MENU] pour date",
         date,
@@ -729,6 +853,24 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
       }
 
+      // --- Section Pep malade ---
+      let pepSection = "";
+      if (pep) {
+        pepSection = `
+      <div class="fc-menu-section"><strong>Pep</strong></div>
+      <button data-action="delete" data-event-id="${pep.id}">
+        Supprimer "Pep malade"
+      </button>
+    `;
+      } else {
+        pepSection = `
+      <div class="fc-menu-section"><strong>Pep</strong></div>
+      <button data-action="add-single" data-type="PEP_SICK" data-date="${date}">
+        Marquer Pep malade
+      </button>
+    `;
+      }
+
       // --- Section congés Alex / Laia ---
       console.log(
         "[EDIT MENU] this.leaves length =",
@@ -770,7 +912,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
       }
 
-      const fullHtml = congeSection + gardeSection + leavesSection;
+      const fullHtml = congeSection + gardeSection + pepSection + leavesSection;
       console.log("[EDIT MENU] full menu HTML length =", fullHtml.length);
 
       this.selectionMenu.innerHTML = fullHtml;
@@ -835,17 +977,22 @@ document.addEventListener("DOMContentLoaded", () => {
             };
           }
 
-          const res = await fetch("/api/manage-event.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+          const res = await fetch(
+            "/modules/family-calendar/includes/api/manage-event.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
           if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
             throw new Error(errData.message || "Erreur HTTP " + res.status);
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -885,11 +1032,14 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearSelection();
 
         try {
-          const response = await fetch("/api/save-leaves.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify([newLeave]),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/save-leaves.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify([newLeave]),
+            }
+          );
           if (!response.ok) {
             throw new Error("Erreur HTTP " + response.status);
           }
@@ -917,11 +1067,14 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearSelection();
 
         try {
-          const response = await fetch("/api/manage-leaf.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete_day", date: leaveDate }),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/manage-leaf.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "delete_day", date: leaveDate }),
+            }
+          );
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new Error(
@@ -985,17 +1138,22 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearSelection();
 
         try {
-          const response = await fetch("/api/save-events.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newEvents),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/save-events.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(newEvents),
+            }
+          );
           if (!response.ok) {
             throw new Error("Erreur HTTP " + response.status);
           }
 
           // Resync DB events
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -1050,16 +1208,21 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearSelection();
 
         try {
-          const response = await fetch("/api/save-events.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify([newEvent]),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/save-events.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify([newEvent]),
+            }
+          );
           if (!response.ok) {
             throw new Error("Erreur HTTP " + response.status);
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -1088,11 +1251,14 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearSelection();
 
         try {
-          const response = await fetch("/api/manage-event.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete", event_id: eventId }),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/manage-event.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "delete", event_id: eventId }),
+            }
+          );
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new Error(
@@ -1100,7 +1266,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -1131,15 +1299,18 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearSelection();
 
         try {
-          const response = await fetch("/api/manage-event.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "update",
-              event_id: eventId,
-              new_type: newType,
-            }),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/manage-event.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "update",
+                event_id: eventId,
+                new_type: newType,
+              }),
+            }
+          );
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new Error(
@@ -1147,7 +1318,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -1168,17 +1341,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async manageEvent(payload) {
       try {
-        const response = await fetch("/api/manage-event.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const response = await fetch(
+          "/modules/family-calendar/includes/api/manage-event.php",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           throw new Error(errData.message || "Erreur HTTP " + response.status);
         }
 
-        const resEvents = await fetch("/api/get-events.php");
+        const resEvents = await fetch(
+          "/modules/family-calendar/includes/api/get-events.php"
+        );
         if (!resEvents.ok) {
           throw new Error("Erreur lors du rechargement des événements.");
         }
@@ -1276,31 +1454,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     calculateMonthTotals(year, month) {
-      // Calculer le premier et dernier jour du mois (uniquement jours de semaine)
-      const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const totals = {
         offCarole: 0,
         extraOffCarole: 0,
         centre: 0,
         avis: 0,
+        pepSick: 0,
+        presencePep: 0,
+        workingDays: 0, // jours potentiels d'accueil Pep
       };
 
-      // Parcourir tous les jours du mois
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const date = new Date(year, month, day);
-        const dayOfWeek = date.getDay();
+        const dayOfWeek = date.getDay(); // 0=dim, 6=sam
 
-        // Ignorer les samedi (6) et dimanche (0)
         if (dayOfWeek === 0 || dayOfWeek === 6) {
-          continue;
+          continue; // on saute samedi/dimanche
         }
 
         const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(
           day
         ).padStart(2, "0")}`;
 
-        // Trouver les événements pour ce jour
+        // Si jour férié, ce n'est PAS un jour potentiel d'accueil Pep
+        const isPublicHoliday =
+          this.publicHolidayDates && this.publicHolidayDates.has(isoDate);
+
+        if (!isPublicHoliday) {
+          totals.workingDays++;
+        }
+
+        // Événements de base (pf_events) pour ce jour
         const dayEvents = this.dbEvents.filter((evt) => evt.date === isoDate);
 
         dayEvents.forEach((evt) => {
@@ -1318,9 +1503,19 @@ document.addEventListener("DOMContentLoaded", () => {
             case "AVIS":
               totals.avis += dur;
               break;
+            case "PEP_SICK":
+              totals.pepSick += dur;
+              break;
           }
         });
       }
+
+      const absencesPep =
+        (totals.offCarole || 0) +
+        (totals.extraOffCarole || 0) +
+        (totals.pepSick || 0);
+
+      totals.presencePep = Math.max(0, totals.workingDays - absencesPep);
 
       return totals;
     }
@@ -1328,7 +1523,7 @@ document.addEventListener("DOMContentLoaded", () => {
     generateMonthSummaryHTML(year, month) {
       const totals = this.calculateMonthTotals(year, month);
       const formatTotal = (total) =>
-        total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "";
+        total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "0";
 
       const monthLabel = `${getMonthNameFr(month)} ${year}`;
 
@@ -1338,19 +1533,21 @@ document.addEventListener("DOMContentLoaded", () => {
         <thead>
           <tr>
             <th>Mois</th>
+            <th>Jours ouvrés</th>
             <th># Off Carole</th>
             <th># Extra off Carole</th>
-            <th># Centre</th>
-            <th># Avis</th>
+            <th># Pep malade</th>
+            <th># Présence Pep</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>${monthLabel}</td>
+            <td>${formatTotal(totals.workingDays)}</td>
             <td>${formatTotal(totals.offCarole)}</td>
             <td>${formatTotal(totals.extraOffCarole)}</td>
-            <td>${formatTotal(totals.centre)}</td>
-            <td>${formatTotal(totals.avis)}</td>
+            <td>${formatTotal(totals.pepSick)}</td>
+            <td>${formatTotal(totals.presencePep)}</td>
           </tr>
         </tbody>
       </table>
@@ -1602,6 +1799,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let classes = "fc-month-day";
         let hasGarde = false;
         let gardeType = null;
+        let hasPepSick = false; // <- ajouté
 
         dayEvents.forEach((evt) => {
           const classMap = {
@@ -1609,6 +1807,7 @@ document.addEventListener("DOMContentLoaded", () => {
             PUBLIC_HOLIDAY: "fc-day--public-holiday",
             OFF_CAROLE: "fc-day--off-carole",
             EXTRA_OFF_CAROLE: "fc-day--extra-off-carole",
+            // PEP_SICK: "fc-day--pep-sick",
           };
 
           if (classMap[evt.type]) {
@@ -1618,6 +1817,10 @@ document.addEventListener("DOMContentLoaded", () => {
           if (GUARDE_TYPES.includes(evt.type)) {
             hasGarde = true;
             gardeType = evt.type;
+          }
+
+          if (evt.type === "PEP_SICK") {
+            hasPepSick = true;
           }
         });
 
@@ -1634,6 +1837,10 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         let cellInnerHTML = `${day}`;
+
+        if (hasPepSick) {
+          cellInnerHTML += `<span class="fc-pep-sick-emoji">🤒</span>`;
+        }
 
         if (leavesOnDay.length > 0) {
           const hasAlex = leavesOnDay.some((lv) => lv.person_id === 2); // Alex
@@ -1696,11 +1903,11 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         const conge = eventsOnDay.find((e) => CONGE_TYPES.includes(e.type));
         const garde = eventsOnDay.find((e) => GUARDE_TYPES.includes(e.type));
-
-        if (!conge && !garde) {
+        const pep = eventsOnDay.find((e) => PEP_TYPES.includes(e.type));
+        if (!conge && !garde && !pep) {
           this.showMonthAddMenu(e);
         } else {
-          this.showMonthEditMenuForDay(e, { conge, garde, date });
+          this.showMonthEditMenuForDay(e, { conge, garde, pep, date });
         }
         return;
       }
@@ -1761,11 +1968,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="fc-menu-section"><strong>Mode de Garde</strong></div>
         <button data-action="add" data-type="CENTRE">Centre</button>
         <button data-action="add" data-type="AVIS">Avis</button>
+        <div class="fc-menu-section"><strong>Pep</strong></div>
+        <button data-action="add" data-type="PEP_SICK">Pep malade</button>
       `;
       this.positionAndShowMonthMenu(e);
     }
 
-    showMonthEditMenuForDay(e, { conge, garde, date }) {
+    showMonthEditMenuForDay(e, { conge, garde, pep, date }) {
       if (!this.monthSelectionMenu) return;
 
       // --- Section congé Carole ---
@@ -1821,6 +2030,24 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
       }
 
+      // --- Section Pep malade ---
+      let pepSection = "";
+      if (pep) {
+        pepSection = `
+      <div class="fc-menu-section"><strong>Pep</strong></div>
+      <button data-action="delete" data-event-id="${pep.id}">
+        Supprimer "Pep malade"
+      </button>
+    `;
+      } else {
+        pepSection = `
+      <div class="fc-menu-section"><strong>Pep</strong></div>
+      <button data-action="add-single" data-type="PEP_SICK" data-date="${date}">
+        Marquer Pep malade
+      </button>
+    `;
+      }
+
       // --- Section congés Alex / Laia ---
       const leavesOnDay = (this.leaves || []).filter(
         (lv) => lv.leave_date === date
@@ -1858,7 +2085,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // --- Assemblage du menu ---
       this.monthSelectionMenu.innerHTML =
-        congeSection + gardeSection + leavesSection;
+        congeSection + gardeSection + pepSection + leavesSection;
       this.positionAndShowMonthMenu(e);
     }
 
@@ -1978,16 +2205,21 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearMonthSelection();
 
         try {
-          const response = await fetch("/api/save-events.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newEvents),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/save-events.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(newEvents),
+            }
+          );
           if (!response.ok) {
             throw new Error("Erreur HTTP " + response.status);
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -2041,16 +2273,21 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearMonthSelection();
 
         try {
-          const response = await fetch("/api/save-events.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify([newEvent]),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/save-events.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify([newEvent]),
+            }
+          );
           if (!response.ok) {
             throw new Error("Erreur HTTP " + response.status);
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -2077,11 +2314,14 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearMonthSelection();
 
         try {
-          const response = await fetch("/api/manage-event.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "delete", event_id: eventId }),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/manage-event.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "delete", event_id: eventId }),
+            }
+          );
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new Error(
@@ -2089,7 +2329,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }
@@ -2116,15 +2358,18 @@ document.addEventListener("DOMContentLoaded", () => {
         this.clearMonthSelection();
 
         try {
-          const response = await fetch("/api/manage-event.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "update",
-              event_id: eventId,
-              new_type: newType,
-            }),
-          });
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/manage-event.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "update",
+                event_id: eventId,
+                new_type: newType,
+              }),
+            }
+          );
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new Error(
@@ -2132,7 +2377,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
           }
 
-          const resEvents = await fetch("/api/get-events.php");
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
           if (!resEvents.ok) {
             throw new Error("Erreur lors du rechargement des événements.");
           }

@@ -1,7 +1,7 @@
 <?php
 // api/manage-leaf.php
 header('Content-Type: application/json');
-require __DIR__ . '/../includes/db.php';
+require __DIR__ . '/../../../../includes/db.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
 

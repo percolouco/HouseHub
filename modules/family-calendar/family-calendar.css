@@ -29,44 +29,106 @@
 
 #planningTable th,
 #planningTable td {
+  height: 32px;
+  min-height: 32px;
+  position: relative;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Colonnes "Mois" et "Semaine" plus étroites */
-#planningTable th:nth-child(1),
-#planningTable td:nth-child(1),
-#planningTable th:nth-child(2),
-#planningTable td:nth-child(2) {
-  width: 2%;
+/* Mois / Semaine */
+#planningHeaderTable .col-month,
+#planningTable .col-month {
+  width: 60px;
+  max-width: 60px;
 }
 
-/* Colonnes jours (Lundi à Vendredi) */
-#planningTable th:nth-child(3),
-#planningTable td:nth-child(3),
-#planningTable th:nth-child(4),
-#planningTable td:nth-child(4),
-#planningTable th:nth-child(5),
-#planningTable td:nth-child(5),
-#planningTable th:nth-child(6),
-#planningTable td:nth-child(6),
-#planningTable th:nth-child(7),
-#planningTable td:nth-child(7) {
-  width: 2%;
+/* Jours */
+#planningHeaderTable .col-day,
+#planningTable .col-day {
+  width: 70px;
+  max-width: 70px;
 }
 
-/* Colonnes de totaux */
-#planningTable th:nth-child(8),
-#planningTable td:nth-child(8),
-#planningTable th:nth-child(9),
-#planningTable td:nth-child(9),
-#planningTable th:nth-child(10),
-#planningTable td:nth-child(10),
-#planningTable th:nth-child(11),
-#planningTable td:nth-child(11) {
-  width: 4%;
+/* Totaux */
+#planningHeaderTable .col-total,
+#planningTable .col-total {
+  width: 50px;
+  max-width: 50px;
+  white-space: nowrap;
+}
+
+/* Sous-colonnes Alex/Laia */
+#planningHeaderTable .col-alex-sub,
+#planningHeaderTable .col-laia-sub,
+#planningTable .col-alex-sub,
+#planningTable .col-laia-sub {
+  width: 40px;
+  max-width: 40px;
+  font-size: 11px;
+}
+
+/* Autoriser le wrap dans les TH des sous-colonnes pour garder lisible */
+#planningTable thead th.col-total,
+#planningTable thead th.col-alex-sub,
+#planningTable thead th.col-laia-sub {
+  white-space: normal;
+}
+
+#planningTable-wrapper {
+  max-height: 500px;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+}
+
+/* Header sticky */
+#planningHeaderTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+/* Empêcher le header de bouger/contracter */
+#planningHeaderTable th {
+  background: #f0f4f8;
+}
+/* Optionnel : aligner visuellement les deux tableaux (bordures, etc.) */
+#planningHeaderTable,
+#planningTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+#planningTable thead th {
+  top: 0;
+  z-index: 3;
+  background: #f0f4f8;
+}
+
+/* Ligne 1 */
+#planningTable thead tr:nth-child(1) th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f0f4f8;
+}
+
+/* Ligne 2 */
+#planningTable thead tr:nth-child(2) th {
+  position: sticky;
+  top: 24px; /* hauteur de la 1ère ligne */
+  z-index: 3;
+  background: #f0f4f8;
+}
+
+/* Ligne 3 */
+#planningTable thead tr:nth-child(3) th {
+  position: sticky;
+  top: 48px; /* 1ère + 2e ligne (22 + 22) */
+  z-index: 3;
+  background: #f0f4f8;
 }
 
 /* === COLOR CODING / LÉGENDE === */
@@ -189,6 +251,16 @@
   line-height: 1;
   z-index: 2;
 }
+/* Planning hebdo : picto Centre en haut à droite */
+#planningTable .fc-day--has-guard.fc-day--centre::after {
+  content: "🏫";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 12px;
+  line-height: 1;
+  z-index: 2;
+}
 
 /* Combinaisons avec dégradés */
 .fc-day--school-holiday.fc-day--off-carole {
@@ -245,6 +317,33 @@
 
 .fc-legend-centre::before {
   content: "🏫";
+}
+
+.fc-legend-pep-sick {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  background: none;
+  border: none;
+}
+
+.fc-legend-pep-sick::before {
+  content: "🤒";
+}
+
+.fc-pep-sick-emoji {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+#planningTable .fc-pep-sick-emoji {
+  font-size: 12px;
+  right: 2px;
+  bottom: 2px;
 }
 
 /* Avis indicateur */
