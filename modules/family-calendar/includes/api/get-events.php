@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 
-require __DIR__ . '/../includes/db.php';
+require __DIR__ . '/../../../../includes/db.php';
 
 try {
     $stmt = $pdo->query("SELECT id, event_date AS date, event_type AS type, person_id, duration FROM pf_events ORDER BY event_date");

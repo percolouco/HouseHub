@@ -63,7 +63,11 @@ require __DIR__ . '/header.php';
         </div>
         <div class="pf-legend-item">
           <div class="pf-legend-color fc-legend-avis"></div>
-          <span>Avis</span>
+          <span>Avis</span>  
+        </div>
+        <div class="pf-legend-item">
+          <div class="pf-legend-color fc-legend-pep-sick"></div>
+          <span>Pep malade</span>
         </div>
       </div>
     </div>
@@ -134,26 +138,121 @@ require __DIR__ . '/header.php';
 <!-- ===================================================================== -->
 <section class="pf-section">
   <h2>Planning par semaine</h2>
-  <div class="pf-table-wrapper">
-    <table id="planningTable" class="pf-table pf-table--compact">
+  <div class="pf-table-wrapper" id="planningTable-wrapper">
+    <table id="planningHeaderTable" class="pf-table pf-table--compact">
+      <colgroup>
+        <col class="col-month">   <!-- Mois -->
+        <col class="col-month">   <!-- Semaine -->
+        <col class="col-day">     <!-- Lundi -->
+        <col class="col-day">     <!-- Mardi -->
+        <col class="col-day">     <!-- Mercredi -->
+        <col class="col-day">     <!-- Jeudi -->
+        <col class="col-day">     <!-- Vendredi -->
+        <col class="col-total">   <!-- # Off -->
+        <col class="col-total">   <!-- # Extra -->
+        <col class="col-total">   <!-- # Centre -->
+        <col class="col-total">   <!-- # Avis -->
+        <col class="col-total">   <!-- # Pep malade -->
+        <col class="col-total">   <!-- # Pep Présence -->
+        <!-- ALEX (6 colonnes) -->
+        <col class="col-alex-sub">
+        <col class="col-alex-sub">
+        <col class="col-alex-sub">
+        <col class="col-alex-sub">
+        <col class="col-alex-sub">
+        <col class="col-alex-sub">
+        <!-- LAIA (6 colonnes) -->
+        <col class="col-laia-sub">
+        <col class="col-laia-sub">
+        <col class="col-laia-sub">
+        <col class="col-laia-sub">
+        <col class="col-laia-sub">
+        <col class="col-laia-sub">
+      </colgroup>
       <thead>
         <tr>
-          <th>Mois</th>
-          <th>Semaine</th>
-          <th>Lundi</th>
-          <th>Mardi</th>
-          <th>Mercredi</th>
-          <th>Jeudi</th>
-          <th>Vendredi</th>
-          <th># Off Carole</th>
-          <th># Extra off Carole</th>
-          <th>#Centre</th>
-          <th>#Avis</th>
+          <th rowspan="3" class="col-month">Mois</th>
+          <th rowspan="3" class="col-month">Semaine</th>
+          <th rowspan="3" class="col-day">Lundi</th>
+          <th rowspan="3" class="col-day">Mardi</th>
+          <th rowspan="3" class="col-day">Mercredi</th>
+          <th rowspan="3" class="col-day">Jeudi</th>
+          <th rowspan="3" class="col-day">Vendredi</th>
+          <th rowspan="3" class="col-total"># Off Carole</th>
+          <th rowspan="3" class="col-total"># Extra off Carole</th>
+          <th rowspan="3" class="col-total"># Centre</th>
+          <th rowspan="3" class="col-total"># Avis</th>
+          <th rowspan="3" class="col-total"># Pep malade</th>
+          <th rowspan="3" class="col-total"># Pep Présence</th>
+
+          <!-- Ligne 1 : ALEX / LAIA -->
+          <th colspan="6" class="col-alex">ALEX</th>
+          <th colspan="6" class="col-laia">LAIA</th>
+        </tr>
+        <tr>
+          <!-- Ligne 2 : CP / JRA / JA (regroupement) -->
+          <th colspan="2" class="col-alex-sub">CP</th>
+          <th colspan="2" class="col-alex-sub">JRA</th>
+          <th colspan="2" class="col-alex-sub">JA</th>
+
+          <th colspan="2" class="col-laia-sub">CP</th>
+          <th colspan="2" class="col-laia-sub">JRA</th>
+          <th colspan="2" class="col-laia-sub">JA</th>
+        </tr>
+        <tr>
+          <!-- Ligne 3 : Available / Use pour chaque type -->
+          <!-- ALEX -->
+          <th class="col-alex-sub">Av.</th>
+          <th class="col-alex-sub">Use</th>
+          <th class="col-alex-sub">Av.</th>
+          <th class="col-alex-sub">Use</th>
+          <th class="col-alex-sub">Av.</th>
+          <th class="col-alex-sub">Use</th>
+
+          <!-- LAIA -->
+          <th class="col-laia-sub">Av.</th>
+          <th class="col-laia-sub">Use</th>
+          <th class="col-laia-sub">Av.</th>
+          <th class="col-laia-sub">Use</th>
+          <th class="col-laia-sub">Av.</th>
+          <th class="col-laia-sub">Use</th>
         </tr>
       </thead>
+    </table>
+    <table id="planningTable" class="pf-table pf-table--compact">
       <tbody id="planningBody">
-        <!-- Le contenu de ce tableau est entièrement généré par family-calendar.js -->
+        <colgroup>
+          <col class="col-month">   <!-- Mois -->
+          <col class="col-month">   <!-- Semaine -->
+          <col class="col-day">     <!-- Lundi -->
+          <col class="col-day">     <!-- Mardi -->
+          <col class="col-day">     <!-- Mercredi -->
+          <col class="col-day">     <!-- Jeudi -->
+          <col class="col-day">     <!-- Vendredi -->
+          <col class="col-total">   <!-- # Off -->
+          <col class="col-total">   <!-- # Extra -->
+          <col class="col-total">   <!-- # Centre -->
+          <col class="col-total">   <!-- # Avis -->
+          <col class="col-total">   <!-- # Pep malade -->
+          <col class="col-total">   <!-- # Pep Présence -->
+          <!-- ALEX (6 colonnes) -->
+          <col class="col-alex-sub">
+          <col class="col-alex-sub">
+          <col class="col-alex-sub">
+          <col class="col-alex-sub">
+          <col class="col-alex-sub">
+          <col class="col-alex-sub">
+          <!-- LAIA (6 colonnes) -->
+          <col class="col-laia-sub">
+          <col class="col-laia-sub">
+          <col class="col-laia-sub">
+          <col class="col-laia-sub">
+          <col class="col-laia-sub">
+          <col class="col-laia-sub">
+        </colgroup>
+        <!-- lignes générées par JS -->
       </tbody>
+
     </table>
     
     <!-- Le menu contextuel est caché par défaut et son contenu est généré par JS -->
