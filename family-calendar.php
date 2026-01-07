@@ -202,20 +202,19 @@ require __DIR__ . '/header.php';
         <tr>
           <!-- Ligne 3 : Available / Use pour chaque type -->
           <!-- ALEX -->
-          <th class="col-alex-sub">Av.</th>
-          <th class="col-alex-sub">Use</th>
-          <th class="col-alex-sub">Av.</th>
-          <th class="col-alex-sub">Use</th>
-          <th class="col-alex-sub">Av.</th>
-          <th class="col-alex-sub">Use</th>
-
-          <!-- LAIA -->
-          <th class="col-laia-sub">Av.</th>
-          <th class="col-laia-sub">Use</th>
-          <th class="col-laia-sub">Av.</th>
-          <th class="col-laia-sub">Use</th>
-          <th class="col-laia-sub">Av.</th>
-          <th class="col-laia-sub">Use</th>
+            <th class="col-alex-sub col-alex-av">Av.</th>
+            <th class="col-alex-sub col-alex-use">Use</th>
+            <th class="col-alex-sub col-alex-av">Av.</th>
+            <th class="col-alex-sub col-alex-use">Use</th>
+            <th class="col-alex-sub col-alex-av">Av.</th>
+            <th class="col-alex-sub col-alex-use">Use</th>
+            <!-- LAIA -->
+            <th class="col-laia-sub col-laia-av">Av.</th>
+            <th class="col-laia-sub col-laia-use">Use</th>
+            <th class="col-laia-sub col-laia-av">Av.</th>
+            <th class="col-laia-sub col-laia-use">Use</th>
+            <th class="col-laia-sub col-laia-av">Av.</th>
+            <th class="col-laia-sub col-laia-use">Use</th>
         </tr>
       </thead>
     </table>

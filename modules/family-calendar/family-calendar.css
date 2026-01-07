@@ -38,6 +38,22 @@
   text-overflow: ellipsis;
 }
 
+/* Colonnes "Av." non modifiables : fond gris clair + texte un peu atténué */
+#planningHeaderTable th.col-alex-av,
+#planningTable td.col-alex-av,
+#planningHeaderTable th.col-laia-av,
+#planningTable td.col-laia-av {
+  background-color: #e5e7eb;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+/* Optionnel : curseur "not-allowed" pour marquer le côté non éditable */
+#planningTable td.col-alex-av,
+#planningTable td.col-laia-av {
+  cursor: not-allowed;
+}
+
 /* Mois / Semaine */
 #planningHeaderTable .col-month,
 #planningTable .col-month {
@@ -175,48 +191,125 @@
   cursor: pointer;
 }
 
-/* Le menu contextuel flottant */
+/* Conteneur du menu de sélection (hebdo & mensuel) */
 .fc-selection-menu {
   display: none;
   position: absolute;
   z-index: 100;
-  background-color: white;
-  border: 1px solid #ccc;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  padding: 8px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db; /* gris clair */
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+  border-radius: 8px;
+  padding: 8px 10px;
   font-size: 12px;
+  min-width: 220px;
+  max-width: 360px;
 }
 
-.fc-selection-menu .fc-menu-section {
+/* Sections internes avec titre */
+.fc-menu-section {
   margin-bottom: 8px;
 }
 
-.fc-selection-menu .fc-menu-section:last-child {
-  margin-bottom: 0;
-}
-
-.fc-selection-menu strong {
+.fc-menu-section > strong {
   display: block;
   margin-bottom: 4px;
   font-weight: 600;
+  color: #111827; /* gris très foncé */
 }
 
-.fc-selection-menu button {
+/* Grille pour disposer proprement les boutons dans une section */
+.fc-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+/* Boutons génériques du menu */
+.fc-selection-menu button.fc-menu-btn,
+.fc-selection-menu button.fc-menu-leave-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.fc-selection-menu button.fc-menu-btn:hover,
+.fc-selection-menu button.fc-menu-leave-btn:hover {
+  background-color: #e5f0ff; /* léger bleu */
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+/* Variantes par type pour un léger hint visuel 
+.fc-menu-btn--conge {
+   congés Carole 
+}
+
+.fc-menu-btn--garde {
+   mode de garde 
+}
+
+.fc-menu-btn--pep {
+   Pep malade 
+} */
+
+/* Boutons "danger" (suppression) */
+.fc-selection-menu button.fc-menu-danger {
   display: block;
   width: 100%;
-  background: none;
-  border: 1px solid #ddd;
+  margin-top: 6px;
+  padding: 4px 6px;
   border-radius: 4px;
-  padding: 4px 8px;
-  margin-top: 4px;
-  text-align: left;
+  border: 1px solid #fecaca;
+  background-color: #fef2f2;
+  color: #b91c1c;
+  font-size: 12px;
   cursor: pointer;
+  text-align: left;
 }
 
-.fc-selection-menu button:hover {
-  background-color: #f0f4f8;
-  border-color: #b0c4de;
+.fc-selection-menu button.fc-menu-danger:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* Tableau des congés Alex / Laia dans le menu */
+.fc-menu-leaves-table {
+  margin-top: 4px;
+}
+
+.fc-menu-leaves-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.fc-menu-leaves-table th,
+.fc-menu-leaves-table td {
+  padding: 2px;
+  text-align: center;
+}
+
+.fc-menu-leaves-table thead th {
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.fc-menu-leaves-table tbody td:first-child {
+  text-align: left;
+  font-weight: 500;
+  color: #4b5563;
 }
 
 /* --- Couleurs de base pour la légende et les jours --- */
@@ -422,6 +515,7 @@
 
 .fc-calendar-and-summary {
   display: block;
+  position: relative;
 }
 
 .fc-month-header {
@@ -676,6 +770,15 @@
   font-weight: 600;
   color: #1f2933;
   line-height: 1;
+}
+
+/* Bordure épaisse pour délimiter les mois dans le planning hebdo */
+#planningTable tr.fc-month-first-week-row td {
+  border-top: 2px solid #243b53; /* couleur sombre cohérente avec ta charte */
+}
+
+#planningTable tr.fc-month-last-week-row td {
+  border-bottom: 2px solid #243b53;
 }
 
 /* === TABLEAU RÉCAPITULATIF === */
