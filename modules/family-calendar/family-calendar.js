@@ -58,16 +58,70 @@ document.addEventListener("DOMContentLoaded", () => {
       this.fixedEvents = await this.fetchPublicAndSchoolHolidays();
       this.events = [...this.dbEvents, ...this.fixedEvents];
       this.leaves = await this.fetchLeaves();
-
-      // Nouveau : set des jours fériés (dates ISO)
       this.publicHolidayDates = new Set(
         this.fixedEvents
           .filter((e) => e.type === "PUBLIC_HOLIDAY")
           .map((e) => e.date)
       );
+      this.leaveBalances = await this.fetchLeaveBalances();
+      this.leaveSnapshots = await this.fetchLeaveSnapshots();
 
       this.reprocessAndRender();
       this.renderMonthCalendar();
+    }
+
+    async fetchLeaveBalances() {
+      try {
+        const res = await fetch(
+          "/modules/family-calendar/includes/api/get-leave-balances.php"
+        );
+        if (!res.ok) {
+          throw new Error("Erreur HTTP " + res.status);
+        }
+        const data = await res.json();
+        return data.balances || [];
+      } catch (err) {
+        console.error("Erreur lors du chargement des soldes de congés:", err);
+        return [];
+      }
+    }
+
+    async fetchLeaveSnapshots() {
+      try {
+        const res = await fetch(
+          "/modules/family-calendar/includes/api/get-leave-snapshots.php"
+        );
+        if (!res.ok) {
+          throw new Error("Erreur HTTP " + res.status);
+        }
+        const data = await res.json();
+        return data.snapshots || [];
+      } catch (err) {
+        console.error(
+          "Erreur lors du chargement des snapshots de congés:",
+          err
+        );
+        return [];
+      }
+    }
+
+    getAvailableAtMonthStart(personId, leaveType, dateStr) {
+      if (!this.monthlyLeaveBalances) return null;
+
+      const dateObj = new Date(dateStr + "T00:00:00");
+      const ymKey = `${dateObj.getFullYear()}-${String(
+        dateObj.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      const personBal = (this.monthlyLeaveBalances[personId] || {})[leaveType];
+      if (!personBal) return null;
+
+      const info = personBal[ymKey];
+      if (!info) return null;
+
+      return info.availableAtMonthStart != null
+        ? parseFloat(info.availableAtMonthStart)
+        : null;
     }
 
     loadDbEvents() {
@@ -202,6 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     reprocessAndRender() {
       this.reprocessEvents();
+      this.calculateMonthlyLeaveBalances();
       this.renderTable();
       this.updateGlobalSummary();
       this.renderMonthCalendar();
@@ -316,6 +371,241 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    calculateMonthlyLeaveBalances() {
+      const usageMonth = {}; // usageMonth[person_id][leave_type][ym] = total days in THAT month
+
+      // 1. Usage mensuel à partir des leaves
+      (this.leaves || []).forEach((lv) => {
+        const personId = parseInt(lv.person_id, 10);
+        const leaveType = lv.leave_type;
+        const dateObj = new Date(lv.leave_date + "T00:00:00");
+        const year = dateObj.getFullYear();
+        const month = dateObj.getMonth() + 1;
+        const ymKey = `${year}-${String(month).padStart(2, "0")}`;
+        const dur = parseFloat(lv.duration) || 1;
+
+        if (!usageMonth[personId]) usageMonth[personId] = {};
+        if (!usageMonth[personId][leaveType])
+          usageMonth[personId][leaveType] = {};
+        usageMonth[personId][leaveType][ymKey] =
+          (usageMonth[personId][leaveType][ymKey] || 0) + dur;
+      });
+
+      // 2. Construire la liste des mois présents dans le planning
+      const allYmKeys = new Set();
+      (this.weeks || []).forEach((w) => {
+        const d = w.dayDates.mon; // lundi
+        const ymKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}`;
+        allYmKeys.add(ymKey);
+      });
+      const ymList = Array.from(allYmKeys).sort(); // ex: "2025-09", "2025-10", ...
+
+      const monthlyBalances = {}; // monthlyBalances[person_id][leave_type][ym] = { usedInMonth, availableAtMonthStart }
+
+      // 3. Indexer les balances annuelles (CP / JA)
+      const balancesByYear = {}; // balancesByYear[person_id][leave_type][year] = initial
+      (this.leaveBalances || []).forEach((b) => {
+        const personId = parseInt(b.person_id, 10);
+        const leaveType = b.leave_type;
+        const balanceYear = parseInt(b.balance_year, 10);
+        const initial = parseFloat(b.initial_balance) || 0;
+
+        if (!balancesByYear[personId]) balancesByYear[personId] = {};
+        if (!balancesByYear[personId][leaveType])
+          balancesByYear[personId][leaveType] = {};
+        balancesByYear[personId][leaveType][balanceYear] = initial;
+      });
+
+      const persons = [2, 3]; // Alex, Laia
+      const types = ["CP", "JRA", "JA"];
+
+      persons.forEach((personId) => {
+        if (!monthlyBalances[personId]) monthlyBalances[personId] = {};
+
+        types.forEach((leaveType) => {
+          if (!monthlyBalances[personId][leaveType])
+            monthlyBalances[personId][leaveType] = {};
+
+          // Pour CP / JA : on utilise initial_balance et on décrémente au fil des mois
+          if (leaveType !== "JRA") {
+            ymList.forEach((ym, index) => {
+              const [yStr] = ym.split("-");
+              const year = parseInt(yStr, 10);
+              const initial =
+                ((balancesByYear[personId] || {})[leaveType] || {})[year] || 0;
+
+              // use caisse : somme des mois < ym
+              const personUsage = (usageMonth[personId] || {})[leaveType] || {};
+              let usedBeforeMonth = 0;
+              Object.entries(personUsage).forEach(([ym2, val]) => {
+                const [y2Str] = ym2.split("-");
+                const y2 = parseInt(y2Str, 10);
+                if (y2 === year && ym2 < ym) {
+                  usedBeforeMonth += parseFloat(val) || 0;
+                }
+              });
+
+              const usedInMonth = parseFloat(
+                ((usageMonth[personId] || {})[leaveType] || {})[ym] || 0
+              );
+
+              let availableAtMonthStart = initial - usedBeforeMonth;
+              if (availableAtMonthStart < 0) availableAtMonthStart = 0;
+
+              monthlyBalances[personId][leaveType][ym] = {
+                usedInMonth,
+                usedBeforeMonth,
+                availableAtMonthStart,
+              };
+            });
+          } else {
+            // === JRA : logique spécifique "crédit progressif" ===
+            // Hypothèse : total annuel = initial_balance pour cette année
+            // et crédit mensuel fixe (par ex 0.75)
+            const accrualPerMonth = 0.75;
+
+            // pour simplifier, on prend l'année du premier ym
+            // si un jour tu gères plusieurs années, on adaptera
+            let previousAvailable = 0;
+
+            ymList.forEach((ym, index) => {
+              const [yStr, mStr] = ym.split("-");
+              const year = parseInt(yStr, 10);
+              const month = parseInt(mStr, 10);
+
+              const personUsage = (usageMonth[personId] || {})[leaveType] || {};
+              const usedInMonth = parseFloat(personUsage[ym] || 0);
+
+              if (index === 0) {
+                // premier mois affiché dans le planning
+                // Av. initial : snapshot éventuel ou 0
+                // Si tu veux utiliser snapshots pour init, tu peux récupérer le plus récent ici.
+                // Pour l'instant, on part de 0 ou d'un snapshot si présent :
+                let initialAv = 0;
+
+                // si tu veux utiliser snapshots :
+                if (this.leaveSnapshots && this.leaveSnapshots.length) {
+                  const snaps = this.leaveSnapshots.filter(
+                    (s) =>
+                      parseInt(s.person_id, 10) === personId &&
+                      s.leave_type === "JRA"
+                  );
+                  if (snaps.length) {
+                    // dernier snapshot avant ce mois
+                    const targetDate = new Date(year, month - 1, 1);
+                    let lastSnap = null;
+                    snaps.forEach((s) => {
+                      const d = new Date(s.snapshot_date + "T00:00:00");
+                      if (d <= targetDate) {
+                        if (!lastSnap || d > lastSnap.date) {
+                          lastSnap = {
+                            date: d,
+                            remaining: parseFloat(s.remaining_balance) || 0,
+                          };
+                        }
+                      }
+                    });
+                    if (lastSnap) {
+                      initialAv = lastSnap.remaining;
+                    }
+                  }
+                }
+
+                const availableAtMonthStart = initialAv;
+                previousAvailable =
+                  availableAtMonthStart - usedInMonth + accrualPerMonth;
+
+                monthlyBalances[personId][leaveType][ym] = {
+                  usedInMonth,
+                  usedBeforeMonth: null,
+                  availableAtMonthStart,
+                };
+              } else {
+                // mois suivant : Av = Av(précédent) + accrual - use(précédent)
+                const availableAtMonthStart =
+                  previousAvailable < 0 ? 0 : previousAvailable;
+                previousAvailable =
+                  availableAtMonthStart - usedInMonth + accrualPerMonth;
+
+                monthlyBalances[personId][leaveType][ym] = {
+                  usedInMonth,
+                  usedBeforeMonth: null,
+                  availableAtMonthStart,
+                };
+              }
+            });
+          }
+        });
+      });
+
+      this.monthlyLeaveBalances = monthlyBalances;
+    }
+
+    calculateLeaveUsage() {
+      // Agrège les jours utilisés par personne et type pour l'année de référence
+      const usage = {}; // key: `${person_id}|${leave_type}|${year}`
+
+      (this.leaves || []).forEach((lv) => {
+        // lv.leave_date est au format 'YYYY-MM-DD'
+        const year = new Date(lv.leave_date + "T00:00:00").getFullYear();
+        const key = `${lv.person_id}|${lv.leave_type}|${year}`;
+        const dur = parseFloat(lv.duration) || 1;
+        usage[key] = (usage[key] || 0) + dur;
+      });
+
+      return usage;
+    }
+
+    calculateMonthlyLeaveUsage() {
+      const usageMonth = {}; // usageMonth[person_id][leave_type][ym] = total days
+
+      (this.leaves || []).forEach((lv) => {
+        const personId = parseInt(lv.person_id, 10);
+        const leaveType = lv.leave_type;
+        const dateObj = new Date(lv.leave_date + "T00:00:00");
+        const year = dateObj.getFullYear();
+        const month = dateObj.getMonth() + 1;
+        const ymKey = `${year}-${String(month).padStart(2, "0")}`;
+        const dur = parseFloat(lv.duration) || 1;
+
+        if (!usageMonth[personId]) usageMonth[personId] = {};
+        if (!usageMonth[personId][leaveType])
+          usageMonth[personId][leaveType] = {};
+        usageMonth[personId][leaveType][ymKey] =
+          (usageMonth[personId][leaveType][ymKey] || 0) + dur;
+      });
+
+      return usageMonth;
+    }
+
+    calculateAvailableBalances() {
+      const usage = this.calculateLeaveUsage();
+
+      // balances[person_id][leave_type][year] = { initial, used, remaining }
+      const balances = {};
+
+      (this.leaveBalances || []).forEach((b) => {
+        const personId = parseInt(b.person_id, 10);
+        const leaveType = b.leave_type;
+        const year = parseInt(b.balance_year, 10);
+        const initial = parseFloat(b.initial_balance) || 0;
+
+        const key = `${personId}|${leaveType}|${year}`;
+        const used = usage[key] || 0;
+        let remaining = initial - used;
+        if (remaining < 0) remaining = 0;
+
+        if (!balances[personId]) balances[personId] = {};
+        if (!balances[personId][leaveType]) balances[personId][leaveType] = {};
+        balances[personId][leaveType][year] = { initial, used, remaining };
+      });
+
+      return balances;
+    }
+
     updateGlobalSummary() {
       const summaryDiv = document.getElementById("globalSummary");
       if (!summaryDiv) return;
@@ -392,28 +682,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderTable() {
       this.planningBody.innerHTML = "";
+
       const monthSpans = this.weeks.reduce(
         (acc, w) => ({ ...acc, [w.monthKey]: (acc[w.monthKey] || 0) + 1 }),
         {}
       );
       const monthRowRendered = {};
+      // map pour savoir si on a déjà rendu les cellules Alex/Laia pour un mois
+      const alexLaiaRowRendered = {};
+
       const formatTotal = (total) =>
         total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "";
 
       this.weeks.forEach((week, index) => {
         const tr = document.createElement("tr");
+
         // Déterminer si c'est la première ou la dernière semaine du mois
         const isFirstWeekOfMonth =
           index === 0 || this.weeks[index - 1].monthKey !== week.monthKey;
         const isLastWeekOfMonth =
           index === this.weeks.length - 1 ||
           this.weeks[index + 1].monthKey !== week.monthKey;
+
         if (isFirstWeekOfMonth) {
           tr.classList.add("fc-month-first-week-row");
         }
         if (isLastWeekOfMonth) {
           tr.classList.add("fc-month-last-week-row");
         }
+
         // Colonne Mois (avec rowSpan)
         if (!monthRowRendered[week.monthKey]) {
           monthRowRendered[week.monthKey] = true;
@@ -548,64 +845,144 @@ document.addEventListener("DOMContentLoaded", () => {
         tdPresencePep.classList.add("col-total");
         tr.appendChild(tdPresencePep);
 
-        // 6 colonnes ALEX : [CP Av., CP Use, JRA Av., JRA Use, JA Av., JA Use]
-        for (let i = 0; i < 6; i++) {
-          const td = document.createElement("td");
-          td.classList.add("col-alex-sub");
+        // ===== Colonnes Alex/Laia Av./Use fusionnées par mois =====
 
-          if (i % 2 === 0) {
-            // colonnes Av. (pour l'instant vides, on remplira plus tard si besoin)
-            td.classList.add("col-alex-av");
-            td.textContent = ""; // ex: futur "solde" CP/JRA/JA
-          } else {
-            // colonnes Use : remplir selon le couple (index, type)
-            td.classList.add("col-alex-use");
+        // Mois de la semaine pour les soldes mensuels
+        const weekMonthDate = week.dayDates.mon; // lundi de la semaine
+        const ymKey = `${weekMonthDate.getFullYear()}-${String(
+          weekMonthDate.getMonth() + 1
+        ).padStart(2, "0")}`;
 
-            let value = "";
-            if (i === 1) {
-              // CP Use
-              value = formatTotal(week.totals.alexCP);
-            } else if (i === 3) {
-              // JRA Use
-              value = formatTotal(week.totals.alexJRA);
-            } else if (i === 5) {
-              // JA Use
-              value = formatTotal(week.totals.alexJA);
+        const monthlyBalances = this.monthlyLeaveBalances || {};
+
+        const computeMonthInfo = (personId, leaveType, ymKey) => {
+          const personBal = (monthlyBalances[personId] || {})[leaveType];
+          if (!personBal) return null;
+          const info = personBal[ymKey];
+          if (!info) return null;
+          return info;
+        };
+
+        const alexCPMonth = computeMonthInfo(2, "CP", ymKey);
+        const alexJRAMonth = computeMonthInfo(2, "JRA", ymKey);
+        const alexJAMonth = computeMonthInfo(2, "JA", ymKey);
+
+        const laiaCPMonth = computeMonthInfo(3, "CP", ymKey);
+        const laiaJRAMonth = computeMonthInfo(3, "JRA", ymKey);
+        const laiaJAMonth = computeMonthInfo(3, "JA", ymKey);
+
+        const getMonthVal = (info, field) =>
+          info && info[field] != null ? info[field] : 0;
+
+        // On ne rend les colonnes Alex/Laia qu'une fois par mois
+        if (!alexLaiaRowRendered[week.monthKey]) {
+          alexLaiaRowRendered[week.monthKey] = true;
+
+          const rowSpan = monthSpans[week.monthKey] || 1;
+
+          // 6 colonnes ALEX : [CP Av., CP Use, JRA Av., JRA Use, JA Av., JA Use]
+          for (let i = 0; i < 6; i++) {
+            const td = document.createElement("td");
+            td.classList.add("col-alex-sub");
+            td.rowSpan = rowSpan;
+
+            if (i % 2 === 0) {
+              // Av.
+              td.classList.add("col-alex-av");
+              let value = "";
+              if (i === 0) {
+                value = alexCPMonth
+                  ? formatTotal(
+                      getMonthVal(alexCPMonth, "availableAtMonthStart")
+                    )
+                  : "";
+              } else if (i === 2) {
+                value = alexJRAMonth
+                  ? formatTotal(
+                      getMonthVal(alexJRAMonth, "availableAtMonthStart")
+                    )
+                  : "";
+              } else if (i === 4) {
+                value = alexJAMonth
+                  ? formatTotal(
+                      getMonthVal(alexJAMonth, "availableAtMonthStart")
+                    )
+                  : "";
+              }
+              td.textContent = value;
+            } else {
+              // Use
+              td.classList.add("col-alex-use");
+              let value = "";
+              if (i === 1) {
+                value = alexCPMonth
+                  ? formatTotal(getMonthVal(alexCPMonth, "usedInMonth"))
+                  : "";
+              } else if (i === 3) {
+                value = alexJRAMonth
+                  ? formatTotal(getMonthVal(alexJRAMonth, "usedInMonth"))
+                  : "";
+              } else if (i === 5) {
+                value = alexJAMonth
+                  ? formatTotal(getMonthVal(alexJAMonth, "usedInMonth"))
+                  : "";
+              }
+              td.textContent = value;
             }
 
-            td.textContent = value;
+            tr.appendChild(td);
           }
 
-          tr.appendChild(td);
-        }
+          // 6 colonnes LAIA : [CP Av., CP Use, JRA Av., JRA Use, JA Av., JA Use]
+          for (let i = 0; i < 6; i++) {
+            const td = document.createElement("td");
+            td.classList.add("col-laia-sub");
+            td.rowSpan = rowSpan;
 
-        // 6 colonnes LAIA : [CP Av., CP Use, JRA Av., JRA Use, JA Av., JA Use]
-        for (let i = 0; i < 6; i++) {
-          const td = document.createElement("td");
-          td.classList.add("col-laia-sub");
-
-          if (i % 2 === 0) {
-            td.classList.add("col-laia-av");
-            td.textContent = ""; // futur solde
-          } else {
-            td.classList.add("col-laia-use");
-
-            let value = "";
-            if (i === 1) {
-              // CP Use
-              value = formatTotal(week.totals.laiaCP);
-            } else if (i === 3) {
-              // JRA Use
-              value = formatTotal(week.totals.laiaJRA);
-            } else if (i === 5) {
-              // JA Use
-              value = formatTotal(week.totals.laiaJA);
+            if (i % 2 === 0) {
+              td.classList.add("col-laia-av");
+              let value = "";
+              if (i === 0) {
+                value = laiaCPMonth
+                  ? formatTotal(
+                      getMonthVal(laiaCPMonth, "availableAtMonthStart")
+                    )
+                  : "";
+              } else if (i === 2) {
+                value = laiaJRAMonth
+                  ? formatTotal(
+                      getMonthVal(laiaJRAMonth, "availableAtMonthStart")
+                    )
+                  : "";
+              } else if (i === 4) {
+                value = laiaJAMonth
+                  ? formatTotal(
+                      getMonthVal(laiaJAMonth, "availableAtMonthStart")
+                    )
+                  : "";
+              }
+              td.textContent = value;
+            } else {
+              td.classList.add("col-laia-use");
+              let value = "";
+              if (i === 1) {
+                value = laiaCPMonth
+                  ? formatTotal(getMonthVal(laiaCPMonth, "usedInMonth"))
+                  : "";
+              } else if (i === 3) {
+                value = laiaJRAMonth
+                  ? formatTotal(getMonthVal(laiaJRAMonth, "usedInMonth"))
+                  : "";
+              } else if (i === 5) {
+                value = laiaJAMonth
+                  ? formatTotal(getMonthVal(laiaJAMonth, "usedInMonth"))
+                  : "";
+              }
+              td.textContent = value;
             }
 
-            td.textContent = value;
+            tr.appendChild(td);
           }
-
-          tr.appendChild(td);
         }
 
         this.planningBody.appendChild(tr);
@@ -1758,6 +2135,26 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        // Bloquer tous les types de congés (CP, JRA, JA) pour Alex (2) et Laia (3)
+        if (personId === 2 || personId === 3) {
+          const available = this.getAvailableAtMonthStart(
+            personId,
+            leaveType,
+            leaveDate
+          );
+          // On pose 1 jour
+          if (available != null && available < 1) {
+            const disp = available.toFixed(2);
+            alert(
+              `Impossible d'ajouter ${leaveType} pour ${
+                personId === 2 ? "Alex" : "Laia"
+              } : il reste ${disp} jour(s) disponible(s) au début de ce mois.`
+            );
+            this.clearSelection();
+            return;
+          }
+        }
+
         this.clearSelection();
 
         try {
@@ -1844,18 +2241,57 @@ document.addEventListener("DOMContentLoaded", () => {
       // Bulk leaves Alex/Laia via bulk-add-leave
       if (action === "bulk-add-leave") {
         if (!this._currentBulkInfo) {
-          this.clearSelection();
+          this.clearMonthSelection();
           return;
         }
 
         const selectedDates = this._currentBulkInfo.selectedDates || [];
         const personId = parseInt(button.dataset.personId, 10);
-        const leaveType = button.dataset.leaveType;
+        const leaveType = button.dataset.leaveType; // "CP", "JRA", "JA"
 
+        // Blocage pour Alex / Laia
+        if (personId === 2 || personId === 3) {
+          // Regrouper les dates par mois
+          const datesByMonth = {}; // ymKey -> dates[]
+          selectedDates.forEach((d) => {
+            const dateObj = new Date(d + "T00:00:00");
+            const ymKey = `${dateObj.getFullYear()}-${String(
+              dateObj.getMonth() + 1
+            ).padStart(2, "0")}`;
+            if (!datesByMonth[ymKey]) datesByMonth[ymKey] = [];
+            datesByMonth[ymKey].push(d);
+          });
+
+          // Pour chaque mois, vérifier Av. >= nb jours demandés dans ce mois
+          for (const ymKey of Object.keys(datesByMonth)) {
+            const datesInMonth = datesByMonth[ymKey];
+            const anyDate = datesInMonth[0];
+            const available = this.getAvailableAtMonthStart(
+              personId,
+              leaveType,
+              anyDate
+            );
+            const needed = datesInMonth.length;
+
+            if (available != null && available < needed) {
+              const disp = available.toFixed(2);
+              alert(
+                `Impossible d'ajouter ${leaveType} pour ${
+                  personId === 2 ? "Alex" : "Laia"
+                } sur ${needed} jour(s) dans ${ymKey} : il reste ${disp} jour(s) disponible(s).`
+              );
+              this.clearMonthSelection();
+              this._currentBulkInfo = null;
+              return;
+            }
+          }
+        }
+
+        this.clearMonthSelection();
         this._currentBulkInfo = null;
 
         try {
-          // Supprimer pour cette personne sur toutes les dates
+          // 1) supprimer les congés existants pour cette personne sur toutes les dates
           await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1866,9 +2302,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }),
           });
 
-          // Ajouter sur toutes les dates
-          const newLeaves = selectedDates.map((d) => ({
-            date: d,
+          // 2) ajouter le nouveau type sur toutes les dates
+          const newLeaves = selectedDates.map((leaveDate) => ({
+            date: leaveDate,
             person_id: personId,
             leave_type: leaveType,
             duration: 1.0,
@@ -1882,18 +2318,18 @@ document.addEventListener("DOMContentLoaded", () => {
               body: JSON.stringify(newLeaves),
             }
           );
-          if (!responseAdd.ok)
+          if (!responseAdd.ok) {
             throw new Error("Erreur HTTP " + responseAdd.status);
+          }
 
           this.leaves = await this.fetchLeaves();
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error("Erreur bulk-add-leave:", err);
+          console.error("Erreur bulk-add-leave (month):", err);
           alert("Erreur bulk congés Alex/Laia : " + err.message);
         }
 
-        this.clearSelection();
         return;
       }
 
@@ -2205,7 +2641,7 @@ document.addEventListener("DOMContentLoaded", () => {
     generateMonthSummaryHTML(year, month) {
       const totals = this.calculateMonthTotals(year, month);
       const formatTotal = (total) =>
-        total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "0";
+        total > 0 ? (Number.isInteger(total) ? total : total.toFixed(2)) : "";
 
       const monthLabel = `${getMonthNameFr(month)} ${year}`;
 
@@ -3611,10 +4047,30 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
+        // Bloquer tous les types de congés (CP, JRA, JA) pour Alex (2) et Laia (3)
+        if (personId === 2 || personId === 3) {
+          const available = this.getAvailableAtMonthStart(
+            personId,
+            leaveType,
+            leaveDate
+          );
+          // On pose 1 jour
+          if (available != null && available < 1) {
+            const disp = available.toFixed(2);
+            alert(
+              `Impossible d'ajouter ${leaveType} pour ${
+                personId === 2 ? "Alex" : "Laia"
+              } : il reste ${disp} jour(s) disponible(s) au début de ce mois.`
+            );
+            this.clearMonthSelection();
+            return;
+          }
+        }
+
         this.clearMonthSelection();
 
         try {
-          // 1) Supprimer tous les congés Alex/Laia pour cette personne ce jour-là
+          // 1) supprimer les congés existants pour cette personne ce jour-là
           await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -3625,20 +4081,20 @@ document.addEventListener("DOMContentLoaded", () => {
             }),
           });
 
-          // 2) Ajouter le type choisi
+          // 2) ajouter le nouveau type
+          const newLeave = {
+            date: leaveDate,
+            person_id: personId,
+            leave_type: leaveType,
+            duration: 1.0,
+          };
+
           const responseAdd = await fetch(
             "/modules/family-calendar/includes/api/save-leaves.php",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify([
-                {
-                  date: leaveDate,
-                  person_id: personId,
-                  leave_type: leaveType,
-                  duration: 1.0,
-                },
-              ]),
+              body: JSON.stringify([newLeave]),
             }
           );
           if (!responseAdd.ok) {
@@ -3649,7 +4105,7 @@ document.addEventListener("DOMContentLoaded", () => {
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error("Erreur set leave single:", err);
+          console.error("Erreur add-leave (month):", err);
           alert("Erreur congé Alex/Laia : " + err.message);
         }
 
@@ -3702,11 +4158,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const selectedDates = this._currentBulkInfo.selectedDates || [];
         const personId = parseInt(button.dataset.personId, 10);
-        const leaveType = button.dataset.leaveType;
+        const leaveType = button.dataset.leaveType; // "CP", "JRA", "JA"
+
+        if (personId === 2 || personId === 3) {
+          // Regrouper les dates par mois
+          const datesByMonth = {}; // ymKey -> dates[]
+          selectedDates.forEach((d) => {
+            const dateObj = new Date(d + "T00:00:00");
+            const ymKey = `${dateObj.getFullYear()}-${String(
+              dateObj.getMonth() + 1
+            ).padStart(2, "0")}`;
+            if (!datesByMonth[ymKey]) datesByMonth[ymKey] = [];
+            datesByMonth[ymKey].push(d);
+          });
+
+          // Pour chaque mois, vérifier Av. >= nb jours demandés dans ce mois
+          for (const ymKey of Object.keys(datesByMonth)) {
+            const datesInMonth = datesByMonth[ymKey];
+            const anyDate = datesInMonth[0];
+            const available = this.getAvailableAtMonthStart(
+              personId,
+              leaveType,
+              anyDate
+            );
+            const needed = datesInMonth.length;
+
+            if (available != null && available < needed) {
+              const disp = available.toFixed(2);
+              alert(
+                `Impossible d'ajouter ${leaveType} pour ${
+                  personId === 2 ? "Alex" : "Laia"
+                } sur ${needed} jour(s) dans ${ymKey} : il reste ${disp} jour(s) disponible(s).`
+              );
+              this.clearMonthSelection();
+              this._currentBulkInfo = null;
+              return;
+            }
+          }
+        }
 
         this._currentBulkInfo = null;
 
         try {
+          // delete & add (ton code existant)
           await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -3739,7 +4233,7 @@ document.addEventListener("DOMContentLoaded", () => {
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error("Erreur bulk-add-leave (month):", err);
+          console.error("Erreur bulk-add-leave:", err);
           alert("Erreur bulk congés Alex/Laia : " + err.message);
         }
 
