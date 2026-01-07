@@ -57,7 +57,6 @@
 #planningTable .col-total {
   width: 50px;
   max-width: 50px;
-  white-space: nowrap;
 }
 
 /* Sous-colonnes Alex/Laia */
@@ -86,8 +85,10 @@
 
 /* Header sticky */
 #planningHeaderTable {
-  width: 100%;
-  border-collapse: collapse;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #f0f4f8;
 }
 /* Empêcher le header de bouger/contracter */
 #planningHeaderTable th {
@@ -109,7 +110,6 @@
 
 /* Ligne 1 */
 #planningTable thead tr:nth-child(1) th {
-  position: sticky;
   top: 0;
   z-index: 3;
   background: #f0f4f8;
@@ -117,7 +117,6 @@
 
 /* Ligne 2 */
 #planningTable thead tr:nth-child(2) th {
-  position: sticky;
   top: 24px; /* hauteur de la 1ère ligne */
   z-index: 3;
   background: #f0f4f8;
@@ -125,7 +124,6 @@
 
 /* Ligne 3 */
 #planningTable thead tr:nth-child(3) th {
-  position: sticky;
   top: 48px; /* 1ère + 2e ligne (22 + 22) */
   z-index: 3;
   background: #f0f4f8;
