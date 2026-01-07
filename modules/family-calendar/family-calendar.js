@@ -920,10 +920,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     positionAndShowMenu(e) {
+      const wrapper = document.getElementById("planningTable-wrapper");
+      const rect = wrapper.getBoundingClientRect();
+
       this.selectionMenu.style.display = "block";
-      this.selectionMenu.style.left = `${e.pageX + 5}px`;
-      this.selectionMenu.style.top = `${e.pageY + 5}px`;
+
+      // Position relative au wrapper, pas à la page
+      this.selectionMenu.style.left = `${e.clientX - rect.left + 5}px`;
+      this.selectionMenu.style.top = `${e.clientY - rect.top + 5}px`;
+
+      // Empêcher la fermeture immédiate par handleClickOutsideMenu
       this.menuJustOpened = true;
+      setTimeout(() => {
+        this.menuJustOpened = false;
+      }, 0);
     }
 
     async handleMenuClick(e) {
@@ -2150,10 +2160,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     positionAndShowMonthMenu(e) {
       if (!this.monthSelectionMenu) return;
+      const wrapper =
+        document.querySelector(".fc-month-calendar-wrapper") || document.body;
+      const rect = wrapper.getBoundingClientRect();
+
       this.monthSelectionMenu.style.display = "block";
-      this.monthSelectionMenu.style.left = `${e.pageX + 5}px`;
-      this.monthSelectionMenu.style.top = `${e.pageY + 5}px`;
+      this.monthSelectionMenu.style.left = `${e.clientX - rect.left + 5}px`;
+      this.monthSelectionMenu.style.top = `${e.clientY - rect.top + 5}px`;
+
       this.menuJustOpened = true;
+      setTimeout(() => {
+        this.menuJustOpened = false;
+      }, 0);
     }
 
     async handleMonthMenuClick(e) {
