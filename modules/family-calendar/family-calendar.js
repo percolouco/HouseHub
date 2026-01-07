@@ -208,6 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     reprocessEvents() {
+      // Réinitialisation des semaines
       this.weeks.forEach((w) => {
         w.totals = {
           offCarole: 0,
@@ -216,25 +217,35 @@ document.addEventListener("DOMContentLoaded", () => {
           avis: 0,
           pepSick: 0,
           presencePep: 0,
+          // Nouveaux totaux pour Alex / Laia
+          alexCP: 0,
+          alexJRA: 0,
+          alexJA: 0,
+          laiaCP: 0,
+          laiaJRA: 0,
+          laiaJA: 0,
         };
-        Object.values(w.dayFlags).forEach((df) => (df.eventsOnDay = []));
+        Object.values(w.dayFlags).forEach((df) => {
+          df.eventsOnDay = [];
+        });
       });
-
+      // ================== Événements Carole / garde / Pep ==================
       this.events.forEach((evt) => {
         const evtDate = new Date(evt.date + "T00:00:00");
+        // Trouver la semaine correspondant à la date de l'événement
         const week = this.weeks.find(
           (w) => evtDate >= w.dayDates.mon && evtDate <= w.dayDates.fri
         );
         if (!week) return;
-
+        // Identifier le jour (mon, tue, wed, thu, fri)
         const dayKey = Object.keys(week.dayDates).find(
-          (k) => week.dayDates[k].toDateString() === evtDate.toDateString()
+          (key) => week.dayDates[key].toDateString() === evtDate.toDateString()
         );
         if (dayKey) {
           week.dayFlags[dayKey].eventsOnDay.push(evt);
         }
-
         const dur = parseFloat(evt.duration) || 1;
+        // Mettre à jour les totaux hebdo selon le type
         switch (evt.type) {
           case "OFF_CAROLE":
             week.totals.offCarole += dur;
@@ -251,6 +262,29 @@ document.addEventListener("DOMContentLoaded", () => {
           case "PEP_SICK":
             week.totals.pepSick += dur;
             break;
+          default:
+            break;
+        }
+      });
+      // ================== Congés Alex / Laia (CP / JRA / JA) ==================
+      (this.leaves || []).forEach((lv) => {
+        const lvDate = new Date(lv.leave_date + "T00:00:00");
+        const week = this.weeks.find(
+          (w) => lvDate >= w.dayDates.mon && lvDate <= w.dayDates.fri
+        );
+        if (!week) return;
+        const isAlex = lv.person_id === 2;
+        const isLaia = lv.person_id === 3;
+        const type = lv.leave_type; // "CP", "JRA" ou "JA"
+        const dur = parseFloat(lv.duration) || 1;
+        if (isAlex) {
+          if (type === "CP") week.totals.alexCP += dur;
+          if (type === "JRA") week.totals.alexJRA += dur;
+          if (type === "JA") week.totals.alexJA += dur;
+        } else if (isLaia) {
+          if (type === "CP") week.totals.laiaCP += dur;
+          if (type === "JRA") week.totals.laiaJRA += dur;
+          if (type === "JA") week.totals.laiaJA += dur;
         }
       });
 
@@ -366,10 +400,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const formatTotal = (total) =>
         total > 0 ? (Number.isInteger(total) ? total : total.toFixed(1)) : "";
 
-      this.weeks.forEach((week) => {
+      this.weeks.forEach((week, index) => {
         const tr = document.createElement("tr");
-
-        // Mois
+        // Déterminer si c'est la première ou la dernière semaine du mois
+        const isFirstWeekOfMonth =
+          index === 0 || this.weeks[index - 1].monthKey !== week.monthKey;
+        const isLastWeekOfMonth =
+          index === this.weeks.length - 1 ||
+          this.weeks[index + 1].monthKey !== week.monthKey;
+        if (isFirstWeekOfMonth) {
+          tr.classList.add("fc-month-first-week-row");
+        }
+        if (isLastWeekOfMonth) {
+          tr.classList.add("fc-month-last-week-row");
+        }
+        // Colonne Mois (avec rowSpan)
         if (!monthRowRendered[week.monthKey]) {
           monthRowRendered[week.monthKey] = true;
           const tdMonth = document.createElement("td");
@@ -503,19 +548,63 @@ document.addEventListener("DOMContentLoaded", () => {
         tdPresencePep.classList.add("col-total");
         tr.appendChild(tdPresencePep);
 
-        // 6 colonnes ALEX
+        // 6 colonnes ALEX : [CP Av., CP Use, JRA Av., JRA Use, JA Av., JA Use]
         for (let i = 0; i < 6; i++) {
           const td = document.createElement("td");
-          td.textContent = "";
           td.classList.add("col-alex-sub");
+
+          if (i % 2 === 0) {
+            // colonnes Av. (pour l'instant vides, on remplira plus tard si besoin)
+            td.classList.add("col-alex-av");
+            td.textContent = ""; // ex: futur "solde" CP/JRA/JA
+          } else {
+            // colonnes Use : remplir selon le couple (index, type)
+            td.classList.add("col-alex-use");
+
+            let value = "";
+            if (i === 1) {
+              // CP Use
+              value = formatTotal(week.totals.alexCP);
+            } else if (i === 3) {
+              // JRA Use
+              value = formatTotal(week.totals.alexJRA);
+            } else if (i === 5) {
+              // JA Use
+              value = formatTotal(week.totals.alexJA);
+            }
+
+            td.textContent = value;
+          }
+
           tr.appendChild(td);
         }
 
-        // 6 colonnes LAIA
+        // 6 colonnes LAIA : [CP Av., CP Use, JRA Av., JRA Use, JA Av., JA Use]
         for (let i = 0; i < 6; i++) {
           const td = document.createElement("td");
-          td.textContent = "";
           td.classList.add("col-laia-sub");
+
+          if (i % 2 === 0) {
+            td.classList.add("col-laia-av");
+            td.textContent = ""; // futur solde
+          } else {
+            td.classList.add("col-laia-use");
+
+            let value = "";
+            if (i === 1) {
+              // CP Use
+              value = formatTotal(week.totals.laiaCP);
+            } else if (i === 3) {
+              // JRA Use
+              value = formatTotal(week.totals.laiaJRA);
+            } else if (i === 5) {
+              // JA Use
+              value = formatTotal(week.totals.laiaJA);
+            }
+
+            td.textContent = value;
+          }
+
           tr.appendChild(td);
         }
 
@@ -624,8 +713,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (this.selectedCells.length === 0) return;
 
+      // ===== Cas 1 seule cellule =====
       if (this.selectedCells.length === 1) {
-        // Cas 1 jour : logique habituelle
         const date = this.selectedCells[0].dataset.date;
         const eventsOnDay = this.events.filter(
           (evt) => evt.date === date && MODIFIABLE_TYPES.includes(evt.type)
@@ -634,12 +723,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const garde = eventsOnDay.find((ev) => GUARDE_TYPES.includes(ev.type));
         const pep = eventsOnDay.find((ev) => PEP_TYPES.includes(ev.type));
 
-        if (!conge && !garde && !pep) {
-          this.showAddMenu(e);
-        } else {
-          this.showEditMenuForDay(e, { conge, garde, pep, date });
-        }
-
+        this.showEditMenuForDay(e, { conge, garde, pep, date });
         return;
       }
 
@@ -666,83 +750,200 @@ document.addEventListener("DOMContentLoaded", () => {
       const allDatesHaveGarde =
         gardes.length === selectedDates.length && uniqueGardeTypes.size === 1;
 
-      console.log("Multi-jours:");
-      console.log("selectedDates:", selectedDates);
-      console.log("eventsOnDates:", eventsOnDates);
-      console.log("conges:", conges);
-      console.log("gardes:", gardes);
-      console.log("uniqueCongeTypes:", Array.from(uniqueCongeTypes));
-      console.log("uniqueGardeTypes:", Array.from(uniqueGardeTypes));
-      console.log("allDatesHaveConge:", allDatesHaveConge);
-      console.log("allDatesHaveGarde:", allDatesHaveGarde);
+      // On construit quand même un bulkInfo partiel (même si pas homogène)
+      const bulkInfo = {
+        selectedDates,
+        conges,
+        gardes,
+        congeType: allDatesHaveConge ? conges[0].type : null,
+        gardeType: allDatesHaveGarde ? gardes[0].type : null,
+      };
 
-      if (allDatesHaveConge || allDatesHaveGarde) {
-        const bulkInfo = {
-          selectedDates,
-          conges,
-          gardes,
-          congeType: allDatesHaveConge ? conges[0].type : null,
-          gardeType: allDatesHaveGarde ? gardes[0].type : null,
-        };
-        this.showBulkMenu(e, bulkInfo);
-      } else {
-        this.showAddMenu(e);
-      }
+      // On affiche toujours le menu bulk pour permettre Alex/Laia,
+      // et éventuellement les actions Carole/garde si congeType/gardeType sont définis.
+      this.showBulkMenu(e, bulkInfo);
     }
 
     showBulkMenu(e, bulkInfo) {
-      const { selectedDates, conges, gardes, congeType, gardeType } = bulkInfo;
+      const { selectedDates } = bulkInfo;
       const nbDays = selectedDates.length;
 
-      let html =
-        '<div class="fc-menu-section"><strong>Actions multi-jours</strong></div>';
+      let html = `
+    <div class="fc-menu-section">
+      <strong>Actions multi-jours</strong>
+    </div>
+  `;
 
-      if (congeType) {
-        const oppositeConge =
-          congeType === "OFF_CAROLE" ? "EXTRA_OFF_CAROLE" : "OFF_CAROLE";
-        html += `
-      <div class="fc-menu-section"><strong>Congés Carole (${nbDays} jours)</strong></div>
+      // Section Congés Carole
+      html += `
+  <div class="fc-menu-section">
+    <strong>Congés Carole (${nbDays} jours)</strong>
+    <div class="fc-menu-grid">
       <button
-        data-action="bulk-update-conge"
-        data-new-type="${oppositeConge}"
-        data-target="conge"
+        class="fc-menu-btn fc-menu-btn--conge"
+        data-action="add"
+        data-type="OFF_CAROLE"
+        data-person="Carole"
       >
-        Remplacer ${congeType.replace(/_/g, " ")} par ${oppositeConge.replace(
-          /_/g,
-          " "
-        )} sur ${nbDays} jours
+        Off Carole
       </button>
       <button
-        data-action="bulk-delete-conge"
-        data-target="conge"
+        class="fc-menu-btn fc-menu-btn--conge"
+        data-action="add"
+        data-type="EXTRA_OFF_CAROLE"
+        data-person="Carole"
       >
-        Supprimer le congé sur ${nbDays} jours
+        Extra Off Carole
       </button>
-    `;
-      }
+    </div>
+    <button
+      class="fc-menu-btn fc-menu-danger"
+      data-action="bulk-clear-conge"
+    >
+      Supprimer tous les congés Carole sur ces jours
+    </button>
+  </div>
+`;
 
-      if (gardeType) {
-        const oppositeGarde = gardeType === "CENTRE" ? "AVIS" : "CENTRE";
-        html += `
-      <div class="fc-menu-section"><strong>Mode de garde (${nbDays} jours)</strong></div>
+      // Section Mode de garde – toujours visible
+      html += `
+  <div class="fc-menu-section">
+    <strong>Mode de garde (${nbDays} jours)</strong>
+    <div class="fc-menu-grid">
       <button
-        data-action="bulk-update-garde"
-        data-new-type="${oppositeGarde}"
-        data-target="garde"
+        class="fc-menu-btn fc-menu-btn--garde"
+        data-action="add"
+        data-type="CENTRE"
       >
-        Remplacer ${gardeType} par ${oppositeGarde} sur ${nbDays} jours
+        Centre
       </button>
       <button
-        data-action="bulk-delete-garde"
-        data-target="garde"
+        class="fc-menu-btn fc-menu-btn--garde"
+        data-action="add"
+        data-type="AVIS"
       >
-        Supprimer le mode de garde sur ${nbDays} jours
+        Avis
       </button>
-    `;
-      }
+    </div>
+    <button
+      class="fc-menu-btn fc-menu-danger"
+      data-action="bulk-clear-garde"
+    >
+      Supprimer tous les modes de garde sur ces jours
+    </button>
+  </div>
+`;
+
+      // Section bulk congés Alex / Laia – tableau identique au single
+      html += `
+  <div class="fc-menu-section">
+    <strong>Congés Alex / Laia (${nbDays} jours)</strong>
+    <div class="fc-menu-leaves-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Alex</th>
+            <th>Laia</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <button
+                type="button"
+                class="fc-menu-btn fc-menu-leave-btn"
+                data-action="bulk-add-leave"
+                data-person-id="2"
+                data-leave-type="CP"
+              >
+                CP
+              </button>
+            </td>
+            <td>
+              <button
+                type="button"
+                class="fc-menu-btn fc-menu-leave-btn"
+                data-action="bulk-add-leave"
+                data-person-id="3"
+                data-leave-type="CP"
+              >
+                CP
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <button
+                type="button"
+                class="fc-menu-btn fc-menu-leave-btn"
+                data-action="bulk-add-leave"
+                data-person-id="2"
+                data-leave-type="JRA"
+              >
+                JRA
+              </button>
+            </td>
+            <td>
+              <button
+                type="button"
+                class="fc-menu-btn fc-menu-leave-btn"
+                data-action="bulk-add-leave"
+                data-person-id="3"
+                data-leave-type="JRA"
+              >
+                JRA
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <button
+                type="button"
+                class="fc-menu-btn fc-menu-leave-btn"
+                data-action="bulk-add-leave"
+                data-person-id="2"
+                data-leave-type="JA"
+              >
+                JA
+              </button>
+            </td>
+            <td>
+              <button
+                type="button"
+                class="fc-menu-btn fc-menu-leave-btn"
+                data-action="bulk-add-leave"
+                data-person-id="3"
+                data-leave-type="JA"
+              >
+                JA
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+`;
+
+      // Après le tableau CP/JRA/JA
+      html += `
+  <button
+    class="fc-menu-btn fc-menu-danger"
+    data-action="bulk-clear-leave"
+    data-person-id="2"
+  >
+    Supprimer tous les congés Alex sur ces jours
+  </button>
+  <button
+    class="fc-menu-btn fc-menu-danger"
+    data-action="bulk-clear-leave"
+    data-person-id="3"
+  >
+    Supprimer tous les congés Laia sur ces jours
+  </button>
+`;
 
       this.selectionMenu.innerHTML = html;
-      // On stocke bulkInfo pour réutilisation dans handleMenuClick
       this._currentBulkInfo = bulkInfo;
       this.positionAndShowMenu(e);
     }
@@ -778,15 +979,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
     showAddMenu(e) {
       this.selectionMenu.innerHTML = `
-        <div class="fc-menu-section"><strong>Ajouter</strong></div>
-        <button data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off Carole</button>
-        <button data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra Off Carole</button>
-        <div class="fc-menu-section"><strong>Mode de Garde</strong></div>
-        <button data-action="add" data-type="CENTRE">Centre</button>
-        <button data-action="add" data-type="AVIS">Avis</button>
-        <div class="fc-menu-section"><strong>Pep</strong></div>
-        <button data-action="add" data-type="PEP_SICK">Pep malade</button>
-      `;
+    <div class="fc-menu-section">
+      <strong>Ajouter</strong>
+      <div class="fc-menu-grid">
+        <button class="fc-menu-btn fc-menu-btn--conge" data-action="add" data-type="OFF_CAROLE" data-person="Carole">
+          Off Carole
+        </button>
+        <button class="fc-menu-btn fc-menu-btn--conge" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">
+          Extra Off Carole
+        </button>
+      </div>
+    </div>
+
+    <div class="fc-menu-section">
+      <strong>Mode de garde</strong>
+      <div class="fc-menu-grid">
+        <button class="fc-menu-btn fc-menu-btn--garde" data-action="add" data-type="CENTRE">
+          Centre
+        </button>
+        <button class="fc-menu-btn fc-menu-btn--garde" data-action="add" data-type="AVIS">
+          Avis
+        </button>
+      </div>
+    </div>
+
+    <div class="fc-menu-section">
+      <strong>Pep</strong>
+      <div class="fc-menu-grid">
+        <button class="fc-menu-btn fc-menu-btn--pep" data-action="add" data-type="PEP_SICK">
+          Pep malade
+        </button>
+      </div>
+    </div>
+  `;
       this.positionAndShowMenu(e);
     }
 
@@ -806,25 +1031,52 @@ document.addEventListener("DOMContentLoaded", () => {
         const oppositeConge =
           conge.type === "OFF_CAROLE" ? "EXTRA_OFF_CAROLE" : "OFF_CAROLE";
         congeSection = `
-      <div class="fc-menu-section"><strong>Congé Carole</strong></div>
-      <button data-action="update" data-event-id="${
-        conge.id
-      }" data-new-type="${oppositeConge}">
-        Remplacer par ${oppositeConge.replace(/_/g, " ")}
-      </button>
-      <button data-action="delete" data-event-id="${conge.id}">
-        Supprimer le congé
-      </button>
+      <div class="fc-menu-section">
+        <strong>Congé Carole</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--conge"
+            data-action="update"
+            data-event-id="${conge.id}"
+            data-new-type="${oppositeConge}"
+          >
+            Remplacer par<br> ${oppositeConge.replace(/_/g, " ")}
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-danger"
+            data-action="delete"
+            data-event-id="${conge.id}"
+          >
+            Supprimer le congé
+          </button>
+        </div>
+      </div>
     `;
       } else {
         congeSection = `
-      <div class="fc-menu-section"><strong>Ajouter un congé</strong></div>
-      <button data-action="add-single" data-type="OFF_CAROLE" data-date="${date}" data-person="Carole">
-        Off Carole
-      </button>
-      <button data-action="add-single" data-type="EXTRA_OFF_CAROLE" data-date="${date}" data-person="Carole">
-        Extra Off Carole
-      </button>
+      <div class="fc-menu-section">
+        <strong>Ajouter un congé</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--conge"
+            data-action="add-single"
+            data-type="OFF_CAROLE"
+            data-date="${date}"
+            data-person="Carole"
+          >
+            Off Carole
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-btn--conge"
+            data-action="add-single"
+            data-type="EXTRA_OFF_CAROLE"
+            data-date="${date}"
+            data-person="Carole"
+          >
+            Extra Off Carole
+          </button>
+        </div>
+      </div>
     `;
       }
 
@@ -833,23 +1085,50 @@ document.addEventListener("DOMContentLoaded", () => {
       if (garde) {
         const oppositeGarde = garde.type === "CENTRE" ? "AVIS" : "CENTRE";
         gardeSection = `
-      <div class="fc-menu-section"><strong>Mode de garde</strong></div>
-      <button data-action="update" data-event-id="${garde.id}" data-new-type="${oppositeGarde}">
-        Remplacer par ${oppositeGarde}
-      </button>
-      <button data-action="delete" data-event-id="${garde.id}">
-        Supprimer le mode de garde
-      </button>
+      <div class="fc-menu-section">
+        <strong>Mode de garde</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--garde"
+            data-action="update"
+            data-event-id="${garde.id}"
+            data-new-type="${oppositeGarde}"
+          >
+            Remplacer par<br> ${oppositeGarde}
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-danger"
+            data-action="delete"
+            data-event-id="${garde.id}"
+          >
+            Supprimer le mode de garde
+          </button>
+        </div>
+      </div>
     `;
       } else {
         gardeSection = `
-      <div class="fc-menu-section"><strong>Ajouter mode de garde</strong></div>
-      <button data-action="add-single" data-type="CENTRE" data-date="${date}">
-        Centre
-      </button>
-      <button data-action="add-single" data-type="AVIS" data-date="${date}">
-        Avis
-      </button>
+      <div class="fc-menu-section">
+        <strong>Ajouter mode de garde</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--garde"
+            data-action="add-single"
+            data-type="CENTRE"
+            data-date="${date}"
+          >
+            Centre
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-btn--garde"
+            data-action="add-single"
+            data-type="AVIS"
+            data-date="${date}"
+          >
+            Avis
+          </button>
+        </div>
+      </div>
     `;
       }
 
@@ -857,17 +1136,30 @@ document.addEventListener("DOMContentLoaded", () => {
       let pepSection = "";
       if (pep) {
         pepSection = `
-      <div class="fc-menu-section"><strong>Pep</strong></div>
-      <button data-action="delete" data-event-id="${pep.id}">
-        Supprimer "Pep malade"
-      </button>
+      <div class="fc-menu-section">
+        <strong>Pep</strong>
+        <button
+          class="fc-menu-btn fc-menu-danger"
+          data-action="delete"
+          data-event-id="${pep.id}"
+        >
+          Supprimer "Pep malade"
+        </button>
+      </div>
     `;
       } else {
         pepSection = `
-      <div class="fc-menu-section"><strong>Pep</strong></div>
-      <button data-action="add-single" data-type="PEP_SICK" data-date="${date}">
-        Marquer Pep malade
-      </button>
+      <div class="fc-menu-section">
+        <strong>Pep</strong>
+        <button
+          class="fc-menu-btn fc-menu-btn--pep"
+          data-action="add-single"
+          data-type="PEP_SICK"
+          data-date="${date}"
+        >
+          Pep malade
+        </button>
+      </div>
     `;
       }
 
@@ -883,30 +1175,114 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("[EDIT MENU] leavesOnDay =", leavesOnDay);
 
       let leavesSection = `
-    <div class="fc-menu-section"><strong>Congés Alex / Laia</strong></div>
-    <button data-action="add-leave" data-date="${date}" data-person-id="2" data-leave-type="CP">
-      Alex - CP
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="2" data-leave-type="JRA">
-      Alex - JRA
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="2" data-leave-type="JA">
-      Alex - JA
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="3" data-leave-type="CP">
-      Laia - CP
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="3" data-leave-type="JRA">
-      Laia - JRA
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="3" data-leave-type="JA">
-      Laia - JA
-    </button>
+    <div class="fc-menu-section">
+      <strong>Congés Alex / Laia</strong>
+      <div class="fc-menu-leaves-table">
+        <table>
+          <thead>
+            <tr>
+              
+              <th>Alex</th>
+              <th>Laia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="2"
+                  data-leave-type="CP"
+                >
+                  CP
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="3"
+                  data-leave-type="CP"
+                >
+                  CP
+                </button>
+              </td>
+            </tr>
+            <tr>
+              
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="2"
+                  data-leave-type="JRA"
+                >
+                  JRA
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="3"
+                  data-leave-type="JRA"
+                >
+                  JRA
+                </button>
+              </td>
+            </tr>
+            <tr>
+              
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="2"
+                  data-leave-type="JA"
+                >
+                  JA
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="3"
+                  data-leave-type="JA"
+                >
+                  JA
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   `;
 
+      // Bouton de suppression si congés existants ce jour-là
       if (leavesOnDay.length > 0) {
         leavesSection += `
-      <button data-action="delete-leaves-day" data-date="${date}">
+      <button
+        type="button"
+        class="fc-menu-btn fc-menu-danger"
+        data-action="delete-leaves-day"
+        data-date="${date}"
+      >
         Supprimer les congés Alex/Laia ce jour-là
       </button>
     `;
@@ -921,19 +1297,133 @@ document.addEventListener("DOMContentLoaded", () => {
 
     positionAndShowMenu(e) {
       const wrapper = document.getElementById("planningTable-wrapper");
+      if (!wrapper) {
+        // fallback sécurité
+        this.selectionMenu.style.display = "block";
+        this.selectionMenu.style.left = `${e.clientX + 5}px`;
+        this.selectionMenu.style.top = `${e.clientY + 5}px`;
+        return;
+      }
+
       const rect = wrapper.getBoundingClientRect();
 
       this.selectionMenu.style.display = "block";
 
-      // Position relative au wrapper, pas à la page
-      this.selectionMenu.style.left = `${e.clientX - rect.left + 5}px`;
-      this.selectionMenu.style.top = `${e.clientY - rect.top + 5}px`;
+      // Position relative au wrapper (qui scrolle)
+      const x = e.clientX - rect.left + wrapper.scrollLeft;
+      const y = e.clientY - rect.top + wrapper.scrollTop;
 
-      // Empêcher la fermeture immédiate par handleClickOutsideMenu
+      this.selectionMenu.style.left = `${x + 5}px`;
+      this.selectionMenu.style.top = `${y + 5}px`;
+
       this.menuJustOpened = true;
       setTimeout(() => {
         this.menuJustOpened = false;
       }, 0);
+    }
+
+    // ===== Helpers Carole / garde =====
+
+    // Single day – Carole
+    async setCaroleSingle(date, type) {
+      try {
+        // 1) supprimer OFF_CAROLE / EXTRA_OFF_CAROLE sur ce jour
+        await this.manageEvent({
+          action: "delete_day_types",
+          date,
+          types: CONGE_TYPES, // ["OFF_CAROLE", "EXTRA_OFF_CAROLE"]
+        });
+
+        // 2) ajouter le nouveau congé
+        await this.manageEvent({
+          action: "add_multiple",
+          events: [
+            {
+              date,
+              type,
+              person: "Carole",
+              duration: 1.0,
+            },
+          ],
+        });
+      } catch (err) {
+        console.error("setCaroleSingle error:", err);
+        alert("Erreur lors de la mise à jour du congé Carole : " + err.message);
+      }
+    }
+
+    // Single day – Garde
+    async setGardeSingle(date, type) {
+      try {
+        await this.manageEvent({
+          action: "delete_day_types",
+          date,
+          types: GUARDE_TYPES, // ["CENTRE","AVIS"]
+        });
+
+        await this.manageEvent({
+          action: "add_multiple",
+          events: [
+            {
+              date,
+              type,
+              duration: 1.0,
+            },
+          ],
+        });
+      } catch (err) {
+        console.error("setGardeSingle error:", err);
+        alert(
+          "Erreur lors de la mise à jour du mode de garde : " + err.message
+        );
+      }
+    }
+
+    // Bulk – Carole
+    async setCaroleBulk(dates, type) {
+      try {
+        await this.manageEvent({
+          action: "bulk_delete_day_types",
+          dates,
+          types: CONGE_TYPES,
+        });
+
+        await this.manageEvent({
+          action: "add_multiple",
+          events: dates.map((date) => ({
+            date,
+            type,
+            person: "Carole",
+            duration: 1.0,
+          })),
+        });
+      } catch (err) {
+        console.error("setCaroleBulk error:", err);
+        alert("Erreur bulk congés Carole : " + err.message);
+      }
+    }
+
+    // Bulk – Garde
+    async setGardeBulk(dates, type) {
+      try {
+        await this.manageEvent({
+          action: "bulk_delete_day_types",
+          dates,
+          types: GUARDE_TYPES,
+        });
+
+        await this.manageEvent({
+          action: "add_multiple",
+          events: dates.map((date) => ({
+            date,
+            type,
+            duration: 1.0,
+          })),
+        });
+      } catch (err) {
+        console.error("setGardeBulk error:", err);
+        alert("Erreur bulk mode de garde : " + err.message);
+      }
     }
 
     async handleMenuClick(e) {
@@ -942,100 +1432,132 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const { action, eventId, newType, type, person, date } = button.dataset;
 
-      // === BULK ACTIONS (multi-jours) ============================================
-      if (
-        action === "bulk-update-conge" ||
-        action === "bulk-delete-conge" ||
-        action === "bulk-update-garde" ||
-        action === "bulk-delete-garde"
-      ) {
-        if (!this._currentBulkInfo) {
-          this.clearSelection();
-          return;
-        }
+      // ===================== SINGLE DAY – Carole / Garde / Pep =====================
 
-        const bulkInfo = this._currentBulkInfo;
-        const target = button.dataset.target; // "conge" ou "garde"
+      // Single day Carole/garde (add-single depuis le menu d’un jour)
+      if (action === "add-single") {
+        const targetDate = date;
 
-        let events = [];
-        if (target === "conge") {
-          events = bulkInfo.conges;
-        } else if (target === "garde") {
-          events = bulkInfo.gardes;
-        }
+        // Switch congé Carole (OFF_CAROLE / EXTRA_OFF_CAROLE)
+        if (CONGE_TYPES.includes(type)) {
+          try {
+            // Récupérer les events de ce jour
+            const existingOnDate = this.dbEvents.filter(
+              (evt) => evt.date === targetDate && CONGE_TYPES.includes(evt.type)
+            );
 
-        const eventIds = events.map((ev) => ev.id);
-        this.clearSelection();
-        this._currentBulkInfo = null;
-
-        try {
-          let payload;
-          if (
-            action === "bulk-delete-conge" ||
-            action === "bulk-delete-garde"
-          ) {
-            payload = {
-              action: "bulk_delete",
-              event_ids: eventIds,
-            };
-          } else {
-            const bulkNewType = button.dataset.newType;
-            payload = {
-              action: "bulk_update",
-              event_ids: eventIds,
-              new_type: bulkNewType,
-            };
-          }
-
-          const res = await fetch(
-            "/modules/family-calendar/includes/api/manage-event.php",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
+            // Supprimer tous les congés Carole ce jour-là
+            for (const evt of existingOnDate) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
             }
-          );
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.message || "Erreur HTTP " + res.status);
+
+            // Ajouter le nouveau type
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify([
+                  {
+                    date: targetDate,
+                    type,
+                    person: "Carole",
+                    duration: 1.0,
+                  },
+                ]),
+              }
+            );
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+          } catch (err) {
+            console.error("Erreur congé Carole:", err);
+            alert("Erreur congé Carole : " + err.message);
           }
 
-          const resEvents = await fetch(
-            "/modules/family-calendar/includes/api/get-events.php"
-          );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
-          const dataEvents = await resEvents.json();
-
-          this.dbEvents = dataEvents.events || [];
-          this.events = [...this.dbEvents, ...this.fixedEvents];
-
-          this.reprocessAndRender();
-          this.renderMonthCalendar();
-        } catch (err) {
-          console.error("Erreur bulk:", err);
-          alert("Erreur lors de l'action multi-jours: " + err.message);
-        }
-
-        return;
-      }
-
-      // === AJOUT D'UN CONGÉ ALEX/LAIA SUR UNE SEULE DATE ==========================
-      if (action === "add-leave") {
-        const leaveDate = date;
-        const personId = parseInt(button.dataset.personId, 10);
-        const leaveType = button.dataset.leaveType;
-
-        if (!leaveDate || !personId || !leaveType) {
           this.clearSelection();
           return;
         }
 
-        const newLeave = {
-          date: leaveDate,
-          person_id: personId,
-          leave_type: leaveType,
+        // Switch mode de garde (CENTRE / AVIS)
+        if (GUARDE_TYPES.includes(type)) {
+          try {
+            const existingOnDate = this.dbEvents.filter(
+              (evt) =>
+                evt.date === targetDate && GUARDE_TYPES.includes(evt.type)
+            );
+
+            // Supprimer tous les modes de garde ce jour-là
+            for (const evt of existingOnDate) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
+            }
+
+            // Ajouter le nouveau type
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify([
+                  {
+                    date: targetDate,
+                    type,
+                    duration: 1.0,
+                  },
+                ]),
+              }
+            );
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+          } catch (err) {
+            console.error("Erreur mode de garde:", err);
+            alert("Erreur mode de garde : " + err.message);
+          }
+
+          this.clearSelection();
+          return;
+        }
+
+        // Pep (comportement existant)
+        const newEvent = {
+          date: targetDate,
+          type,
+          person,
           duration: 1.0,
         };
 
@@ -1043,38 +1565,250 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
           const response = await fetch(
-            "/modules/family-calendar/includes/api/save-leaves.php",
+            "/modules/family-calendar/includes/api/save-events.php",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify([newLeave]),
+              body: JSON.stringify([newEvent]),
             }
           );
-          if (!response.ok) {
-            throw new Error("Erreur HTTP " + response.status);
-          }
+          if (!response.ok) throw new Error("Erreur HTTP " + response.status);
 
-          // Recharger les congés
-          this.leaves = await this.fetchLeaves();
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
+          const dataEvents = await resEvents.json();
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
           this.reprocessAndRender();
-          this.renderMonthCalendar();
         } catch (err) {
-          console.error(err);
-          alert("Erreur lors de l'ajout de congé Alex/Laia.");
+          console.error("Erreur ajout Pep:", err);
+          alert("Erreur lors de l'ajout.");
         }
 
         return;
       }
 
-      // === SUPPRIMER TOUS LES CONGÉS ALEX/LAIA D'UN JOUR ==========================
+      // ===================== BULK – Carole / Garde / Pep ===========================
+
+      if (action === "add") {
+        const selectedDates = this.selectedCells.map((c) => c.dataset.date);
+
+        // Bulk congés Carole
+        if (CONGE_TYPES.includes(type)) {
+          try {
+            // Supprimer tous les OFF/EXTRA_OFF sur ces dates
+            const existingOnDates = this.dbEvents.filter(
+              (evt) =>
+                selectedDates.includes(evt.date) &&
+                CONGE_TYPES.includes(evt.type)
+            );
+            for (const evt of existingOnDates) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
+            }
+
+            // Ajouter le type choisi sur chaque date
+            const newEvents = selectedDates.map((d) => ({
+              date: d,
+              type,
+              person: "Carole",
+              duration: 1.0,
+            }));
+
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newEvents),
+              }
+            );
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+          } catch (err) {
+            console.error("Erreur bulk congés Carole:", err);
+            alert("Erreur bulk congés Carole : " + err.message);
+          }
+
+          this.clearSelection();
+          return;
+        }
+
+        // Bulk mode de garde
+        if (GUARDE_TYPES.includes(type)) {
+          try {
+            const existingOnDates = this.dbEvents.filter(
+              (evt) =>
+                selectedDates.includes(evt.date) &&
+                GUARDE_TYPES.includes(evt.type)
+            );
+            for (const evt of existingOnDates) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
+            }
+
+            const newEvents = selectedDates.map((d) => ({
+              date: d,
+              type,
+              duration: 1.0,
+            }));
+
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newEvents),
+              }
+            );
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+          } catch (err) {
+            console.error("Erreur bulk mode de garde:", err);
+            alert("Erreur bulk mode de garde : " + err.message);
+          }
+
+          this.clearSelection();
+          return;
+        }
+
+        // Bulk Pep (comportement existant)
+        const newEvents = this.selectedCells.map((cell) => ({
+          date: cell.dataset.date,
+          type,
+          person,
+          duration: 1.0,
+        }));
+
+        this.clearSelection();
+
+        try {
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/save-events.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(newEvents),
+            }
+          );
+          if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+          const resEvents = await fetch(
+            "/modules/family-calendar/includes/api/get-events.php"
+          );
+          const dataEvents = await resEvents.json();
+          this.dbEvents = dataEvents.events || [];
+          this.events = [...this.dbEvents, ...this.fixedEvents];
+
+          this.reprocessAndRender();
+        } catch (err) {
+          console.error("Erreur bulk add:", err);
+          alert("Erreur lors de l'ajout.");
+        }
+
+        return;
+      }
+
+      // ===================== ALEX / LAIA (single / bulk) ==========================
+
+      // Single day leaves Alex/Laia
+      if (action === "add-leave") {
+        const leaveDate = date;
+        const personId = parseInt(button.dataset.personId, 10);
+        const leaveType = button.dataset.leaveType; // "CP", "JRA", "JA"
+
+        if (!leaveDate || !personId || !leaveType) {
+          this.clearSelection();
+          return;
+        }
+
+        this.clearSelection();
+
+        try {
+          // 1) Supprimer tous les congés Alex/Laia pour cette personne ce jour-là
+          await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "delete_day_person",
+              date: leaveDate,
+              person_id: personId,
+            }),
+          });
+
+          // 2) Ajouter le type choisi
+          const responseAdd = await fetch(
+            "/modules/family-calendar/includes/api/save-leaves.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify([
+                {
+                  date: leaveDate,
+                  person_id: personId,
+                  leave_type: leaveType,
+                  duration: 1.0,
+                },
+              ]),
+            }
+          );
+          if (!responseAdd.ok) {
+            throw new Error("Erreur HTTP " + responseAdd.status);
+          }
+
+          this.leaves = await this.fetchLeaves();
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("Erreur set leave single:", err);
+          alert("Erreur congé Alex/Laia : " + err.message);
+        }
+
+        return;
+      }
+
       if (action === "delete-leaves-day") {
         const leaveDate = date;
         if (!leaveDate) {
           this.clearSelection();
           return;
         }
-
-        this.clearSelection();
 
         try {
           const response = await fetch(
@@ -1096,169 +1830,80 @@ document.addEventListener("DOMContentLoaded", () => {
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error(err);
+          console.error("Erreur delete leaves day:", err);
           alert(
             "Erreur lors de la suppression des congés Alex/Laia pour ce jour: " +
               err.message
           );
         }
 
-        return;
-      }
-
-      // === AJOUT MULTI-JOURS (sélection de plusieurs cellules) ===================
-      if (action === "add") {
-        const selectedDates = this.selectedCells.map((c) => c.dataset.date);
-        const existingOnDates = this.dbEvents.filter((evt) =>
-          selectedDates.includes(evt.date)
-        );
-
-        // Contrôles métier : pas de double congé / pas de double mode de garde
-        if (CONGE_TYPES.includes(type)) {
-          const hasCongeConflict = existingOnDates.some((evt) =>
-            CONGE_TYPES.includes(evt.type)
-          );
-          if (hasCongeConflict) {
-            alert(
-              "Impossible d'ajouter un congé : au moins une date a déjà un congé (Off/Extra Off)."
-            );
-            this.clearSelection();
-            return;
-          }
-        } else if (GUARDE_TYPES.includes(type)) {
-          const hasGardeConflict = existingOnDates.some((evt) =>
-            GUARDE_TYPES.includes(evt.type)
-          );
-          if (hasGardeConflict) {
-            alert(
-              "Impossible d'ajouter un mode de garde : au moins une date a déjà Centre/Avis."
-            );
-            this.clearSelection();
-            return;
-          }
-        }
-
-        const newEvents = this.selectedCells.map((cell) => ({
-          date: cell.dataset.date,
-          type,
-          person,
-          duration: 1.0,
-        }));
-
         this.clearSelection();
-
-        try {
-          const response = await fetch(
-            "/modules/family-calendar/includes/api/save-events.php",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(newEvents),
-            }
-          );
-          if (!response.ok) {
-            throw new Error("Erreur HTTP " + response.status);
-          }
-
-          // Resync DB events
-          const resEvents = await fetch(
-            "/modules/family-calendar/includes/api/get-events.php"
-          );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
-          const dataEvents = await resEvents.json();
-
-          this.dbEvents = dataEvents.events || [];
-          this.events = [...this.dbEvents, ...this.fixedEvents];
-
-          this.reprocessAndRender();
-        } catch (err) {
-          console.error(err);
-          alert("Erreur lors de l'ajout.");
-        }
-
         return;
       }
 
-      // === AJOUT SUR UNE SEULE DATE (menu combiné d'un jour) =====================
-      if (action === "add-single") {
-        const targetDate = date;
-        const existingOnDate = this.dbEvents.filter(
-          (evt) => evt.date === targetDate
-        );
-
-        if (CONGE_TYPES.includes(type)) {
-          const hasCongeConflict = existingOnDate.some((evt) =>
-            CONGE_TYPES.includes(evt.type)
-          );
-          if (hasCongeConflict) {
-            alert("Un congé existe déjà ce jour-là.");
-            this.clearSelection();
-            return;
-          }
-        } else if (GUARDE_TYPES.includes(type)) {
-          const hasGardeConflict = existingOnDate.some((evt) =>
-            GUARDE_TYPES.includes(evt.type)
-          );
-          if (hasGardeConflict) {
-            alert("Un mode de garde existe déjà ce jour-là.");
-            this.clearSelection();
-            return;
-          }
-        }
-
-        const newEvent = {
-          date: targetDate,
-          type,
-          person,
-          duration: 1.0,
-        };
-
-        this.clearSelection();
-
-        try {
-          const response = await fetch(
-            "/modules/family-calendar/includes/api/save-events.php",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify([newEvent]),
-            }
-          );
-          if (!response.ok) {
-            throw new Error("Erreur HTTP " + response.status);
-          }
-
-          const resEvents = await fetch(
-            "/modules/family-calendar/includes/api/get-events.php"
-          );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
-          const dataEvents = await resEvents.json();
-
-          this.dbEvents = dataEvents.events || [];
-          this.events = [...this.dbEvents, ...this.fixedEvents];
-
-          this.reprocessAndRender();
-        } catch (err) {
-          console.error(err);
-          alert("Erreur lors de l'ajout.");
-        }
-
-        return;
-      }
-
-      // === SUPPRESSION SIMPLE ====================================================
-      if (action === "delete") {
-        if (!eventId) {
-          console.warn("Bouton delete sans eventId, action ignorée.");
+      // Bulk leaves Alex/Laia via bulk-add-leave
+      if (action === "bulk-add-leave") {
+        if (!this._currentBulkInfo) {
           this.clearSelection();
           return;
         }
 
+        const selectedDates = this._currentBulkInfo.selectedDates || [];
+        const personId = parseInt(button.dataset.personId, 10);
+        const leaveType = button.dataset.leaveType;
+
+        this._currentBulkInfo = null;
+
+        try {
+          // Supprimer pour cette personne sur toutes les dates
+          await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "bulk_delete_day_person",
+              dates: selectedDates,
+              person_id: personId,
+            }),
+          });
+
+          // Ajouter sur toutes les dates
+          const newLeaves = selectedDates.map((d) => ({
+            date: d,
+            person_id: personId,
+            leave_type: leaveType,
+            duration: 1.0,
+          }));
+
+          const responseAdd = await fetch(
+            "/modules/family-calendar/includes/api/save-leaves.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(newLeaves),
+            }
+          );
+          if (!responseAdd.ok)
+            throw new Error("Erreur HTTP " + responseAdd.status);
+
+          this.leaves = await this.fetchLeaves();
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("Erreur bulk-add-leave:", err);
+          alert("Erreur bulk congés Alex/Laia : " + err.message);
+        }
+
         this.clearSelection();
+        return;
+      }
+
+      // ===================== SUPPRESSION SIMPLE EVENT =============================
+
+      if (action === "delete") {
+        if (!eventId) {
+          this.clearSelection();
+          return;
+        }
 
         try {
           const response = await fetch(
@@ -1279,34 +1924,64 @@ document.addEventListener("DOMContentLoaded", () => {
           const resEvents = await fetch(
             "/modules/family-calendar/includes/api/get-events.php"
           );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
           const dataEvents = await resEvents.json();
-
           this.dbEvents = dataEvents.events || [];
           this.events = [...this.dbEvents, ...this.fixedEvents];
 
           this.reprocessAndRender();
         } catch (err) {
-          console.error(err);
+          console.error("Erreur delete:", err);
           alert("Erreur lors de la suppression : " + err.message);
         }
 
+        this.clearSelection();
         return;
       }
 
-      // === MODIFICATION SIMPLE ===================================================
-      if (action === "update") {
-        console.log("[UPDATE] click sur bouton update", { eventId, newType });
+      // ===================== SUPPRESSION BULK LEAVE =============================
 
-        if (!eventId) {
-          console.warn("Bouton update sans eventId, action ignorée.");
+      if (action === "bulk-clear-leave") {
+        if (!this._currentBulkInfo) {
           this.clearSelection();
           return;
         }
+        const selectedDates = this._currentBulkInfo.selectedDates || [];
+        const personId = parseInt(button.dataset.personId, 10);
 
+        try {
+          await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "bulk_delete_day_person",
+              dates: selectedDates,
+              person_id: personId,
+            }),
+          });
+
+          this.leaves = await this.fetchLeaves();
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("Erreur bulk-clear-leave:", err);
+          alert(
+            "Erreur lors de la suppression des congés sur ces jours : " +
+              err.message
+          );
+        }
+
+        this._currentBulkInfo = null;
         this.clearSelection();
+        return;
+      }
+
+      // ===================== UPDATE SIMPLE (utilisé par les boutons "Remplacer par") =====
+
+      if (action === "update") {
+        if (!eventId) {
+          this.clearSelection();
+          return;
+        }
 
         try {
           const response = await fetch(
@@ -1331,20 +2006,17 @@ document.addEventListener("DOMContentLoaded", () => {
           const resEvents = await fetch(
             "/modules/family-calendar/includes/api/get-events.php"
           );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
           const dataEvents = await resEvents.json();
-
           this.dbEvents = dataEvents.events || [];
           this.events = [...this.dbEvents, ...this.fixedEvents];
 
           this.reprocessAndRender();
         } catch (err) {
-          console.error("[UPDATE] Erreur lors de la modification :", err);
+          console.error("Erreur update:", err);
           alert("Erreur lors de la modification : " + err.message);
         }
 
+        this.clearSelection();
         return;
       }
     }
@@ -1906,7 +2578,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (this.monthSelectedCells.length === 0) return;
 
       if (this.monthSelectedCells.length === 1) {
-        // Cas 1 jour : logique habituelle
         const date = this.monthSelectedCells[0].dataset.date;
         const eventsOnDay = this.events.filter(
           (evt) => evt.date === date && MODIFIABLE_TYPES.includes(evt.type)
@@ -1914,15 +2585,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const conge = eventsOnDay.find((e) => CONGE_TYPES.includes(e.type));
         const garde = eventsOnDay.find((e) => GUARDE_TYPES.includes(e.type));
         const pep = eventsOnDay.find((e) => PEP_TYPES.includes(e.type));
-        if (!conge && !garde && !pep) {
-          this.showMonthAddMenu(e);
-        } else {
-          this.showMonthEditMenuForDay(e, { conge, garde, pep, date });
-        }
+
+        // Toujours ouvrir le menu complet qui inclut Alex/Laia
+        this.showMonthEditMenuForDay(e, { conge, garde, pep, date });
         return;
       }
 
-      // ===== Multi-jours : tentative de bulk edit =====
+      // ===== Multi-jours : toujours ouvrir le menu bulk =====
       const selectedDates = this.monthSelectedCells.map((c) => c.dataset.date);
       const eventsOnDates = this.events.filter(
         (evt) =>
@@ -1945,18 +2614,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const allDatesHaveGarde =
         gardes.length === selectedDates.length && uniqueGardeTypes.size === 1;
 
-      if (allDatesHaveConge || allDatesHaveGarde) {
-        const bulkInfo = {
-          selectedDates,
-          conges,
-          gardes,
-          congeType: allDatesHaveConge ? conges[0].type : null,
-          gardeType: allDatesHaveGarde ? gardes[0].type : null,
-        };
-        this.showMonthBulkMenu(e, bulkInfo);
-      } else {
-        this.showMonthAddMenu(e);
-      }
+      const bulkInfo = {
+        selectedDates,
+        conges,
+        gardes,
+        congeType: allDatesHaveConge ? conges[0].type : null,
+        gardeType: allDatesHaveGarde ? gardes[0].type : null,
+      };
+
+      // Peu importe qu'il y ait déjà des congés ou non, on ouvre le bulk
+      this.showMonthBulkMenu(e, bulkInfo);
     }
 
     clearMonthSelection() {
@@ -1971,16 +2638,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
     showMonthAddMenu(e) {
       if (!this.monthSelectionMenu) return;
+
       this.monthSelectionMenu.innerHTML = `
-        <div class="fc-menu-section"><strong>Ajouter</strong></div>
-        <button data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off Carole</button>
-        <button data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra Off Carole</button>
-        <div class="fc-menu-section"><strong>Mode de Garde</strong></div>
-        <button data-action="add" data-type="CENTRE">Centre</button>
-        <button data-action="add" data-type="AVIS">Avis</button>
-        <div class="fc-menu-section"><strong>Pep</strong></div>
-        <button data-action="add" data-type="PEP_SICK">Pep malade</button>
-      `;
+    <div class="fc-menu-section">
+      <strong>Ajouter</strong>
+      <div class="fc-menu-grid">
+        <button
+          class="fc-menu-btn fc-menu-btn--conge"
+          data-action="add"
+          data-type="OFF_CAROLE"
+          data-person="Carole"
+        >
+          Off Carole
+        </button>
+        <button
+          class="fc-menu-btn fc-menu-btn--conge"
+          data-action="add"
+          data-type="EXTRA_OFF_CAROLE"
+          data-person="Carole"
+        >
+          Extra Off Carole
+        </button>
+      </div>
+    </div>
+
+    <div class="fc-menu-section">
+      <strong>Mode de garde</strong>
+      <div class="fc-menu-grid">
+        <button
+          class="fc-menu-btn fc-menu-btn--garde"
+          data-action="add"
+          data-type="CENTRE"
+        >
+          Centre
+        </button>
+        <button
+          class="fc-menu-btn fc-menu-btn--garde"
+          data-action="add"
+          data-type="AVIS"
+        >
+          Avis
+        </button>
+      </div>
+    </div>
+
+    <div class="fc-menu-section">
+      <strong>Pep</strong>
+      <div class="fc-menu-grid">
+        <button
+          class="fc-menu-btn fc-menu-btn--pep"
+          data-action="add"
+          data-type="PEP_SICK"
+        >
+          Pep malade
+        </button>
+      </div>
+    </div>
+  `;
+
       this.positionAndShowMonthMenu(e);
     }
 
@@ -1993,25 +2708,52 @@ document.addEventListener("DOMContentLoaded", () => {
         const oppositeConge =
           conge.type === "OFF_CAROLE" ? "EXTRA_OFF_CAROLE" : "OFF_CAROLE";
         congeSection = `
-      <div class="fc-menu-section"><strong>Congé Carole</strong></div>
-      <button data-action="update" data-event-id="${
-        conge.id
-      }" data-new-type="${oppositeConge}">
-        Remplacer par ${oppositeConge.replace(/_/g, " ")}
-      </button>
-      <button data-action="delete" data-event-id="${conge.id}">
-        Supprimer le congé
-      </button>
+      <div class="fc-menu-section">
+        <strong>Congé Carole</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--conge"
+            data-action="update"
+            data-event-id="${conge.id}"
+            data-new-type="${oppositeConge}"
+          >
+            Remplacer par<br> ${oppositeConge.replace(/_/g, " ")}
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-danger"
+            data-action="delete"
+            data-event-id="${conge.id}"
+          >
+            Supprimer le congé
+          </button>
+        </div>
+      </div>
     `;
       } else {
         congeSection = `
-      <div class="fc-menu-section"><strong>Ajouter un congé</strong></div>
-      <button data-action="add-single" data-type="OFF_CAROLE" data-date="${date}" data-person="Carole">
-        Off Carole
-      </button>
-      <button data-action="add-single" data-type="EXTRA_OFF_CAROLE" data-date="${date}" data-person="Carole">
-        Extra Off Carole
-      </button>
+      <div class="fc-menu-section">
+        <strong>Ajouter un congé</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--conge"
+            data-action="add-single"
+            data-type="OFF_CAROLE"
+            data-date="${date}"
+            data-person="Carole"
+          >
+            Off Carole
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-btn--conge"
+            data-action="add-single"
+            data-type="EXTRA_OFF_CAROLE"
+            data-date="${date}"
+            data-person="Carole"
+          >
+            Extra Off Carole
+          </button>
+        </div>
+      </div>
     `;
       }
 
@@ -2020,23 +2762,50 @@ document.addEventListener("DOMContentLoaded", () => {
       if (garde) {
         const oppositeGarde = garde.type === "CENTRE" ? "AVIS" : "CENTRE";
         gardeSection = `
-      <div class="fc-menu-section"><strong>Mode de garde</strong></div>
-      <button data-action="update" data-event-id="${garde.id}" data-new-type="${oppositeGarde}">
-        Remplacer par ${oppositeGarde}
-      </button>
-      <button data-action="delete" data-event-id="${garde.id}">
-        Supprimer le mode de garde
-      </button>
+      <div class="fc-menu-section">
+        <strong>Mode de garde</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--garde"
+            data-action="update"
+            data-event-id="${garde.id}"
+            data-new-type="${oppositeGarde}"
+          >
+            Remplacer par<br> ${oppositeGarde}
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-danger"
+            data-action="delete"
+            data-event-id="${garde.id}"
+          >
+            Supprimer le mode de garde
+          </button>
+        </div>
+      </div>
     `;
       } else {
         gardeSection = `
-      <div class="fc-menu-section"><strong>Ajouter mode de garde</strong></div>
-      <button data-action="add-single" data-type="CENTRE" data-date="${date}">
-        Centre
-      </button>
-      <button data-action="add-single" data-type="AVIS" data-date="${date}">
-        Avis
-      </button>
+      <div class="fc-menu-section">
+        <strong>Ajouter mode de garde</strong>
+        <div class="fc-menu-grid">
+          <button
+            class="fc-menu-btn fc-menu-btn--garde"
+            data-action="add-single"
+            data-type="CENTRE"
+            data-date="${date}"
+          >
+            Centre
+          </button>
+          <button
+            class="fc-menu-btn fc-menu-btn--garde"
+            data-action="add-single"
+            data-type="AVIS"
+            data-date="${date}"
+          >
+            Avis
+          </button>
+        </div>
+      </div>
     `;
       }
 
@@ -2044,17 +2813,30 @@ document.addEventListener("DOMContentLoaded", () => {
       let pepSection = "";
       if (pep) {
         pepSection = `
-      <div class="fc-menu-section"><strong>Pep</strong></div>
-      <button data-action="delete" data-event-id="${pep.id}">
-        Supprimer "Pep malade"
-      </button>
+      <div class="fc-menu-section">
+        <strong>Pep</strong>
+        <button
+          class="fc-menu-btn fc-menu-danger"
+          data-action="delete"
+          data-event-id="${pep.id}"
+        >
+          Supprimer "Pep malade"
+        </button>
+      </div>
     `;
       } else {
         pepSection = `
-      <div class="fc-menu-section"><strong>Pep</strong></div>
-      <button data-action="add-single" data-type="PEP_SICK" data-date="${date}">
-        Marquer Pep malade
-      </button>
+      <div class="fc-menu-section">
+        <strong>Pep</strong>
+        <button
+          class="fc-menu-btn fc-menu-btn--pep"
+          data-action="add-single"
+          data-type="PEP_SICK"
+          data-date="${date}"
+        >
+          Pep malade
+        </button>
+      </div>
     `;
       }
 
@@ -2064,36 +2846,118 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       let leavesSection = `
-    <div class="fc-menu-section"><strong>Congés Alex / Laia</strong></div>
-    <button data-action="add-leave" data-date="${date}" data-person-id="2" data-leave-type="CP">
-      Alex - CP
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="2" data-leave-type="JRA">
-      Alex - JRA
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="2" data-leave-type="JA">
-      Alex - JA
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="3" data-leave-type="CP">
-      Laia - CP
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="3" data-leave-type="JRA">
-      Laia - JRA
-    </button>
-    <button data-action="add-leave" data-date="${date}" data-person-id="3" data-leave-type="JA">
-      Laia - JA
-    </button>
+    <div class="fc-menu-section">
+      <strong>Congés Alex / Laia</strong>
+      <div class="fc-menu-leaves-table">
+        <table>
+          <thead>
+            <tr>
+              
+              <th>Alex</th>
+              <th>Laia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="2"
+                  data-leave-type="CP"
+                >
+                  CP
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="3"
+                  data-leave-type="CP"
+                >
+                  CP
+                </button>
+              </td>
+            </tr>
+            <tr>
+              
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="2"
+                  data-leave-type="JRA"
+                >
+                  JRA
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="3"
+                  data-leave-type="JRA"
+                >
+                  JRA
+                </button>
+              </td>
+            </tr>
+            <tr>
+              
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="2"
+                  data-leave-type="JA"
+                >
+                  JA
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="add-leave"
+                  data-date="${date}"
+                  data-person-id="3"
+                  data-leave-type="JA"
+                >
+                  JA
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   `;
 
       if (leavesOnDay.length > 0) {
         leavesSection += `
-      <button data-action="delete-leaves-day" data-date="${date}">
+      <button
+        type="button"
+        class="fc-menu-btn fc-menu-danger"
+        data-action="delete-leaves-day"
+        data-date="${date}"
+      >
         Supprimer les congés Alex/Laia ce jour-là
       </button>
     `;
       }
 
-      // --- Assemblage du menu ---
       this.monthSelectionMenu.innerHTML =
         congeSection + gardeSection + pepSection + leavesSection;
       this.positionAndShowMonthMenu(e);
@@ -2102,69 +2966,195 @@ document.addEventListener("DOMContentLoaded", () => {
     showMonthBulkMenu(e, bulkInfo) {
       if (!this.monthSelectionMenu) return;
 
-      const { selectedDates, conges, gardes, congeType, gardeType } = bulkInfo;
+      const { selectedDates } = bulkInfo;
       const nbDays = selectedDates.length;
 
-      let html =
-        '<div class="fc-menu-section"><strong>Actions multi-jours</strong></div>';
+      let html = `
+    <div class="fc-menu-section">
+      <strong>Actions multi-jours</strong>
+    </div>
+  `;
 
-      if (congeType) {
-        const oppositeConge =
-          congeType === "OFF_CAROLE" ? "EXTRA_OFF_CAROLE" : "OFF_CAROLE";
-        html += `
-      <div class="fc-menu-section"><strong>Congés Carole (${nbDays} jours)</strong></div>
+      // === Congés Carole (toujours visible) ===
+      html += `
+    <div class="fc-menu-section">
+      <strong>Congés Carole (${nbDays} jours)</strong>
+      <div class="fc-menu-grid">
+        <button
+          class="fc-menu-btn fc-menu-btn--conge"
+          data-action="add"
+          data-type="OFF_CAROLE"
+          data-person="Carole"
+        >
+          Off Carole
+        </button>
+        <button
+          class="fc-menu-btn fc-menu-btn--conge"
+          data-action="add"
+          data-type="EXTRA_OFF_CAROLE"
+          data-person="Carole"
+        >
+          Extra Off Carole
+        </button>
+      </div>
       <button
-        data-action="bulk-update-conge"
-        data-new-type="${oppositeConge}"
-        data-target="conge"
+        class="fc-menu-btn fc-menu-danger"
+        data-action="bulk-clear-conge"
       >
-        Remplacer ${congeType.replace(/_/g, " ")} par ${oppositeConge.replace(
-          /_/g,
-          " "
-        )} sur ${nbDays} jours
+        Supprimer tous les congés Carole sur ces jours
       </button>
-      <button
-        data-action="bulk-delete-conge"
-        data-target="conge"
-      >
-        Supprimer le congé sur ${nbDays} jours
-      </button>
-    `;
-      }
+    </div>
+  `;
 
-      if (gardeType) {
-        const oppositeGarde = gardeType === "CENTRE" ? "AVIS" : "CENTRE";
-        html += `
-      <div class="fc-menu-section"><strong>Mode de garde (${nbDays} jours)</strong></div>
+      // === Mode de garde (toujours visible) ===
+      html += `
+    <div class="fc-menu-section">
+      <strong>Mode de garde (${nbDays} jours)</strong>
+      <div class="fc-menu-grid">
+        <button
+          class="fc-menu-btn fc-menu-btn--garde"
+          data-action="add"
+          data-type="CENTRE"
+        >
+          Centre
+        </button>
+        <button
+          class="fc-menu-btn fc-menu-btn--garde"
+          data-action="add"
+          data-type="AVIS"
+        >
+          Avis
+        </button>
+      </div>
       <button
-        data-action="bulk-update-garde"
-        data-new-type="${oppositeGarde}"
-        data-target="garde"
+        class="fc-menu-btn fc-menu-danger"
+        data-action="bulk-clear-garde"
       >
-        Remplacer ${gardeType} par ${oppositeGarde} sur ${nbDays} jours
+        Supprimer tous les modes de garde sur ces jours
+      </button>
+    </div>
+  `;
+
+      // === Congés Alex / Laia (tableau identique au single) ===
+      html += `
+    <div class="fc-menu-section">
+      <strong>Congés Alex / Laia (${nbDays} jours)</strong>
+      <div class="fc-menu-leaves-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Alex</th>
+              <th>Laia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="bulk-add-leave"
+                  data-person-id="2"
+                  data-leave-type="CP"
+                >
+                  CP
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="bulk-add-leave"
+                  data-person-id="3"
+                  data-leave-type="CP"
+                >
+                  CP
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="bulk-add-leave"
+                  data-person-id="2"
+                  data-leave-type="JRA"
+                >
+                  JRA
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="bulk-add-leave"
+                  data-person-id="3"
+                  data-leave-type="JRA"
+                >
+                  JRA
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="bulk-add-leave"
+                  data-person-id="2"
+                  data-leave-type="JA"
+                >
+                  JA
+                </button>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="fc-menu-btn fc-menu-leave-btn"
+                  data-action="bulk-add-leave"
+                  data-person-id="3"
+                  data-leave-type="JA"
+                >
+                  JA
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button
+        class="fc-menu-btn fc-menu-danger"
+        data-action="bulk-clear-leave"
+        data-person-id="2"
+      >
+        Supprimer tous les congés Alex sur ces jours
       </button>
       <button
-        data-action="bulk-delete-garde"
-        data-target="garde"
+        class="fc-menu-btn fc-menu-danger"
+        data-action="bulk-clear-leave"
+        data-person-id="3"
       >
-        Supprimer le mode de garde sur ${nbDays} jours
+        Supprimer tous les congés Laia sur ces jours
       </button>
-    `;
-      }
+    </div>
+  `;
 
       this.monthSelectionMenu.innerHTML = html;
-      // On réutilise la même propriété que pour le planning hebdo :
       this._currentBulkInfo = bulkInfo;
       this.positionAndShowMonthMenu(e);
     }
 
     positionAndShowMonthMenu(e) {
       if (!this.monthSelectionMenu) return;
-      const wrapper =
-        document.querySelector(".fc-month-calendar-wrapper") || document.body;
+
+      // parent direct qui contient le calendrier + le menu
+      const wrapper = this.monthSelectionMenu.parentElement; // .fc-calendar-and-summary
       const rect = wrapper.getBoundingClientRect();
 
       this.monthSelectionMenu.style.display = "block";
+
+      // Position relative au wrapper, comme pour l’hebdo
       this.monthSelectionMenu.style.left = `${e.clientX - rect.left + 5}px`;
       this.monthSelectionMenu.style.top = `${e.clientY - rect.top + 5}px`;
 
@@ -2180,39 +3170,126 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const { action, eventId, newType, type, person, date } = button.dataset;
 
-      // Réutiliser la même logique que handleMenuClick mais avec monthSelectedCells
+      // === AJOUT MULTI-JOURS (Carole / garde / Pep) ============================
       if (action === "add") {
         const selectedDates = this.monthSelectedCells.map(
           (c) => c.dataset.date
         );
-        const existingOnDates = this.dbEvents.filter((evt) =>
-          selectedDates.includes(evt.date)
-        );
 
+        // Bulk congés Carole
         if (CONGE_TYPES.includes(type)) {
-          const hasCongeConflict = existingOnDates.some((evt) =>
-            CONGE_TYPES.includes(evt.type)
-          );
-          if (hasCongeConflict) {
-            alert(
-              "Impossible d'ajouter un congé : au moins une date a déjà un congé (Off/Extra Off)."
+          try {
+            const existingOnDates = this.dbEvents.filter(
+              (evt) =>
+                selectedDates.includes(evt.date) &&
+                CONGE_TYPES.includes(evt.type)
             );
-            this.clearMonthSelection();
-            return;
-          }
-        } else if (GUARDE_TYPES.includes(type)) {
-          const hasGardeConflict = existingOnDates.some((evt) =>
-            GUARDE_TYPES.includes(evt.type)
-          );
-          if (hasGardeConflict) {
-            alert(
-              "Impossible d'ajouter un mode de garde : au moins une date a déjà Centre/Avis."
+            for (const evt of existingOnDates) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
+            }
+
+            const newEvents = selectedDates.map((d) => ({
+              date: d,
+              type,
+              person: "Carole",
+              duration: 1.0,
+            }));
+
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newEvents),
+              }
             );
-            this.clearMonthSelection();
-            return;
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+            this.renderMonthCalendar();
+          } catch (err) {
+            console.error("Erreur bulk Carole (month):", err);
+            alert("Erreur bulk congés Carole : " + err.message);
           }
+
+          this.clearMonthSelection();
+          return;
         }
 
+        // Bulk mode de garde
+        if (GUARDE_TYPES.includes(type)) {
+          try {
+            const existingOnDates = this.dbEvents.filter(
+              (evt) =>
+                selectedDates.includes(evt.date) &&
+                GUARDE_TYPES.includes(evt.type)
+            );
+            for (const evt of existingOnDates) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
+            }
+
+            const newEvents = selectedDates.map((d) => ({
+              date: d,
+              type,
+              duration: 1.0,
+            }));
+
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newEvents),
+              }
+            );
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+            this.renderMonthCalendar();
+          } catch (err) {
+            console.error("Erreur bulk garde (month):", err);
+            alert("Erreur bulk mode de garde : " + err.message);
+          }
+
+          this.clearMonthSelection();
+          return;
+        }
+
+        // Bulk Pep
         const newEvents = this.monthSelectedCells.map((cell) => ({
           date: cell.dataset.date,
           type,
@@ -2231,56 +3308,139 @@ document.addEventListener("DOMContentLoaded", () => {
               body: JSON.stringify(newEvents),
             }
           );
-          if (!response.ok) {
-            throw new Error("Erreur HTTP " + response.status);
-          }
+          if (!response.ok) throw new Error("Erreur HTTP " + response.status);
 
           const resEvents = await fetch(
             "/modules/family-calendar/includes/api/get-events.php"
           );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
           const dataEvents = await resEvents.json();
-
           this.dbEvents = dataEvents.events || [];
           this.events = [...this.dbEvents, ...this.fixedEvents];
 
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error(err);
+          console.error("Erreur bulk add (month):", err);
           alert("Erreur lors de l'ajout.");
         }
         return;
       }
 
+      // === AJOUT SUR UNE SEULE DATE (Carole / garde / Pep) =====================
       if (action === "add-single") {
         const targetDate = date;
-        const existingOnDate = this.dbEvents.filter(
-          (evt) => evt.date === targetDate
-        );
 
+        // Switch congé Carole
         if (CONGE_TYPES.includes(type)) {
-          const hasCongeConflict = existingOnDate.some((evt) =>
-            CONGE_TYPES.includes(evt.type)
-          );
-          if (hasCongeConflict) {
-            alert("Un congé existe déjà ce jour-là.");
-            this.clearMonthSelection();
-            return;
+          try {
+            const existingOnDate = this.dbEvents.filter(
+              (evt) => evt.date === targetDate && CONGE_TYPES.includes(evt.type)
+            );
+            for (const evt of existingOnDate) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
+            }
+
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify([
+                  {
+                    date: targetDate,
+                    type,
+                    person: "Carole",
+                    duration: 1.0,
+                  },
+                ]),
+              }
+            );
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+            this.renderMonthCalendar();
+          } catch (err) {
+            console.error("Erreur Carole (month single):", err);
+            alert("Erreur congé Carole : " + err.message);
           }
-        } else if (GUARDE_TYPES.includes(type)) {
-          const hasGardeConflict = existingOnDate.some((evt) =>
-            GUARDE_TYPES.includes(evt.type)
-          );
-          if (hasGardeConflict) {
-            alert("Un mode de garde existe déjà ce jour-là.");
-            this.clearMonthSelection();
-            return;
-          }
+
+          this.clearMonthSelection();
+          return;
         }
 
+        // Switch mode de garde
+        if (GUARDE_TYPES.includes(type)) {
+          try {
+            const existingOnDate = this.dbEvents.filter(
+              (evt) =>
+                evt.date === targetDate && GUARDE_TYPES.includes(evt.type)
+            );
+            for (const evt of existingOnDate) {
+              await fetch(
+                "/modules/family-calendar/includes/api/manage-event.php",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "delete",
+                    event_id: evt.id,
+                  }),
+                }
+              );
+            }
+
+            const response = await fetch(
+              "/modules/family-calendar/includes/api/save-events.php",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify([
+                  {
+                    date: targetDate,
+                    type,
+                    duration: 1.0,
+                  },
+                ]),
+              }
+            );
+            if (!response.ok) throw new Error("Erreur HTTP " + response.status);
+
+            const resEvents = await fetch(
+              "/modules/family-calendar/includes/api/get-events.php"
+            );
+            const dataEvents = await resEvents.json();
+            this.dbEvents = dataEvents.events || [];
+            this.events = [...this.dbEvents, ...this.fixedEvents];
+
+            this.reprocessAndRender();
+            this.renderMonthCalendar();
+          } catch (err) {
+            console.error("Erreur garde (month single):", err);
+            alert("Erreur mode de garde : " + err.message);
+          }
+
+          this.clearMonthSelection();
+          return;
+        }
+
+        // Pep
         const newEvent = {
           date: targetDate,
           type,
@@ -2299,30 +3459,25 @@ document.addEventListener("DOMContentLoaded", () => {
               body: JSON.stringify([newEvent]),
             }
           );
-          if (!response.ok) {
-            throw new Error("Erreur HTTP " + response.status);
-          }
+          if (!response.ok) throw new Error("Erreur HTTP " + response.status);
 
           const resEvents = await fetch(
             "/modules/family-calendar/includes/api/get-events.php"
           );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
           const dataEvents = await resEvents.json();
-
           this.dbEvents = dataEvents.events || [];
           this.events = [...this.dbEvents, ...this.fixedEvents];
 
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error(err);
+          console.error("Erreur add (month single):", err);
           alert("Erreur lors de l'ajout.");
         }
         return;
       }
 
+      // === SUPPRESSION SIMPLE (Carole / garde / Pep) ===========================
       if (action === "delete") {
         if (!eventId) {
           this.clearMonthSelection();
@@ -2350,23 +3505,56 @@ document.addEventListener("DOMContentLoaded", () => {
           const resEvents = await fetch(
             "/modules/family-calendar/includes/api/get-events.php"
           );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
           const dataEvents = await resEvents.json();
-
           this.dbEvents = dataEvents.events || [];
           this.events = [...this.dbEvents, ...this.fixedEvents];
 
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error(err);
+          console.error("Erreur delete (month):", err);
           alert("Erreur lors de la suppression : " + err.message);
         }
         return;
       }
 
+      // === SUPPRESSION BULK ALEX / LAIA ===========================
+      if (action === "bulk-clear-leave") {
+        if (!this._currentBulkInfo) {
+          this.clearSelection();
+          return;
+        }
+        const selectedDates = this._currentBulkInfo.selectedDates || [];
+        const personId = parseInt(button.dataset.personId, 10);
+
+        try {
+          await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "bulk_delete_day_person",
+              dates: selectedDates,
+              person_id: personId,
+            }),
+          });
+
+          this.leaves = await this.fetchLeaves();
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("Erreur bulk-clear-leave:", err);
+          alert(
+            "Erreur lors de la suppression des congés sur ces jours : " +
+              err.message
+          );
+        }
+
+        this._currentBulkInfo = null;
+        this.clearSelection();
+        return;
+      }
+
+      // === MODIFICATION SIMPLE ===================================================
       if (action === "update") {
         if (!eventId) {
           this.clearMonthSelection();
@@ -2398,20 +3586,164 @@ document.addEventListener("DOMContentLoaded", () => {
           const resEvents = await fetch(
             "/modules/family-calendar/includes/api/get-events.php"
           );
-          if (!resEvents.ok) {
-            throw new Error("Erreur lors du rechargement des événements.");
-          }
           const dataEvents = await resEvents.json();
-
           this.dbEvents = dataEvents.events || [];
           this.events = [...this.dbEvents, ...this.fixedEvents];
 
           this.reprocessAndRender();
           this.renderMonthCalendar();
         } catch (err) {
-          console.error("[UPDATE] Erreur lors de la modification :", err);
+          console.error("Erreur update (month):", err);
           alert("Erreur lors de la modification : " + err.message);
         }
+        return;
+      }
+
+      // === ALEX / LAIA (logique identique à handleMenuClick) ===================
+
+      if (action === "add-leave") {
+        const leaveDate = date;
+        const personId = parseInt(button.dataset.personId, 10);
+        const leaveType = button.dataset.leaveType; // "CP", "JRA", "JA"
+
+        if (!leaveDate || !personId || !leaveType) {
+          this.clearMonthSelection();
+          return;
+        }
+
+        this.clearMonthSelection();
+
+        try {
+          // 1) Supprimer tous les congés Alex/Laia pour cette personne ce jour-là
+          await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "delete_day_person",
+              date: leaveDate,
+              person_id: personId,
+            }),
+          });
+
+          // 2) Ajouter le type choisi
+          const responseAdd = await fetch(
+            "/modules/family-calendar/includes/api/save-leaves.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify([
+                {
+                  date: leaveDate,
+                  person_id: personId,
+                  leave_type: leaveType,
+                  duration: 1.0,
+                },
+              ]),
+            }
+          );
+          if (!responseAdd.ok) {
+            throw new Error("Erreur HTTP " + responseAdd.status);
+          }
+
+          this.leaves = await this.fetchLeaves();
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("Erreur set leave single:", err);
+          alert("Erreur congé Alex/Laia : " + err.message);
+        }
+
+        return;
+      }
+
+      if (action === "delete-leaves-day") {
+        const leaveDate = date;
+        if (!leaveDate) {
+          this.clearMonthSelection();
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            "/modules/family-calendar/includes/api/manage-leaf.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "delete_day", date: leaveDate }),
+            }
+          );
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(
+              errData.message || "Erreur HTTP " + response.status
+            );
+          }
+
+          this.leaves = await this.fetchLeaves();
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("Erreur delete_leaves_day (month):", err);
+          alert(
+            "Erreur lors de la suppression des congés Alex/Laia pour ce jour: " +
+              err.message
+          );
+        }
+
+        this.clearMonthSelection();
+        return;
+      }
+
+      if (action === "bulk-add-leave") {
+        if (!this._currentBulkInfo) {
+          this.clearMonthSelection();
+          return;
+        }
+
+        const selectedDates = this._currentBulkInfo.selectedDates || [];
+        const personId = parseInt(button.dataset.personId, 10);
+        const leaveType = button.dataset.leaveType;
+
+        this._currentBulkInfo = null;
+
+        try {
+          await fetch("/modules/family-calendar/includes/api/manage-leaf.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "bulk_delete_day_person",
+              dates: selectedDates,
+              person_id: personId,
+            }),
+          });
+
+          const newLeaves = selectedDates.map((d) => ({
+            date: d,
+            person_id: personId,
+            leave_type: leaveType,
+            duration: 1.0,
+          }));
+
+          const responseAdd = await fetch(
+            "/modules/family-calendar/includes/api/save-leaves.php",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(newLeaves),
+            }
+          );
+          if (!responseAdd.ok)
+            throw new Error("Erreur HTTP " + responseAdd.status);
+
+          this.leaves = await this.fetchLeaves();
+          this.reprocessAndRender();
+          this.renderMonthCalendar();
+        } catch (err) {
+          console.error("Erreur bulk-add-leave (month):", err);
+          alert("Erreur bulk congés Alex/Laia : " + err.message);
+        }
+
+        this.clearMonthSelection();
         return;
       }
     }
