@@ -137,7 +137,15 @@ require __DIR__ . '/header.php';
 <!--  PLANNING PRINCIPAL                                                   -->
 <!-- ===================================================================== -->
 <section class="pf-section">
-  <h2>Planning par semaine</h2>
+  <div class="fc-week-header">
+    <h2>Planning hebdo</h2>
+    <div class="fc-week-nav-controls">
+      <button id="fc-prev-school-year" class="fc-nav-button">‹</button>
+      <span id="fc-current-school-year-label"></span>
+      <button id="fc-next-school-year" class="fc-nav-button">›</button>
+    </div>
+  </div>
+
   <div class="pf-table-wrapper" id="planningTable-wrapper">
     <table id="planningHeaderTable" class="pf-table pf-table--compact">
       <colgroup>
