@@ -92,8 +92,34 @@
   white-space: normal;
 }
 
+/* Header du planning hebdo : même esprit que fc-month-header */
+.fc-week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fc-week-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#fc-current-school-year-label {
+  font-weight: 600;
+  color: #243b53;
+}
+
+#fc-current-school-year-label {
+  font-weight: 600;
+  color: #243b53;
+}
+
 #planningTable-wrapper {
-  max-height: 500px;
+  max-height: 80vh;
   overflow-y: auto;
   overflow-x: auto;
   position: relative;

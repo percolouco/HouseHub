@@ -19,15 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
       this.monthSelectionMenu = document.getElementById(
         "fc-month-selectionMenu"
       );
-      // Initialiser avec septembre (mois 8, car 0-indexé) pour l'année scolaire
+
+      // Mois courant réel pour le calendrier mensuel
       this.currentMonth = new Date();
-      const currentMonthIndex = this.currentMonth.getMonth();
-      // Si on est avant septembre, on affiche l'année scolaire précédente
-      if (currentMonthIndex < 8) {
-        this.currentMonth.setFullYear(this.currentMonth.getFullYear() - 1);
-      }
-      this.currentMonth.setMonth(8); // Septembre
-      this.currentMonth.setDate(1); // Premier jour du mois
+      this.currentMonth.setDate(1); // premier jour du mois courant
+
       this.viewMode = "1month"; // "1month", "2months", "year"
 
       if (!this.planningBody || !this.selectionMenu) {
@@ -52,7 +48,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // ================== INIT ==================
     async init() {
       this.setupEventListeners();
-      this.weeks = this.generateWeeksStructure();
+
+      // Déterminer l'année scolaire en cours à partir de la date du jour
+      const now = new Date();
+      const nowMonth = now.getMonth(); // 0-11
+      const nowYear = now.getFullYear();
+      this.currentSchoolYearStart = nowMonth >= 8 ? nowYear : nowYear - 1;
+
+      // Charger les semaines pour l'année scolaire courante
+      this.weeks = await this.fetchWeeksStructureScolaire(
+        this.currentSchoolYearStart
+      );
+
+      // Mettre à jour le label d'année scolaire dans l'UI
+      this.updateSchoolYearLabel();
 
       this.dbEvents = this.loadDbEvents();
       this.fixedEvents = await this.fetchPublicAndSchoolHolidays();
@@ -211,47 +220,50 @@ document.addEventListener("DOMContentLoaded", () => {
       return [...publicHolidays, ...schoolHolidayEvents];
     }
 
-    generateWeeksStructure() {
-      const weeks = [];
-      const start = new Date(2025, 8, 1); // 1er septembre 2025
-      const end = new Date(2026, 7, 31); // 31 août 2026
-      let current = new Date(start);
+    async fetchWeeksStructureScolaire(schoolYearStart) {
+      try {
+        const year = schoolYearStart || new Date().getFullYear();
+        const res = await fetch(
+          `/modules/family-calendar/includes/api/get-calendar-weeks-scolaire.php?school_year_start=${year}`
+        );
+        if (!res.ok) {
+          throw new Error("Erreur HTTP " + res.status);
+        }
+        const data = await res.json();
+        const weeks = data.weeks || [];
 
-      // Remonter au lundi le plus proche <= start
-      while (current.getDay() !== 1) current.setDate(current.getDate() - 1);
+        return weeks.map((w) => {
+          const mon = new Date(w.mon_date + "T00:00:00");
+          const tue = new Date(w.tue_date + "T00:00:00");
+          const wed = new Date(w.wed_date + "T00:00:00");
+          const thu = new Date(w.thu_date + "T00:00:00");
+          const fri = new Date(w.fri_date + "T00:00:00");
 
-      while (current <= end) {
-        const monday = new Date(current);
-
-        // C’est CETTE date qui doit servir de référence pour le mois
-        const weekMonthDate = monday;
-
-        const weekData = {
-          id: `${monday.getFullYear()}-W${getWeekOfYear(monday)}`,
-          monthKey: `${weekMonthDate.getFullYear()}-${String(
-            weekMonthDate.getMonth() + 1
-          ).padStart(2, "0")}`,
-          monthName: getMonthNameFr(weekMonthDate.getMonth()),
-          weekLabel: `W${getWeekOfYear(monday)}`,
-          dayDates: {},
-          dayFlags: {},
-        };
-
-        ["mon", "tue", "wed", "thu", "fri"].forEach((dayKey, index) => {
-          const dayDate = new Date(monday);
-          dayDate.setDate(monday.getDate() + index);
-          weekData.dayDates[dayKey] = dayDate;
-          weekData.dayFlags[dayKey] = { eventsOnDay: [] };
+          return {
+            id: `${w.week_iso_year}-W${w.week_iso_number}`, // ex: 2026-W01
+            monthKey: `${w.year}-${String(w.month).padStart(2, "0")}`, // année calendaire + mois
+            monthName: w.month_name,
+            weekLabel: w.week_label,
+            dayDates: {
+              mon,
+              tue,
+              wed,
+              thu,
+              fri,
+            },
+            dayFlags: {
+              mon: { eventsOnDay: [] },
+              tue: { eventsOnDay: [] },
+              wed: { eventsOnDay: [] },
+              thu: { eventsOnDay: [] },
+              fri: { eventsOnDay: [] },
+            },
+          };
         });
-
-        weeks.push(weekData);
-        current.setDate(current.getDate() + 7);
+      } catch (err) {
+        console.error("Erreur chargement calendar weeks scolaire:", err);
+        return [];
       }
-
-      // Juste pour verrouiller l’ordre si un jour tu modifies current ailleurs
-      weeks.sort((a, b) => a.dayDates.mon - b.dayDates.mon);
-
-      return weeks;
     }
 
     reprocessAndRender() {
@@ -1030,6 +1042,20 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       if (nextBtn) {
         nextBtn.addEventListener("click", () => this.navigateMonth(1));
+      }
+
+      // Navigation année scolaire (planning hebdo)
+      const prevSchoolYearBtn = document.getElementById("fc-prev-school-year");
+      const nextSchoolYearBtn = document.getElementById("fc-next-school-year");
+      if (prevSchoolYearBtn) {
+        prevSchoolYearBtn.addEventListener("click", () =>
+          this.changeSchoolYear(-1)
+        );
+      }
+      if (nextSchoolYearBtn) {
+        nextSchoolYearBtn.addEventListener("click", () =>
+          this.changeSchoolYear(1)
+        );
       }
 
       // Boutons de changement de vue
@@ -2501,24 +2527,28 @@ document.addEventListener("DOMContentLoaded", () => {
           btn.classList.add("fc-view-button--active");
         }
       });
+
+      // Si on passe en vue "year", caler currentMonth sur septembre
+      if (mode === "year" && this.currentSchoolYearStart != null) {
+        this.currentMonth = new Date(this.currentSchoolYearStart, 8, 1);
+      }
+
       this.renderMonthCalendar();
     }
 
-    navigateMonth(direction) {
+    async navigateMonth(direction) {
       if (this.viewMode === "year") {
-        // Navigation par année scolaire : on avance/recul d'un an,
-        // en gardant currentMonth fixé sur septembre
-        const year = this.currentMonth.getFullYear() + direction;
-        this.currentMonth = new Date(year, 8, 1); // 8 = septembre
-      } else {
-        // Navigation simple par mois (1 ou 2 mois)
-        const year = this.currentMonth.getFullYear();
-        const month = this.currentMonth.getMonth() + direction;
-
-        // new Date gère automatiquement le dépassement (ex: 2025, 12 => jan 2026)
-        this.currentMonth = new Date(year, month, 1);
+        // Navigation par année scolaire via les flèches :
+        // on réutilise changeSchoolYear
+        await this.changeSchoolYear(direction);
+        return;
       }
 
+      // Navigation simple par mois (1 ou 2 mois)
+      const year = this.currentMonth.getFullYear();
+      const month = this.currentMonth.getMonth() + direction;
+
+      this.currentMonth = new Date(year, month, 1);
       this.renderMonthCalendar();
     }
 
@@ -2561,6 +2591,35 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         this.renderSingleMonthView();
       }
+    }
+
+    updateSchoolYearLabel() {
+      const label = document.getElementById("fc-current-school-year-label");
+      if (!label || this.currentSchoolYearStart == null) return;
+      const start = this.currentSchoolYearStart;
+      const end = start + 1;
+      label.textContent = `Année scolaire ${start}–${end}`;
+    }
+
+    async changeSchoolYear(delta) {
+      // delta = -1 ou +1
+      this.currentSchoolYearStart = (this.currentSchoolYearStart || 0) + delta;
+
+      // Mettre currentMonth sur septembre de cette nouvelle année pour la vue "year"
+      // (pour le mensuel, on garde currentMonth tel quel, sauf si tu passes explicitement en vue year)
+      if (this.viewMode === "year") {
+        this.currentMonth = new Date(this.currentSchoolYearStart, 8, 1); // septembre
+      }
+
+      // Recharger les semaines de cette année scolaire
+      this.weeks = await this.fetchWeeksStructureScolaire(
+        this.currentSchoolYearStart
+      );
+
+      // Mettre à jour données / affichage
+      this.reprocessAndRender();
+      this.updateSchoolYearLabel();
+      this.renderMonthCalendar();
     }
 
     renderSingleMonthView() {
