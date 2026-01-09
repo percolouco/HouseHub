@@ -4,7 +4,7 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require __DIR__ . '/includes/auth.php';
-require_login('/family-calendar.php');
+require_login();
 
 require __DIR__ . '/includes/db.php';
 

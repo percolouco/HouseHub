@@ -4,18 +4,27 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function require_login(?string $redirectTarget = '/index.php'): void
+/**
+ * Vérifie qu'un utilisateur est connecté.
+ * Si non, le redirige vers la page de login avec ?redirect=URL_DEMANDEE
+ *
+ * @param string|null $loginPage URL de la page de login (par défaut /login.php)
+ */
+function require_login(?string $loginPage = '/login.php'): void
 {
-    // Exemple d’implémentation typique
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
     if (empty($_SESSION['user'])) {
-        // Si null → on choisit un fallback (par exemple index)
-        $target = $redirectTarget ?? '/index.php';
+        // URL de la page courante (ex: /christmas-list.php?foo=bar)
+        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+
+        // On redirige vers la page de login en ajoutant ?redirect=...
+        $redirectParam = urlencode($currentUrl);
+        $target = ($loginPage ?? '/login.php') . '?redirect=' . $redirectParam;
+
         header('Location: ' . $target);
         exit;
     }
 }
-
