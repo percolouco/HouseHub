@@ -74,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       this.leaveBalances = await this.fetchLeaveBalances();
       this.leaveSnapshots = await this.fetchLeaveSnapshots();
+      this.personLeaveMeta = await this.fetchPersonLeaveMeta();
 
       this.reprocessAndRender();
       this.renderMonthCalendar();
@@ -111,6 +112,28 @@ document.addEventListener("DOMContentLoaded", () => {
           err
         );
         return [];
+      }
+    }
+
+    async fetchPersonLeaveMeta() {
+      try {
+        const res = await fetch(
+          "/modules/family-calendar/includes/api/get-person-leave-meta.php"
+        );
+        if (!res.ok) {
+          throw new Error("Erreur HTTP " + res.status);
+        }
+        const data = await res.json();
+        // meta: [ { person_id: 2, anniversary_date: "2020-04-30" }, ... ]
+        const map = {};
+        (data.meta || []).forEach((row) => {
+          const pid = parseInt(row.person_id, 10);
+          map[pid] = row.anniversary_date; // string "YYYY-MM-DD"
+        });
+        return map; // { 2: "2020-04-30", 3: "2020-04-30", ... }
+      } catch (err) {
+        console.error("Erreur fetchPersonLeaveMeta:", err);
+        return {};
       }
     }
 
@@ -385,8 +408,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calculateMonthlyLeaveBalances() {
       const usageMonth = {}; // usageMonth[person_id][leave_type][ym] = total days in THAT month
+      const pivotDateStr = "2025-09-01";
+      const pivotDate = new Date(pivotDateStr + "T00:00:00");
 
-      // 1. Usage mensuel à partir des leaves
+      const getSnapshotRemaining = (personId, leaveType, targetDateStr) => {
+        if (!this.leaveSnapshots || !this.leaveSnapshots.length) return null;
+
+        const targetDate = new Date(targetDateStr + "T00:00:00");
+        let best = null;
+
+        this.leaveSnapshots.forEach((s) => {
+          if (
+            parseInt(s.person_id, 10) === personId &&
+            s.leave_type === leaveType
+          ) {
+            const d = new Date(s.snapshot_date + "T00:00:00");
+            if (d <= targetDate) {
+              if (!best || d > best.date) {
+                best = {
+                  date: d,
+                  remaining: parseFloat(s.remaining_balance) || 0,
+                };
+              }
+            }
+          }
+        });
+
+        return best ? best.remaining : null;
+      };
+
+      // 1. Usage mensuel à partir des leaves (pf_leaves)
       (this.leaves || []).forEach((lv) => {
         const personId = parseInt(lv.person_id, 10);
         const leaveType = lv.leave_type;
@@ -403,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
           (usageMonth[personId][leaveType][ymKey] || 0) + dur;
       });
 
-      // 2. Construire la liste des mois présents dans le planning
+      // 2. Liste des mois présents dans le planning (YYYY-MM)
       const allYmKeys = new Set();
       (this.weeks || []).forEach((w) => {
         const d = w.dayDates.mon; // lundi
@@ -417,8 +468,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const monthlyBalances = {}; // monthlyBalances[person_id][leave_type][ym] = { usedInMonth, availableAtMonthStart }
 
-      // 3. Indexer les balances annuelles (CP / JA)
-      const balancesByYear = {}; // balancesByYear[person_id][leave_type][year] = initial
+      // 3. Indexer les balances annuelles (droits)
+      // balancesByYear[person_id][leave_type][year] = initial_balance
+      const balancesByYear = {};
       (this.leaveBalances || []).forEach((b) => {
         const personId = parseInt(b.person_id, 10);
         const leaveType = b.leave_type;
@@ -441,28 +493,56 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!monthlyBalances[personId][leaveType])
             monthlyBalances[personId][leaveType] = {};
 
-          // Pour CP / JA : on utilise initial_balance et on décrémente au fil des mois
-          if (leaveType !== "JRA") {
-            ymList.forEach((ym, index) => {
-              const [yStr] = ym.split("-");
-              const year = parseInt(yStr, 10);
-              const initial =
-                ((balancesByYear[personId] || {})[leaveType] || {})[year] || 0;
+          const personUsageAll = (usageMonth[personId] || {})[leaveType] || {};
 
-              // use caisse : somme des mois < ym
-              const personUsage = (usageMonth[personId] || {})[leaveType] || {};
+          // ===================== CP =====================
+          // 25/an, utilisables du 01/08 N au 31/07 N+1.
+          // On considère que les 25 sont dispo au 01/08.
+          if (leaveType === "CP") {
+            ymList.forEach((ym) => {
+              const [yStr, mStr] = ym.split("-");
+              const year = parseInt(yStr, 10);
+              const month = parseInt(mStr, 10);
+
+              // Déterminer l'année scolaire CP (N)
+              // Si mois >= 8 -> année scolaire = year
+              // Sinon -> année scolaire = year - 1
+              const cpSchoolYear = month >= 8 ? year : year - 1;
+
+              const initial =
+                ((balancesByYear[personId] || {}).CP || {})[cpSchoolYear] || 0;
+
+              // Période effective de cette "cohorte" CP:
+              // [cpSchoolYear-08-01, (cpSchoolYear+1)-07-31]
+              const periodStart = `${cpSchoolYear}-08-01`;
+              const periodEnd = `${cpSchoolYear + 1}-07-31`;
+
+              // Date du début du mois courant
+              const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+
+              // usedBeforeMonth = somme des CP sur la période, avant le 1er de ce mois
               let usedBeforeMonth = 0;
-              Object.entries(personUsage).forEach(([ym2, val]) => {
-                const [y2Str] = ym2.split("-");
-                const y2 = parseInt(y2Str, 10);
-                if (y2 === year && ym2 < ym) {
+
+              Object.entries(personUsageAll).forEach(([ym2, val]) => {
+                // Convertir ym2 -> date 1er du mois
+                const [yyStr, mmStr] = ym2.split("-");
+                const yy = parseInt(yyStr, 10);
+                const mm = parseInt(mmStr, 10);
+
+                // Jour 01 pour comparaison lexicographique
+                const ym2MonthStart = `${yy}-${mmStr}-01`;
+
+                // On ne compte que les CP dans la période de validité
+                if (
+                  ym2MonthStart >= periodStart &&
+                  ym2MonthStart < monthStart &&
+                  ym2MonthStart <= periodEnd
+                ) {
                   usedBeforeMonth += parseFloat(val) || 0;
                 }
               });
 
-              const usedInMonth = parseFloat(
-                ((usageMonth[personId] || {})[leaveType] || {})[ym] || 0
-              );
+              const usedInMonth = parseFloat(personUsageAll[ym] || 0);
 
               let availableAtMonthStart = initial - usedBeforeMonth;
               if (availableAtMonthStart < 0) availableAtMonthStart = 0;
@@ -473,82 +553,186 @@ document.addEventListener("DOMContentLoaded", () => {
                 availableAtMonthStart,
               };
             });
-          } else {
-            // === JRA : logique spécifique "crédit progressif" ===
-            // Hypothèse : total annuel = initial_balance pour cette année
-            // et crédit mensuel fixe (par ex 0.75)
-            const accrualPerMonth = 0.75;
 
-            // pour simplifier, on prend l'année du premier ym
-            // si un jour tu gères plusieurs années, on adaptera
-            let previousAvailable = 0;
+            return; // CP géré, on passe au type suivant
+          }
 
-            ymList.forEach((ym, index) => {
+          // ===================== JRA (version simple pour affichage) =====================
+          // On considère les JRA de l'année Y comme un bloc de initial_balance,
+          // utilisable du 01/01/Y au 28/02/Y+1 (tolérance incluse),
+          // et on affiche pour chaque mois le solde disponible en fonction de l'usage.
+          if (leaveType === "JRA") {
+            ymList.forEach((ym) => {
               const [yStr, mStr] = ym.split("-");
               const year = parseInt(yStr, 10);
               const month = parseInt(mStr, 10);
 
-              const personUsage = (usageMonth[personId] || {})[leaveType] || {};
+              // Année "source" des JRA: c'est simplement l'année civile
+              const jraYear = year;
+              const totalYear =
+                ((balancesByYear[personId] || {}).JRA || {})[jraYear] || 0;
+
+              // Période de validité: [01/01/jraYear, 28/02/jraYear+1]
+              const periodStart = `${jraYear}-01-01`;
+              const periodEnd = `${jraYear + 1}-02-28`;
+
+              // Début du mois courant
+              const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+
+              // usedBeforeMonth: somme des JRA sur la période, avant le 1er de ce mois
+              let usedBeforeMonth = 0;
+
+              Object.entries(personUsageAll).forEach(([ym2, val]) => {
+                const [yyStr, mmStr] = ym2.split("-");
+                const yy = parseInt(yyStr, 10);
+                const mm = parseInt(mmStr, 10);
+                const ym2MonthStart = `${yy}-${mmStr}-01`;
+
+                if (
+                  ym2MonthStart >= periodStart &&
+                  ym2MonthStart < monthStart &&
+                  ym2MonthStart <= periodEnd
+                ) {
+                  usedBeforeMonth += parseFloat(val) || 0;
+                }
+              });
+
+              const usedInMonth = parseFloat(personUsageAll[ym] || 0);
+
+              let availableAtMonthStart = totalYear - usedBeforeMonth;
+              if (availableAtMonthStart < 0) availableAtMonthStart = 0;
+
+              monthlyBalances[personId][leaveType][ym] = {
+                usedInMonth,
+                usedBeforeMonth,
+                availableAtMonthStart,
+              };
+            });
+
+            return; // JRA géré
+          }
+
+          // ===================== JA (jours d'ancienneté) =====================
+          // Gérés par cycle anniversaire (pf_person_leave_meta).
+          if (leaveType === "JA") {
+            const anniversaryStr =
+              (this.personLeaveMeta && this.personLeaveMeta[personId]) || null;
+
+            ymList.forEach((ym) => {
+              const [yStr, mStr] = ym.split("-");
+              const year = parseInt(yStr, 10);
+              const month = parseInt(mStr, 10);
+
+              const personUsage = personUsageAll;
+
+              // Si pas de date anniversaire connue, fallback sur ancienne logique annuelle
+              if (!anniversaryStr) {
+                const initial =
+                  ((balancesByYear[personId] || {}).JA || {})[year] || 0;
+
+                let usedBeforeMonth = 0;
+                Object.entries(personUsage).forEach(([ym2, val]) => {
+                  const [y2Str] = ym2.split("-");
+                  const y2 = parseInt(y2Str, 10);
+                  if (y2 === year && ym2 < ym) {
+                    usedBeforeMonth += parseFloat(val) || 0;
+                  }
+                });
+
+                const usedInMonth = parseFloat(personUsage[ym] || 0);
+
+                let availableAtMonthStart = initial - usedBeforeMonth;
+                if (availableAtMonthStart < 0) availableAtMonthStart = 0;
+
+                monthlyBalances[personId][leaveType][ym] = {
+                  usedInMonth,
+                  usedBeforeMonth,
+                  availableAtMonthStart,
+                };
+                return; // pour ce ym
+              }
+
+              // --- Logique cycle anniversaire ---
+              // anniversaryStr ex: "2020-04-30"
+              const annDate = new Date(anniversaryStr + "T00:00:00");
+              const annDay = annDate.getDate(); // 30
+              const annMonth = annDate.getMonth(); // 0-11 -> 3 pour Avril
+
+              // Date du mois courant (on prend le 1er pour simplifier)
+              const currentMonthStart = new Date(year, month - 1, 1);
+
+              // On calcule le cycleStart / cycleEnd autour de ce currentMonthStart
+              // 1) Anniversaire de l'année courante
+              const anniversaryThisYear = new Date(year, annMonth, annDay);
+
+              let cycleStart, cycleEnd, cycleYear;
+
+              if (currentMonthStart >= anniversaryThisYear) {
+                // Le cycle courant a commencé cette année
+                cycleStart = new Date(year, annMonth, annDay + 1); // lendemain
+                cycleEnd = new Date(year + 1, annMonth, annDay); // prochain anniv
+                cycleYear = year;
+              } else {
+                // Le cycle courant a commencé l'année précédente
+                cycleStart = new Date(year - 1, annMonth, annDay + 1);
+                cycleEnd = new Date(year, annMonth, annDay);
+                cycleYear = year - 1;
+              }
+
+              // On formate ces dates pour comparer avec les ym
+              const toIso = (d) =>
+                `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+                  2,
+                  "0"
+                )}-${String(d.getDate()).padStart(2, "0")}`;
+
+              const periodStart = toIso(cycleStart);
+              const periodEnd = toIso(cycleEnd);
+
+              // Début du mois courant
+              const monthStartIso = `${year}-${String(month).padStart(
+                2,
+                "0"
+              )}-01`;
+
+              // Initial pour ce cycle: soit pf_leave_balances[cycleYear], soit 4 par défaut
+              let initial =
+                ((balancesByYear[personId] || {}).JA || {})[cycleYear] || 0;
+              if (!initial) {
+                initial = 4; // fallback si tu ne remplis pas pf_leave_balances pour JA tous les ans
+              }
+
+              // usedBeforeMonth: JA posés sur ce cycle avant le 1er du mois courant
+              let usedBeforeMonth = 0;
+              Object.entries(personUsage).forEach(([ym2, val]) => {
+                // ym2 = "YYYY-MM"
+                const [yyStr, mmStr] = ym2.split("-");
+                const yy = parseInt(yyStr, 10);
+                const mm = parseInt(mmStr, 10);
+                const ym2Start = `${yy}-${mmStr}-01`;
+
+                if (
+                  ym2Start >= periodStart &&
+                  ym2Start < monthStartIso &&
+                  ym2Start <= periodEnd
+                ) {
+                  usedBeforeMonth += parseFloat(val) || 0;
+                }
+              });
+
               const usedInMonth = parseFloat(personUsage[ym] || 0);
 
-              if (index === 0) {
-                // premier mois affiché dans le planning
-                // Av. initial : snapshot éventuel ou 0
-                // Si tu veux utiliser snapshots pour init, tu peux récupérer le plus récent ici.
-                // Pour l'instant, on part de 0 ou d'un snapshot si présent :
-                let initialAv = 0;
+              let availableAtMonthStart = initial - usedBeforeMonth;
+              if (availableAtMonthStart < 0) availableAtMonthStart = 0;
 
-                // si tu veux utiliser snapshots :
-                if (this.leaveSnapshots && this.leaveSnapshots.length) {
-                  const snaps = this.leaveSnapshots.filter(
-                    (s) =>
-                      parseInt(s.person_id, 10) === personId &&
-                      s.leave_type === "JRA"
-                  );
-                  if (snaps.length) {
-                    // dernier snapshot avant ce mois
-                    const targetDate = new Date(year, month - 1, 1);
-                    let lastSnap = null;
-                    snaps.forEach((s) => {
-                      const d = new Date(s.snapshot_date + "T00:00:00");
-                      if (d <= targetDate) {
-                        if (!lastSnap || d > lastSnap.date) {
-                          lastSnap = {
-                            date: d,
-                            remaining: parseFloat(s.remaining_balance) || 0,
-                          };
-                        }
-                      }
-                    });
-                    if (lastSnap) {
-                      initialAv = lastSnap.remaining;
-                    }
-                  }
-                }
-
-                const availableAtMonthStart = initialAv;
-                previousAvailable =
-                  availableAtMonthStart - usedInMonth + accrualPerMonth;
-
-                monthlyBalances[personId][leaveType][ym] = {
-                  usedInMonth,
-                  usedBeforeMonth: null,
-                  availableAtMonthStart,
-                };
-              } else {
-                // mois suivant : Av = Av(précédent) + accrual - use(précédent)
-                const availableAtMonthStart =
-                  previousAvailable < 0 ? 0 : previousAvailable;
-                previousAvailable =
-                  availableAtMonthStart - usedInMonth + accrualPerMonth;
-
-                monthlyBalances[personId][leaveType][ym] = {
-                  usedInMonth,
-                  usedBeforeMonth: null,
-                  availableAtMonthStart,
-                };
-              }
+              monthlyBalances[personId][leaveType][ym] = {
+                usedInMonth,
+                usedBeforeMonth,
+                availableAtMonthStart,
+              };
             });
+
+            return; // JA géré
           }
         });
       });

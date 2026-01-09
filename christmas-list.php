@@ -1,7 +1,8 @@
 <?php
 // Protection : nécessite d'être connecté
 require __DIR__ . '/includes/auth.php';
-require_login('/christmas-list.php');
+require_login(); 
+
 
 // Connexion DB
 require __DIR__ . '/includes/db.php';
