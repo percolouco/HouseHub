@@ -13,7 +13,11 @@ body {
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
     sans-serif;
   background: #f5f5f5;
   color: #222;
@@ -39,8 +43,7 @@ body {
 
 .pf-container {
   max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 16px;
+  margin-left: 6px;
 }
 
 .pf-header {
@@ -93,7 +96,7 @@ body {
 .pf-section--panel {
   background: #fff;
   border-radius: 8px;
-  padding: 16px 16px 20px;
+  padding: 10px 10px 10px 10px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
