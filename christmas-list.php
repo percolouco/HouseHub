@@ -28,6 +28,12 @@ $allOccasionLabels = [
     'ROIS' => 'Reis',
 ];
 
+$occasionIcons = [
+  'TIO'  => '/modules/christmas-list/assets/img/tio.png',           
+  'NOEL' => '/modules/christmas-list/assets/img/santa.png',
+  'ROIS' => '/modules/christmas-list/assets/img/reis.png',
+];
+
 // Récup toutes les données pour l’année
 $stmt = $pdo->prepare("
   SELECT * 
@@ -68,7 +74,16 @@ foreach ($gifts as $gift) {
 
     <?php foreach ($allOccasionLabels as $occCode => $occLabel): ?>
       <div class="cl-occasion-block">
-        <h3 class="cl-occasion-title"><?= htmlspecialchars($occLabel) ?></h3>
+        <h3 class="cl-occasion-title">
+  <?php if (!empty($occasionIcons[$occCode])): ?>
+    <img class="cl-occasion-icon"
+         src="<?= htmlspecialchars($occasionIcons[$occCode]) ?>"
+         alt=""
+         aria-hidden="true">
+  <?php endif; ?>
+  <?= htmlspecialchars($occLabel) ?>
+</h3>
+
 
         <div class="cl-occasion-children-tables">
           <?php

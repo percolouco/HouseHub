@@ -336,3 +336,17 @@
 .cl-detail-wrapper .pf-table td {
   padding: 4px 4px;
 }
+
+/* Icône devant le titre de fête */
+.cl-occasion-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cl-occasion-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex: 0 0 20px;
+  filter: none; /* garde les couleurs des SVG/PNG */
+}
