@@ -195,7 +195,7 @@ label {
 }
 
 input[type="number"] {
-  width: 3.1rem;
+  width: 150px;
   font-size: 11px;
   padding: 2px 3px;
 }

@@ -153,18 +153,33 @@ foreach ($gifts as $gift) {
                       <td>
                         <?php if ($gift): ?>
                           <?php
-                            $desc  = htmlspecialchars($gift['gift_description']);
-                            $amt   = (float)$gift['amount'];
-                            $plink = trim($gift['product_link'] ?? '');
+                            $desc   = htmlspecialchars($gift['gift_description']);
+                            $amt    = (float)$gift['amount'];
+                            $plink  = trim($gift['product_link'] ?? '');
+                            $payer  = $gift['payer_name'] ?? $gift['adult_name']; // sécurité si colonne manquante
                           ?>
-                          <?php if ($plink !== ''): ?>
-                            <a href="<?= htmlspecialchars($plink) ?>" target="_blank" rel="noopener noreferrer" class="cl-gift-link"><?= $desc ?></a>
-                          <?php else: ?>
-                            <span class="cl-gift-desc"><?= $desc ?></span>
+
+                          <div class="cl-gift-line">
+                            <?php if ($plink !== ''): ?>
+                              <a href="<?= htmlspecialchars($plink) ?>"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="cl-gift-link"><?= $desc ?></a>
+                            <?php else: ?>
+                              <span class="cl-gift-desc"><?= $desc ?></span>
+                            <?php endif; ?>
+
+                            <?php if ($amt > 0): ?>
+                              <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
+                            <?php endif; ?>
+                          </div>
+
+                          <?php if (!empty($payer) && $payer !== $gift['adult_name']): ?>
+                            <small style="color:#b91c1c; font-style:italic;">
+                              (pagat per <?= htmlspecialchars($payer) ?>)
+                            </small>
                           <?php endif; ?>
-                          <?php if ($amt > 0): ?>
-                            <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
-                          <?php endif; ?>
+
                         <?php else: ?>
                           <span class="cl-empty">—</span>
                         <?php endif; ?>
@@ -222,6 +237,103 @@ foreach ($gifts as $gift) {
     </div>
   </section>
 
+
+
+  <!-- =============================================================== -->
+  <!--  Calcul des dettes pour l'année en cours                        -->
+  <!-- =============================================================== -->
+  <?php
+  // Calcul des dettes pour l'année en cours
+  $people = $adults;
+  // Inclure tout adulte qui apparaîtrait en base (sécurité)
+  $adultsInDb = array_values(array_unique(array_column($gifts, 'adult_name')));
+  $payersInDb = array_values(array_unique(array_column($gifts, 'payer_name')));
+  $people = array_values(array_unique(array_merge($people, $adultsInDb, $payersInDb)));
+
+  // Matrice brute: qui doit à qui (adult -> payer)
+  $matrix = [];
+  foreach ($people as $p1) {
+    foreach ($people as $p2) {
+      if (!isset($matrix[$p1])) $matrix[$p1] = [];
+      $matrix[$p1][$p2] = 0.0;
+    }
+  }
+
+  foreach ($gifts as $g) {
+    $adult = $g['adult_name'];
+    $payer = $g['payer_name'] ?? $g['adult_name'];
+    $amt   = (float)$g['amount'];
+    if ($amt > 0 && $adult !== $payer) {
+      $matrix[$adult][$payer] += $amt;
+    }
+  }
+
+  // Net pairwise (A<->B)
+  $settlements = []; // [ [from, to, amount], ... ]
+  for ($i = 0; $i < count($people); $i++) {
+    for ($j = $i + 1; $j < count($people); $j++) {
+      $a = $people[$i];
+      $b = $people[$j];
+      $net = $matrix[$a][$b] - $matrix[$b][$a];
+      if ($net > 0.009) {
+        $settlements[] = [$a, $b, $net]; // a doit à b
+      } elseif ($net < -0.009) {
+        $settlements[] = [$b, $a, -$net]; // b doit à a
+      }
+    }
+  }
+  ?>
+
+  <section class="pf-section pf-section--panel">
+    <h2>Tricount</h2>
+    
+    <div class="cl-budget-wrapper">
+      <table class="pf-table pf-table--compact cl-debt-matrix">
+        <thead>
+          <tr>
+            <th class="cl-matrix-corner">
+              <span>Deutor ↓</span>
+              <span>Creditor →</span>
+            </th>
+            <?php foreach ($people as $p): ?>
+              <th><?= htmlspecialchars($p) ?></th>
+            <?php endforeach; ?>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($people as $debtor): ?>
+            <tr>
+              <th><?= htmlspecialchars($debtor) ?></th>
+              <?php foreach ($people as $creditor): ?>
+                <?php
+                  $val = $matrix[$debtor][$creditor] ?? 0;
+                  $isDiag = ($debtor === $creditor);
+                  $display = $isDiag || $val == 0 ? '—' : number_format($val, 0, ',', ' ') . ' €';
+                  $cls = $isDiag ? 'cl-mtx-diag' : ($val > 0 ? 'cl-mtx-owe' : 'cl-mtx-empty');
+                ?>
+                <td class="<?= $cls ?>"><?= $display ?></td>
+              <?php endforeach; ?>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:10px;">Liquidacions</h3>
+    <?php if (empty($settlements)): ?>
+      <p class="cl-legend">Cap deute pendent.</p>
+    <?php else: ?>
+      <ul>
+        <?php foreach ($settlements as [$from, $to, $amt]): ?>
+          <li><?= htmlspecialchars($from) ?> ha de pagar <?= number_format($amt, 0, ',', ' ') ?> € a <?= htmlspecialchars($to) ?></li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+  </section>
+
+
+
+
   <!-- =============================================================== -->
   <!--  LISTE DÉTAILLÉE DES CADEAUX (vue "debug"/admin")               -->
   <!-- =============================================================== -->
@@ -269,25 +381,25 @@ document.addEventListener('DOMContentLoaded', function () {
   const cancelBtn = modal.querySelector('.clm-cancel');
 
   document.querySelectorAll('.cl-child-add-btn').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      const year     = btn.getAttribute('data-year');
-      const child    = btn.getAttribute('data-child');
-      const occasion = btn.getAttribute('data-occasion');
-
-      modal.classList.add('cl-open');
-
-      // Remplir les champs cachés
-      document.getElementById('clm-year').value     = year;
-      document.getElementById('clm-child').value    = child;
-      document.getElementById('clm-occasion').value = occasion;
-
-      // Reset des champs visibles
-      document.getElementById('clm-adult').selectedIndex = 0;
-      document.getElementById('clm-gift').value   = '';
-      document.getElementById('clm-amount').value = '';
-      document.getElementById('clm-link').value   = '';
-    });
+  btn.addEventListener('click', function () {
+    const year     = btn.getAttribute('data-year');
+    const child    = btn.getAttribute('data-child');
+    const occasion = btn.getAttribute('data-occasion');
+    modal.classList.add('cl-open');
+    // Contexte
+    document.getElementById('clm-year').value     = year;
+    document.getElementById('clm-child').value    = child;
+    document.getElementById('clm-occasion').value = occasion;
+    // Reset
+    document.getElementById('clm-adult').selectedIndex = 0;
+    document.getElementById('clm-gift').value   = '';
+    document.getElementById('clm-amount').value = '';
+    document.getElementById('clm-link').value   = '';
+    // Titre dynamique
+    const titleEl = document.getElementById('cl-modal-title');
+    titleEl.textContent = `Afegeix un regal per ${child}`;
   });
+});
 
   function closeModal() {
     modal.classList.remove('cl-open');
@@ -302,46 +414,51 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="cl-modal-backdrop"></div>
   <div class="cl-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="cl-modal-title">
     <form method="post" action="/modules/christmas-list/save-gift.php" class="cl-modal-form">
-      <h3 id="cl-modal-title">Afegeix un regal</h3>
+  <h3 id="cl-modal-title">Afegeix un regal</h3>
 
-      <!-- Champs cachés (contexte) -->
-      <input type="hidden" name="year" id="clm-year" value="<?= $year ?>">
-      <input type="hidden" name="child_name" id="clm-child" value="">
-      <input type="hidden" name="occasion" id="clm-occasion" value="">
+  <input type="hidden" name="year" id="clm-year" value="<?= $year ?>">
+  <input type="hidden" name="child_name" id="clm-child" value="">
+  <input type="hidden" name="occasion" id="clm-occasion" value="">
 
-      <!-- Adulte -->
-      <label class="clm-label">
-        Adult
-        <select name="adult_name" id="clm-adult" required>
-          <?php foreach ($adults as $adultName): ?>
-            <option value="<?= htmlspecialchars($adultName) ?>"><?= htmlspecialchars($adultName) ?></option>
-          <?php endforeach; ?>
-        </select>
-      </label>
+  <label class="clm-label">
+    Adult
+    <select name="adult_name" id="clm-adult" required>
+      <?php foreach ($adults as $adultName): ?>
+        <option value="<?= htmlspecialchars($adultName) ?>"><?= htmlspecialchars($adultName) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </label>
 
-      <!-- Cadeau -->
-      <label class="clm-label">
-        Nom del regal
-        <input type="text" name="gift_description" id="clm-gift" placeholder="p. ex., Lego Star Wars" required>
-      </label>
+  <label class="clm-label">
+    Pagat per
+    <select name="payer_name" id="clm-payer" required>
+      <?php foreach ($adults as $adultName): ?>
+        <option value="<?= htmlspecialchars($adultName) ?>"><?= htmlspecialchars($adultName) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </label>
 
-      <!-- Montant -->
-      <label class="clm-label">
-        Preu (€)
-        <input type="number" name="amount" id="clm-amount" placeholder="p. ex., 49,99" step="0.01" min="0">
-      </label>
+  <label class="clm-label">
+    Nom del regal
+    <input type="text" name="gift_description" id="clm-gift" placeholder="p. ex., Lego Star Wars" required>
+  </label>
 
-      <!-- Lien produit (optionnel) -->
-      <label class="clm-label">
-        Enllaç (opcional)
-        <input type="url" name="product_link" id="clm-link" placeholder="https://exemple.com/producte">
-      </label>
+  <label class="clm-label">
+    Preu (€)
+    <input type="number" name="amount" id="clm-amount" placeholder="p. ex., 49,99" step="0.01" min="0">
+  </label>
 
-      <div class="cl-modal-actions">
-        <button type="button" class="clm-cancel">Cancel·la</button>
-        <button type="submit" class="clm-ok">Desa</button>
-      </div>
-    </form>
+  <label class="clm-label">
+    Enllaç (opcional)
+    <input type="url" name="product_link" id="clm-link" placeholder="https://exemple.com/producte">
+  </label>
+
+  <div class="cl-modal-actions">
+    <button type="button" class="clm-cancel">Cancel·la</button>
+    <button type="submit" class="clm-ok">OK</button>
+  </div>
+</form>
+
   </div>
 </div>
 

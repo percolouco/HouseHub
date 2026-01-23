@@ -176,10 +176,25 @@
   color: #9ca3af;
 }
 
-/* Prix du cadeau (dans la cellule) */
+/* Ligne cadeau: description à gauche, montant complètement à droite */
+.cl-gift-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+}
+.cl-gift-desc,
+.cl-gift-link {
+  flex: 1 1 auto;
+  min-width: 0; /* autorise le wrapping du texte si très long */
+}
+
 .cl-gift-amount {
+  margin-left: auto; /* pousse le montant à droite */
+  text-align: right;
   color: #627d98;
-  white-space: nowrap;
+  white-space: nowrap; /* reste sur une seule ligne */
+  min-width: fit-content;
 }
 
 /* Code couleur par enfant (bordure + header/caption) */
@@ -307,11 +322,26 @@
   color: #1f2933;
 }
 .clm-cancel {
-  color: #9fb3c8;
+  color: #d03050;
 }
 .clm-cancel:hover,
 .clm-ok:hover {
   background: #d9e2ec;
+}
+
+/* Prix: sans spinners, largeur fixe */
+#clm-amount {
+  width: 150px;
+  font-size: 11px;
+  padding: 2px 3px;
+  -moz-appearance: textfield; /* Firefox legacy */
+  appearance: textfield; /* Standard property (modern browsers) */
+}
+/* Chrome/Safari */
+#clm-amount::-webkit-outer-spin-button,
+#clm-amount::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* ========================================================= */
@@ -349,4 +379,33 @@
   object-fit: contain;
   flex: 0 0 20px;
   filter: none; /* garde les couleurs des SVG/PNG */
+}
+/* clarté de lecture */
+.cl-debt-matrix .cl-matrix-corner {
+  font-size: 11px;
+  color: #6b7280;
+  text-align: left;
+  line-height: 1.2;
+  min-width: 92px;
+}
+
+.cl-debt-matrix td.cl-mtx-diag {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #111827 0,
+    #111827 6px,
+    #1f2937 6px,
+    #1f2937 12px
+  );
+  color: transparent; /* masque le “—” pour un rendu propre */
+}
+
+.cl-debt-matrix td.cl-mtx-owe {
+  background: #fff7ed; /* léger orange */
+  color: #7c2d12; /* brun/orange foncé */
+  font-weight: 600;
+}
+
+.cl-debt-matrix td.cl-mtx-empty {
+  color: #9ca3af;
 }
