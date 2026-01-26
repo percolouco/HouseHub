@@ -225,11 +225,12 @@
 }
 
 .cl-gift-amount {
-  margin-left: auto; /* pousse le montant à droite */
+  margin-left: auto;
   text-align: right;
   color: #627d98;
-  white-space: nowrap; /* reste sur une seule ligne */
+  white-space: nowrap;
   min-width: fit-content;
+  transition: opacity 120ms ease;
 }
 
 /* Code couleur par enfant (bordure + header/caption) */
@@ -497,7 +498,7 @@
 /* Zone droite: prix visible par défaut; icônes masquées */
 .cl-gift-right {
   position: relative;
-  min-width: 35px; /* réserve un petit espace */
+  min-width: 48px; /* réserve un petit espace */
   display: flex;
   justify-content: flex-end;
 }
@@ -526,11 +527,13 @@
 
 /* Survol (desktop) ou état actif (mobile): cacher prix, montrer icônes */
 .cl-gift-right:hover .cl-gift-amount,
-.cl-gift-right.is-active .cl-gift-amount {
+.cl-gift-right.is-active .cl-gift-amount,
+.cl-gift-right:focus-within .cl-gift-amount {
   opacity: 0;
 }
 .cl-gift-right:hover .cl-gift-actions,
-.cl-gift-right.is-active .cl-gift-actions {
+.cl-gift-right.is-active .cl-gift-actions,
+.cl-gift-right:focus-within .cl-gift-actions {
   opacity: 1;
   pointer-events: auto;
 }
@@ -541,19 +544,23 @@
   background: transparent;
   padding: 0;
   cursor: pointer;
-  color: #374151; /* crayon par défaut */
+  color: #374151;
   line-height: 1;
 }
 .cl-gift-action-btn svg {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   display: block;
   color: inherit;
   fill: currentColor;
 }
 .cl-gift-delete {
   color: #b91c1c !important;
-} /* poubelle rouge forcé */
+}
+.cl-gift-action-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
 
 .cl-titlebar {
   display: flex;

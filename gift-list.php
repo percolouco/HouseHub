@@ -209,27 +209,36 @@ $occasionsToShow = array_values(array_intersect(array_keys($allOccasionLabels), 
                                 <div class="cl-gift-right">
                                   <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
                                   <span class="cl-gift-actions">
-                                    <button type="button"
-                                            class="cl-gift-action-btn cl-gift-edit"
-                                            title="Edita"
-                                            aria-label="Edita"
-                                            data-id="<?= $giftId ?>"
-                                            data-year="<?= $year ?>"
-                                            data-child="<?= htmlspecialchars($childName) ?>"
-                                            data-occasion="<?= htmlspecialchars($occCode) ?>"
-                                            data-adult="<?= htmlspecialchars($gift['adult_name']) ?>"
-                                            data-payer="<?= htmlspecialchars($payer) ?>"
-                                            data-desc="<?= htmlspecialchars($gift['gift_description']) ?>"
-                                            data-amount="<?= htmlspecialchars($gift['amount']) ?>"
-                                            data-link="<?= htmlspecialchars($gift['product_link'] ?? '') ?>">
-                                      <!-- icône -->
+                                    <button
+                                      type="button"
+                                      class="cl-gift-action-btn cl-gift-edit"
+                                      title="Edita"
+                                      aria-label="Edita"
+                                      data-id="<?= $giftId ?>"
+                                      data-year="<?= $year ?>"
+                                      data-child="<?= htmlspecialchars($childName) ?>"
+                                      data-occasion="<?= htmlspecialchars($occCode) ?>"
+                                      data-adult="<?= htmlspecialchars($gift['adult_name']) ?>"
+                                      data-payer="<?= htmlspecialchars($payer) ?>"
+                                      data-desc="<?= htmlspecialchars($gift['gift_description']) ?>"
+                                      data-amount="<?= htmlspecialchars($gift['amount']) ?>"
+                                      data-link="<?= htmlspecialchars($gift['product_link'] ?? '') ?>"
+                                    >
+                                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+                                      </svg>
                                     </button>
-                                    <button type="button"
-                                            class="cl-gift-action-btn cl-gift-delete"
-                                            title="Eliminar"
-                                            aria-label="Eliminar"
-                                            data-id="<?= $giftId ?>">
-                                      <!-- icône -->
+                                    <!-- Delete -->
+                                    <button
+                                      type="button"
+                                      class="cl-gift-action-btn cl-gift-delete"
+                                      title="Eliminar"
+                                      aria-label="Eliminar"
+                                      data-id="<?= $giftId ?>"
+                                    >
+                                      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true">
+                                        <path d="M9 3h6a1 1 0 0 1 1 1v2h3a1 1 0 1 1 0 2h-1l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 8H4a1 1 0 1 1 0-2h3V4a1 1 0 0 1 1-1zm-1 5h2v10H8V8zm4 0h2v10h-2V8z"/>
+                                      </svg>
                                     </button>
                                   </span>
                                 </div>
