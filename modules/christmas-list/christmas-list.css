@@ -37,7 +37,7 @@
 .cl-occasion-children-tables {
   display: grid;
   grid-template-columns: repeat(3, minmax(280px, 1fr));
-  gap: 12px; /* espacement léger entre mini-tableaux */
+  gap: 7px;
   align-items: start;
   margin-top: 8px;
 }
@@ -156,13 +156,11 @@
 /* Corps: séparateurs + gestion des noms longs */
 .cl-child-table tbody td {
   vertical-align: top;
-  padding: 6px 8px;
+  padding: 6px 4px;
   border-top: 1px solid #edf2f7;
   border-right: 1px solid #e5e7eb;
   font-size: 12px;
   line-height: 1.35;
-  word-break: break-word;
-  overflow-wrap: anywhere;
 }
 .cl-child-table tbody td:last-child {
   border-right: none;
@@ -174,19 +172,6 @@
   width: 100%;
   text-align: center;
   color: #9ca3af;
-}
-
-/* Ligne cadeau: description à gauche, montant complètement à droite */
-.cl-gift-line {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  width: 100%;
-}
-.cl-gift-desc,
-.cl-gift-link {
-  flex: 1 1 auto;
-  min-width: 0; /* autorise le wrapping du texte si très long */
 }
 
 .cl-gift-amount {
@@ -344,6 +329,43 @@
   margin: 0;
 }
 
+/* Icônes d’action (éditer / supprimer) à côté du nom du cadeau */
+/* Conteneur de la ligne cadeau: réserve un espace à gauche pour les icônes overlay */
+.cl-gift-item {
+  position: relative;
+  padding-left: 2px;
+}
+/* Icônes en overlay coin haut-gauche */
+.cl-gift-actions--overlay {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: flex;
+  gap: 4px;
+  opacity: 0.65; /* discrètes */
+  transition: opacity 120ms ease;
+}
+.cl-gift-item:hover .cl-gift-actions--overlay {
+  opacity: 1; /* plus visibles au survol */
+}
+
+.cl-gift-action-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: #374151;
+  line-height: 1;
+}
+.cl-gift-action-btn svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+.cl-gift-delete {
+  color: #b91c1c;
+} /* poubelle rouge */
+
 /* ========================================================= */
 /*  Résumé du budget et Liste détaillée                      */
 /* ========================================================= */
@@ -409,3 +431,76 @@
 .cl-debt-matrix td.cl-mtx-empty {
   color: #9ca3af;
 }
+
+/* Ligne cadeau: gauche (nom) / droite (prix ou icônes) */
+.cl-gift-line {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+}
+.cl-gift-desc,
+.cl-gift-link {
+  flex: 1 1 auto;
+  min-width: 40px;
+}
+
+/* Zone droite: prix visible par défaut; icônes masquées */
+.cl-gift-right {
+  position: relative;
+  min-width: 35px; /* réserve un petit espace */
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Prix */
+.cl-gift-amount {
+  margin-left: auto;
+  text-align: right;
+  color: #627d98;
+  white-space: nowrap;
+  transition: opacity 120ms ease;
+}
+
+/* Icônes (même zone, positionnées à droite) */
+.cl-gift-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+/* Survol (desktop) ou état actif (mobile): cacher prix, montrer icônes */
+.cl-gift-right:hover .cl-gift-amount,
+.cl-gift-right.is-active .cl-gift-amount {
+  opacity: 0;
+}
+.cl-gift-right:hover .cl-gift-actions,
+.cl-gift-right.is-active .cl-gift-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Boutons icônes compacts et couleurs */
+.cl-gift-action-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: #374151; /* crayon par défaut */
+  line-height: 1;
+}
+.cl-gift-action-btn svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  color: inherit;
+  fill: currentColor;
+}
+.cl-gift-delete {
+  color: #b91c1c !important;
+} /* poubelle rouge forcé */
