@@ -153,37 +153,76 @@ foreach ($gifts as $gift) {
                       <td>
                         <?php if ($gift): ?>
                           <?php
+                            $giftId = (int)$gift['id'];
                             $desc   = htmlspecialchars($gift['gift_description']);
                             $amt    = (float)$gift['amount'];
                             $plink  = trim($gift['product_link'] ?? '');
-                            $payer  = $gift['payer_name'] ?? $gift['adult_name']; // sécurité si colonne manquante
+                            $payer  = $gift['payer_name'] ?? $gift['adult_name'];
                           ?>
 
-                          <div class="cl-gift-line">
-                            <?php if ($plink !== ''): ?>
-                              <a href="<?= htmlspecialchars($plink) ?>"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="cl-gift-link"><?= $desc ?></a>
-                            <?php else: ?>
-                              <span class="cl-gift-desc"><?= $desc ?></span>
-                            <?php endif; ?>
+                          <div class="cl-gift-item">
+                            <div class="cl-gift-line">
+                              <!-- Nom du cadeau (lien ou texte) -->
+                              <?php if ($plink !== ''): ?>
+                                <a href="<?= htmlspecialchars($plink) ?>"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  class="cl-gift-link"><?= $desc ?></a>
+                              <?php else: ?>
+                                <span class="cl-gift-desc"><?= $desc ?></span>
+                              <?php endif; ?>
 
-                            <?php if ($amt > 0): ?>
-                              <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
+                              <!-- Zone de droite: prix ou icônes (selon hover/clic) -->
+                              <div class="cl-gift-right">
+                                <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
+
+                                <span class="cl-gift-actions">
+                                  <!-- Edit -->
+                                  <button type="button"
+                                          class="cl-gift-action-btn cl-gift-edit"
+                                          title="Edita"
+                                          aria-label="Edita"
+                                          data-id="<?= $giftId ?>"
+                                          data-year="<?= $year ?>"
+                                          data-child="<?= htmlspecialchars($childName) ?>"
+                                          data-occasion="<?= htmlspecialchars($occCode) ?>"
+                                          data-adult="<?= htmlspecialchars($gift['adult_name']) ?>"
+                                          data-payer="<?= htmlspecialchars($payer) ?>"
+                                          data-desc="<?= htmlspecialchars($gift['gift_description']) ?>"
+                                          data-amount="<?= htmlspecialchars($gift['amount']) ?>"
+                                          data-link="<?= htmlspecialchars($gift['product_link'] ?? '') ?>">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true">
+                                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+                                    </svg>
+                                  </button>
+
+                                  <!-- Delete -->
+                                  <button type="button"
+                                          class="cl-gift-action-btn cl-gift-delete"
+                                          title="Eliminar"
+                                          aria-label="Eliminar"
+                                          data-id="<?= $giftId ?>">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true">
+                                      <path d="M9 3h6a1 1 0 0 1 1 1v2h3a1 1 0 1 1 0 2h-1l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 8H4a1 1 0 1 1 0-2h3V4a1 1 0 0 1 1-1zm-1 5h2v10H8V8zm4 0h2v10h-2V8z"/>
+                                    </svg>
+                                  </button>
+                                </span>
+                              </div>
+                            </div>
+
+                            <?php if (!empty($payer) && $payer !== $gift['adult_name']): ?>
+                              <small style="color:#b91c1c; font-style:italic;">
+                                (pagat per <?= htmlspecialchars($payer) ?>)
+                              </small>
                             <?php endif; ?>
                           </div>
-
-                          <?php if (!empty($payer) && $payer !== $gift['adult_name']): ?>
-                            <small style="color:#b91c1c; font-style:italic;">
-                              (pagat per <?= htmlspecialchars($payer) ?>)
-                            </small>
-                          <?php endif; ?>
 
                         <?php else: ?>
                           <span class="cl-empty">—</span>
                         <?php endif; ?>
                       </td>
+
+
                     <?php endforeach; ?>
                   </tr>
                 <?php endfor; ?>
@@ -375,39 +414,118 @@ foreach ($gifts as $gift) {
 <!-- JS inline : modale d'ajout de cadeau -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  // Modale d'ajout de cadeau (bouton + à côté du nom de l'enfant)
   const modal = document.getElementById('cl-gift-modal');
   const backdrop = modal.querySelector('.cl-modal-backdrop');
   const cancelBtn = modal.querySelector('.clm-cancel');
 
+  // Ouverture modale en mode création (bouton + enfant)
   document.querySelectorAll('.cl-child-add-btn').forEach(function (btn) {
-  btn.addEventListener('click', function () {
-    const year     = btn.getAttribute('data-year');
-    const child    = btn.getAttribute('data-child');
-    const occasion = btn.getAttribute('data-occasion');
-    modal.classList.add('cl-open');
-    // Contexte
-    document.getElementById('clm-year').value     = year;
-    document.getElementById('clm-child').value    = child;
-    document.getElementById('clm-occasion').value = occasion;
-    // Reset
-    document.getElementById('clm-adult').selectedIndex = 0;
-    document.getElementById('clm-gift').value   = '';
-    document.getElementById('clm-amount').value = '';
-    document.getElementById('clm-link').value   = '';
-    // Titre dynamique
-    const titleEl = document.getElementById('cl-modal-title');
-    titleEl.textContent = `Afegeix un regal per ${child}`;
-  });
-});
+    btn.addEventListener('click', function () {
+      const year     = btn.getAttribute('data-year');
+      const child    = btn.getAttribute('data-child');
+      const occasion = btn.getAttribute('data-occasion');
 
-  function closeModal() {
-    modal.classList.remove('cl-open');
-  }
+      modal.classList.add('cl-open');
+
+      // Mode création
+      document.getElementById('clm-action').value = 'create';
+      document.getElementById('clm-id').value = '';
+
+      // Contexte
+      document.getElementById('clm-year').value     = year;
+      document.getElementById('clm-child').value    = child;
+      document.getElementById('clm-occasion').value = occasion;
+
+      // Reset
+      const adultSelect = document.getElementById('clm-adult');
+      const payerSelect = document.getElementById('clm-payer');
+      adultSelect.selectedIndex = 0;
+      payerSelect.value = adultSelect.value;
+      document.getElementById('clm-gift').value   = '';
+      document.getElementById('clm-amount').value = '';
+      document.getElementById('clm-link').value   = '';
+
+      // Titre
+      const titleEl = document.getElementById('cl-modal-title');
+      titleEl.textContent = `Afegeix un regal per ${child}`;
+    });
+  });
+
+  // Ouverture modale en mode édition (icône crayon)
+  document.querySelectorAll('.cl-gift-edit').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const dataset = btn.dataset;
+
+      modal.classList.add('cl-open');
+
+      // Mode édition
+      document.getElementById('clm-action').value = 'update';
+      document.getElementById('clm-id').value = dataset.id;
+
+      // Contexte
+      document.getElementById('clm-year').value     = dataset.year;
+      document.getElementById('clm-child').value    = dataset.child;
+      document.getElementById('clm-occasion').value = dataset.occasion;
+
+      // Champs visibles
+      document.getElementById('clm-adult').value = dataset.adult;
+      document.getElementById('clm-payer').value = dataset.payer;
+      document.getElementById('clm-gift').value  = dataset.desc;
+      document.getElementById('clm-amount').value = dataset.amount || '';
+      document.getElementById('clm-link').value   = dataset.link || '';
+
+      // Titre
+      const titleEl = document.getElementById('cl-modal-title');
+      titleEl.textContent = `Edita un regal per ${dataset.child}`;
+    });
+  });
+
+  // Suppression (icône poubelle)
+  const deleteForm = document.getElementById('cl-delete-form');
+  const deleteIdInput = document.getElementById('cld-id');
+
+  document.querySelectorAll('.cl-gift-delete').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const giftId = btn.getAttribute('data-id');
+      if (!giftId) return;
+
+      if (confirm('Vols eliminar aquest regal?')) {
+        deleteIdInput.value = giftId;
+        deleteForm.submit();
+      }
+    });
+  });
+
+  function closeModal() { modal.classList.remove('cl-open'); }
   cancelBtn.addEventListener('click', closeModal);
   backdrop.addEventListener('click', closeModal);
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+  // Toggle mobile: tap sur la zone droite bascule les icônes
+  document.querySelectorAll('.cl-gift-right').forEach(function (zone) {
+    zone.addEventListener('click', function (e) {
+      // Si on clique une icône (bouton), ne pas toggler la zone
+      if (e.target.closest('.cl-gift-action-btn')) return;
+      // Fermer les autres
+      document.querySelectorAll('.cl-gift-right.is-active').forEach(function (z) {
+        if (z !== zone) z.classList.remove('is-active');
+      });
+      // Bascule sur la zone courante
+      zone.classList.toggle('is-active');
+    });
+  });
+  // Option: clic en dehors -> referme
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.cl-gift-right')) {
+      document.querySelectorAll('.cl-gift-right.is-active').forEach(function (z) {
+        z.classList.remove('is-active');
+      });
+    }
+  }, true);
+});
 </script>
+
 
 <!-- Modal d'ajout de cadeau -->
 <div id="cl-gift-modal" class="cl-modal" aria-hidden="true">
@@ -419,6 +537,9 @@ document.addEventListener('DOMContentLoaded', function () {
   <input type="hidden" name="year" id="clm-year" value="<?= $year ?>">
   <input type="hidden" name="child_name" id="clm-child" value="">
   <input type="hidden" name="occasion" id="clm-occasion" value="">
+  <input type="hidden" name="action" id="clm-action" value="create">
+  <input type="hidden" name="gift_id" id="clm-id" value="">
+
 
   <label class="clm-label">
     Adult
@@ -461,6 +582,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   </div>
 </div>
+
+<form id="cl-delete-form" method="post" action="/modules/christmas-list/save-gift.php" style="display:none">
+  <input type="hidden" name="year" value="<?= $year ?>">
+  <input type="hidden" name="action" value="delete">
+  <input type="hidden" name="gift_id" id="cld-id" value="">
+</form>
+
 
 <?php
 require __DIR__ . '/footer.php';
