@@ -39,6 +39,26 @@ require __DIR__ . '/header.php';
         <span class="pf-card-cta">Accéder au module</span>
       </a>
 
+      <!-- Module : holidays -->
+      <a href="/holidays.php" class="pf-card pf-card--module">
+        <div class="pf-card-icon">🎁</div>
+        <h3 class="pf-card-title">Holidays</h3>
+        <div class="pf-card-body">
+          Plannification des vacances.
+        </div>
+        <span class="pf-card-cta">Accéder au module</span>
+      </a>
+
+            <!-- Module : gift list -->
+      <a href="/gift-list.php" class="pf-card pf-card--module">
+        <div class="pf-card-icon">🎁</div>
+        <h3 class="pf-card-title">Gift list</h3>
+        <div class="pf-card-body">
+          Planifica els regals de cada nen, per al Tió, el Nadal i els Reis.
+        </div>
+        <span class="pf-card-cta">Accedir al mòdul</span>
+      </a>
+
       <!-- Exemple de futur module -->
       <div class="pf-card pf-card--module pf-card--disabled">
         <div class="pf-card-icon">💰</div>
@@ -48,16 +68,6 @@ require __DIR__ . '/header.php';
         </div>
         <span class="pf-card-cta">À venir</span>
       </div>
-
-            <!-- Module : gift list -->
-      <a href="/gift-list.php" class="pf-card pf-card--module">
-        <div class="pf-card-icon">🎄</div>
-        <h3 class="pf-card-title">gift list</h3>
-        <div class="pf-card-body">
-          Planifica els regals de cada nen, per al Tió, el Nadal i els Reis.
-        </div>
-        <span class="pf-card-cta">Accedir al mòdul</span>
-      </a>
 
     </div>
   </section>
