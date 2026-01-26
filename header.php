@@ -36,7 +36,8 @@ if (!isset($activePage)) {
             class="pf-nav-link <?= $activePage === 'home' ? 'pf-nav-link--active' : ''; ?>">Accueil</a>
           <a href="/family-calendar.php"
             class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : ''; ?>">Family calendar</a>
-            
+          <a href="/holidays.php"
+            class="pf-nav-link <?= $activePage === 'holidays' ? 'pf-nav-link--active' : ''; ?>">Holidays</a>  
           <a href="/gift-list.php"
             class="pf-nav-link <?= $activePage === 'gift-list' ? 'pf-nav-link--active' : ''; ?>">Gift list</a>
         </nav>
