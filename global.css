@@ -210,3 +210,78 @@ input[type="number"] {
   font-weight: 600;
   color: #243b53;
 }
+/* === Mobile Comfort: header et éléments plus lisibles/rapprochés === */
+@media (pointer: coarse), (max-width: 780px) {
+  /* Container: remplace le léger décalage par un padding homogène */
+  .pf-container {
+    max-width: none; /* laisse respirer sur mobile */
+    margin-left: 0;
+    padding: 0 12px;
+  }
+
+  /* Header global */
+  .pf-header {
+    padding: 12px 0; /* plus de hauteur */
+  }
+  .pf-header-content {
+    padding: 0 12px;
+    gap: 10px; /* rapproche un peu les éléments */
+  }
+  .pf-logo {
+    font-size: 20px; /* plus lisible */
+  }
+
+  /* Navigation */
+  .pf-nav {
+    gap: 8px; /* éléments un peu plus rapprochés */
+    overflow-x: auto; /* scroll horizontal si trop d’items */
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px; /* espace pour le pouce quand ça scroll */
+  }
+  .pf-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pf-nav-link {
+    font-size: 16px; /* >=16px évite le zoom iOS */
+    padding: 10px 12px;
+    min-height: 44px; /* cible tactile recommandée */
+    border-radius: 8px;
+  }
+
+  /* Contenu principal et sections */
+  .pf-main {
+    padding: 16px 12px 28px; /* un peu plus dense */
+  }
+  .pf-section {
+    margin-top: 16px; /* sections rapprochées */
+  }
+  .pf-section--panel {
+    padding: 12px; /* contenu plus confortable au doigt */
+    border-radius: 10px;
+  }
+
+  /* Tables: taille + padding légèrement augmentés */
+  .pf-table {
+    font-size: 13.5px;
+  }
+  .pf-table th,
+  .pf-table td {
+    padding: 6px 6px;
+  }
+  .pf-table--compact th,
+  .pf-table--compact td {
+    padding: 6px 6px;
+  }
+
+  /* Formulaires: éviter le zoom iOS et lisibilité */
+  label {
+    font-size: 14px;
+  }
+  input[type="number"] {
+    width: 100%;
+    max-width: 220px;
+    font-size: 16px; /* >=16px évite le zoom iOS */
+    padding: 8px 10px;
+  }
+}
