@@ -599,3 +599,64 @@
     transform: translate(-50%, -50%) translateY(1px);
   }
 }
+/* === Gift List: Mobile Comfort v2 === */
+@media (pointer: coarse), (max-width: 780px) {
+  .pf-gift-list h1 {
+    font-size: clamp(24px, 7vw, 30px);
+    margin: 10px 0 6px;
+    line-height: 1.2;
+  }
+  .pf-gift-list h2 {
+    font-size: clamp(20px, 5.6vw, 24px);
+    line-height: 1.25;
+    margin: 10px 0 6px;
+  }
+  .pf-gift-list h3 {
+    font-size: clamp(17px, 4.8vw, 20px);
+    line-height: 1.3;
+    margin: 8px 0 4px;
+  }
+
+  /* Switch de vue plus gros et confortable */
+  .cl-view-btn {
+    font-size: 18px;
+    padding: 12px 14px;
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  /* Grille/listes: un peu plus d’air */
+  .cl-occasion-children-tables {
+    gap: 12px;
+  }
+
+  /* Tableaux enfant: en-têtes et cellules plus lisibles */
+  .cl-child-table thead th {
+    padding: 10px 10px;
+    font-size: 13.5px;
+  }
+  .cl-child-table tbody td {
+    padding: 10px 8px;
+    font-size: 13.5px;
+  }
+  .cl-summary-adult-total {
+    font-size: 13px;
+  }
+
+  /* Bouton + : nous avons déjà agrandi le hit-area; on garde les réglages précédents */
+  .cl-child-table caption {
+    padding-right: 72px;
+  }
+
+  /* Tables Budget/Tricount/Detail: un cran au‑dessus aussi */
+  .cl-budget-wrapper .pf-table,
+  .cl-detail-wrapper .pf-table {
+    font-size: 13.5px;
+  }
+  .cl-budget-wrapper .pf-table th,
+  .cl-budget-wrapper .pf-table td,
+  .cl-detail-wrapper .pf-table th,
+  .cl-detail-wrapper .pf-table td {
+    padding: 8px 8px;
+  }
+}

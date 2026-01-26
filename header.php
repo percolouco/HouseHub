@@ -31,26 +31,25 @@ if (!isset($activePage)) {
     <header class="pf-header">
       <div class="pf-container pf-header-content">
         <div class="pf-logo">PachaFamily</div>
-
         <nav class="pf-nav">
           <a href="/index.php"
-             class="pf-nav-link <?= $activePage === 'home' ? 'pf-nav-link--active' : ''; ?>">Accueil</a>
-
+            class="pf-nav-link <?= $activePage === 'home' ? 'pf-nav-link--active' : ''; ?>">Accueil</a>
           <a href="/family-calendar.php"
-             class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : ''; ?>">Family calendar</a>
-             
+            class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : ''; ?>">Family calendar</a>
+            
           <a href="/gift-list.php"
-             class="pf-nav-link <?= $activePage === 'gift-list' ? 'pf-nav-link--active' : ''; ?>">Gift list</a>
-
+            class="pf-nav-link <?= $activePage === 'gift-list' ? 'pf-nav-link--active' : ''; ?>">Gift list</a>
+        </nav>
+        <div class="pf-header-actions">
           <?php if (isset($_SESSION['user'])): ?>
-            <span class="pf-nav-user">
+            <span class="pf-greeting">
               Bonjour <?= htmlspecialchars($_SESSION['user']['display_name'] ?? $_SESSION['user']['username'], ENT_QUOTES, 'UTF-8'); ?>
             </span>
             <a href="/logout.php" class="pf-nav-link pf-nav-link--secondary">Se déconnecter</a>
           <?php else: ?>
             <a href="/login.php" class="pf-nav-link pf-nav-link--secondary">Se connecter</a>
           <?php endif; ?>
-        </nav>
+        </div>
       </div>
     </header>
 
