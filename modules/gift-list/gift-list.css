@@ -579,3 +579,23 @@
   color: #fff;
   border-color: #333;
 }
+
+/* Centrage fiable du + dans le cercle (micro-nudge du cercle) */
+.cl-child-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* On décale très légèrement le cercle vers le bas pour compenser l’optique du glyphe + */
+.cl-child-add-btn::before {
+  transform: translate(-50%, -50%) translateY(0.5px);
+}
+
+/* Si nécessaire sur certains mobiles, augmente le nudge */
+@media (pointer: coarse) {
+  .cl-child-add-btn::before {
+    transform: translate(-50%, -50%) translateY(1px);
+  }
+}
