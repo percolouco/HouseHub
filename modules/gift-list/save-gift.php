@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/../../includes/auth.php';
-require_login('/christmas-list.php');
+require_login('/gift-list.php');
 
 require __DIR__ . '/../../includes/db.php';
 
@@ -10,11 +10,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         $gift_id = (int)($_POST['gift_id'] ?? 0);
         if ($gift_id > 0) {
-            $stmt = $pdo->prepare("DELETE FROM pf_christmas_gifts WHERE id = :id");
+            $stmt = $pdo->prepare("DELETE FROM pf_gift_gifts WHERE id = :id");
             $stmt->execute(['id' => $gift_id]);
         }
 
-        header('Location: /christmas-list.php');
+        header('Location: /gift-list.php');
         exit;
     }
 
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $gift_id = (int)($_POST['gift_id'] ?? 0);
         if ($gift_id > 0 && $adult_name && $payer_name && $child_name && $occasion && $gift_desc) {
             $stmt = $pdo->prepare("
-                UPDATE pf_christmas_gifts
+                UPDATE pf_gift_gifts
                    SET year = :year,
                        adult_name = :adult_name,
                        payer_name = :payer_name,
@@ -60,14 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        header('Location: /christmas-list.php');
+        header('Location: /gift-list.php');
         exit;
     }
 
     // create (par défaut)
     if ($adult_name && $payer_name && $child_name && $occasion && $gift_desc) {
         $stmt = $pdo->prepare("
-            INSERT INTO pf_christmas_gifts
+            INSERT INTO pf_gift_gifts
               (year, adult_name, payer_name, child_name, occasion, gift_description, product_link, amount)
             VALUES
               (:year, :adult_name, :payer_name, :child_name, :occasion, :gift_description, :product_link, :amount)
@@ -84,6 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
     }
 
-    header('Location: /christmas-list.php');
+    header('Location: /gift-list.php');
     exit;
 }

@@ -1,12 +1,12 @@
 /* ========================================================= */
-/*  Styles généraux page Christmas list                      */
+/*  Styles généraux page gift list                      */
 /* ========================================================= */
 
-.pf-christmas-list h1 {
+.pf-gift-list h1 {
   margin-bottom: 4px;
 }
 
-.pf-christmas-list p {
+.pf-gift-list p {
   margin-top: 0;
   margin-bottom: 12px;
   font-size: 13px;
@@ -40,6 +40,18 @@
   gap: 7px;
   align-items: start;
   margin-top: 8px;
+}
+
+/* Désactiver la grille uniquement pour la vue Anniversary */
+.pf-gift-list .cl-view-anniversary .cl-occasion-children-tables {
+  display: block; /* remplace la grid */
+}
+
+.pf-gift-list .cl-view-anniversary .cl-child-table {
+  width: 100%;
+  min-width: 720px; /* ajuste si nécessaire avec 6 colonnes */
+  margin-bottom: 12px; /* espacement entre tables */
+  overflow-x: auto; /* sécurité si ça déborde sur petit écran */
 }
 
 @media (max-width: 1200px) {
@@ -504,3 +516,28 @@
 .cl-gift-delete {
   color: #b91c1c !important;
 } /* poubelle rouge forcé */
+
+.cl-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cl-view-switch {
+  display: flex;
+  gap: 8px;
+}
+.cl-view-btn {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #333;
+  background: #f7f7f7;
+}
+.cl-view-btn.is-active {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}

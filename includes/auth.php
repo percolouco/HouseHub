@@ -17,7 +17,7 @@ function require_login(?string $loginPage = '/login.php'): void
     }
 
     if (empty($_SESSION['user'])) {
-        // URL de la page courante (ex: /christmas-list.php?foo=bar)
+        // URL de la page courante (ex: /gift-list.php?foo=bar)
         $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
 
         // On redirige vers la page de login en ajoutant ?redirect=...

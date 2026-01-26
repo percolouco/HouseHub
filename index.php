@@ -49,10 +49,10 @@ require __DIR__ . '/header.php';
         <span class="pf-card-cta">À venir</span>
       </div>
 
-            <!-- Module : Christmas list -->
-      <a href="/christmas-list.php" class="pf-card pf-card--module">
+            <!-- Module : gift list -->
+      <a href="/gift-list.php" class="pf-card pf-card--module">
         <div class="pf-card-icon">🎄</div>
-        <h3 class="pf-card-title">Christmas list</h3>
+        <h3 class="pf-card-title">gift list</h3>
         <div class="pf-card-body">
           Planifica els regals de cada nen, per al Tió, el Nadal i els Reis.
         </div>
