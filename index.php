@@ -35,32 +35,32 @@ require __DIR__ . '/header.php';
         <div class="pf-card-icon">📅</div>
         <h3 class="pf-card-title">Family calendar</h3>
         <div class="pf-card-desc">
-          Gérez les congés, vacances et la garde sur un calendrier partagé pour toute la famille.
+          Gérez les congés, les modes de garde et l'organisation hebdomadaire.
         </div>
-        <span class="pf-card-cta">Accéder au module</span>
+        <span class="pf-card-cta">Ouvrir</span>
       </a>
 
       <a href="/holidays.php" class="pf-module-card">
         <div class="pf-card-icon">🏖️</div>
-        <h3 class="pf-card-title">Holidays</h3>
+        <h3 class="pf-card-title">Vacances</h3>
         <div class="pf-card-desc">
-          Planification des vacances.
+          Planifiez vos prochaines escapades, destinations et idées de voyage.
         </div>
-        <span class="pf-card-cta">Accéder au module</span>
+        <span class="pf-card-cta">Explorer</span>
       </a>
 
       <a href="/gift-list.php" class="pf-module-card">
         <div class="pf-card-icon">🎁</div>
-        <h3 class="pf-card-title">Gift list</h3>
+        <h3 class="pf-card-title">Cadeaux</h3>
         <div class="pf-card-desc">
-          Planifiez les cadeaux pour chaque enfant, pour Noël, les anniversaires et les Rois.
+          Planifiez les cadeaux pour chaque enfant, pour Noël, les anniversaires et autres.
         </div>
-        <span class="pf-card-cta">Accéder au module</span>
+        <span class="pf-card-cta">Voir les listes</span>
       </a>
 
       <div class="pf-module-card pf-card--disabled">
         <div class="pf-card-icon">💰</div>
-        <h3 class="pf-card-title">Budget familial</h3>
+        <h3 class="pf-card-title">Budget</h3>
         <div class="pf-card-desc">
           Bientôt disponible : suivi des dépenses, catégories et budget mensuel.
         </div>
