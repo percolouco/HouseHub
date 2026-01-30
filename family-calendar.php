@@ -1,5 +1,7 @@
 <?php
-// Active l'affichage des erreurs pour le développement
+// modules/family-calendar/family-calendar.php
+
+// Active l'affichage des erreurs pour le développement (à retirer en prod si nécessaire)
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -9,8 +11,9 @@ require_login();
 require __DIR__ . '/includes/db.php';
 
 // --- On récupère TOUS les événements sauvegardés en base ---
+// Note: Si la base grossit trop, il faudra filtrer par année ici.
 $stmt_events = $pdo->query("SELECT * FROM pf_events");
-$dbEvents = $stmt_events->fetchAll();
+$dbEvents = $stmt_events->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle  = "PachaFamily - Family Calendar";
 $activePage = "family-calendar";
@@ -18,75 +21,47 @@ $bodyClass  = "pf-family-calendar";
 $pageCss    = "/modules/family-calendar/family-calendar.css"; 
 
 require __DIR__ . '/header.php';
-
 ?>
 
-<!-- ===================================================================== -->
-<!--  INJECTION DES DONNÉES DU SERVEUR VERS JAVASCRIPT                     -->
-<!--  Cette variable `serverData` sera lue par le script JS au démarrage.  -->
-<!-- ===================================================================== -->
 <script>
+  /* JSON_NUMERIC_CHECK convertit les strings "1" en entiers 1, utile pour les calculs JS */
   const serverData = <?php echo json_encode($dbEvents, JSON_NUMERIC_CHECK); ?>;
 </script>
 
-<h1>Family Calendar</h1>
+<div class="pf-d-flex pf-align-center pf-justify-between pf-mb-4">
+    <h1>Family Calendar</h1>
+    </div>
 
-<!-- ===================================================================== -->
-<!--  PANNEAU DE CONTRÔLE : Légende, Récapitulatif et Vacances             -->
-<!-- ===================================================================== -->
 <section class="pf-section pf-section--panel">
   <div class="pf-flex pf-flex--wrap pf-gap-lg">
     
-    <!-- LÉGENDE -->
     <div class="pf-card pf-card--small">
       <h2 class="pf-card-title">Légende</h2>
       <div class="pf-card-body">
-        <div class="pf-legend-item">
-          <div class="pf-legend-color fc-legend-school-holiday"></div>
-          <span>Vacances scolaires</span>
-        </div>
-        <div class="pf-legend-item">
-          <div class="pf-legend-color fc-legend-public-holiday"></div>
-          <span>Jour férié</span>
-        </div>
-        <div class="pf-legend-item">
-          <div class="pf-legend-color fc-legend-off-carole"></div>
-          <span>Off Carole</span>
-        </div>
-        <div class="pf-legend-item">
-          <div class="pf-legend-color fc-legend-extra-off-carole"></div>
-          <span>Extra Off Carole</span>
-        </div>
-        <div class="pf-legend-item">
-          <div class="pf-legend-color fc-legend-centre"></div>
-          <span>Centre</span>
-        </div>
-        <div class="pf-legend-item">
-          <div class="pf-legend-color fc-legend-avis"></div>
-          <span>Avis</span>  
-        </div>
-        <div class="pf-legend-item">
-          <div class="pf-legend-color fc-legend-pep-sick"></div>
-          <span>Pep malade</span>
+        <div class="pf-legend-grid">
+            <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span>Vacances</span></div>
+            <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span>Férié</span></div>
+            <div class="pf-legend-item"><div class="pf-legend-color fc-legend-off-carole"></div><span>Off Carole</span></div>
+            <div class="pf-legend-item"><div class="pf-legend-color fc-legend-extra-off-carole"></div><span>Extra Off</span></div>
+            <div class="pf-legend-item"><div class="pf-legend-color fc-legend-centre"></div><span>Centre</span></div>
+            <div class="pf-legend-item"><div class="pf-legend-color fc-legend-avis"></div><span>Avis</span></div>
+            <div class="pf-legend-item"><div class="pf-legend-color fc-legend-pep-sick"></div><span>Pep Malade</span></div>
         </div>
       </div>
     </div>
 
-
-    <!-- RÉCAPITULATIF ANNUEL -->
     <div class="pf-card pf-card--small">
       <h2 class="pf-card-title">Récapitulatif annuel</h2>
       <div class="pf-card-body" id="globalSummary">
-        <!-- Rempli par le JavaScript -->
+        <span class="pf-loading-text">Chargement...</span>
       </div>
     </div>
 
-    <!-- VACANCES SCOLAIRES -->
     <div class="pf-card pf-card--small pf-card--wide">
-      <h2 class="pf-card-title">Vacances scolaires - Zone C (2025-2026)</h2>
+      <h2 class="pf-card-title">Vacances scolaires - Zone C</h2>
       <div class="pf-card-body">
-        <div class="pf-table-wrapper">
-          <table id="schoolHolidaysTable" class="fc-holidays-table">
+        <div class="pf-table-wrapper pf-table-wrapper--max-height">
+          <table id="schoolHolidaysTable" class="fc-holidays-table pf-table pf-table--compact">
             <thead>
               <tr>
                 <th>Période</th>
@@ -96,8 +71,7 @@ require __DIR__ . '/header.php';
               </tr>
             </thead>
             <tbody>
-              <!-- Rempli par JS -->
-            </tbody>
+              </tbody>
           </table>
         </div>
       </div>
@@ -106,12 +80,10 @@ require __DIR__ . '/header.php';
   </div>
 </section>
 
-<!-- ===================================================================== -->
-<!--  CALENDRIER MENSUEL                                                   -->
-<!-- ===================================================================== -->
 <section class="pf-section">
   <h2>Calendrier mensuel</h2>
   <div class="fc-month-calendar-wrapper">
+    
     <div class="fc-month-header">
       <div class="fc-view-controls">
         <button id="fc-view-1month" class="fc-view-button fc-view-button--active" data-view="1month">1 mois</button>
@@ -124,18 +96,16 @@ require __DIR__ . '/header.php';
         <button id="fc-next-month" class="fc-nav-button">›</button>
       </div>
     </div>
-    <div class="fc-calendar-and-summary">
+
+    <div class="fc-calendar-container">
       <div id="fc-month-calendar" class="fc-month-calendar">
+        </div>
+      <div id="fc-month-selectionMenu" class="fc-selection-menu" hidden></div>
     </div>
-    <!-- Le menu contextuel pour le calendrier mensuel -->
-    <div id="fc-month-selectionMenu" class="fc-selection-menu"></div>
+
   </div>
-    </div>
 </section>
 
-<!-- ===================================================================== -->
-<!--  PLANNING PRINCIPAL                                                   -->
-<!-- ===================================================================== -->
 <section class="pf-section">
   <div class="fc-week-header">
     <h2>Planning hebdo</h2>
@@ -147,29 +117,15 @@ require __DIR__ . '/header.php';
   </div>
 
   <div class="pf-table-wrapper" id="planningTable-wrapper">
-    <table id="planningHeaderTable" class="pf-table pf-table--compact">
+    <table id="planningTable" class="pf-table pf-table--compact pf-table--sticky-head pf-table--bordered">
+      
       <colgroup>
-        <col class="col-month">   <!-- Mois -->
-        <col class="col-month">   <!-- Semaine -->
-        <col class="col-day">     <!-- Lundi -->
-        <col class="col-day">     <!-- Mardi -->
-        <col class="col-day">     <!-- Mercredi -->
-        <col class="col-day">     <!-- Jeudi -->
-        <col class="col-day">     <!-- Vendredi -->
-        <col class="col-total">   <!-- # Off -->
-        <col class="col-total">   <!-- # Extra -->
-        <col class="col-total">   <!-- # Centre -->
-        <col class="col-total">   <!-- # Avis -->
-        <col class="col-total">   <!-- # Pep malade -->
-        <col class="col-total">   <!-- # Pep Présence -->
-        <!-- ALEX (6 colonnes) -->
+        <col class="col-month">   <col class="col-month">   <col class="col-day">     <col class="col-day">     <col class="col-day">     <col class="col-day">     <col class="col-day">     <col class="col-total">   <col class="col-total">   <col class="col-total">   <col class="col-total">   <col class="col-total">   <col class="col-total">   <col class="col-alex-sub">
         <col class="col-alex-sub">
         <col class="col-alex-sub">
         <col class="col-alex-sub">
         <col class="col-alex-sub">
         <col class="col-alex-sub">
-        <col class="col-alex-sub">
-        <!-- LAIA (6 colonnes) -->
         <col class="col-laia-sub">
         <col class="col-laia-sub">
         <col class="col-laia-sub">
@@ -177,28 +133,27 @@ require __DIR__ . '/header.php';
         <col class="col-laia-sub">
         <col class="col-laia-sub">
       </colgroup>
+
       <thead>
         <tr>
           <th rowspan="3" class="col-month">Mois</th>
-          <th rowspan="3" class="col-month">Semaine</th>
-          <th rowspan="3" class="col-day">Lundi</th>
-          <th rowspan="3" class="col-day">Mardi</th>
-          <th rowspan="3" class="col-day">Mercredi</th>
-          <th rowspan="3" class="col-day">Jeudi</th>
-          <th rowspan="3" class="col-day">Vendredi</th>
-          <th rowspan="3" class="col-total"># Off Carole</th>
-          <th rowspan="3" class="col-total"># Extra off Carole</th>
-          <th rowspan="3" class="col-total"># Centre</th>
-          <th rowspan="3" class="col-total"># Avis</th>
-          <th rowspan="3" class="col-total"># Pep malade</th>
-          <th rowspan="3" class="col-total"># Pep Présence</th>
+          <th rowspan="3" class="col-month">Sem.</th>
+          <th rowspan="3" class="col-day">Lun</th>
+          <th rowspan="3" class="col-day">Mar</th>
+          <th rowspan="3" class="col-day">Mer</th>
+          <th rowspan="3" class="col-day">Jeu</th>
+          <th rowspan="3" class="col-day">Ven</th>
+          <th rowspan="3" class="col-total rotated-text"><span>Off Carole</span></th>
+          <th rowspan="3" class="col-total rotated-text"><span>Extra Off</span></th>
+          <th rowspan="3" class="col-total rotated-text"><span>Centre</span></th>
+          <th rowspan="3" class="col-total rotated-text"><span>Avis</span></th>
+          <th rowspan="3" class="col-total rotated-text"><span>Pep Malade</span></th>
+          <th rowspan="3" class="col-total rotated-text"><span>Présence</span></th>
 
-          <!-- Ligne 1 : ALEX / LAIA -->
-          <th colspan="6" class="col-alex">ALEX</th>
-          <th colspan="6" class="col-laia">LAIA</th>
+          <th colspan="6" class="col-alex header-group">ALEX</th>
+          <th colspan="6" class="col-laia header-group">LAIA</th>
         </tr>
         <tr>
-          <!-- Ligne 2 : CP / JRA / JA (regroupement) -->
           <th colspan="2" class="col-alex-sub">CP</th>
           <th colspan="2" class="col-alex-sub">JRA</th>
           <th colspan="2" class="col-alex-sub">JA</th>
@@ -208,15 +163,12 @@ require __DIR__ . '/header.php';
           <th colspan="2" class="col-laia-sub">JA</th>
         </tr>
         <tr>
-          <!-- Ligne 3 : Available / Use pour chaque type -->
-          <!-- ALEX -->
-            <th class="col-alex-sub col-alex-av">Av.</th>
+          <th class="col-alex-sub col-alex-av">Av.</th>
             <th class="col-alex-sub col-alex-use">Use</th>
             <th class="col-alex-sub col-alex-av">Av.</th>
             <th class="col-alex-sub col-alex-use">Use</th>
             <th class="col-alex-sub col-alex-av">Av.</th>
             <th class="col-alex-sub col-alex-use">Use</th>
-            <!-- LAIA -->
             <th class="col-laia-sub col-laia-av">Av.</th>
             <th class="col-laia-sub col-laia-use">Use</th>
             <th class="col-laia-sub col-laia-av">Av.</th>
@@ -225,54 +177,16 @@ require __DIR__ . '/header.php';
             <th class="col-laia-sub col-laia-use">Use</th>
         </tr>
       </thead>
-    </table>
-    <table id="planningTable" class="pf-table pf-table--compact">
+
       <tbody id="planningBody">
-        <colgroup>
-          <col class="col-month">   <!-- Mois -->
-          <col class="col-month">   <!-- Semaine -->
-          <col class="col-day">     <!-- Lundi -->
-          <col class="col-day">     <!-- Mardi -->
-          <col class="col-day">     <!-- Mercredi -->
-          <col class="col-day">     <!-- Jeudi -->
-          <col class="col-day">     <!-- Vendredi -->
-          <col class="col-total">   <!-- # Off -->
-          <col class="col-total">   <!-- # Extra -->
-          <col class="col-total">   <!-- # Centre -->
-          <col class="col-total">   <!-- # Avis -->
-          <col class="col-total">   <!-- # Pep malade -->
-          <col class="col-total">   <!-- # Pep Présence -->
-          <!-- ALEX (6 colonnes) -->
-          <col class="col-alex-sub">
-          <col class="col-alex-sub">
-          <col class="col-alex-sub">
-          <col class="col-alex-sub">
-          <col class="col-alex-sub">
-          <col class="col-alex-sub">
-          <!-- LAIA (6 colonnes) -->
-          <col class="col-laia-sub">
-          <col class="col-laia-sub">
-          <col class="col-laia-sub">
-          <col class="col-laia-sub">
-          <col class="col-laia-sub">
-          <col class="col-laia-sub">
-        </colgroup>
-        <!-- lignes générées par JS -->
-      </tbody>
+        </tbody>
 
     </table>
     
-    <!-- Le menu contextuel est caché par défaut et son contenu est généré par JS -->
-    <div id="selectionMenu" class="fc-selection-menu"></div>
+    <div id="selectionMenu" class="fc-selection-menu" hidden></div>
   </div>
 </section>
 
-<!-- ===================================================================== -->
-<!--  CHARGEMENT DU SCRIPT JAVASCRIPT PRINCIPAL                            -->
-<!-- ===================================================================== -->
 <script src="/modules/family-calendar/family-calendar.js"></script>
 
-<?php
-// Inclusion du pied de page
-require __DIR__ . '/footer.php';
-?>
+<?php require __DIR__ . '/footer.php'; ?>
