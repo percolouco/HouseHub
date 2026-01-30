@@ -1,161 +1,139 @@
-/* === HOME : fond et overlay === */
+/* modules/home/home.css */
 
-/* Fond image uniquement pour la home */
+/* === 1. CONFIGURATION DU FOND & DU BODY === */
 body.pf-home {
-  position: relative;
+  /* Image de fond desktop */
   background-image: url("/modules/home/assets/img/background.jpg");
   background-size: cover;
   background-position: center center;
+  background-attachment: fixed; /* Effet parallax léger */
   background-repeat: no-repeat;
 
-  /* Texte global plutôt clair sur la home (sur l'image) */
-  color: #f9fafb;
+  /* Couleur de texte par défaut sur la home (Blanc) */
+  color: #ffffff;
 }
 
-/* Header translucide par-dessus l'image sur la home */
-.pf-home .pf-header {
-  background: rgba(36, 59, 83, 0.85);
-  backdrop-filter: blur(4px); /* optionnel, si supporté */
-}
-
-/* Voile sombre sur toute la page home */
+/* Voile sombre pour garantir la lisibilité du texte blanc */
 body.pf-home::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35);
-  z-index: -1;
+  background: rgba(15, 23, 42, 0.5); /* Bleu nuit semi-transparent */
+  z-index: -1; /* Derrière le contenu */
 }
 
-/* S'assurer que le contenu passe au-dessus du voile */
-body.pf-home > * {
-  position: relative;
-  z-index: 0;
+/* === 2. HEADER SPÉCIFIQUE (Translucide) === */
+body.pf-home .pf-header {
+  background: rgba(36, 59, 83, 0.85); /* Ton ancien bleu sombre */
+  backdrop-filter: blur(8px); /* Effet verre dépoli */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Descendre légèrement le contenu sous le header sur la home */
-body.pf-home .pf-main {
-  padding-top: 80px;
+/* Adaptation des couleurs des liens du header sur fond sombre */
+body.pf-home .pf-logo {
+  color: #ffffff;
+}
+body.pf-home .pf-burger-btn {
+  color: #ffffff;
 }
 
-/* === HOME / MODULES CARDS === */
-
-/* Container des cartes de modules */
-.pf-modules-cards {
-  margin-top: 16px;
+body.pf-home .pf-nav-link {
+  color: rgba(255, 255, 255, 0.8);
+}
+body.pf-home .pf-nav-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+body.pf-home .pf-nav-link--active {
+  background: rgba(255, 255, 255, 0.9);
+  color: #243b53; /* Texte foncé sur fond blanc */
 }
 
-/* Card module : réutilise .pf-card mais plus "clicable" */
-.pf-card--module {
-  min-width: 240px;
-  max-width: 320px;
-  display: flex;
-  flex-direction: column;
-  text-decoration: none;
-  color: inherit;
-  background: #ffffff;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease,
-    border-color 0.15s ease, background-color 0.15s ease;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+/* Badge utilisateur */
+body.pf-home .pf-user-badge {
+  color: rgba(255, 255, 255, 0.9);
+}
+body.pf-home .pf-logout-btn {
+  color: #fca5a5;
+} /* Rouge clair */
+body.pf-home .pf-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fca5a5;
 }
 
-.pf-card--module:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
-  border-color: #bcccdc;
-  background-color: #f8fafc;
+/* === 3. HERO SECTION (Message de Bienvenue) === */
+.pf-hero {
+  margin-top: 40px;
+  margin-bottom: 60px;
+  text-align: right; /* Aligné à droite comme demandé */
 }
 
-/* Désactivation / "à venir" */
-.pf-card--disabled {
-  cursor: default;
-  opacity: 0.7;
+.pf-hero h1 {
+  color: #ffffff;
+  font-size: 2.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); /* Ombre pour détacher le texte de l'image */
+  margin-bottom: 12px;
 }
 
-.pf-card--disabled:hover {
-  transform: none;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
-  border-color: #d9e2ec;
-  background-color: #f8fafc;
-}
-
-/* Icône dans la card */
-.pf-card-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-/* CTA (texte en bas de card) */
-.pf-card-cta {
-  margin-top: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #243b53;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.pf-card-cta::after {
-  content: "→";
-  font-size: 12px;
-}
-
-/* Assure que le CTA reste en bas quand le texte est plus long */
-.pf-card--module .pf-card-body {
-  flex: 1;
-}
-
-/* Bloc user info */
-.pf-user-info {
-  margin-top: 12px;
-  font-size: 13px;
-  color: #f9fafb; /* lisible sur le fond */
-}
-
-.pf-user-info a {
-  color: #ffb4b4;
-  text-decoration: none;
+.pf-hero p {
+  color: #e2e8f0; /* Gris très clair */
+  font-size: 1.2rem;
   font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-.pf-user-info a:hover {
-  text-decoration: underline;
+/* === 4. GRILLE DES MODULES === */
+
+/* Titre de section "Modules" */
+body.pf-home .pf-modules-grid {
+  /* On ajoute un titre visuel ou on espace simplement */
+  margin-top: 20px;
 }
 
-/* Dans les cards (fond clair) : texte foncé */
-body.pf-home .pf-card,
-body.pf-home .pf-section--panel {
-  color: #222;
+/* Les cartes restent blanches, donc on force le texte foncé à l'intérieur */
+.pf-module-card {
+  background: rgba(255, 255, 255, 0.95); /* Presque opaque */
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  color: var(--text-main); /* Retour à la couleur sombre globale */
 }
 
-/* S’assurer que les titres / textes intro sont bien à gauche et lisibles */
-body.pf-home h1,
-body.pf-home .pf-container > p,
-body.pf-home .pf-user-info,
-body.pf-home .pf-section > h2 {
-  text-align: left;
-  color: #f9fafb;
-}
-/* === ALIGNEMENT À DROITE DU BLOC INTRO SUR LA HOME === */
-
-/* On aligne à droite uniquement le bloc d'intro */
-body.pf-home .pf-container > h1,
-body.pf-home .pf-container > p,
-body.pf-home .pf-container > .pf-user-info {
-  text-align: right;
+.pf-module-card:hover {
+  background: #ffffff;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
-/* On garde le titre "Modules" à gauche, sauf si tu veux aussi le mettre à droite */
-body.pf-home .pf-section > h2 {
-  text-align: left;
+/* On s'assure que les titres et textes DANS les cartes ne sont pas blancs */
+.pf-module-card h3.pf-card-title {
+  color: var(--text-main);
+}
+.pf-module-card p.pf-card-desc {
+  color: var(--text-muted);
 }
 
-/* Image de fond spécifique pour le mobile */
+/* === 5. MOBILE RESPONSIVE === */
 @media (max-width: 768px) {
   body.pf-home {
+    /* Image spécifique mobile */
     background-image: url("/modules/home/assets/img/background_m.jpg");
-    background-position: center center;
+    background-attachment: scroll; /* Fixed bug souvent sur mobile, scroll est mieux */
+  }
+
+  /* Sur mobile, on recentre le texte pour l'équilibre */
+  .pf-hero {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 40px;
+  }
+
+  .pf-hero h1 {
+    font-size: 2rem;
+  }
+
+  /* Ajustement header mobile */
+  body.pf-home .pf-header {
+    padding: 0 16px;
   }
 }

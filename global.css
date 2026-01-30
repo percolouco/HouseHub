@@ -1,328 +1,330 @@
-/* === RESET SIMPLE === */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* global.css */
+
+:root {
+  --primary: #3b82f6;
+  --primary-dark: #1d4ed8;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --bg-page: #f8fafc;
+  --bg-panel: #ffffff;
+  --border-light: #e2e8f0;
+  --danger: #ef4444;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-/* === BASE HTML / BODY === */
-html,
-body {
-  height: 100%;
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
   font-family:
-    system-ui,
+    "Inter",
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
+    Roboto,
     sans-serif;
-  background: #f5f5f5;
-  color: #222;
-}
-
-/* === LAYOUT GLOBAL (structure page + footer collé en bas) === */
-
-.pf-page {
-  min-height: 100vh; /* au minimum la hauteur de la fenêtre */
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.pf-main {
-  flex: 1 0 auto;
-}
-
-.pf-footer {
-  flex-shrink: 0;
-}
-
-/* === LAYOUT CONTAINER / HEADER / NAV / FOOTER === */
-
-.pf-container {
-  max-width: 1440px;
-  margin-left: 6px;
-}
-
+/* === HEADER === */
 .pf-header {
-  background: #243b53;
-  color: #fff;
-  padding: 8px 0;
-}
-
-.pf-header-content {
+  background: white;
+  border-bottom: 1px solid var(--border-light);
+  padding: 0 20px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-}
-.pf-header-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .pf-logo {
-  font-weight: 600;
-  font-size: 18px;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--primary);
+  text-decoration: none;
+  letter-spacing: -0.03em;
 }
 
+/* Navigation Desktop */
 .pf-nav {
   display: flex;
-  gap: 16px;
+  gap: 8px;
 }
 
 .pf-nav-link {
-  color: #d9e2ec;
   text-decoration: none;
-  font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
 
 .pf-nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: #f1f5f9;
+  color: var(--text-main);
 }
 
 .pf-nav-link--active {
-  background: #102a43;
-  color: #f0f4f8;
+  background: #eff6ff;
+  color: var(--primary);
 }
 
-.pf-main {
-  padding: 24px 10px 48px;
+/* Actions Header (User) */
+.pf-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.pf-section {
-  margin-top: 32px;
+.pf-user-badge {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.pf-section--panel {
-  background: #fff;
-  border-radius: 8px;
-  padding: 10px 10px 10px 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+.pf-logout-btn {
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+.pf-logout-btn:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
 }
 
-.pf-footer {
-  border-top: 1px solid #d9e2ec;
-  padding: 8px 0;
-  font-size: 12px;
-  color: #627d98;
-  background: #f0f4f8;
+/* Menu Burger (Mobile) */
+.pf-burger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-main);
 }
-
-/* Sur certaines pages (comme la home), on pourra override le header via une classe de body */
-
-/* === FLEX & CARDS GÉNÉRIQUES === */
-
-.pf-flex {
+.pf-mobile-menu {
+  display: none; /* caché par défaut */
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  padding: 20px;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 99;
+}
+.pf-mobile-menu.is-open {
   display: flex;
 }
 
-.pf-flex--wrap {
-  flex-wrap: wrap;
-}
-
-.pf-gap-lg {
-  gap: 24px;
-}
-
-.pf-card {
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #d9e2ec;
-  padding: 12px 14px;
-}
-
-.pf-card--small {
-  min-width: 240px;
-  max-width: 260px;
-}
-
-/* Large card (utilisée pour le tableau des vacances) */
-.pf-card.pf-card--wide {
-  min-width: 400px;
-  flex: 1 1 400px;
-}
-
-.pf-card-title {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
-
-.pf-card-body {
-  font-size: 13px;
-}
-
-/* === TABLES GÉNÉRIQUES === */
-
-.pf-table-wrapper {
-  max-height: 600px;
-  overflow: auto;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #d9e2ec;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-}
-
-.pf-table {
+/* === MAIN CONTENT === */
+.pf-main {
+  flex: 1;
   width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px;
 }
 
-.pf-table th,
-.pf-table td {
-  border: 1px solid #d9e2ec;
-  padding: 4px 6px;
-  text-align: center;
-  position: relative;
+.pf-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.pf-table thead th {
-  position: sticky;
-  top: 0;
-  background: #f0f4f8;
-  z-index: 1;
-}
-
-.pf-table--compact th,
-.pf-table--compact td {
-  padding: 3px 4px;
-}
-
-/* === FORMULAIRES / TEXTE GÉNÉRIQUE === */
-
-label {
-  font-size: 12px;
-}
-
-input[type="number"] {
-  width: 150px;
-  font-size: 11px;
-  padding: 2px 3px;
-}
-
-/* Récapitulatif global (utilisé dans le calendrier mais style simple) */
-#globalSummary p {
-  margin: 4px 0;
-  font-size: 12px;
-}
-
-#globalSummary strong {
-  font-weight: 600;
-  color: #243b53;
-}
-
-.pf-greeting {
-  color: #f0f4f8;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
+/* === TYPOGRAPHY === */
+h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: var(--text-main);
   line-height: 1.2;
 }
-/* === Mobile Comfort v2: header + textes plus grands et mieux alignés === */
-@media (pointer: coarse), (max-width: 780px) {
-  /* Container */
-  .pf-container {
-    max-width: none;
-    margin-left: 0;
-    padding: 0 14px;
-  }
+p {
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
 
-  /* Header */
+/* === CARDS (Modules) === */
+.pf-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.pf-module-card {
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-decoration: none;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-module-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+  border-color: #cbd5e1;
+}
+
+.pf-card-icon {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+.pf-card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+.pf-card-desc {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+.pf-card-cta {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pf-card-cta::after {
+  content: "→";
+  transition: transform 0.2s;
+}
+.pf-module-card:hover .pf-card-cta::after {
+  transform: translateX(4px);
+}
+
+.pf-card--disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  filter: grayscale(100%);
+}
+
+/* === FORMS (Login) === */
+.pf-login-container {
+  max-width: 400px;
+  margin: 60px auto;
+  background: white;
+  padding: 40px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-light);
+}
+
+.pf-form-group {
+  margin-bottom: 20px;
+}
+.pf-form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+.pf-form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 1rem;
+}
+.pf-form-group input:focus {
+  outline: 2px solid var(--primary);
+  border-color: var(--primary);
+}
+
+.pf-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pf-btn:hover {
+  background: var(--primary-dark);
+}
+
+.pf-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  border: 1px solid #fecaca;
+}
+
+/* === FOOTER === */
+.pf-footer {
+  border-top: 1px solid var(--border-light);
+  background: white;
+  padding: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
+/* === MOBILE RESPONSIVE === */
+@media (max-width: 768px) {
   .pf-header {
-    padding: 16px 0;
+    padding: 0 16px;
   }
-  .pf-header-content {
-    padding: 0 14px;
-    gap: 12px;
-    align-items: center;
-  }
-  .pf-logo {
-    font-size: 22px;
-  }
-  .pf-header-actions {
-    gap: 10px;
-  }
-
-  .pf-greeting {
-    color: #f0f4f8;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    line-height: 1.2;
-    font-size: 18px;
-  }
-  .pf-nav-link--secondary {
-    font-size: 18px;
-    padding: 12px 14px;
-    min-height: 48px;
-    border-radius: 10px;
-  }
-  /* Si tu utilises un avatar/icône dedans */
-  .pf-greeting img,
-  .pf-greeting .avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-  }
-
-  /* Navigation */
   .pf-nav {
-    gap: 10px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
-  }
-  .pf-nav::-webkit-scrollbar {
     display: none;
-  }
+  } /* Caché sur mobile, activé via burger */
+  .pf-header-actions {
+    display: none;
+  } /* Caché sur mobile, dans le menu */
 
-  .pf-nav-link {
-    font-size: 18px;
-    padding: 12px 14px;
-    min-height: 48px;
-    border-radius: 10px;
-  }
+  .pf-burger-btn {
+    display: block;
+  } /* Affiché sur mobile */
 
-  /* Main + sections */
-  .pf-main {
-    padding: 20px 14px 34px;
+  /* Menu Mobile Ouvert */
+  .pf-mobile-nav-link {
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-main);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
   }
-  .pf-section {
-    margin-top: 18px;
-  }
-  .pf-section--panel {
-    padding: 14px;
-    border-radius: 12px;
-  }
-
-  /* Tables */
-  .pf-table {
-    font-size: 14px;
-  }
-  .pf-table th,
-  .pf-table td {
-    padding: 8px 8px;
-  }
-  .pf-table--compact th,
-  .pf-table--compact td {
-    padding: 7px 7px;
-  }
-
-  /* Formulaires */
-  label {
-    font-size: 15px;
-  }
-  input[type="number"] {
-    width: 100%;
-    max-width: 240px;
-    font-size: 17px; /* >=16px évite le zoom iOS */
-    padding: 12px 12px;
-    border-radius: 10px;
+  .pf-mobile-logout {
+    color: var(--danger);
   }
 }
