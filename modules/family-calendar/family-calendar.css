@@ -1,954 +1,562 @@
-/* === TABLES SPÉCIFIQUES AU FAMILY CALENDAR === */
+/* modules/family-calendar/family-calendar.css */
 
-/* Tableau des vacances scolaires */
-#schoolHolidaysTable {
-  width: auto;
-  table-layout: auto;
-  border-collapse: collapse;
+/* --- 1. VARIABLES --- */
+:root {
+  --primary: #3b82f6;
+  --bg-page: #f8fafc;
+  --bg-header: #f1f5f9;
+  --border-color: #cbd5e1;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+
+  /* Couleurs Sémantiques */
+  --c-school-holiday: #e5d9f2;
+  --c-public-holiday: #e0e0e0;
+  --c-off-carole: #ffedd5;
+  --c-extra-off: #fee2e2;
+  --c-selected: #bfdbfe;
+
+  /* NOUVELLES COULEURS (Neutres) */
+  --bg-alex: #f0fdfa; /* Teal très pâle */
+  --text-alex: #0f766e; /* Teal foncé */
+
+  --bg-laia: #fffbeb; /* Jaune/Ambre très pâle */
+  --text-laia: #b45309; /* Ambre foncé */
 }
 
-.pf-card.pf-card--wide .pf-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
+.pf-family-calendar {
+  background-color: var(--bg-page);
+  font-family: "Inter", system-ui, sans-serif;
+  color: var(--text-main);
+  font-size: 13px;
 }
 
-/* En-têtes et cellules sans retour à la ligne */
-#schoolHolidaysTable th,
-#schoolHolidaysTable td {
-  white-space: nowrap;
-  overflow: visible;
-  padding: 4px 8px;
-  text-align: center;
-}
-
-/* Planning hebdomadaire principal */
-#planningTable {
-  table-layout: fixed;
-  width: 100%;
-}
-
-#planningTable th,
-#planningTable td {
-  height: 32px;
-  min-height: 32px;
-  position: relative;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Colonnes "Av." non modifiables : fond gris clair + texte un peu atténué */
-#planningHeaderTable th.col-alex-av,
-#planningTable td.col-alex-av,
-#planningHeaderTable th.col-laia-av,
-#planningTable td.col-laia-av {
-  background-color: #e5e7eb;
-  color: #4b5563;
-  font-weight: 600;
-}
-
-/* Optionnel : curseur "not-allowed" pour marquer le côté non éditable */
-#planningTable td.col-alex-av,
-#planningTable td.col-laia-av {
-  cursor: not-allowed;
-}
-
-/* Mois / Semaine */
-#planningHeaderTable .col-month,
-#planningTable .col-month {
-  width: 60px;
-  max-width: 60px;
-}
-
-/* Jours */
-#planningHeaderTable .col-day,
-#planningTable .col-day {
-  width: 70px;
-  max-width: 70px;
-}
-
-/* Totaux */
-#planningHeaderTable .col-total,
-#planningTable .col-total {
-  width: 50px;
-  max-width: 50px;
-}
-
-/* Sous-colonnes Alex/Laia */
-#planningHeaderTable .col-alex-sub,
-#planningHeaderTable .col-laia-sub,
-#planningTable .col-alex-sub,
-#planningTable .col-laia-sub {
-  width: 40px;
-  max-width: 40px;
-  font-size: 11px;
-}
-
-/* Autoriser le wrap dans les TH des sous-colonnes pour garder lisible */
-#planningTable thead th.col-total,
-#planningTable thead th.col-alex-sub,
-#planningTable thead th.col-laia-sub {
-  white-space: normal;
-}
-
-/* Header du planning hebdo : même esprit que fc-month-header */
-.fc-week-header {
+/* --- 2. LÉGENDE --- */
+.pf-legend-grid {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 12px;
 }
-
-.fc-week-nav-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-#fc-current-school-year-label {
-  font-weight: 600;
-  color: #243b53;
-}
-
-#fc-current-school-year-label {
-  font-weight: 600;
-  color: #243b53;
-}
-
-#planningTable-wrapper {
-  max-height: 80vh;
-  overflow-y: auto;
-  overflow-x: auto;
-  position: relative;
-}
-
-/* Header sticky */
-#planningHeaderTable {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: #f0f4f8;
-}
-/* Empêcher le header de bouger/contracter */
-#planningHeaderTable th {
-  background: #f0f4f8;
-}
-/* Optionnel : aligner visuellement les deux tableaux (bordures, etc.) */
-#planningHeaderTable,
-#planningTable {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-#planningTable thead th {
-  top: 0;
-  z-index: 3;
-  background: #f0f4f8;
-}
-
-/* Ligne 1 */
-#planningTable thead tr:nth-child(1) th {
-  top: 0;
-  z-index: 3;
-  background: #f0f4f8;
-}
-
-/* Ligne 2 */
-#planningTable thead tr:nth-child(2) th {
-  top: 24px; /* hauteur de la 1ère ligne */
-  z-index: 3;
-  background: #f0f4f8;
-}
-
-/* Ligne 3 */
-#planningTable thead tr:nth-child(3) th {
-  top: 48px; /* 1ère + 2e ligne (22 + 22) */
-  z-index: 3;
-  background: #f0f4f8;
-}
-
-/* === COLOR CODING / LÉGENDE === */
-
-.fc-row--carole-off {
-  background: #ffe0e0;
-}
-
-.fc-row--bank-holiday {
-  background: #d9f7be;
-}
-
-/* Tableau recap vacances scolaires */
-.fc-holidays-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  margin-top: 8px;
-}
-
-.fc-holidays-table th,
-.fc-holidays-table td {
-  border: none;
-  padding: 4px 4px;
-}
-
-.fc-holidays-table thead th {
-  background: none;
-  font-weight: 600;
-  color: #243b53;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #d9e2ec;
-}
-
-.fc-holidays-table tbody tr:nth-child(odd) td {
-  background: #f8fafc;
-}
-
-.fc-holidays-table tbody tr:nth-child(even) td {
-  background: transparent;
-}
-
-/* Cellule de jour sélectionnée dans le calendrier */
-.fc-day--selected {
-  background-color: #bde4ff !important;
-  cursor: pointer;
-}
-
-/* Conteneur du menu de sélection (hebdo & mensuel) */
-.fc-selection-menu {
-  display: none;
-  position: absolute;
-  z-index: 100;
-  background-color: #ffffff;
-  border: 1px solid #d1d5db; /* gris clair */
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
-  min-width: 220px;
-  max-width: 360px;
-}
-
-/* Sections internes avec titre */
-.fc-menu-section {
-  margin-bottom: 8px;
-}
-
-.fc-menu-section > strong {
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 600;
-  color: #111827; /* gris très foncé */
-}
-
-/* Grille pour disposer proprement les boutons dans une section */
-.fc-menu-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-}
-
-/* Boutons génériques du menu */
-.fc-selection-menu button.fc-menu-btn,
-.fc-selection-menu button.fc-menu-leave-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  border-radius: 4px;
-  border: 1px solid #e5e7eb;
-  padding: 4px 6px;
-  font-size: 12px;
-  background: #f9fafb;
-  color: #111827;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.fc-selection-menu button.fc-menu-btn:hover,
-.fc-selection-menu button.fc-menu-leave-btn:hover {
-  background-color: #e5f0ff; /* léger bleu */
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
-}
-
-/* Variantes par type pour un léger hint visuel 
-.fc-menu-btn--conge {
-   congés Carole 
-}
-
-.fc-menu-btn--garde {
-   mode de garde 
-}
-
-.fc-menu-btn--pep {
-   Pep malade 
-} */
-
-/* Boutons "danger" (suppression) */
-.fc-selection-menu button.fc-menu-danger {
-  display: block;
-  width: 100%;
-  margin-top: 6px;
-  padding: 4px 6px;
-  border-radius: 4px;
-  border: 1px solid #fecaca;
-  background-color: #fef2f2;
-  color: #b91c1c;
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.fc-selection-menu button.fc-menu-danger:hover {
-  background-color: #fee2e2;
-  border-color: #fca5a5;
-}
-
-/* Tableau des congés Alex / Laia dans le menu */
-.fc-menu-leaves-table {
-  margin-top: 4px;
-}
-
-.fc-menu-leaves-table table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 11px;
-}
-
-.fc-menu-leaves-table th,
-.fc-menu-leaves-table td {
-  padding: 2px;
-  text-align: center;
-}
-
-.fc-menu-leaves-table thead th {
-  font-weight: 600;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.fc-menu-leaves-table tbody td:first-child {
-  text-align: left;
-  font-weight: 500;
-  color: #4b5563;
-}
-
-/* --- Couleurs de base pour la légende et les jours --- */
-.fc-day--school-holiday {
-  background-color: #e5d9f2;
-}
-.fc-day--public-holiday {
-  background-color: #e0e0e0;
-}
-.fc-day--off-carole {
-  background-color: #ffe9a7;
-}
-.fc-day--extra-off-carole {
-  background-color: #ffd59b;
-}
-.fc-day--has-guard {
-  box-sizing: border-box;
-}
-
-/* Picto pour Centre */
-.fc-day--has-guard.fc-day--centre {
-  position: relative;
-}
-.fc-day--has-guard.fc-day--centre::after {
-  content: "🏫";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 14px;
-  line-height: 1;
-  z-index: 2;
-}
-/* Planning hebdo : picto Centre en haut à droite */
-#planningTable .fc-day--has-guard.fc-day--centre::after {
-  content: "🏫";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 12px;
-  line-height: 1;
-  z-index: 2;
-}
-
-/* Combinaisons avec dégradés */
-.fc-day--school-holiday.fc-day--off-carole {
-  background-image: linear-gradient(45deg, #e5d9f2 49%, #ffe9a7 51%);
-}
-.fc-day--school-holiday.fc-day--extra-off-carole {
-  background-image: linear-gradient(45deg, #e5d9f2 49%, #ffd59b 51%);
-}
-
-/* Légende */
 .pf-legend-item {
   display: flex;
   align-items: center;
-  margin-bottom: 5px;
+  gap: 6px;
+  font-size: 0.85rem;
 }
-
 .pf-legend-color {
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  border: 1px solid #d9e2ec;
-  margin-right: 8px;
-}
-
-.pf-legend-item span {
-  font-size: 12px;
-  color: #334e68;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fc-legend-school-holiday {
-  background-color: #e5d9f2;
+  background: var(--c-school-holiday);
 }
-
 .fc-legend-public-holiday {
-  background-color: #e0e0e0;
+  background: var(--c-public-holiday);
 }
-
 .fc-legend-off-carole {
-  background-color: #ffe9a7;
+  background: var(--c-off-carole);
 }
-
 .fc-legend-extra-off-carole {
-  background-color: #ffd59b;
+  background: var(--c-extra-off);
 }
-
 .fc-legend-centre {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 16px;
-  background: none;
-  border: none;
+  background-color: white;
 }
-
 .fc-legend-centre::before {
   content: "🏫";
+  font-size: 14px;
 }
-
 .fc-legend-pep-sick {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 16px;
-  background: none;
-  border: none;
+  background-color: white;
 }
-
 .fc-legend-pep-sick::before {
   content: "🤒";
-}
-
-.fc-pep-sick-emoji {
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
   font-size: 14px;
-  line-height: 1;
 }
-
-#planningTable .fc-pep-sick-emoji {
-  font-size: 12px;
-  right: 2px;
-  bottom: 2px;
-}
-
-/* Avis indicateur */
 .fc-legend-avis {
-  border-radius: 2px;
   width: 24px;
   height: 16px;
-  background: linear-gradient(
+  background: repeating-linear-gradient(
     to bottom,
-    #ffcc00 0%,
-    #ffcc00 11%,
-    #c8102e 11%,
-    #c8102e 22%,
-    #ffcc00 22%,
-    #ffcc00 33%,
-    #c8102e 33%,
-    #c8102e 44%,
-    #ffcc00 44%,
-    #ffcc00 55%,
-    #c8102e 55%,
-    #c8102e 66%,
-    #ffcc00 66%,
-    #ffcc00 77%,
-    #c8102e 77%,
-    #c8102e 88%,
-    #ffcc00 88%,
-    #ffcc00 100%
+    #fcd116,
+    #fcd116 2px,
+    #ce1126 2px,
+    #ce1126 4px
   );
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+  border: 1px solid #ce1126;
 }
 
-/* === CALENDRIER MENSUEL === */
+/* --- 3. PLANNING HEBDO --- */
 
-.fc-day--has-guard.fc-day--avis {
+/* --- HEADER PLANNING HEBDO (Harmonisé avec Calendrier Mensuel) --- */
+
+.fc-week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px; /* Même marge que le calendrier mensuel */
+  padding-bottom: 0;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Le titre "Planning hebdo" */
+.fc-week-header h2 {
+  margin: 0;
+  font-size: 1.25rem; /* Même taille que le titre du mois */
+  font-weight: 800;
+  color: var(--text-main);
+  text-transform: none; /* On garde la casse normale ou uppercase selon préférence */
+  border: none;
+  padding: 0;
+}
+
+/* Conteneur des flèches et de la date */
+.fc-week-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* Espace identique au header mensuel */
+  background: white;
+  padding: 4px 12px;
+  border-radius: 50px; /* Petit conteneur pilule optionnel pour lier le tout */
+  border: 1px solid transparent; /* ou var(--border-color) si tu veux un cadre */
+}
+
+/* LE TEXTE DE L'ANNÉE (Cible de ta demande) */
+#fc-current-school-year-label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+  letter-spacing: -0.02em;
+  min-width: 120px; /* Empêche le saut quand les chiffres changent */
+
+  /* Pour l'alignement vertical parfait avec les boutons */
+  display: inline-block;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+/* Ajustement spécifique pour les boutons de navigation dans ce header */
+.fc-week-nav-controls .fc-nav-button {
+  /* On s'assure qu'ils ont bien la taille définie globalement */
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  background: white; /* Fond blanc */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.fc-week-nav-controls .fc-nav-button:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+#planningTable-wrapper {
+  max-height: 80vh;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   position: relative;
 }
 
-.fc-day--has-guard.fc-day--avis::after {
-  content: "";
+#planningTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+/* Sticky Header */
+#planningTable thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-header);
+}
+#planningTable thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  padding: 6px;
+  font-size: 0.75rem;
+  color: var(--text-main);
+  z-index: 20;
+  box-shadow: 0 1px 0 var(--border-color);
+}
+
+/* Gestion hauteurs Sticky */
+#planningTable thead tr:nth-child(1) th {
+  top: 0;
+  height: 32px;
+}
+#planningTable thead tr:nth-child(2) th {
+  top: 32px;
+  height: 28px;
+  z-index: 19;
+}
+#planningTable thead tr:nth-child(3) th {
+  top: 60px;
+  height: 24px;
+  z-index: 19;
+  border-bottom: 2px solid var(--border-color);
+}
+
+/* En-têtes Alex / Laia (Couleurs mises à jour) */
+.col-alex.header-group {
+  background: var(--bg-alex) !important;
+  color: var(--text-alex);
+}
+.col-laia.header-group {
+  background: var(--bg-laia) !important;
+  color: var(--text-laia);
+}
+
+/* Cellules */
+#planningTable tbody td {
+  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  height: 36px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Couleurs Cellules */
+.fc-day--school-holiday {
+  background: var(--c-school-holiday);
+}
+.fc-day--public-holiday {
+  background: var(--c-public-holiday);
+  font-weight: 700;
+}
+.fc-day--off-carole {
+  background: var(--c-off-carole);
+}
+.fc-day--extra-off-carole {
+  background: var(--c-extra-off);
+}
+.fc-day--selected {
+  background: var(--c-selected) !important;
+  outline: 2px solid var(--primary);
+  z-index: 5;
+}
+
+/* Indicateurs */
+.fc-day--centre::after {
+  content: "🏫";
   position: absolute;
   top: 2px;
   right: 2px;
+  font-size: 12px;
+  line-height: 1;
+  left: auto;
+  transform: none;
+}
+.fc-day--avis::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
   width: 14px;
-  height: 8px;
+  height: 10px;
   border-radius: 2px;
-  background: linear-gradient(
+  background: repeating-linear-gradient(
     to bottom,
-    #ffcc00 0%,
-    #ffcc00 11%,
-    #c8102e 11%,
-    #c8102e 22%,
-    #ffcc00 22%,
-    #ffcc00 33%,
-    #c8102e 33%,
-    #c8102e 44%,
-    #ffcc00 44%,
-    #ffcc00 55%,
-    #c8102e 55%,
-    #c8102e 66%,
-    #ffcc00 66%,
-    #ffcc00 77%,
-    #c8102e 77%,
-    #c8102e 88%,
-    #ffcc00 88%,
-    #ffcc00 100%
+    #fcd116,
+    #fcd116 2px,
+    #ce1126 2px,
+    #ce1126 4px
   );
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
-  z-index: 2;
+  border: 1px solid #b91c1c;
+}
+.fc-pep-sick-emoji {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 12px;
+  line-height: 1;
 }
 
+/* Colonnes spécifiques */
+.col-alex-av,
+.col-laia-av {
+  background: #f8fafc;
+  color: var(--text-muted);
+  cursor: default;
+}
+.col-alex-sub {
+  background: var(--bg-alex);
+}
+.col-laia-sub {
+  background: var(--bg-laia);
+}
+
+.col-month {
+  width: 50px;
+  background: white;
+  font-weight: 600;
+  border-right: 2px solid var(--border-color) !important;
+}
+.col-day {
+  width: 40px;
+  border-right: 2px solid var(--border-color) !important;
+}
+.col-total {
+  width: 30px;
+}
+.col-alex-sub,
+.col-laia-sub {
+  width: 35px;
+}
+
+.rotated-text span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* --- 4. CALENDRIER MENSUEL (Modernisé) --- */
 .fc-month-calendar-wrapper {
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  border: 1px solid #d9e2ec;
-}
-
-.fc-calendar-and-summary {
-  display: block;
-  position: relative;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 16px; /* Plus arrondi */
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .fc-month-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #d9e2ec;
+  align-items: center;
+  margin-bottom: 20px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
-.fc-view-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.fc-view-button {
-  background: #f0f4f8;
-  border: 1px solid #d9e2ec;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  color: #243b53;
-  transition: all 0.2s;
-}
-
-.fc-view-button:hover {
-  background: #d9e2ec;
-  border-color: #bcccdc;
-}
-
-.fc-view-button--active {
-  background: #243b53;
-  color: #fff;
-  border-color: #243b53;
-}
-
-.fc-view-button--active:hover {
-  background: #102a43;
-  border-color: #102a43;
-}
-
+/* NAVIGATION (Flèches) */
 .fc-nav-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.fc-month-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #243b53;
-  min-width: 200px;
-  text-align: center;
+  gap: 16px;
+  order: 2; /* Pour s'assurer qu'il est bien placé */
 }
 
 .fc-nav-button {
-  background: #f0f4f8;
-  border: 1px solid #d9e2ec;
-  border-radius: 4px;
-  padding: 6px 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: white;
+  color: var(--text-main);
   font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: #243b53;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .fc-nav-button:hover {
-  background: #d9e2ec;
-  border-color: #bcccdc;
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.15);
 }
 
+.fc-nav-button:active {
+  transform: translateY(0);
+}
+
+/* TITRE DU MOIS */
+#fc-current-month-year {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  text-transform: capitalize;
+  min-width: 180px;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+/* BOUTONS DE VUE (Segmented Control Style) */
+.fc-view-controls {
+  display: inline-flex;
+  background: #f1f5f9; /* Gris clair de fond */
+  padding: 4px;
+  border-radius: 12px;
+  gap: 0; /* Collés */
+  order: 1;
+}
+
+.fc-view-button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: 8px; /* Un peu moins que le conteneur */
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fc-view-button:hover {
+  color: var(--text-main);
+}
+
+.fc-view-button--active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-weight: 700;
+}
+
+/* RESTE DU CALENDRIER (Inchangé mais nécessaire pour le contexte) */
 .fc-month-calendar {
   width: 100%;
+  display: block;
 }
-
 .fc-month-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  table-layout: fixed;
 }
-
-.fc-month-table thead th {
-  background: #f0f4f8;
-  padding: 8px 4px;
-  text-align: center;
-  font-weight: 600;
-  color: #243b53;
-  border: 1px solid #d9e2ec;
+.fc-month-table th {
+  background: #f8fafc;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
 }
-
-.fc-month-table tbody td {
-  border: 1px solid #d9e2ec;
-  padding: 8px 4px;
-  text-align: center;
+.fc-month-table td {
+  border: 1px solid var(--border-color);
+  height: 80px;
   vertical-align: top;
-  min-height: 60px;
-  height: 60px;
+  padding: 6px;
   position: relative;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
-
-.fc-month-summary-inline {
-  margin-top: 8px;
-  background: #f8fafc;
-  border-radius: 6px;
-  border: 1px solid #d9e2ec;
-  font-size: 12px;
-  padding: 6px 8px;
-}
-
-.fc-month-summary-inline table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.fc-month-summary-inline th,
-.fc-month-summary-inline td {
-  padding: 4px 6px;
-  text-align: center;
-}
-
-.fc-month-summary-inline th {
-  font-weight: 600;
-  color: #243b53;
-  border-bottom: 1px solid #d9e2ec;
-}
-
-.fc-month-summary-inline td:first-child {
-  text-align: left;
-}
-
-.fc-month-day {
-  background: #fff;
-}
-
-.fc-month-day:hover {
-  background: #f8fafc !important;
-}
-
 .fc-day--other-month {
-  background: #f0f4f8;
-  color: #9fb3c8;
-  box-shadow: none;
+  background: #fcfcfc;
 }
 
-.fc-day--weekend {
-  background: #f8fafc;
-}
-
-.fc-day--weekend.fc-day--school-holiday,
-.fc-day--weekend.fc-day--public-holiday,
-.fc-day--weekend.fc-day--off-carole,
-.fc-day--weekend.fc-day--extra-off-carole {
-  background: inherit;
-}
-
-/* Application des couleurs existantes au calendrier mensuel */
-.fc-month-table .fc-day--school-holiday {
-  background-color: #e5d9f2;
-}
-
-.fc-month-table .fc-day--public-holiday {
-  background-color: #e0e0e0;
-}
-
-.fc-month-table .fc-day--off-carole {
-  background-color: #ffe9a7;
-}
-
-.fc-month-table .fc-day--extra-off-carole {
-  background-color: #ffd59b;
-}
-
-.fc-month-table .fc-day--has-guard {
-  box-sizing: border-box;
-}
-
-.fc-month-table .fc-day--has-guard.fc-day--centre {
-  position: relative;
-}
-
-.fc-month-table .fc-day--has-guard.fc-day--centre::after {
-  content: "🏫";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 12px;
-  line-height: 1;
-  z-index: 2;
-}
-
-.fc-month-table .fc-day--has-guard.fc-day--avis {
-  position: relative;
-}
-
-.fc-month-table .fc-day--has-guard.fc-day--avis::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 12px;
-  height: 7px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to bottom,
-    #ffcc00 0%,
-    #ffcc00 11%,
-    #c8102e 11%,
-    #c8102e 22%,
-    #ffcc00 22%,
-    #ffcc00 33%,
-    #c8102e 33%,
-    #c8102e 44%,
-    #ffcc00 44%,
-    #ffcc00 55%,
-    #c8102e 55%,
-    #c8102e 66%,
-    #ffcc00 66%,
-    #ffcc00 77%,
-    #c8102e 77%,
-    #c8102e 88%,
-    #ffcc00 88%,
-    #ffcc00 100%
-  );
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
-  z-index: 2;
-}
-
-.fc-month-table .fc-day--selected {
-  background-color: #bde4ff !important;
-  cursor: pointer;
-}
-
-.fc-leaves-label-container {
-  position: absolute;
-  top: 1px;
-  left: 2px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  z-index: 2;
-}
-
-.fc-leaves-label {
-  font-size: 8px;
-  font-weight: 600;
-  color: #1f2933;
-  line-height: 1;
-}
-
-/* Bordure épaisse pour délimiter les mois dans le planning hebdo */
-#planningTable tr.fc-month-first-week-row td {
-  border-top: 2px solid #243b53; /* couleur sombre cohérente avec ta charte */
-}
-
-#planningTable tr.fc-month-last-week-row td {
-  border-bottom: 2px solid #243b53;
-}
-
-/* === TABLEAU RÉCAPITULATIF === */
-
-.fc-month-summary {
-  min-width: 300px;
-}
-
-.fc-summary-table-wrapper {
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 10px 10px 12px;
-  border: 1px solid #d9e2ec;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
-}
-
-.fc-summary-table {
-  font-size: 12px;
-}
-
-.fc-summary-table thead th {
-  background: transparent;
-  border-bottom: 1px solid #d9e2ec;
-}
-
-.fc-summary-table tbody td {
-  border: none;
-  border-bottom: 1px solid #edf2f7;
-}
-
-.fc-summary-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.fc-summary-total-row {
-  background: #f0f4f8 !important;
-  border-top: 2px solid #243b53;
-}
-
-.fc-summary-total-row td {
-  background: #f0f4f8 !important;
-  font-weight: 600;
-  color: #243b53;
-}
-
-/* Responsive pour le calendrier et le récapitulatif */
-@media (max-width: 1200px) {
-  .fc-calendar-and-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .fc-month-summary {
-    min-width: 100%;
-  }
-}
-
-/* === VUE 2 MOIS === */
+/* Conteneurs Vues */
 .fc-two-months-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-}
-
-.fc-month-container {
   width: 100%;
 }
-
-.fc-month-title {
-  font-weight: 600;
-  font-size: 15px;
-  color: #243b53;
-  margin-bottom: 12px;
-  text-align: center;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #d9e2ec;
-}
-
-/* === VUE ANNÉE === */
 .fc-year-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  width: 100%;
 }
-
+.fc-month-container,
 .fc-year-month {
-  background: #f8fafc;
-  border: 1px solid #d9e2ec;
-  border-radius: 6px;
-  padding: 12px;
+  background: white;
 }
-
+.fc-month-title,
 .fc-year-month-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: #243b53;
-  margin-bottom: 8px;
   text-align: center;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #d9e2ec;
+  border-bottom: 2px solid var(--primary);
+  text-transform: capitalize;
 }
 
-.fc-year-month .fc-month-table {
-  font-size: 11px;
+/* --- 5. MENU CONTEXTUEL --- */
+.fc-selection-menu {
+  position: absolute;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 240px;
+  display: none;
 }
-
-.fc-year-month .fc-month-table thead th {
-  padding: 4px 2px;
-  font-size: 10px;
+.fc-menu-section {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
 }
-
-.fc-year-month .fc-month-table tbody td {
-  padding: 4px 2px;
-  height: 32px;
-  font-size: 11px;
+.fc-menu-section:last-child {
+  border: none;
 }
-
-/* Responsive pour la vue année */
-@media (max-width: 1200px) {
-  .fc-year-container {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.fc-menu-section strong {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
-
-@media (max-width: 768px) {
-  .fc-two-months-container {
-    grid-template-columns: 1fr;
-  }
-
-  .fc-year-container {
-    grid-template-columns: 1fr;
-  }
-
-  .fc-month-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .fc-view-controls {
-    justify-content: center;
-  }
-
-  .fc-nav-controls {
-    justify-content: center;
-  }
+.fc-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.fc-menu-btn {
+  background: white;
+  border: 1px solid var(--border-color);
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+}
+.fc-menu-btn:hover {
+  background: #eff6ff;
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.fc-menu-danger {
+  width: 100%;
+  margin-top: 4px;
+  background: #fff1f2;
+  border: 1px solid #fda4af;
+  color: #be123c;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.fc-menu-danger:hover {
+  background: #be123c;
+  color: white;
+  border-color: #be123c;
+}
+.fc-menu-leaves-table table {
+  width: 100%;
+}
+.fc-menu-leaves-table th {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding-bottom: 4px;
+}
+.fc-menu-leaves-table td {
+  padding: 2px;
 }
