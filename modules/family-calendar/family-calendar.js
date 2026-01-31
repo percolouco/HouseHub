@@ -1,24 +1,16 @@
 /**
- * family-calendar.js (FIXED: Selection, View Buttons, Colors)
+ * family-calendar.js (Version Sécurisée)
  */
-
 document.addEventListener("DOMContentLoaded", () => {
   const CONGE_TYPES = ["OFF_CAROLE", "EXTRA_OFF_CAROLE"];
   const GUARDE_TYPES = ["CENTRE", "AVIS"];
   const PEP_TYPES = ["PEP_SICK"];
-  const MODIFIABLE_TYPES = [...CONGE_TYPES, ...GUARDE_TYPES, ...PEP_TYPES];
 
   class FamilyCalendar {
     constructor() {
+      // Éléments DOM (avec sécurité null)
       this.planningBody = document.getElementById("planningBody");
       this.selectionMenu = document.getElementById("selectionMenu");
-      // Menu dans le body pour position absolue correcte
-      if (
-        this.selectionMenu &&
-        this.selectionMenu.parentElement !== document.body
-      ) {
-        document.body.appendChild(this.selectionMenu);
-      }
       this.schoolHolidaysTableBody = document.querySelector(
         "#schoolHolidaysTable tbody",
       );
@@ -26,6 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
       this.monthSelectionMenu = document.getElementById(
         "fc-month-selectionMenu",
       );
+
+      // Déplacement des menus dans le body pour affichage correct
+      if (
+        this.selectionMenu &&
+        this.selectionMenu.parentElement !== document.body
+      ) {
+        document.body.appendChild(this.selectionMenu);
+      }
       if (
         this.monthSelectionMenu &&
         this.monthSelectionMenu.parentElement !== document.body
@@ -33,7 +33,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.appendChild(this.monthSelectionMenu);
       }
 
-      // Etat
       this.currentMonth = new Date();
       this.currentMonth.setDate(1);
       this.viewMode = "1month";
@@ -42,7 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
       this.isSelecting = false;
       this.selectedCells = [];
       this.monthSelectedCells = [];
-      this.isMonthSelecting = false;
       this._currentBulkInfo = null;
 
       // Données
@@ -56,7 +54,12 @@ document.addEventListener("DOMContentLoaded", () => {
         3: { CP: {}, JRA: {}, JA: {} },
       };
 
-      if (!this.planningBody) return;
+      // Si le tableau principal n'est pas là, on arrête tout pour ne pas crasher
+      if (!this.planningBody) {
+        console.warn("Element #planningBody introuvable. Le JS s'arrête.");
+        return;
+      }
+
       this.init();
     }
 
@@ -65,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const now = new Date();
       this.currentSchoolYearStart =
         now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+
       await this.refreshAllData();
       this.updateSchoolYearLabel();
     }
@@ -105,13 +109,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         this.reprocessAndRender();
       } catch (e) {
-        console.error("Erreur chargement", e);
+        console.error("Erreur chargement données:", e);
       }
     }
 
-    // Appel API pour les vacances scolaires (Zone C) avec dédoublonnage
     async fetchPublicAndSchoolHolidays() {
-      // 1. Jours fériés 2025-2026 (Statique)
+      // 1. Jours fériés (Statique)
       const publicHolidays = [
         "2025-11-01",
         "2025-11-11",
@@ -131,38 +134,31 @@ document.addEventListener("DOMContentLoaded", () => {
         duration: 1,
       }));
 
-      // 2. Vacances Scolaires (API Gouv)
       const schoolHolidayEvents = [];
+
       try {
+        // API Gouv
         const url =
           "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='2025-2026' AND zones LIKE '%Zone C%'&limit=100";
         const res = await fetch(url);
         const data = await res.json();
         const rawRecords = data.results || [];
 
-        // --- DÉDOUBLONNAGE ---
-        // On utilise une Map pour ne garder qu'une entrée unique par (Description + Date Début)
+        // Dédoublonnage
         const uniqueHolidaysMap = new Map();
-
         rawRecords.forEach((r) => {
-          // Clé unique : "Vacances de Noël|2025-12-20"
           const key = `${r.description}|${r.start_date}`;
-          if (!uniqueHolidaysMap.has(key)) {
-            uniqueHolidaysMap.set(key, r);
-          }
+          if (!uniqueHolidaysMap.has(key)) uniqueHolidaysMap.set(key, r);
         });
-
-        // Convertir la Map en tableau
         const uniqueRecords = Array.from(uniqueHolidaysMap.values());
 
-        // Remplir le tableau HTML du haut (avec la liste propre)
+        // APPEL DE LA MÉTHODE D'AFFICHAGE (séparée pour la propreté)
         this.renderSchoolHolidaysTable(uniqueRecords);
 
-        // Générer les événements jour par jour (uniquement sur la liste propre)
+        // Génération des events pour le calendrier (cases colorées)
         uniqueRecords.forEach((r, idx) => {
           let curr = new Date(r.start_date);
           const end = new Date(r.end_date);
-          // Boucle jour par jour
           while (curr < end) {
             const iso = curr.toISOString().split("T")[0];
             schoolHolidayEvents.push({
@@ -175,56 +171,40 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
       } catch (e) {
-        console.warn(
-          "Impossible de charger les vacances scolaires depuis l'API Gouv.",
-          e,
-        );
+        console.warn("Erreur API Vacances (pas grave, on continue)", e);
       }
 
+      // On retourne TOUJOURS les événements, même si l'affichage du tableau échoue
       return [...publicHolidays, ...schoolHolidayEvents];
     }
 
-    processWeeks(rawWeeks) {
-      return rawWeeks.map((w) => ({
-        id: `${w.week_iso_year}-W${w.week_iso_number}`,
-        monthKey: `${w.year}-${String(w.month).padStart(2, "0")}`,
-        monthName: w.month_name,
-        weekLabel: w.week_label,
-        dayDates: {
-          mon: new Date(w.mon_date + "T00:00:00"),
-          tue: new Date(w.tue_date + "T00:00:00"),
-          wed: new Date(w.wed_date + "T00:00:00"),
-          thu: new Date(w.thu_date + "T00:00:00"),
-          fri: new Date(w.fri_date + "T00:00:00"),
-        },
-        dayFlags: {
-          mon: { events: [] },
-          tue: { events: [] },
-          wed: { events: [] },
-          thu: { events: [] },
-          fri: { events: [] },
-        },
-        totals: {
-          offCarole: 0,
-          extraOffCarole: 0,
-          centre: 0,
-          avis: 0,
-          pepSick: 0,
-          presencePep: 0,
-          alexCP: 0,
-          alexJRA: 0,
-          alexJA: 0,
-          laiaCP: 0,
-          laiaJRA: 0,
-          laiaJA: 0,
-        },
-      }));
+    renderSchoolHolidaysTable(records) {
+      // Si le tableau HTML n'existe pas (ex: on n'est pas sur la bonne page), on ne fait rien
+      if (!this.schoolHolidaysTableBody) return;
+
+      // 1. Tri chronologique strict (du plus ancien au plus récent)
+      records.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+
+      // 2. Génération du HTML
+      this.schoolHolidaysTableBody.innerHTML = records
+        .map(
+          (r) => `
+         <tr>
+           <td>${r.description}</td>
+           <td>${new Date(r.start_date).toLocaleDateString("fr-FR")}</td>
+           <td>${new Date(r.end_date).toLocaleDateString("fr-FR")}</td>
+         </tr>
+       `,
+        )
+        .join("");
     }
+
+    // ================== LOGIQUE MÉTIER ==================
 
     reprocessAndRender() {
       this.reprocessEvents();
       this.calculateMonthlyBalances();
-      this.updateGlobalSummary();
+      this.initSummaryControls();
       this.renderTable();
       this.renderMonthCalendar();
     }
@@ -241,6 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
               (k) => w.dayDates[k].getTime() === d.getTime(),
             );
             if (dayKey) w.dayFlags[dayKey].events.push(e);
+
             const dur = parseFloat(e.duration) || 1;
             const typeMap = {
               OFF_CAROLE: "offCarole",
@@ -341,6 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     renderTable() {
+      if (!this.planningBody) return;
       this.planningBody.innerHTML = "";
       const monthSpans = this.weeks.reduce((acc, w) => {
         acc[w.monthKey] = (acc[w.monthKey] || 0) + 1;
@@ -383,8 +365,7 @@ document.addEventListener("DOMContentLoaded", () => {
           td.textContent = String(dateObj.getDate()).padStart(2, "0");
           td.className = "col-day";
 
-          const dayEvents = w.dayFlags[d].events;
-          dayEvents.forEach((evt) => {
+          w.dayFlags[d].events.forEach((evt) => {
             if (evt.type === "OFF_CAROLE")
               td.classList.add("fc-day--off-carole");
             if (evt.type === "EXTRA_OFF_CAROLE")
@@ -402,11 +383,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
           if (dayLeaves.length) {
             let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; line-height:1; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
-            // --- CORRECTION COULEURS ---
             if (dayLeaves.some((l) => l.person_id === 2))
-              html += `<span style="color:#0f766e; font-weight:800;">A</span>`; // Teal
+              html += `<span style="color:#0f766e; font-weight:800;">A</span>`;
             if (dayLeaves.some((l) => l.person_id === 3))
-              html += `<span style="color:#b45309; font-weight:800;">L</span>`; // Amber
+              html += `<span style="color:#b45309; font-weight:800;">L</span>`;
             html += `</div>`;
             td.innerHTML += html;
           }
@@ -455,7 +435,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderMonthCalendar() {
       if (!this.monthCalendar) return;
-      this.monthCalendar.innerHTML = ""; // CLEAN UP
+      this.monthCalendar.innerHTML = "";
 
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
@@ -508,10 +488,8 @@ document.addEventListener("DOMContentLoaded", () => {
     renderYearView() {
       const startYear = this.currentSchoolYearStart;
       let html = '<div class="fc-year-container">';
-      // Sept-Dec
       for (let i = 8; i < 12; i++)
         html += `<div class="fc-year-month"><div class="fc-year-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(new Date(startYear, i))}</div>${this.generateMonthHTML(startYear, i)}</div>`;
-      // Jan-Aug
       for (let i = 0; i < 8; i++)
         html += `<div class="fc-year-month"><div class="fc-year-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(new Date(startYear + 1, i))}</div>${this.generateMonthHTML(startYear + 1, i)}</div>`;
       html += "</div>";
@@ -582,43 +560,185 @@ document.addEventListener("DOMContentLoaded", () => {
       return html;
     }
 
-    renderSchoolHolidaysTable(records) {
-      if (!this.schoolHolidaysTableBody) return;
-      records.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-      this.schoolHolidaysTableBody.innerHTML = records
-        .map(
-          (r) => `
-         <tr>
-           <td>${r.description}</td>
-           <td>${new Date(r.start_date).toLocaleDateString("fr-FR")}</td>
-           <td>${new Date(r.end_date).toLocaleDateString("fr-FR")}</td>
-           <td>${r.zones}</td>
-         </tr>
-       `,
-        )
-        .join("");
-    }
+    // --- NOUVELLES MÉTHODES POUR LE RÉCAPITULATIF DYNAMIQUE ---
 
-    updateGlobalSummary() {
-      const div = document.getElementById("globalSummary");
-      if (!div) return;
-      const stats = { off: 0, extra: 0, sick: 0, pep: 0, totalWorking: 0 };
+    /**
+     * Initialise les menus déroulants (Année / Mois)
+     */
+    initSummaryControls() {
+      const typeSelect = document.getElementById("summType");
+      const valueSelect = document.getElementById("summValue");
+
+      if (!typeSelect || !valueSelect) return;
+
+      // 1. Scanner les données pour trouver les années et mois disponibles
+      const years = new Set();
+      const months = new Set();
+
       this.weeks.forEach((w) => {
-        stats.off += w.totals.offCarole;
-        stats.extra += w.totals.extraOffCarole;
-        stats.sick += w.totals.pepSick;
-        stats.pep += w.totals.presencePep;
         Object.values(w.dayDates).forEach((d) => {
-          if (!this.publicHolidayDates.has(d.toISOString().split("T")[0]))
-            stats.totalWorking++;
+          years.add(d.getFullYear());
+          const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+          months.add(mKey);
         });
       });
+
+      const sortedYears = Array.from(years).sort();
+      const sortedMonths = Array.from(months).sort();
+
+      // 2. Fonction interne pour remplir le 2ème menu (Valeurs)
+      const populateValues = () => {
+        const currentType = typeSelect.value;
+        const previousValue = valueSelect.value; // Pour essayer de garder la sélection si possible
+
+        valueSelect.innerHTML = ""; // On vide
+
+        if (currentType === "year") {
+          sortedYears.forEach((y) => {
+            const opt = document.createElement("option");
+            opt.value = y;
+            opt.textContent = y;
+            valueSelect.appendChild(opt);
+          });
+
+          // Sélection intelligente : garder l'ancienne ou prendre l'année en cours
+          if (sortedYears.includes(parseInt(previousValue))) {
+            valueSelect.value = previousValue;
+          } else {
+            const currentYear = new Date().getFullYear();
+            if (sortedYears.includes(currentYear))
+              valueSelect.value = currentYear;
+          }
+        } else {
+          // Mode Mois
+          sortedMonths.forEach((m) => {
+            const [y, mo] = m.split("-");
+            const dateObj = new Date(y, mo - 1, 1);
+            // Format : "octobre 2025"
+            const label = new Intl.DateTimeFormat("fr-FR", {
+              month: "long",
+              year: "numeric",
+            }).format(dateObj);
+
+            const opt = document.createElement("option");
+            opt.value = m;
+            opt.textContent = label;
+            valueSelect.appendChild(opt);
+          });
+
+          // Sélection intelligente : mois courant
+          const nowIso = new Date().toISOString().slice(0, 7); // "2025-01"
+          if (sortedMonths.includes(nowIso)) {
+            valueSelect.value = nowIso;
+          }
+        }
+
+        // Une fois rempli, on met à jour les chiffres
+        this.updateGlobalSummary();
+      };
+
+      // 3. Attacher les écouteurs (UNE SEULE FOIS)
+      if (!this.summaryListenersAttached) {
+        typeSelect.addEventListener("change", populateValues);
+        valueSelect.addEventListener("change", () =>
+          this.updateGlobalSummary(),
+        );
+        this.summaryListenersAttached = true;
+      }
+
+      // 4. Premier appel pour remplir dès le chargement
+      populateValues();
+    }
+
+    /**
+     * Calcule et affiche les KPIs en fonction des filtres
+     */
+    updateGlobalSummary() {
+      const div = document.getElementById("globalSummary");
+      const typeSelect = document.getElementById("summType");
+      const valueSelect = document.getElementById("summValue");
+
+      if (!div) return;
+
+      // Si les contrôles n'ont pas encore de valeur (chargement initial), on attend
+      if (typeSelect && valueSelect && !valueSelect.value) return;
+
+      const filterType = typeSelect ? typeSelect.value : "year";
+      const filterValue = valueSelect
+        ? valueSelect.value
+        : new Date().getFullYear().toString(); // Fallback
+
+      const stats = { off: 0, extra: 0, sick: 0, pep: 0, totalWorking: 0 };
+
+      // Parcours précis jour par jour
+      this.weeks.forEach((w) => {
+        Object.entries(w.dayDates).forEach(([dayName, dateObj]) => {
+          // Vérification du filtre
+          let match = false;
+          if (filterType === "year") {
+            if (dateObj.getFullYear().toString() === filterValue) match = true;
+          } else {
+            // Month (YYYY-MM)
+            const isoMonth = dateObj.toISOString().slice(0, 7);
+            if (isoMonth === filterValue) match = true;
+          }
+
+          if (match) {
+            // Récupérer les events de CE jour spécifique
+            const dayEvents = w.dayFlags[dayName].events;
+
+            // Additions
+            dayEvents.forEach((e) => {
+              const dur = parseFloat(e.duration) || 1;
+              if (e.type === "OFF_CAROLE") stats.off += dur;
+              if (e.type === "EXTRA_OFF_CAROLE") stats.extra += dur;
+              if (e.type === "PEP_SICK") stats.sick += dur;
+            });
+
+            // Calcul présence (Jour ouvré - Absences)
+            // Est-ce un jour ouvré ? (Pas férié, pas we - WE déjà exclu par structure semainier lun-ven)
+            // NOTE : Ma structure `weeks` ne contient que Lun-Ven par défaut.
+            const dateIso = dateObj.toISOString().split("T")[0];
+            if (!this.publicHolidayDates.has(dateIso)) {
+              // C'est un jour potentiellement ouvré
+              stats.totalWorking++;
+
+              // Calcul des absences sur ce jour
+              let dayAbsence = 0;
+              dayEvents.forEach((e) => {
+                if (
+                  ["OFF_CAROLE", "EXTRA_OFF_CAROLE", "PEP_SICK"].includes(
+                    e.type,
+                  )
+                ) {
+                  dayAbsence += parseFloat(e.duration) || 1;
+                }
+              });
+
+              stats.pep += Math.max(0, 1 - dayAbsence);
+            }
+          }
+        });
+      });
+
+      // Affichage HTML Vertical
       div.innerHTML = `
-         <p><strong>Off Carole :</strong> ${stats.off} jours</p>
-         <p><strong>Extra Off Carole :</strong> ${stats.extra} jours</p>
-         <p><strong>Pep malade :</strong> ${stats.sick} jours</p>
-         <p><strong>Présence Pep :</strong> ${stats.pep} jours</p>
-         <p style="font-size:0.8em; color:#666; margin-top:4px;">(Sur jours ouvrés totaux : ${stats.totalWorking})</p>
+         <div class="fc-summary-item">
+            <span class="fc-summary-label">Off Carole</span>
+            <span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} jours</span>
+         </div>
+         <div class="fc-summary-item">
+            <span class="fc-summary-label">Extra Off Carole</span>
+            <span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} jours</span>
+         </div>
+         <div class="fc-summary-item">
+            <span class="fc-summary-label">Pep Malade</span>
+            <span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} jours</span>
+         </div>
+         <div class="fc-summary-item">
+            <span class="fc-summary-label">Présence Pep</span>
+            <span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} jours</span>
+         </div>
        `;
     }
 
@@ -628,28 +748,103 @@ document.addEventListener("DOMContentLoaded", () => {
         lbl.textContent = `${this.currentSchoolYearStart} – ${this.currentSchoolYearStart + 1}`;
     }
 
+    processWeeks(rawWeeks) {
+      return rawWeeks.map((w) => ({
+        id: `${w.week_iso_year}-W${w.week_iso_number}`,
+        monthKey: `${w.year}-${String(w.month).padStart(2, "0")}`,
+        monthName: w.month_name,
+        weekLabel: w.week_label,
+        dayDates: {
+          mon: new Date(w.mon_date + "T00:00:00"),
+          tue: new Date(w.tue_date + "T00:00:00"),
+          wed: new Date(w.wed_date + "T00:00:00"),
+          thu: new Date(w.thu_date + "T00:00:00"),
+          fri: new Date(w.fri_date + "T00:00:00"),
+        },
+        dayFlags: {
+          mon: { events: [] },
+          tue: { events: [] },
+          wed: { events: [] },
+          thu: { events: [] },
+          fri: { events: [] },
+        },
+        totals: {
+          offCarole: 0,
+          extraOffCarole: 0,
+          centre: 0,
+          avis: 0,
+          pepSick: 0,
+          presencePep: 0,
+          alexCP: 0,
+          alexJRA: 0,
+          alexJA: 0,
+          laiaCP: 0,
+          laiaJRA: 0,
+          laiaJA: 0,
+        },
+      }));
+    }
+
+    async fetchApi(url) {
+      return fetch(url).then((r) => r.json());
+    }
+
+    async postApi(url, data) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    async changeSchoolYear(delta) {
+      this.currentSchoolYearStart += delta;
+      this.updateSchoolYearLabel();
+      await this.refreshAllData();
+    }
+
     // ================== INTERACTIONS ==================
 
     setupEventListeners() {
       // Planning Hebdo
-      this.planningBody.addEventListener("mousedown", (e) =>
-        this.handleMouseDown(e),
-      );
-      document.addEventListener("mousemove", (e) => this.handleMouseMove(e));
-      document.addEventListener("mouseup", (e) => this.handleMouseUp(e));
+      if (this.planningBody) {
+        this.planningBody.addEventListener("mousedown", (e) =>
+          this.handleMouseDown(e),
+        );
+        document.addEventListener("mousemove", (e) => this.handleMouseMove(e));
+        document.addEventListener("mouseup", (e) => this.handleMouseUp(e));
+      }
 
-      // Calendrier Mensuel (Clic simple pour ouvrir le menu)
+      // Modale
+      const btnOpen = document.getElementById("btnOpenHolidays");
+      const btnClose = document.getElementById("btnCloseHolidays");
+      const modal = document.getElementById("modalHolidays");
+      if (btnOpen && modal)
+        btnOpen.addEventListener("click", () => (modal.style.display = "flex"));
+      if (btnClose && modal)
+        btnClose.addEventListener(
+          "click",
+          () => (modal.style.display = "none"),
+        );
+      if (modal)
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.style.display = "none";
+        });
+
+      // Calendrier Mensuel
       if (this.monthCalendar) {
         this.monthCalendar.addEventListener("click", (e) => {
           const td = e.target.closest("td[data-date]");
           if (td) {
-            this.monthSelectedCells = [td]; // Simuler sélection unique
+            this.monthSelectedCells = [td];
             this.showMenu(e.pageX, e.pageY, [td.dataset.date], true);
           }
         });
       }
 
-      // Menus Contextuels
+      // Menus
       document.addEventListener("click", (e) => this.closeMenusIfOutside(e));
       const handleMenu = (e) => {
         const btn = e.target.closest("button");
@@ -660,7 +855,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (this.monthSelectionMenu)
         this.monthSelectionMenu.addEventListener("click", handleMenu);
 
-      // Boutons Navigation Mensuelle
+      // Nav Mensuelle
       document
         .getElementById("fc-prev-month")
         ?.addEventListener("click", () => {
@@ -674,7 +869,7 @@ document.addEventListener("DOMContentLoaded", () => {
           this.renderMonthCalendar();
         });
 
-      // Boutons Navigation Année Scolaire
+      // Nav Année
       document
         .getElementById("fc-prev-school-year")
         ?.addEventListener("click", () => this.changeSchoolYear(-1));
@@ -682,7 +877,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .getElementById("fc-next-school-year")
         ?.addEventListener("click", () => this.changeSchoolYear(1));
 
-      // Boutons de Vue (1 mois / 2 mois / Année)
+      // Boutons Vue
       document.querySelectorAll(".fc-view-button").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           document
@@ -712,13 +907,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     handleMouseUp(e) {
       if (!this.isSelecting) return;
-
-      // FIX CRITIQUE : Si on relâche la souris sur une case qu'on n'a pas eu le temps de "survoler" (mouvement rapide)
-      // on l'ajoute maintenant pour être sûr qu'elle est dans la sélection.
+      // Fix : inclure la dernière cellule
       const td = e.target.closest("#planningTable td[data-date]");
-      if (td && !this.selectedCells.includes(td)) {
-        this.selectCell(td);
-      }
+      if (td && !this.selectedCells.includes(td)) this.selectCell(td);
 
       this.isSelecting = false;
       if (!this.selectedCells.length) return;
@@ -735,14 +926,14 @@ document.addEventListener("DOMContentLoaded", () => {
     clearSelection() {
       this.selectedCells.forEach((c) => c.classList.remove("fc-day--selected"));
       this.selectedCells = [];
-      this.selectionMenu.style.display = "none";
+      if (this.selectionMenu) this.selectionMenu.style.display = "none";
       if (this.monthSelectionMenu)
         this.monthSelectionMenu.style.display = "none";
     }
 
     closeMenusIfOutside(e) {
       if (
-        !this.selectionMenu.contains(e.target) &&
+        !this.selectionMenu?.contains(e.target) &&
         !this.monthSelectionMenu?.contains(e.target) &&
         !this.menuJustOpened
       ) {
@@ -803,7 +994,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async handleMenuAction(dataset) {
-      this.selectionMenu.style.display = "none";
+      if (this.selectionMenu) this.selectionMenu.style.display = "none";
       if (this.monthSelectionMenu)
         this.monthSelectionMenu.style.display = "none";
 
@@ -886,26 +1077,6 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (e) {
         alert("Erreur action: " + e.message);
       }
-    }
-
-    async fetchApi(url) {
-      return fetch(url).then((r) => r.json());
-    }
-
-    async postApi(url, data) {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    }
-
-    async changeSchoolYear(delta) {
-      this.currentSchoolYearStart += delta;
-      this.updateSchoolYearLabel();
-      await this.refreshAllData();
     }
   }
 
