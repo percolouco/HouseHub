@@ -24,147 +24,117 @@
   --text-laia: #b45309; /* Ambre foncé */
 }
 
+/* Base */
 .pf-family-calendar {
   background-color: var(--bg-page);
   font-family: "Inter", system-ui, sans-serif;
   color: var(--text-main);
   font-size: 13px;
+  line-height: 1.4;
 }
 
-/* --- 2. LÉGENDE --- */
-.pf-legend-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+/* OVERRIDES STRUCTURAUX */
+.pf-family-calendar .pf-container {
+  max-width: 100% !important;
+  padding: 0 20px;
 }
-.pf-legend-item {
+.pf-family-calendar .pf-main {
+  padding-top: 20px;
+  padding-bottom: 40px;
+}
+
+/* Titres */
+.pf-card-title {
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.pf-card-body {
+  padding: 16px;
+}
+
+/* --- 2. HEADER PAGE & BOUTON VACANCES --- */
+.fc-header-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.pf-btn-icon-text {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 20px; /* Pill */
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-.pf-legend-color {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.pf-btn-icon-text:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #f0f9ff;
+  transform: translateY(-1px);
 }
-
-.fc-legend-school-holiday {
-  background: var(--c-school-holiday);
-}
-.fc-legend-public-holiday {
-  background: var(--c-public-holiday);
-}
-.fc-legend-off-carole {
-  background: var(--c-off-carole);
-}
-.fc-legend-extra-off-carole {
-  background: var(--c-extra-off);
-}
-.fc-legend-centre {
-  background-color: white;
-}
-.fc-legend-centre::before {
-  content: "🏫";
-  font-size: 14px;
-}
-.fc-legend-pep-sick {
-  background-color: white;
-}
-.fc-legend-pep-sick::before {
-  content: "🤒";
-  font-size: 14px;
-}
-.fc-legend-avis {
-  width: 24px;
-  height: 16px;
-  background: repeating-linear-gradient(
-    to bottom,
-    #fcd116,
-    #fcd116 2px,
-    #ce1126 2px,
-    #ce1126 4px
-  );
-  border: 1px solid #ce1126;
+.pf-btn-icon-text .icon {
+  font-size: 1.2em;
 }
 
 /* --- 3. PLANNING HEBDO --- */
-
-/* --- HEADER PLANNING HEBDO (Harmonisé avec Calendrier Mensuel) --- */
 
 .fc-week-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px; /* Même marge que le calendrier mensuel */
-  padding-bottom: 0;
+  margin-bottom: 16px;
   gap: 16px;
   flex-wrap: wrap;
 }
-
-/* Le titre "Planning hebdo" */
 .fc-week-header h2 {
   margin: 0;
-  font-size: 1.25rem; /* Même taille que le titre du mois */
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--text-main);
-  text-transform: none; /* On garde la casse normale ou uppercase selon préférence */
-  border: none;
-  padding: 0;
 }
 
-/* Conteneur des flèches et de la date */
+/* Contrôles Année Scolaire */
 .fc-week-nav-controls {
   display: flex;
   align-items: center;
-  gap: 16px; /* Espace identique au header mensuel */
+  gap: 12px;
   background: white;
   padding: 4px 12px;
-  border-radius: 50px; /* Petit conteneur pilule optionnel pour lier le tout */
-  border: 1px solid transparent; /* ou var(--border-color) si tu veux un cadre */
+  border-radius: 50px;
 }
-
-/* LE TEXTE DE L'ANNÉE (Cible de ta demande) */
 #fc-current-school-year-label {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--text-main);
+  min-width: 120px;
   text-align: center;
   letter-spacing: -0.02em;
-  min-width: 120px; /* Empêche le saut quand les chiffres changent */
-
-  /* Pour l'alignement vertical parfait avec les boutons */
-  display: inline-block;
-  line-height: 1;
-  padding-top: 2px;
 }
 
-/* Ajustement spécifique pour les boutons de navigation dans ce header */
-.fc-week-nav-controls .fc-nav-button {
-  /* On s'assure qu'ils ont bien la taille définie globalement */
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
-  background: white; /* Fond blanc */
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.fc-week-nav-controls .fc-nav-button:hover {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
 #planningTable-wrapper {
   max-height: 80vh;
   overflow: auto;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   background: white;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   position: relative;
 }
 
@@ -192,10 +162,10 @@
   font-size: 0.75rem;
   color: var(--text-main);
   z-index: 20;
-  box-shadow: 0 1px 0 var(--border-color);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* Gestion hauteurs Sticky */
+/* Hauteurs */
 #planningTable thead tr:nth-child(1) th {
   top: 0;
   height: 32px;
@@ -207,12 +177,12 @@
 }
 #planningTable thead tr:nth-child(3) th {
   top: 60px;
-  height: 24px;
+  height: 26px;
   z-index: 19;
   border-bottom: 2px solid var(--border-color);
 }
 
-/* En-têtes Alex / Laia (Couleurs mises à jour) */
+/* Couleurs Headers */
 .col-alex.header-group {
   background: var(--bg-alex) !important;
   color: var(--text-alex);
@@ -222,7 +192,7 @@
   color: var(--text-laia);
 }
 
-/* Cellules */
+/* Corps */
 #planningTable tbody td {
   border-right: 1px solid #f1f5f9;
   border-bottom: 1px solid #f1f5f9;
@@ -256,7 +226,7 @@
   z-index: 5;
 }
 
-/* Indicateurs */
+/* Icones */
 .fc-day--centre::after {
   content: "🏫";
   position: absolute;
@@ -264,35 +234,28 @@
   right: 2px;
   font-size: 12px;
   line-height: 1;
-  left: auto;
-  transform: none;
 }
+
 .fc-day--avis::after {
   content: "";
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 2px;
+  right: 2px;
   width: 14px;
-  height: 10px;
-  border-radius: 2px;
-  background: repeating-linear-gradient(
-    to bottom,
-    #fcd116,
-    #fcd116 2px,
-    #ce1126 2px,
-    #ce1126 4px
-  );
-  border: 1px solid #b91c1c;
+  height: 14px;
+  background: url("/modules/family-calendar/assets/img/avis.svg") no-repeat
+    center center;
+  background-size: contain;
+  border: none;
 }
 .fc-pep-sick-emoji {
   position: absolute;
   bottom: 2px;
   right: 2px;
   font-size: 12px;
-  line-height: 1;
 }
 
-/* Colonnes spécifiques */
+/* Colonnes */
 .col-alex-av,
 .col-laia-av {
   background: #f8fafc;
@@ -305,7 +268,6 @@
 .col-laia-sub {
   background: var(--bg-laia);
 }
-
 .col-month {
   width: 50px;
   background: white;
@@ -332,13 +294,13 @@
   color: var(--text-muted);
 }
 
-/* --- 4. CALENDRIER MENSUEL (Modernisé) --- */
+/* --- 4. CALENDRIER MENSUEL (MODERNISÉ) --- */
 .fc-month-calendar-wrapper {
   background: white;
   border: 1px solid var(--border-color);
-  border-radius: 16px; /* Plus arrondi */
+  border-radius: 16px;
   padding: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -346,19 +308,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
   gap: 16px;
 }
 
-/* NAVIGATION (Flèches) */
+/* Navigation Flèches */
 .fc-nav-controls {
   display: flex;
   align-items: center;
   gap: 16px;
-  order: 2; /* Pour s'assurer qu'il est bien placé */
+  order: 2;
 }
-
 .fc-nav-button {
   width: 36px;
   height: 36px;
@@ -371,22 +332,16 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-
 .fc-nav-button:hover {
   border-color: var(--primary);
   color: var(--primary);
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.15);
 }
 
-.fc-nav-button:active {
-  transform: translateY(0);
-}
-
-/* TITRE DU MOIS */
+/* Titre Mois */
 #fc-current-month-year {
   margin: 0;
   font-size: 1.25rem;
@@ -398,40 +353,37 @@
   letter-spacing: -0.02em;
 }
 
-/* BOUTONS DE VUE (Segmented Control Style) */
+/* Boutons Vue (Segmented) */
 .fc-view-controls {
   display: inline-flex;
-  background: #f1f5f9; /* Gris clair de fond */
+  background: #e2e8f0;
   padding: 4px;
-  border-radius: 12px;
-  gap: 0; /* Collés */
+  border-radius: 8px;
+  gap: 0;
   order: 1;
 }
-
 .fc-view-button {
   background: transparent;
   border: none;
-  color: var(--text-muted);
-  padding: 8px 16px;
-  border-radius: 8px; /* Un peu moins que le conteneur */
+  border-radius: 6px;
+  padding: 6px 16px;
   font-size: 0.85rem;
   font-weight: 600;
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
 }
-
 .fc-view-button:hover {
   color: var(--text-main);
 }
-
 .fc-view-button--active {
   background: white;
   color: var(--primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-weight: 700;
 }
 
-/* RESTE DU CALENDRIER (Inchangé mais nécessaire pour le contexte) */
+/* Table Mensuelle */
 .fc-month-calendar {
   width: 100%;
   display: block;
@@ -447,7 +399,6 @@
   border: 1px solid var(--border-color);
   font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-muted);
 }
 .fc-month-table td {
@@ -462,7 +413,7 @@
   background: #fcfcfc;
 }
 
-/* Conteneurs Vues */
+/* Grilles Vues */
 .fc-two-months-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -490,7 +441,272 @@
   text-transform: capitalize;
 }
 
-/* --- 5. MENU CONTEXTUEL --- */
+/* --- 5. NOUVELLE SECTION BASSE (CARTES) --- */
+.pf-section--bottom-panels {
+  margin-top: 40px;
+}
+.fc-bottom-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.pf-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Légende Badge Style */
+
+.pf-legend-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.pf-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+.pf-legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Couleurs & Contenus Légende */
+.fc-legend-school-holiday {
+  background: var(--c-school-holiday);
+}
+.fc-legend-public-holiday {
+  background: var(--c-public-holiday);
+}
+.fc-legend-off-carole {
+  background: var(--c-off-carole);
+}
+.fc-legend-extra-off-carole {
+  background: var(--c-extra-off);
+}
+
+/* Légende : Emojis */
+.fc-legend-centre {
+  background: white;
+}
+.fc-legend-centre::after {
+  content: "🏫";
+}
+
+.fc-legend-pep-sick {
+  background: white;
+}
+.fc-legend-pep-sick::after {
+  content: "🤒";
+}
+
+/* Légende : Icone SVG Avis */
+.fc-legend-avis {
+  background: white url("/modules/family-calendar/assets/img/avis.svg")
+    no-repeat center center;
+  background-size: contain;
+  border: none; /* Pas de bordure pour le SVG propre */
+}
+
+/* Récapitulatif Vertical */
+.fc-summary-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.fc-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.fc-summary-item:last-child {
+  border-bottom: none;
+}
+.fc-summary-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.fc-summary-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.fc-summary-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-left: 8px;
+  font-style: italic;
+}
+
+/* --- CONTROLES RÉCAPITULATIF --- */
+
+/* On transforme le titre de la card en Flexbox pour y mettre les boutons */
+.fc-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px; /* Un peu plus compact verticalement */
+}
+
+.fc-summary-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.fc-summ-select {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.75rem; /* Petit texte */
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  height: 24px;
+}
+
+.fc-summ-select:hover {
+  border-color: var(--primary);
+}
+
+/* Ajustement mobile pour les sélecteurs */
+@media (max-width: 768px) {
+  .fc-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* --- 6. MODALE VACANCES --- */
+.fc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 99999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.2s ease-out;
+}
+.fc-modal-content {
+  background: white;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fc-modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.fc-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+.fc-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.1s;
+}
+.fc-modal-close:hover {
+  background: #f1f5f9;
+  color: #ef4444;
+}
+.fc-modal-body {
+  padding: 0;
+  overflow-y: auto;
+}
+
+/* Table Modale */
+.fc-holidays-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.fc-holidays-table th {
+  background: #f9fafb;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.fc-holidays-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--text-main);
+}
+.fc-holidays-table tr:nth-child(even) {
+  background: #fafafa;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* --- 7. MENU CONTEXTUEL --- */
 .fc-selection-menu {
   position: absolute;
   z-index: 9999;
@@ -559,4 +775,23 @@
 }
 .fc-menu-leaves-table td {
   padding: 2px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .fc-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .fc-month-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .fc-nav-controls,
+  .fc-view-controls {
+    justify-content: center;
+  }
+  .pf-btn-icon-text {
+    width: 100%;
+    justify-content: center;
+  }
 }
