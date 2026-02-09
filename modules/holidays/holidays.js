@@ -1,360 +1,174 @@
-// modules/holidays/holidays.js
-
 document.addEventListener("DOMContentLoaded", () => {
-  // --- 1. FONCTIONS UTILITAIRES ---
-
-  /**
-   * Configure les comportements de fermeture d'une modale (Backdrop, Cancel, Escape)
-   */
-  function setupModal(modalId, openAction = null) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return null;
-
-    const backdrop = modal.querySelector(".hol-backdrop");
-    const cancelBtn = modal.querySelector(".hol-cancel");
-
-    const close = () => modal.classList.remove("open");
-    const open = () => {
-      modal.classList.add("open");
-      if (openAction) openAction();
-    };
-
-    if (backdrop) backdrop.addEventListener("click", close);
-    if (cancelBtn) cancelBtn.addEventListener("click", close);
-
-    // Fermeture avec ECHAP (uniquement si cette modale est ouverte)
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal.classList.contains("open")) {
-        close();
-      }
-    });
-
-    return { modal, open, close };
-  }
-
-  /**
-   * Échappe les caractères HTML pour éviter les failles XSS simples
-   */
-  function esc(s) {
-    if (s === null || s === undefined) return "";
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  // --- 2. GESTION MODALE "AJOUTER" ---
-  const addModalCtrl = setupModal("hol-add-modal");
-  const addBtn = document.getElementById("hol-add-open");
-  if (addBtn && addModalCtrl) {
-    addBtn.addEventListener("click", addModalCtrl.open);
-  }
-
-  // --- 3. GESTION MODALE "ÉDITER" ---
-  const editModalCtrl = setupModal("hol-edit-modal");
-
-  // Fonction pour charger et ouvrir l'édition via AJAX
-  async function openEditForId(id) {
-    if (!editModalCtrl) return;
-
-    try {
-      const res = await fetch(
-        `/modules/holidays/view.php?id=${encodeURIComponent(id)}`,
-        { headers: { Accept: "application/json" } },
-      );
-      if (!res.ok) throw new Error("Erreur HTTP " + res.status);
-
-      const it = await res.json();
-      const modal = editModalCtrl.modal;
-
-      // Helper pour remplir les champs
-      const setVal = (sel, val) => {
-        const el = modal.querySelector(sel);
-        if (el) el.value = val ?? "";
-      };
-
-      // Remplissage du formulaire
-      setVal("#edit-id", it.id);
-      setVal("#edit-title", it.title);
-      setVal("#edit-country", it.country);
-      setVal("#edit-region", it.region);
-      setVal("#edit-city", it.city);
-      setVal("#edit-lat", it.lat);
-      setVal("#edit-lng", it.lng);
-      setVal("#edit-start", it.desired_start_date);
-      setVal("#edit-end", it.desired_end_date);
-      setVal("#edit-season", it.season_hint);
-      setVal("#edit-days", it.ideal_days);
-      setVal("#edit-status", it.status || "draft");
-      setVal("#edit-notes", it.notes);
-
-      editModalCtrl.open();
-    } catch (err) {
-      console.error(err);
-      alert("Impossible de charger les données de l'idée.");
-    }
-  }
-
-  // Écouteurs sur les boutons "Éditer" (Liste + Détail)
-  document.body.addEventListener("click", (e) => {
-    // Utilisation de la délégation d'événement pour gérer tous les boutons (même dynamiques)
-    const btn = e.target.closest(".btn-edit");
-    if (btn && btn.hasAttribute("data-edit-id")) {
-      const id = btn.getAttribute("data-edit-id");
-      openEditForId(id);
-    }
-    // Cas spécifique du bouton dans le header de la vue détail
-    else if (e.target.id === "hol-edit-open") {
-      const id = e.target.getAttribute("data-edit-id");
-      openEditForId(id);
-    }
-  });
-
-  // --- 4. GESTION SUPPRESSION ---
-  document.body.addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-delete");
-    if (btn && btn.hasAttribute("data-del-id")) {
-      const id = btn.getAttribute("data-del-id");
-      if (
-        confirm(
-          "Voulez-vous vraiment supprimer cette idée ?\nCette action est irréversible.",
-        )
-      ) {
-        // Création d'un formulaire temporaire pour le POST
-        const form = document.createElement("form");
-        form.method = "post";
-        form.action = "/modules/holidays/save.php";
-        form.innerHTML = `
-          <input type="hidden" name="action" value="delete_idea">
-          <input type="hidden" name="id" value="${id}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-      }
-    }
-  });
-
-  // --- 5. GÉOCODAGE (Nominatim) ---
-  document.querySelectorAll(".hol-geocode-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const scope = btn.getAttribute("data-scope"); // 'add' ou 'edit'
-      let latInput,
-        lngInput,
-        qParts = [];
-
-      // Récupération des inputs selon le scope
-      if (scope === "edit") {
-        const getVal = (id) =>
-          (document.getElementById(id)?.value || "").trim();
-        qParts = [
-          getVal("edit-city"),
-          getVal("edit-region"),
-          getVal("edit-country"),
-        ];
-        latInput = document.getElementById("edit-lat");
-        lngInput = document.getElementById("edit-lng");
-      } else {
-        // Scope 'add' : on cherche dans le formulaire parent
-        const form = btn.closest("form");
-        const getVal = (name) =>
-          (form?.querySelector(`input[name="${name}"]`)?.value || "").trim();
-        qParts = [getVal("city"), getVal("region"), getVal("country")];
-        latInput = form?.querySelector('input[name="lat"]');
-        lngInput = form?.querySelector('input[name="lng"]');
-      }
-
-      const q = qParts.filter(Boolean).join(", ");
-      if (!q) {
-        alert(
-          "Veuillez renseigner au moins une Ville ou un Pays pour géocoder.",
-        );
-        return;
-      }
-
-      // UI : chargement
-      removeNearbyPicker(btn);
-      btn.disabled = true;
-      const originalText = btn.textContent;
-      btn.textContent = "⏳...";
-
-      try {
-        const res = await fetch(
-          `/modules/holidays/geocode.php?q=${encodeURIComponent(q)}&limit=5`,
-          {
-            headers: { Accept: "application/json" },
-          },
-        );
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data?.error || "Erreur inconnue");
-
-        // Cas 1: Résultat direct (lat/lng uniques)
-        if (data.lat && data.lng) {
-          if (latInput) latInput.value = data.lat;
-          if (lngInput) lngInput.value = data.lng;
-        }
-        // Cas 2: Liste de choix
-        else if (Array.isArray(data.results) && data.results.length > 0) {
-          renderGeocodePicker(btn, data.results, (choice) => {
-            if (latInput) latInput.value = choice.lat;
-            if (lngInput) lngInput.value = choice.lng;
-            removeNearbyPicker(btn);
-          });
-        } else {
-          alert("Aucun résultat trouvé pour : " + q);
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Erreur lors du géocodage.");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
-      }
-    });
-  });
-
-  function renderGeocodePicker(anchorBtn, results, onPick) {
-    removeNearbyPicker(anchorBtn);
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "hol-geocode-picker";
-
-    // Header
-    const header = document.createElement("div");
-    header.className = "hol-geocode-picker__header";
-    header.innerHTML = `<span>Choix multiples</span><button type="button" class="hol-close">×</button>`;
-    header
-      .querySelector(".hol-close")
-      .addEventListener("click", () => removeNearbyPicker(anchorBtn));
-    wrapper.appendChild(header);
-
-    // Liste
-    const list = document.createElement("ul");
-    list.className = "hol-geocode-picker__list";
-
-    results.forEach((r) => {
-      const li = document.createElement("li");
-      li.className = "hol-geocode-picker__item";
-      li.innerHTML = `
-        <div class="hol-info">
-            <span class="hol-label">${esc(r.display_name)}</span>
-            <span class="hol-coords">(${r.lat}, ${r.lng})</span>
-        </div>
-        <button type="button">Choisir</button>
-      `;
-      li.querySelector("button").addEventListener("click", () => onPick(r));
-      list.appendChild(li);
-    });
-
-    wrapper.appendChild(list);
-
-    // Insertion après le conteneur du bouton
-    const container =
-      anchorBtn.closest(".hol-inline") || anchorBtn.parentElement;
-    container.insertAdjacentElement("afterend", wrapper);
-  }
-
-  function removeNearbyPicker(anchorBtn) {
-    const container =
-      anchorBtn.closest(".hol-inline") || anchorBtn.parentElement;
-    const next = container?.nextElementSibling;
-    if (next && next.classList.contains("hol-geocode-picker")) {
-      next.remove();
-    }
-  }
-
-  // --- 6. CARTE LEAFLET ---
-  let mapInitialized = false;
-  let mapInstance;
-
-  // Fonction d'initialisation de la carte (appelée à l'ouverture de la modale)
-  function initMap() {
-    if (mapInitialized) {
-      // Si déjà init, on force juste le redimensionnement pour éviter les bugs d'affichage
-      setTimeout(() => mapInstance.invalidateSize(), 200);
-      return;
-    }
-
-    if (typeof L === "undefined") {
-      console.error("Leaflet n'est pas chargé.");
-      return;
-    }
-
-    // Récupération sécurisée des données injectées par PHP
-    const MAP_DATA = Array.isArray(window.HOL_MAP_DATA)
-      ? window.HOL_MAP_DATA
-      : [];
-
-    mapInstance = L.map("hol-map", { scrollWheelZoom: true });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-    }).addTo(mapInstance);
-
-    const markers = [];
-
-    MAP_DATA.forEach((it) => {
-      const lat = parseFloat(it.lat);
-      const lng = parseFloat(it.lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-      // Code couleur selon statut
-      const colors = {
-        planned: "#16a34a",
-        favorite: "#f59e0b",
-        shortlist: "#3b82f6",
-        default: "#6b7280",
-      };
-      const color = colors[it.status] || colors.default;
-
-      const m = L.circleMarker([lat, lng], {
-        radius: 7,
-        color: "#ffffff",
-        weight: 1,
-        fillColor: color,
-        fillOpacity: 0.9,
-      }).addTo(mapInstance);
-
-      // Construction du popup
-      const loc = [it.city, it.region, it.country].filter(Boolean).join(", ");
-      const dates = it.desired_start_date
-        ? `${it.desired_start_date}${it.desired_end_date ? " → " + it.desired_end_date : ""}`
-        : null;
-
-      m.bindPopup(`
-        <div class="hol-map-popup">
-            <strong>${esc(it.title)}</strong>
-            <div style="font-size:0.9em; color:#666;">${esc(loc)}</div>
-            ${dates ? `<div style="font-size:0.85em; margin-top:4px;">📅 ${esc(dates)}</div>` : ""}
-            <div style="margin-top:8px;">
-                <span class="hol-status hol-status--${esc(it.status)}">${esc(it.status)}</span>
-                <a href="/holidays.php?id=${it.id}" style="margin-left:8px;">Voir</a>
-            </div>
-        </div>
-      `);
-
-      markers.push(m);
-    });
-
-    // Centrage de la carte
-    if (markers.length > 0) {
-      const group = L.featureGroup(markers);
-      mapInstance.fitBounds(group.getBounds(), { padding: [50, 50] });
-    } else {
-      mapInstance.setView([46.603354, 1.888334], 5); // France par défaut si vide
-    }
-
-    mapInitialized = true;
-
-    // Hack indispensable pour que Leaflet calcule la bonne taille dans une modale
-    setTimeout(() => mapInstance.invalidateSize(), 200);
-  }
-
-  // Connexion de la carte à la modale
-  const mapBtn = document.getElementById("hol-map-open");
-  if (mapBtn) {
-    const mapModalCtrl = setupModal("hol-map-modal", initMap); // On passe initMap en callback d'ouverture
-    mapBtn.addEventListener("click", mapModalCtrl.open);
-  }
+  // Initialisation des écouteurs globaux si besoin
 });
+
+// --- 1. GESTION DE LA MODALE D'ÉDITION ---
+
+function openHolidayModal(mode) {
+  const modal = document.getElementById("holidayModal");
+  const form = document.getElementById("holidayForm");
+  const btnDelete = document.getElementById("btn_delete");
+
+  // Reset complet
+  form.reset();
+  document.getElementById("inp_id").value = "";
+  document.getElementById("list_transport").innerHTML = "";
+  document.getElementById("list_accommodation").innerHTML = "";
+  document.getElementById("list_activity").innerHTML = "";
+
+  if (mode === "add") {
+    document.getElementById("modalTitle").innerText = "Nouveau Voyage";
+    btnDelete.style.display = "none";
+  } else {
+    document.getElementById("modalTitle").innerText = "Modifier le voyage";
+    btnDelete.style.display = "block";
+  }
+
+  modal.classList.add("open");
+  modal.style.display = "flex";
+
+  // --- AJOUT : FORCER LE SCROLL EN HAUT ---
+  const content = modal.querySelector(".pf-modal-content");
+  if (content) {
+    content.scrollTop = 0;
+  }
+  // Optionnel : Mettre le focus sur le premier champ (Titre)
+  // setTimeout(() => document.getElementById('inp_title').focus(), 50);
+}
+
+function closeHolidayModal() {
+  const modal = document.getElementById("holidayModal");
+  modal.classList.remove("open");
+  modal.style.display = "none";
+}
+
+// Fonction appelée au clic sur une carte (injectée par PHP)
+function editHoliday(data) {
+  openHolidayModal("edit");
+
+  const h = data.main;
+
+  // Remplissage des champs principaux
+  document.getElementById("inp_id").value = h.id;
+  document.getElementById("inp_title").value = h.title;
+  document.getElementById("inp_status").value = h.status;
+  document.getElementById("inp_period").value = h.period_hint;
+  document.getElementById("inp_start").value = h.start_date;
+  document.getElementById("inp_end").value = h.end_date;
+  document.getElementById("inp_food").value =
+    h.budget_food > 0 ? h.budget_food : "";
+  document.getElementById("inp_extra").value =
+    h.budget_extra > 0 ? h.budget_extra : "";
+  document.getElementById("inp_notes").value = h.notes;
+
+  // Remplissage des listes dynamiques
+  if (data.items && data.items.length > 0) {
+    data.items.forEach((item) => {
+      addItem(item.category, item.name, item.amount, item.is_paid);
+    });
+  }
+}
+
+// --- 2. GESTION DES LISTES DYNAMIQUES (Transport, etc.) ---
+
+function addItem(category, name = "", amount = "", isPaid = 0) {
+  const container = document.getElementById("list_" + category);
+  const div = document.createElement("div");
+
+  // Utilisation des classes CSS définies précédemment
+  div.className = "savings-line-item";
+
+  // Checkbox logique pour "Payé"
+  const checkedAttr = isPaid == 1 ? "checked" : "";
+
+  div.innerHTML = `
+        <input type="hidden" name="items[cat][]" value="${category}">
+        
+        <input type="text" name="items[name][]" class="pf-input" 
+               placeholder="Nom (ex: Vol)" value="${name}" 
+               style="flex: 2; min-width: 0;">
+               
+        <input type="number" step="0.01" name="items[amount][]" class="pf-input" 
+               placeholder="€" value="${amount}" 
+               style="width: 80px; text-align: right;">
+               
+        <label title="Déjà payé ?" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
+            <input type="checkbox" ${checkedAttr} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
+            <input type="hidden" name="items[paid][]" value="${isPaid}">
+            <span style="font-size:0.8rem; margin-left:4px;">Payé</span>
+        </label>
+        
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Supprimer">
+            &times;
+        </button>
+    `;
+
+  container.appendChild(div);
+}
+
+function deleteHoliday() {
+  if (!confirm("Supprimer définitivement ce voyage ?")) return;
+
+  const form = document.getElementById("holidayForm");
+
+  // On ajoute un input caché pour signaler la suppression au PHP
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "action_delete";
+  input.value = "1";
+
+  form.appendChild(input);
+  form.submit();
+}
+
+// --- 3. GESTION DE LA CARTE (Leaflet) ---
+
+let map = null;
+
+function toggleMap() {
+  const modal = document.getElementById("hol-map-modal");
+
+  if (modal.style.display === "flex") {
+    modal.style.display = "none";
+  } else {
+    modal.style.display = "flex";
+    // Petit délai pour laisser le temps au DOM de s'afficher avant d'init Leaflet
+    setTimeout(initMap, 100);
+  }
+}
+
+function initMap() {
+  if (map) {
+    map.invalidateSize(); // Recalcule la taille si la fenêtre a changé
+    return;
+  }
+
+  if (typeof L === "undefined") return;
+
+  // Centré sur l'Europe par défaut
+  map = L.map("hol-map").setView([46.6, 2.4], 4);
+
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    {
+      attribution: "© OpenStreetMap",
+    },
+  ).addTo(map);
+
+  // On récupère les points définis en global dans le PHP
+  if (typeof HOL_MAP_POINTS !== "undefined") {
+    HOL_MAP_POINTS.forEach((pt) => {
+      const color =
+        pt.status === "planned" || pt.status === "booked" ? "green" : "blue";
+
+      // Cercle simple
+      L.circleMarker([pt.lat, pt.lng], {
+        color: color,
+        radius: 8,
+        fillOpacity: 0.8,
+      })
+        .addTo(map)
+        .bindPopup(`<b>${pt.title}</b><br>${pt.status}`);
+    });
+  }
+}
