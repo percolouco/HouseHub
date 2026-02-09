@@ -466,6 +466,29 @@
   background: #fef2f2;
 }
 
+@media (hover: none) {
+  /* Sur écran tactile, on désactive l'effet de masquage */
+  .cl-gift-amount {
+    /* Option A: On garde le prix visible */
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    margin-right: 30px; /* Faire de la place pour le bouton supprimer */
+  }
+
+  .cl-gift-actions {
+    /* On rend les actions toujours visibles et clicables */
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    pointer-events: auto !important;
+    background: rgba(
+      255,
+      255,
+      255,
+      0.8
+    ); /* Fond pour lisibilité si superposition */
+  }
+}
+
 /* --- 8. BUDGET & TRICOUNT --- */
 .pf-section--panel {
   margin-bottom: 32px;

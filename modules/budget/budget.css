@@ -1,0 +1,663 @@
+/* modules/budget/budget.css */
+
+/* --- 1. VARIABLES & BASE --- */
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success: #10b981; /* Vert */
+  --danger: #ef4444; /* Rouge */
+  --warning: #f59e0b; /* Jaune */
+
+  --bg-page: #f1f5f9;
+  --bg-card: #ffffff;
+
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+
+  --radius-l: 16px;
+  --radius-m: 10px;
+  --radius-s: 6px;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* --- 2. LAYOUT & CONTAINER --- */
+.budget-view {
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--text-main);
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* En-tête de la vue */
+.view-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.view-header h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a; /* Très sombre, quasi noir */
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+/* --- 3. NAVIGATION TABS (Pills) --- */
+.budget-tabs-container {
+  display: inline-flex;
+  background: var(--bg-card);
+  padding: 6px;
+  border-radius: 50px;
+  box-shadow: var(--shadow-md);
+  gap: 8px;
+  position: relative;
+  z-index: 10;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 40px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.tab-item:hover {
+  background-color: var(--bg-page);
+  color: var(--text-main);
+}
+
+.tab-item.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transform: scale(1.02);
+}
+
+.tab-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+/* Sous-onglets propriétaire (Alex/Laia) */
+.owner-tabs {
+  display: inline-flex;
+  background: #e2e8f0;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.owner-tab {
+  padding: 6px 20px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.owner-tab.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- 4. BOUTONS --- */
+.pf-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 10px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pf-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.pf-btn.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid #cbd5e1;
+  box-shadow: none;
+}
+
+.pf-btn.btn-secondary:hover {
+  background: var(--bg-page);
+  color: var(--text-main);
+  border-color: #94a3b8;
+}
+
+.btn-icon,
+.btn-icon-small {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-s);
+  transition: background 0.2s;
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+.btn-icon-small {
+  font-size: 0.9rem;
+  padding: 4px;
+}
+
+.btn-icon:hover,
+.btn-icon-small:hover {
+  background: #e2e8f0;
+  transform: scale(1.1);
+}
+
+/* Actions groupées */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* --- 5. TABLEAU MODERNE --- */
+.pf-table {
+  width: 100%;
+  background: var(--bg-card);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.pf-table th {
+  background: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.pf-table td {
+  padding: 3px 16px; /* Ajusté pour être moins haut */
+  border-bottom: 1px solid var(--bg-page);
+  vertical-align: middle;
+  font-size: 0.95rem;
+}
+
+.pf-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.pf-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Styles spécifiques aux lignes */
+.row-income td:first-child {
+  border-left: 4px solid var(--success);
+}
+.row-expense td:first-child {
+  border-left: 4px solid var(--danger);
+}
+.row-estimate td:first-child {
+  border-left: 4px solid var(--warning);
+}
+.row-estimate td {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Styles tableau épargne */
+.savings-table .row-total td {
+  background: var(--bg-page);
+  border-bottom: 2px solid #cbd5e1;
+}
+.savings-table .row-extres td {
+  background: #fffbeb;
+  border-top: 2px solid #e2e8f0;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+.sticky-col {
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  z-index: 2;
+  border-right: 1px solid var(--bg-page);
+  min-width: 150px;
+}
+
+/* Cellules spéciales */
+.cell-amount {
+  font-family: "Consolas", "Monaco", monospace;
+  font-weight: 700;
+}
+
+.cell-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 100%;
+}
+
+/* Bouton supprimer au survol */
+.btn-cell-delete {
+  display: none;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: none;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: -5px;
+}
+
+.btn-cell-delete:hover {
+  background: var(--danger);
+  color: white;
+}
+
+td:hover .btn-cell-delete {
+  display: flex;
+}
+
+/* Footer du tableau */
+.pf-table tfoot {
+  background: #f8fafc;
+  border-top: 2px solid #e2e8f0;
+}
+.pf-table tfoot td {
+  padding: 18px 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* --- 6. FORMULAIRES & INPUTS --- */
+.pf-label {
+  display: block;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.pf-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-m);
+  font-size: 1rem;
+  background: #f8fafc;
+  color: var(--text-main);
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.pf-input:focus {
+  background: var(--bg-card);
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+/* Checkbox Custom */
+input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--success);
+  border-color: var(--success);
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✓";
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* --- 7. MODALE --- */
+.pf-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px); /* Safari support */
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pf-modal-content {
+  background: var(--bg-card);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 32px;
+  position: relative;
+  animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@keyframes modalPop {
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.pf-modal-title {
+  margin-top: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 15px;
+  margin-bottom: 8px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* --- 8. UTILITAIRES & BADGES --- */
+.text-success {
+  color: var(--success);
+}
+.text-danger {
+  color: var(--danger);
+}
+.text-muted {
+  color: var(--text-muted);
+}
+.font-bold {
+  font-weight: 700;
+}
+
+.badge-type {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.badge-type.mensuel {
+  background: #eff6ff;
+  color: var(--primary);
+}
+.badge-type.annuel {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.budget-note {
+  margin-top: 15px;
+  font-size: 0.85em;
+  opacity: 0.8;
+  color: var(--text-muted);
+}
+
+/* --- 9. MOBILE RESPONSIVE --- */
+@media (max-width: 768px) {
+  .budget-tabs-container {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 15px;
+    justify-content: space-between;
+  }
+
+  .tab-item {
+    padding: 10px 15px;
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 0.85rem;
+  }
+
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pf-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pf-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Sur mobile, les formulaires passent en 1 colonne */
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- EN-TÊTE DES COLONNES MOIS (Optimisé) --- */
+
+/* Conteneur principal dans le <th> */
+.month-header-container {
+  display: flex;
+  flex-direction: column; /* Empile texte et boutons */
+  align-items: center; /* Centre horizontalement */
+  justify-content: center;
+  gap: 6px; /* Espace entre le texte et les boutons */
+  min-width: 100px; /* Largeur min pour éviter l'écrasement */
+}
+
+/* Le texte du mois */
+.month-name {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+/* Conteneur des boutons */
+.month-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0.5; /* Un peu transparent par défaut pour ne pas surcharger */
+  transition: opacity 0.2s ease;
+}
+
+/* On affiche les boutons pleinement au survol de la colonne */
+th:hover .month-actions {
+  opacity: 1;
+}
+
+/* Style spécifique pour réduire la taille des boutons d'en-tête */
+.month-actions .btn-icon-small {
+  font-size: 0.75rem; /* Icône plus petite */
+  padding: 2px 6px; /* Padding réduit */
+  height: 24px; /* Hauteur fixe et petite */
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.month-actions .btn-icon-small:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* --- LIGNES DYNAMIQUES (Modale Épargne) --- */
+
+.savings-line-item {
+  display: flex; /* Flexbox pour aligner horizontalement */
+  align-items: center; /* Centrage vertical */
+  gap: 10px; /* Espace entre les éléments */
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+/* La catégorie prend tout l'espace disponible */
+.savings-line-item .input-category-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+/* Le montant a une largeur fixe pour être aligné proprement */
+.savings-line-item .input-amount {
+  width: 110px !important; /* Force la largeur */
+  text-align: right;
+}
+
+/* Le bouton de suppression */
+.savings-line-item .btn-remove {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ef4444; /* Rouge */
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.savings-line-item .btn-remove:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+/* --- THÈMES NENS (POL & PEP) --- */
+
+/* Style du Titre pour Pol (Bleu) */
+.nens-title.theme-pol {
+  color: #1e3a8a !important; /* Bleu foncé */
+  background: #eaf2ff !important; /* Bleu très pâle */
+  border-left: 4px solid #1e3a8a !important;
+  border-radius: 0 8px 8px 0; /* Petit effet onglet */
+  padding: 8px 12px;
+}
+
+/* Style du Tableau pour Pol */
+.nens-table.theme-pol thead th {
+  background: #f5f9ff !important; /* Bleu glace */
+  color: #1e3a8a !important;
+}
+.nens-table.theme-pol {
+  border-top: 2px solid #bcd3ff !important; /* Bordure bleue */
+}
+
+/* Style du Titre pour Pep (Vert) */
+.nens-title.theme-pep {
+  color: #14532d !important; /* Vert foncé */
+  background: #eaf7ea !important; /* Vert très pâle */
+  border-left: 4px solid #14532d !important;
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
+}
+
+/* Style du Tableau pour Pep */
+.nens-table.theme-pep thead th {
+  background: #f6fdf6 !important; /* Vert glace */
+  color: #14532d !important;
+}
+.nens-table.theme-pep {
+  border-top: 2px solid #b9e3b9 !important; /* Bordure verte */
+}
