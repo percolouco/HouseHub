@@ -58,14 +58,14 @@ require __DIR__ . '/header.php';
         <span class="pf-card-cta">Voir les listes</span>
       </a>
 
-      <div class="pf-module-card pf-card--disabled">
-        <div class="pf-card-icon">💰</div>
-        <h3 class="pf-card-title">Budget</h3>
-        <div class="pf-card-desc">
-          Bientôt disponible : suivi des dépenses, catégories et budget mensuel.
-        </div>
-        <span class="pf-card-cta">À venir</span>
-      </div>
+      <a href="/budget.php" class="pf-module-card">
+    <div class="pf-card-icon">💰</div>
+    <h3 class="pf-card-title">Budget</h3>
+    <div class="pf-card-desc">
+        Suivi des dépenses fixes, revenus et équilibre du compte familial.
+    </div>
+    <span class="pf-card-cta">Gérer</span>
+</a>
 
     </div>
   </section>
