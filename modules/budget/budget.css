@@ -661,3 +661,37 @@ th:hover .month-actions {
 .nens-table.theme-pep {
   border-top: 2px solid #b9e3b9 !important; /* Bordure verte */
 }
+
+/* Styles spécifiques Suivi Mensuel */
+
+/* Animation d'apparition */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar fine pour les listes */
+.cat-card div::-webkit-scrollbar {
+  width: 6px;
+}
+.cat-card div::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.cat-card div::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.cat-card div::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Input datalist chrome fix */
+input::-webkit-calendar-picker-indicator {
+  opacity: 100;
+}
