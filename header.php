@@ -43,6 +43,7 @@ $activePage = $activePage ?? "";
   <div class="pf-mobile-menu">
     <a href="/index.php" class="pf-mobile-nav-link">Accueil</a>
     <a href="/family-calendar.php" class="pf-mobile-nav-link">Calendrier</a>
+    <a href="/budget.php" class="pf-mobile-nav-link">Budget</a>
     <a href="/holidays.php" class="pf-mobile-nav-link">Vacances</a>
     <a href="/gift-list.php" class="pf-mobile-nav-link">Cadeaux</a>
     <?php if (isset($_SESSION['user'])): ?>
