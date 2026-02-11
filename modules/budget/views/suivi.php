@@ -7,36 +7,71 @@
 
 $currentMonthKey = date('m-Y');
 
-// A. AJOUT CATÉGORIE TEMPORAIRE
+// A. AJOUT CATÉGORIE TEMPORAIRE MANUELLE
 if (isset($_POST['action']) && $_POST['action'] === 'add_temp_cat') {
     $name = trim($_POST['cat_name']);
     $budget = floatval($_POST['cat_budget']);
+    $type = $_POST['cat_type'] === 'credit' ? 'credit' : 'debit';
+    
     if ($name && $budget >= 0) {
-        $stmt = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, budget) VALUES (?, ?, ?)");
-        $stmt->execute([$currentMonthKey, $name, $budget]);
+        $stmt = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$currentMonthKey, $name, $type, $budget]);
         header("Location: ?tab=suivi"); exit;
     }
 }
 
 // B. SUPPRESSION CATÉGORIE TEMPORAIRE
 if (isset($_GET['del_cat'])) {
-    $id = (int)$_GET['del_cat'];
-    $pdo->prepare("DELETE FROM pf_monthly_categories WHERE id = ?")->execute([$id]);
+    $pdo->prepare("DELETE FROM pf_monthly_categories WHERE id = ?")->execute([(int)$_GET['del_cat']]);
     header("Location: ?tab=suivi"); exit;
 }
 
-// C. SAUVEGARDE IMPORT CSV
+// C. SAUVEGARDE SNAPSHOT BANCAIRE (MODIFIÉ : Remplacement de l'ancien)
+if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
+    $date = $_POST['snapshot_date'];
+    $amount = floatval($_POST['snapshot_amount']);
+    
+    // On vide la table pour que le nouveau remplace l'ancien
+    $pdo->query("DELETE FROM pf_bank_snapshots");
+    
+    $pdo->prepare("INSERT INTO pf_bank_snapshots (snapshot_date, amount) VALUES (?, ?)")->execute([$date, $amount]);
+    header("Location: ?tab=suivi"); exit;
+}
+
+// D. SAUVEGARDE IMPORT CSV
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
+    
+    $tempCatMapping = [];
+    if (!empty($_POST['new_temp_cats'])) {
+        $stmtTemp = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, 0)");
+        foreach ($_POST['new_temp_cats'] as $tempKey => $catData) {
+            $stmtTemp->execute([$currentMonthKey, $catData['name'], $catData['type']]);
+            $tempCatMapping[$tempKey] = $pdo->lastInsertId();
+        }
+    }
+
     $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref) VALUES (?, ?, ?, ?, ?)");
     $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category) VALUES (?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category)");
 
     if (isset($_POST['lines']) && is_array($_POST['lines'])) {
         foreach ($_POST['lines'] as $line) {
-            if (!empty($line['cat']) && isset($line['import_check'])) {
+            if (isset($line['import_check'])) {
+                $cat = $line['cat'];
+                $is_credit = isset($line['is_credit']) ? (int)$line['is_credit'] : 0;
+                
+                if ($is_credit && empty($cat)) continue;
+                if (!$is_credit && empty($cat)) continue;
+
+                if (strpos($cat, 'NEW_TEMP_') === 0 && isset($tempCatMapping[$cat])) {
+                    $cat = 'TEMP_' . $tempCatMapping[$cat];
+                }
+
+                $finalAmount = $is_credit ? -abs($line['amount']) : abs($line['amount']);
+
                 try {
-                    $stmtExp->execute([$line['date'], $line['cat'], $line['label'], $line['amount'], $line['ref']]);
-                    $stmtRule->execute([$line['label'], $line['cat']]);
+                    $stmtExp->execute([$line['date'], $cat, $line['label'], $finalAmount, $line['ref']]);
+                    $stmtRule->execute([$line['label'], $cat]);
                     $count++;
                 } catch (Exception $e) { continue; }
             }
@@ -45,18 +80,13 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     header("Location: ?tab=suivi&msg=imported_$count"); exit;
 }
 
-// D. AJOUT DÉPENSE MANUELLE
+// E. AJOUT DÉPENSE MANUELLE
 if (isset($_POST['action']) && $_POST['action'] === 'add_expense') {
     $cat = $_POST['category']; 
     $amount = floatval($_POST['amount']); 
     $date = $_POST['date'];
     
-    // Logique pour le label : Soit liste fermée (School), soit texte libre
-    if ($cat === 'School' && !empty($_POST['label_select'])) {
-        $label = trim($_POST['label_select']);
-    } else {
-        $label = trim($_POST['label']);
-    }
+    $label = ($cat === 'School' && !empty($_POST['label_select'])) ? trim($_POST['label_select']) : trim($_POST['label']);
 
     if ($label && $amount > 0) {
         $uniqueRef = "MANUAL_" . uniqid();
@@ -66,22 +96,50 @@ if (isset($_POST['action']) && $_POST['action'] === 'add_expense') {
     }
 }
 
-// E. SUPPRESSION DÉPENSE
+// F. SUPPRESSION DÉPENSE
 if (isset($_GET['delete_expense'])) {
     $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_GET['delete_expense']]);
     header("Location: ?tab=suivi"); exit;
 }
 
 // ============================================================================
-// 2. CALCUL DES BUDGETS & INDICATEURS
+// 2. CALCUL DES BUDGETS & SNAPSHOT
 // ============================================================================
 
 $budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0;
 $total_income = 0; $total_expenses_prevues = 0;
-$reste_a_venir = 0; // Somme des frais futurs
-$today_day = (int)date('j'); // Jour du mois (1 à 31)
+$reste_a_venir = 0; 
+$today_day = (int)date('j'); 
 
-// 2.1 Récupération Budget Fixe
+// --- SNAPSHOT & SOLDE THÉORIQUE ---
+$snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
+$solde_theorique = 0;
+
+try {
+    $snapStmt = $pdo->query("SELECT * FROM pf_bank_snapshots ORDER BY snapshot_date DESC, id DESC LIMIT 1");
+    if ($s = $snapStmt->fetch(PDO::FETCH_ASSOC)) {
+        $snapshot = ['date' => $s['snapshot_date'], 'amount' => (float)$s['amount']];
+    }
+} catch (Exception $e) {}
+
+$solde_theorique = $snapshot['amount'];
+
+// Calcul du solde théorique : On soustrait les opérations saisies APRÈS la date du snapshot
+if (!empty($snapshot['date'])) {
+    try {
+        $stmtCalc = $pdo->prepare("SELECT SUM(amount) as total_diff FROM pf_expenses WHERE date_exp > ?");
+        $stmtCalc->execute([$snapshot['date']]);
+        $resDiff = $stmtCalc->fetch(PDO::FETCH_ASSOC);
+        if ($resDiff && $resDiff['total_diff'] !== null) {
+            // amount est positif pour les débits, négatif pour les crédits
+            // On soustrait donc le total diff. (Ex: 3500 - 50 = 3450)
+            $solde_theorique -= (float)$resDiff['total_diff'];
+        }
+    } catch (Exception $e) {}
+}
+
+
+// --- LECTURE BUDGET PREVISIONNEL ---
 $stmt = $pdo->query("SELECT name, amount, type, category, is_estimate, payment_day FROM pf_budget_items");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $rawAmount = (float)$item['amount'];
@@ -94,20 +152,12 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     } else {
         $total_expenses_prevues += $amt;
         
-        // --- CALCUL DU "RESTE À VENIR" ---
-        // Conditions : Expense + Mensuel + (Jour > Aujourd'hui OU C'est l'école)
         if ($item['category'] === 'expense' && $item['type'] === 'Mensuel') {
-            // Si c'est l'école, on l'ajoute toujours (selon ta demande)
-            if ($name === 'Estimacio escola') {
-                $reste_a_venir += $rawAmount;
-            }
-            // Sinon, si c'est une autre dépense avec une date future
-            elseif ($pDay > $today_day) {
+            if ($name === 'Estimacio escola' || $pDay > $today_day) {
                 $reste_a_venir += $rawAmount;
             }
         }
 
-        // --- MAPPING CATÉGORIES ---
         if ($name === 'Estimacio F&B & beauty') $budget_fmcg = $amt;
         elseif ($name === 'Estimacio escola') $budget_school = $amt;
         elseif ($name === 'Estimation gasolina') $budget_essence = $amt;
@@ -117,17 +167,21 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// 2.2 Récupération Catégories Temporaires
-$tempCats = [];
-$total_temp_budget = 0;
+// Catégories Temporaires
+$tempCats = []; $total_temp_budget = 0;
 try {
     $stmt = $pdo->prepare("SELECT * FROM pf_monthly_categories WHERE month_year = ?");
     $stmt->execute([$currentMonthKey]);
     $tempCats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach($tempCats as $tc) $total_temp_budget += $tc['budget'];
+    foreach($tempCats as $tc) {
+        // On n'ajoute au "budget prévisionnel" que si c'est un débit. 
+        // Si c'est un crédit (réserve), l'argent est censé déjà être ou arriver sur le compte
+        if ($tc['type'] === 'debit') {
+            $total_temp_budget += $tc['budget'];
+        }
+    }
 } catch (Exception $e) {}
 
-// 2.3 Calcul Reste à vivre
 $budget_autres = $total_income - ($total_expenses_prevues + $total_temp_budget);
 if ($budget_autres < 0) $budget_autres = 0;
 
@@ -136,19 +190,20 @@ if ($budget_autres < 0) $budget_autres = 0;
 // ============================================================================
 
 $categoriesConfig = [
-    'FMCG' => ['label' => 'Courses (FMCG)', 'budget' => $budget_fmcg, 'color' => '#3b82f6', 'suggestions' => ['Action', 'Carrefour', 'Lidl']],
-    'Essence' => ['label' => 'Essence', 'budget' => $budget_essence, 'color' => '#f59e0b', 'suggestions' => ['Audi', 'Polo']],
-    'School' => ['label' => 'École / Garde', 'budget' => $budget_school, 'color' => '#10b981', 'suggestions' => []], // Liste fermée gérée en JS
-    'Frais' => ['label' => 'Charges Fixes', 'budget' => $budget_frais, 'color' => '#ef4444', 'suggestions' => ['Netflix', 'Assurance', 'Prêt']],
+    'FMCG' => ['type'=>'debit', 'label'=>'Courses (FMCG)', 'budget'=>$budget_fmcg, 'color'=>'#3b82f6', 'suggestions'=>['Action', 'Carrefour', 'Lidl']],
+    'Essence' => ['type'=>'debit', 'label'=>'Essence', 'budget'=>$budget_essence, 'color'=>'#f59e0b', 'suggestions'=>['Audi', 'Polo']],
+    'School' => ['type'=>'debit', 'label'=>'École / Garde', 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
+    'Frais' => ['type'=>'debit', 'label'=>'Charges Fixes', 'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>['Netflix', 'Assurance', 'Prêt']],
 ];
 
-// Couleurs temporaires
 $tempColors = ['#ec4899', '#06b6d4', '#84cc16', '#d946ef', '#f97316'];
 $colorIdx = 0;
 
 foreach ($tempCats as $tc) {
     $catKey = 'TEMP_' . $tc['id'];
+    $catType = isset($tc['type']) ? $tc['type'] : 'debit';
     $categoriesConfig[$catKey] = [
+        'type' => $catType,
         'label' => $tc['name'],
         'budget' => $tc['budget'],
         'color' => $tempColors[$colorIdx % count($tempColors)],
@@ -159,14 +214,13 @@ foreach ($tempCats as $tc) {
     $colorIdx++;
 }
 
-$categoriesConfig['Autres'] = ['label' => 'Autres / Imprévus', 'budget' => $budget_autres, 'color' => '#64748b', 'suggestions' => ['Restaurant', 'Cadeau']];
-$categoriesConfig['LivretA'] = ['label' => 'Epargne', 'budget' => 0, 'color' => '#8b5cf6', 'suggestions' => ['Virement']];
+$categoriesConfig['Autres'] = ['type'=>'debit', 'label'=>'Autres / Imprévus', 'budget'=>$budget_autres, 'color'=>'#64748b', 'suggestions'=>['Restaurant', 'Cadeau']];
+$categoriesConfig['LivretA'] = ['type'=>'debit', 'label'=>'Epargne', 'budget'=>0, 'color'=>'#8b5cf6', 'suggestions'=>['Virement']];
 
 // ============================================================================
-// 4. DONNÉES & IMPORT
+// 4. DONNÉES RÉELLES & IMPORT
 // ============================================================================
 
-// CSV PREVIEW
 $csvData = [];
 $showPreview = false;
 if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
@@ -174,27 +228,40 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $handle = fopen($file, "r");
     $rules = []; try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
     $existingRefs = []; try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
+    
     fgetcsv($handle, 1000, ";"); 
     while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
         $rawDebit = $data[8] ?? ''; 
-        if (!empty($rawDebit)) {
+        $rawCredit = $data[9] ?? ''; 
+        
+        $amount = 0; $isCredit = 0;
+        if (!empty(trim($rawCredit))) {
+            $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawCredit)));
+            $isCredit = 1;
+        } elseif (!empty(trim($rawDebit))) {
             $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawDebit)));
-            $dateParts = explode('/', $data[0]); 
-            $dateSql = (count($dateParts) == 3) ? $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0] : date('Y-m-d');
-            $label = trim($data[1]) ?: trim($data[2]);
-            $refCSV = trim($data[3]);
-            $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2));
-            $isDuplicate = in_array($uniqueKey, $existingRefs);
-            $suggestedCat = '';
-            foreach ($rules as $kw => $c) { if (stripos($label, $kw) !== false) { $suggestedCat = $c; break; } }
-            $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate];
+        } else {
+            continue; 
         }
+
+        $dateParts = explode('/', $data[0]); 
+        $dateSql = (count($dateParts) == 3) ? $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0] : date('Y-m-d');
+        $label = trim($data[1]) ?: trim($data[2]);
+        $refCSV = trim($data[3]);
+        
+        $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
+        $isDuplicate = in_array($uniqueKey, $existingRefs);
+        
+        $suggestedCat = '';
+        foreach ($rules as $kw => $c) { if (stripos($label, $kw) !== false) { $suggestedCat = $c; break; } }
+        
+        $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
     }
     fclose($handle);
     $showPreview = true;
 }
 
-// DÉPENSES RÉELLES
+// DÉPENSES EN BDD
 $currentMonth = date('m'); $currentYear = date('Y');
 $stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? ORDER BY date_exp DESC");
 $stmt->execute([$currentMonth, $currentYear]);
@@ -206,47 +273,45 @@ $expensesByCategory = array_fill_keys(array_keys($categoriesConfig), []);
 foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
-    $totals[$cat] += $exp['amount'];
+    
+    // Si la dépense est un crédit (montant < 0 en bdd), on augmente l'enveloppe
+    if ($exp['amount'] < 0) {
+        $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
+    } else {
+        $totals[$cat] += $exp['amount'];
+    }
+    
     $expensesByCategory[$cat][] = $exp;
 }
 
 $globalSpent = array_sum($totals);
 $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
+
+// --- FONCTION D'AFFICHAGE ---
+function getDisplayLogic($spent, $bg, $type) {
+    if ($type === 'credit') {
+        $remaining = $bg - $spent;
+        $pct = ($bg > 0) ? max(0, min(100, ($remaining / $bg) * 100)) : 0;
+        $isOver = ($remaining < 0);
+        $text = number_format(ceil($remaining), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
+    } else {
+        $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0);
+        $isOver = ($spent > $bg && $bg > 0);
+        $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
+    }
+    return ['pct' => $pct, 'isOver' => $isOver, 'text' => $text];
+}
 ?>
 
 <style>
-    .cat-card {
-        background: white; border-radius: 16px; border: 1px solid #e2e8f0;
-        display: flex; flex-direction: column; overflow: hidden; position: relative;
-    }
-    .btn-add-item {
-        background: rgba(255, 255, 255, 0.6); color: inherit; border: 1px solid rgba(0, 0, 0, 0.1);
-        width: 28px; height: 28px; border-radius: 50%; font-size: 18px; line-height: 1; cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    .btn-add-item:hover {
-        background: white; transform: rotate(90deg) scale(1.1);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); border-color: currentColor;
-    }
-    .pf-modal {
-        display: none; position: fixed; inset: 0; z-index: 9999;
-        background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
-        align-items: center; justify-content: center;
-    }
-    .pf-modal-content {
-        background: white; width: 95%; border-radius: 20px;
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); padding: 30px; position: relative;
-    }
-    .progress-grid {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;
-    }
-    
-    /* Animation pour le reste à venir */
+    .cat-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .btn-add-item { background: rgba(255, 255, 255, 0.6); color: inherit; border: 1px solid rgba(0, 0, 0, 0.1); width: 28px; height: 28px; border-radius: 50%; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .btn-add-item:hover { background: white; transform: rotate(90deg) scale(1.1); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); border-color: currentColor; }
+    .pf-modal { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+    .pf-modal-content { background: white; width: 95%; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); padding: 30px; position: relative; }
+    .progress-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
     .fade-pulse { animation: pulseText 2s infinite; }
-    @keyframes pulseText {
-        0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; }
-    }
+    @keyframes pulseText { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
 </style>
 
 <div class="budget-view">
@@ -256,8 +321,20 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
             <div>
                 <h2 style="margin:0;">Suivi : <?= date('F Y') ?></h2>
                 <div style="margin-top:4px; font-size:0.9rem; color:#64748b;">
-                    Charges à venir ce mois : <strong class="fade-pulse" style="color:#f59e0b;"><?= number_format($reste_a_venir, 0, ',', ' ') ?> €</strong>
+                    Charges à venir : <strong class="fade-pulse" style="color:#f59e0b;"><?= number_format(ceil($reste_a_venir), 0, ',', ' ') ?> €</strong>
                 </div>
+                
+                <div style="margin-top:4px; font-size:0.9rem; color:#64748b; display:flex; align-items:center; gap:5px;">
+                    Solde au <?= date('d/m', strtotime($snapshot['date'])) ?> : 
+                    <strong style="color:#1e293b;"><?= number_format($snapshot['amount'], 2, ',', ' ') ?> €</strong>
+                    <button onclick="openSuiviModal('snapshotModal')" style="background:none; border:none; cursor:pointer; font-size:0.9rem; padding:0; filter:grayscale(1);">✏️</button>
+                </div>
+
+                <div style="margin-top:4px; font-size:0.9rem; color:#64748b; display:flex; align-items:center; gap:5px;">
+                    Solde théorique au <?= date('d/m') ?> : 
+                    <strong style="color:#3b82f6;"><?= number_format($solde_theorique, 2, ',', ' ') ?> €</strong>
+                </div>
+
             </div>
             <div style="text-align:right;">
                 <strong style="font-size:1.4rem; color:#1e293b;"><?= number_format(ceil($globalSpent), 0, ',', ' ') ?> €</strong>
@@ -267,17 +344,16 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
 
         <div class="progress-grid">
             <?php foreach ($categoriesConfig as $key => $conf): 
-                $spent = $totals[$key]; $bg = $conf['budget'];
-                $pct = ($bg > 0) ? min(100, ($spent/$bg)*100) : ($spent>0?100:0);
-                $col = ($spent > $bg && $bg > 0) ? '#ef4444' : $conf['color'];
+                $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']);
+                $barCol = $logic['isOver'] ? '#ef4444' : $conf['color'];
             ?>
             <div class="progress-card">
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:5px;">
                     <span style="font-weight:600; color:<?= $conf['color'] ?>"><?= $conf['label'] ?></span>
-                    <span><?= number_format(ceil($spent), 0, ',', ' ') ?> / <?= number_format(ceil($bg), 0, ',', ' ') ?> €</span>
+                    <span><?= $logic['text'] ?></span>
                 </div>
                 <div style="background:#f1f5f9; height:8px; border-radius:4px; overflow:hidden;">
-                    <div style="width:<?= $pct ?>%; background:<?= $col ?>; height:100%;"></div>
+                    <div style="width:<?= $logic['pct'] ?>%; background:<?= $barCol ?>; height:100%;"></div>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -292,13 +368,20 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
     <div id="addTempCatForm" style="display:none; background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:20px;">
         <form method="POST" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
             <input type="hidden" name="action" value="add_temp_cat">
-            <div style="flex:1; min-width:200px;">
+            <div style="flex:1; min-width:180px;">
                 <label class="pf-label">Nom</label>
                 <input type="text" name="cat_name" class="pf-input" required>
             </div>
             <div style="width:120px;">
-                <label class="pf-label">Budget (€)</label>
-                <input type="number" name="cat_budget" class="pf-input" step="1" required>
+                <label class="pf-label">Budget de base</label>
+                <input type="number" name="cat_budget" class="pf-input" step="1" value="0" required>
+            </div>
+            <div style="width:150px;">
+                <label class="pf-label">Type</label>
+                <select name="cat_type" class="pf-input">
+                    <option value="debit">Débit (Budget)</option>
+                    <option value="credit">Crédit (Réserve)</option>
+                </select>
             </div>
             <button type="submit" class="pf-btn" style="width:auto;">Créer</button>
         </form>
@@ -316,31 +399,45 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
         <?php else: ?>
             <form method="POST" id="formMapping">
                 <input type="hidden" name="action" value="save_import">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <h3>Valider l'importation</h3>
-                    <span id="missingCount" style="color:red; font-weight:bold; display:none;"></span>
+                <div id="dynamicNewCats"></div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="margin:0;">Valider l'importation</h3>
+                    <div>
+                        <span id="missingCount" style="color:#ef4444; background:#fee2e2; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; display:none; margin-right:10px;"></span>
+                        <button type="button" class="btn-icon-small" onclick="openSuiviModal('newCatModal')" title="Créer une catégorie" style="display:inline-flex; vertical-align:middle; width:auto; padding:4px 10px;">➕ Catégorie</button>
+                    </div>
                 </div>
-                <div style="max-height:300px; overflow-y:auto; background:white; border:1px solid #eee;">
+
+                <div style="max-height:350px; overflow-y:auto; background:white; border:1px solid #eee; border-radius:8px;">
                     <table class="pf-table" style="margin:0;">
-                        <thead><tr><th><input type="checkbox" onclick="toggleAll(this)" checked></th><th>Libellé</th><th>Montant</th><th>Catégorie</th></tr></thead>
+                        <thead style="position:sticky; top:0; z-index:10;">
+                            <tr><th><input type="checkbox" onclick="toggleAll(this)" checked></th><th>Libellé</th><th>Montant</th><th>Catégorie</th></tr>
+                        </thead>
                         <tbody>
                             <?php foreach ($csvData as $idx => $row): 
-                                $dup = $row['is_duplicate']; $dis = $dup?'disabled':''; ?>
-                            <tr style="<?= $dup?'opacity:0.5':(empty($row['cat'])?'background:#fff1f2':'') ?>">
-                                <td><input type="checkbox" class="line-checkbox" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
+                                $dup = $row['is_duplicate']; $isCrd = $row['is_credit']; $dis = $dup?'disabled':''; 
+                                $bgCol = $dup ? 'opacity:0.5' : (empty($row['cat']) && !$isCrd ? 'background:#fff1f2' : '');
+                            ?>
+                            <tr style="<?= $bgCol ?>">
+                                <td>
+                                    <input type="checkbox" class="line-checkbox" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
                                     <input type="hidden" name="lines[<?= $idx ?>][date]" value="<?= $row['date'] ?>">
                                     <input type="hidden" name="lines[<?= $idx ?>][label]" value="<?= $row['label'] ?>">
                                     <input type="hidden" name="lines[<?= $idx ?>][amount]" value="<?= $row['amount'] ?>">
                                     <input type="hidden" name="lines[<?= $idx ?>][ref]" value="<?= $row['ref'] ?>">
+                                    <input type="hidden" class="is-credit-flag" name="lines[<?= $idx ?>][is_credit]" value="<?= $isCrd ?>">
                                 </td>
                                 <td>
                                     <?= htmlspecialchars($row['label']) ?>
-                                    <?php if($dup): ?><span style="color:#ef4444; font-size:0.85em; font-weight:bold; margin-left:5px;">(déjà importé)</span><?php endif; ?>
+                                    <?php if($dup): ?><small style="color:#ef4444; font-weight:bold; margin-left:5px;">(déjà importé)</small><?php endif; ?>
                                 </td>
-                                <td><?= number_format($row['amount'],2) ?> €</td>
+                                <td style="font-weight:bold; color:<?= $isCrd ? '#10b981' : '#1e293b' ?>;">
+                                    <?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'],2) ?> €
+                                </td>
                                 <td>
                                     <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="checkValidation()" <?= $dis ?>>
-                                        <option value="">-- ? --</option>
+                                        <option value="">-- <?= $isCrd ? 'Ignorer (Crédit)' : 'À définir' ?> --</option>
                                         <?php foreach ($categoriesConfig as $k => $c): ?>
                                             <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
                                         <?php endforeach; ?>
@@ -351,9 +448,9 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
                         </tbody>
                     </table>
                 </div>
-                <div style="margin-top:10px; text-align:right;">
-                    <a href="?tab=suivi" class="pf-btn btn-secondary">Annuler</a>
-                    <button type="submit" id="btnImport" class="pf-btn" style="width:auto;">Importer</button>
+                <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:10px;">
+                    <a href="?tab=suivi" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</a>
+                    <button type="submit" id="btnImport" class="pf-btn" style="width:auto; margin:0;">Importer</button>
                 </div>
             </form>
         <?php endif; ?>
@@ -371,32 +468,32 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
                         <?php endif; ?>
                     </h3>
                     <div style="font-size:0.85rem; color:#64748b; font-weight:600; margin-top:2px;">
-                        <?= number_format(ceil($totals[$key]), 0, ',', ' ') ?> / <?= number_format(ceil($conf['budget']), 0, ',', ' ') ?> €
+                        <?php $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']); echo $logic['text']; ?>
                     </div>
                 </div>
                 <button class="btn-add-item" style="color:<?= $conf['color'] ?>;" onclick="openAddModal('<?= $key ?>', '<?= addslashes($conf['label']) ?>')">＋</button>
             </div>
 
-            <?php 
-                $bg = $conf['budget']; 
-                $pct = ($bg > 0) ? min(100, ($totals[$key]/$bg)*100) : ($totals[$key]>0?100:0);
-                $barCol = ($totals[$key] > $bg && $bg > 0) ? '#ef4444' : $conf['color'];
-            ?>
+            <?php $barCol = $logic['isOver'] ? '#ef4444' : $conf['color']; ?>
             <div style="background:#f1f5f9; height:4px; width:100%;">
-                <div style="width:<?= $pct ?>%; background:<?= $barCol ?>; height:100%;"></div>
+                <div style="width:<?= $logic['pct'] ?>%; background:<?= $barCol ?>; height:100%;"></div>
             </div>
 
             <div style="flex:1; max-height:300px; overflow-y:auto; padding:0;">
                 <?php if (empty($expensesByCategory[$key])): ?>
-                    <div style="padding:20px; text-align:center; color:#cbd5e1; font-style:italic; font-size:0.85rem;">Aucune dépense</div>
+                    <div style="padding:20px; text-align:center; color:#cbd5e1; font-style:italic; font-size:0.85rem;">Aucune ligne.</div>
                 <?php else: ?>
                     <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
                         <?php foreach ($expensesByCategory[$key] as $exp): ?>
                         <tr style="border-bottom:1px solid #f8fafc;">
                             <td style="padding:10px 15px; color:#94a3b8;"><?= date('d/m', strtotime($exp['date_exp'])) ?></td>
                             <td style="padding:10px 5px; font-weight:500;"><?= htmlspecialchars($exp['label']) ?></td>
-                            <td style="padding:10px 15px; text-align:right;">-<?= number_format($exp['amount'], 2) ?></td>
-                            <td style="width:20px; padding-right:10px;"><a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('x ?')" style="color:#ef4444; text-decoration:none;">&times;</a></td>
+                            <?php if($exp['amount'] < 0): ?>
+                                <td style="padding:10px 15px; text-align:right; font-weight:600; color:#10b981;">+<?= number_format(abs($exp['amount']), 2) ?></td>
+                            <?php else: ?>
+                                <td style="padding:10px 15px; text-align:right; font-weight:600; color:#1e293b;">-<?= number_format($exp['amount'], 2) ?></td>
+                            <?php endif; ?>
+                            <td style="width:20px; padding-right:10px;"><a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('x ?')" style="color:#ef4444; text-decoration:none; font-size:1.2rem;">&times;</a></td>
                         </tr>
                         <?php endforeach; ?>
                     </table>
@@ -411,7 +508,7 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
     <div class="pf-modal-content" style="max-width:400px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="margin:0;" id="modalTitle">Nouvelle dépense</h3>
-            <button type="button" onclick="closeModal()" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+            <button type="button" onclick="closeSuiviModal('manualExpenseModal')" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
         </div>
         
         <form method="POST">
@@ -442,81 +539,129 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
                 <input type="number" step="0.01" name="amount" class="pf-input" placeholder="0.00" required>
             </div>
 
-            <div style="text-align:right; margin-top:20px;">
-                <button type="button" onclick="closeModal()" class="pf-btn btn-secondary" style="margin-right:10px;">Annuler</button>
-                <button type="submit" class="pf-btn">Ajouter</button>
+            <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeSuiviModal('manualExpenseModal')" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
+                <button type="submit" class="pf-btn" style="width:auto; margin:0;">Ajouter</button>
             </div>
         </form>
     </div>
 </div>
 
+<div id="snapshotModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width:350px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0;">Mettre à jour le solde</h3>
+            <button type="button" onclick="closeSuiviModal('snapshotModal')" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="save_snapshot">
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label">Date du relevé</label>
+                <input type="date" name="snapshot_date" class="pf-input" value="<?= date('Y-m-d') ?>" required>
+            </div>
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label">Solde actuel (€)</label>
+                <input type="number" step="0.01" name="snapshot_amount" class="pf-input" placeholder="0.00" required>
+            </div>
+            <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
+                <button type="submit" class="pf-btn" style="width:auto; margin:0;">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="newCatModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width:350px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0;">Nouvelle catégorie</h3>
+            <button type="button" onclick="closeSuiviModal('newCatModal')" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+            <label class="pf-label">Nom (ex: Vacances)</label>
+            <input type="text" id="newCatName" class="pf-input">
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+            <label class="pf-label">Type</label>
+            <select id="newCatType" class="pf-input">
+                <option value="debit">Débit (Dépense standard)</option>
+                <option value="credit">Crédit (Réserve d'argent)</option>
+            </select>
+        </div>
+        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" onclick="closeSuiviModal('newCatModal')" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
+            <button type="button" onclick="confirmNewCat()" class="pf-btn" style="width:auto; margin:0;">Créer</button>
+        </div>
+    </div>
+</div>
+
 <script>
-// UI Utils
+// --- UI ---
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
+function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; }
+window.onclick = function(event) { if (event.target.classList.contains('pf-modal')) event.target.style.display = 'none'; }
 
-// MODALE LOGIQUE
+// --- SAISIE MANUELLE ---
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
-
 function openAddModal(catKey, catLabel) {
-    const modal = document.getElementById('manualExpenseModal');
-    if(modal) {
-        modal.style.display = 'flex';
-        document.getElementById('modalTitle').innerText = "Dépense : " + catLabel;
-        document.getElementById('modalCatInput').value = catKey;
-        
-        // GESTION DU CHAMP TITRE (Input vs Select pour School)
-        const blockText = document.getElementById('blockInputText');
-        const blockSelect = document.getElementById('blockInputSelect');
-        const inputLabel = document.getElementById('modalLabelInput');
+    openSuiviModal('manualExpenseModal');
+    document.getElementById('modalTitle').innerText = "Dépense : " + catLabel;
+    document.getElementById('modalCatInput').value = catKey;
+    
+    const blockText = document.getElementById('blockInputText');
+    const blockSelect = document.getElementById('blockInputSelect');
+    const inputLabel = document.getElementById('modalLabelInput');
 
-        if (catKey === 'School') {
-            // Mode Select Fermé
-            blockText.style.display = 'none';
-            blockSelect.style.display = 'block';
-            inputLabel.required = false; // On désactive le required du text
-        } else {
-            // Mode Texte Libre
-            blockText.style.display = 'block';
-            blockSelect.style.display = 'none';
-            inputLabel.required = true;
-            
-            // Chargement suggestions
-            const list = document.getElementById('modalSuggestions');
-            list.innerHTML = '';
-            inputLabel.value = '';
-            if (suggestions[catKey]) {
-                suggestions[catKey].forEach(item => {
-                    const op = document.createElement('option');
-                    op.value = item;
-                    list.appendChild(op);
-                });
-            }
-            setTimeout(() => inputLabel.focus(), 100);
-        }
+    if (catKey === 'School') {
+        blockText.style.display = 'none'; blockSelect.style.display = 'block'; inputLabel.required = false;
+    } else {
+        blockText.style.display = 'block'; blockSelect.style.display = 'none'; inputLabel.required = true;
+        const list = document.getElementById('modalSuggestions');
+        list.innerHTML = ''; inputLabel.value = '';
+        if (suggestions[catKey]) suggestions[catKey].forEach(i => { const op = document.createElement('option'); op.value = i; list.appendChild(op); });
+        setTimeout(() => inputLabel.focus(), 100);
     }
 }
 
-function closeModal() {
-    const modal = document.getElementById('manualExpenseModal');
-    if(modal) modal.style.display = 'none';
+// --- IMPORT CSV ---
+let newCatIndex = 0;
+function confirmNewCat() {
+    const name = document.getElementById('newCatName').value.trim();
+    const type = document.getElementById('newCatType').value;
+    if(name !== "") {
+        const key = 'NEW_TEMP_' + newCatIndex++;
+        document.getElementById('formMapping').insertAdjacentHTML('beforeend', `<input type="hidden" name="new_temp_cats[${key}][name]" value="${name}"><input type="hidden" name="new_temp_cats[${key}][type]" value="${type}">`);
+        document.querySelectorAll('.line-select').forEach(sel => {
+            const opt = document.createElement('option');
+            opt.value = key; opt.text = "🏷️ " + name + (type === 'credit' ? ' (Réserve)' : '');
+            sel.add(opt, sel.options[1]); 
+        });
+        closeSuiviModal('newCatModal');
+        checkValidation();
+    }
 }
 
-window.onclick = function(event) {
-    const modal = document.getElementById('manualExpenseModal');
-    if (event.target == modal) { closeModal(); }
-}
-
-// IMPORT CSV
 function toggleAll(src) { document.querySelectorAll('.line-checkbox:not([disabled])').forEach(c => c.checked = src.checked); checkValidation(); }
 function checkValidation() {
     const cbs = document.querySelectorAll('.line-checkbox:checked');
     let miss = 0;
-    cbs.forEach(cb => { if(cb.closest('tr').querySelector('.line-select').value === "") miss++; });
+    cbs.forEach(cb => { 
+        const row = cb.closest('tr');
+        const isCredit = row.querySelector('.is-credit-flag').value === '1';
+        if (row.querySelector('.line-select').value === "") {
+            if(!isCredit) miss++; 
+            row.style.background = isCredit ? '' : '#fff1f2';
+        } else {
+            row.style.background = '';
+        }
+    });
+    
     const btn = document.getElementById('btnImport');
     const msg = document.getElementById('missingCount');
     if(miss>0) { 
         btn.disabled = true; btn.style.opacity=0.5; btn.style.cursor='not-allowed';
-        msg.style.display='inline'; msg.innerText=miss+' à définir';
+        msg.style.display='inline'; msg.innerText=miss+' à définir (débits)';
     } else {
         btn.disabled = false; btn.style.opacity=1; btn.style.cursor='pointer';
         msg.style.display='none';

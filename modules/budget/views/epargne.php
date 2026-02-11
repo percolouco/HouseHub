@@ -1,10 +1,24 @@
 <?php
+// modules/budget/views/epargne.php
+
 // 1. Gestion des propriétaires à afficher
 $requestedOwner = $_GET['owner'] ?? 'Nens'; 
 
 // Si l'onglet est "Nens", on affiche Pol et Pep. Sinon, on affiche juste la personne demandée.
 $ownersToDisplay = ($requestedOwner === 'Nens') ? ['Pol', 'Pep'] : [$requestedOwner];
 ?>
+
+<style>
+/* Cacher les flèches haut/bas des champs de type number */
+input[type="number"].no-spinners::-webkit-inner-spin-button, 
+input[type="number"].no-spinners::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+}
+input[type="number"].no-spinners {
+    -moz-appearance: textfield; /* Firefox */
+}
+</style>
 
 <div class="budget-view">
     
@@ -14,7 +28,7 @@ $ownersToDisplay = ($requestedOwner === 'Nens') ? ['Pol', 'Pep'] : [$requestedOw
             <a href="?tab=epargne&owner=Laia" class="owner-tab <?= $requestedOwner === 'Laia' ? 'active' : '' ?>">Laia</a>
             <a href="?tab=epargne&owner=Nens" class="owner-tab <?= $requestedOwner === 'Nens' ? 'active' : '' ?>">Nens 👶</a>
         </div>
-        </div>
+    </div>
 
     <?php foreach ($ownersToDisplay as $currentOwner): 
         // --- Récupération des données pour $currentOwner ---
@@ -41,7 +55,6 @@ $ownersToDisplay = ($requestedOwner === 'Nens') ? ['Pol', 'Pep'] : [$requestedOw
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: <?= ($requestedOwner === 'Nens' && $currentOwner !== 'Pol') ? '40px' : '0' ?>;">        
         <div style="flex-grow: 1;">
             <?php if ($requestedOwner === 'Nens'): 
-                // On détermine la classe CSS basée sur le nom (pol ou pep)
                 $themeClass = 'theme-' . strtolower($currentOwner);
             ?>
                 <h3 class="nens-title <?= $themeClass ?>" style="margin:0; font-size:1.2rem;">
@@ -56,122 +69,340 @@ $ownersToDisplay = ($requestedOwner === 'Nens') ? ['Pol', 'Pep'] : [$requestedOw
                     🔁 +1 Mois
                 </button>
             <?php endif; ?>
-            <button onclick="openSavingsModal('add', '<?= $currentOwner ?>')" class="pf-btn">
+            <button onclick="openCustomSavingsModal('<?= $currentOwner ?>')" class="pf-btn">
                 ＋ Saisir un mois
             </button>
         </div>
-
     </div>
 
-        <div class="table-responsive" style="background:white; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0;">
-            <?php if (empty($months)): ?>
+    <div class="table-responsive" style="background:white; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0;">
+        <?php if (empty($months)): ?>
             <div style="padding: 30px; text-align: center; color: #64748b;">
                 <p>Aucune donnée pour <?= htmlspecialchars($currentOwner) ?>.</p>
             </div>
         <?php else: ?>
-<table class="pf-table savings-table nens-table theme-<?= strtolower($currentOwner) ?>" style="margin-top:0; box-shadow:none; border-radius:16px;">            <thead>
-                <tr>
-                    <th class="sticky-col" style="background:#f8fafc;">Poste / Mois</th>
-                    <?php foreach ($months as $month): ?>
-                        <th>
-                            <div class="month-header-container">
-                                <span class="month-name"><?= date('M Y', strtotime($month)) ?></span>
-                                <div class="month-actions">
-                                    <button class="btn-icon-small" title="Modifier"
-                                            onclick='editMonth("<?= $month ?>", "<?= $currentOwner ?>", <?= json_encode($data[$month] ?? []) ?>, <?= json_encode($allCategories) ?>)'>
-                                        ✏️
-                                    </button>
-                                    <button class="btn-icon-small" title="Supprimer"
-                                            onclick="deleteEntireMonth('<?= $month ?>', '<?= $currentOwner ?>')"
-                                            style="color: #ef4444; border-color: #fca5a5; background: #fef2f2;">
-                                        🗑️
-                                    </button>
+            <table class="pf-table savings-table nens-table theme-<?= strtolower($currentOwner) ?>" style="margin-top:0; box-shadow:none; border-radius:16px;">            
+                <thead>
+                    <tr>
+                        <th class="sticky-col" style="background:#f8fafc;">Poste / Mois</th>
+                        <?php foreach ($months as $month): ?>
+                            <th>
+                                <div class="month-header-container">
+                                    <span class="month-name"><?= date('M Y', strtotime($month)) ?></span>
+                                    <div class="month-actions">
+                                        <button class="btn-icon-small" title="Modifier"
+                                                onclick='editCustomSavingsMonth("<?= $month ?>", "<?= $currentOwner ?>", <?= json_encode($data[$month] ?? []) ?>)'>
+                                            ✏️
+                                        </button>
+                                        <button class="btn-icon-small" title="Supprimer"
+                                                onclick="deleteEntireMonth('<?= $month ?>', '<?= $currentOwner ?>')"
+                                                style="color: #ef4444; border-color: #fca5a5; background: #fef2f2;">
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </th>
-                    <?php endforeach; ?>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="row-total">
-                    <td class="sticky-col"><strong>Total</strong></td>
-                    <?php foreach ($months as $month): ?>
-                        <td class="text-center font-bold" style="color: #2563eb;">
-                            <?= number_format($data[$month]['TOTAL_BANQUE'] ?? 0, 0, ',', ' ') ?> €
-                        </td>
-                    <?php endforeach; ?>
-                </tr>
+                            </th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="row-total">
+                        <td class="sticky-col"><strong>Total</strong></td>
+                        <?php foreach ($months as $month): ?>
+                            <td class="text-center font-bold" style="color: #2563eb;">
+                                <?= number_format($data[$month]['TOTAL_BANQUE'] ?? 0, 0, ',', ' ') ?> €
+                            </td>
+                        <?php endforeach; ?>
+                    </tr>
 
-                <?php foreach ($allCategories as $cat): ?>
-                <tr>
-                    <td class="sticky-col"><?= htmlspecialchars($cat) ?></td>
-                    <?php foreach ($months as $month): $amount = $data[$month][$cat] ?? 0; ?>
-                        <td class="text-center text-muted">
-                            <?php if ($amount != 0): ?>
-                                <div class="cell-content">
-                                    <span>- <?= number_format($amount, 0, ',', ' ') ?> €</span>
-                                    <button class="btn-cell-delete" 
-                                            onclick="deleteSavingsEntry('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= $currentOwner ?>')">
-                                        &times;
-                                    </button>
-                                </div>
-                            <?php else: ?> - <?php endif; ?>
-                        </td>
+                    <?php foreach ($allCategories as $cat): ?>
+                    <tr>
+                        <td class="sticky-col"><?= htmlspecialchars($cat) ?></td>
+                        <?php foreach ($months as $month): $amount = $data[$month][$cat] ?? 0; ?>
+                            <td class="text-center text-muted">
+                                <?php if ($amount != 0): ?>
+                                    <div class="cell-content">
+                                        <span>- <?= number_format($amount, 0, ',', ' ') ?> €</span>
+                                        <button class="btn-cell-delete" 
+                                                onclick="deleteSavingsEntry('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= $currentOwner ?>')">
+                                            &times;
+                                        </button>
+                                    </div>
+                                <?php else: ?> - <?php endif; ?>
+                            </td>
+                        <?php endforeach; ?>
+                    </tr>
                     <?php endforeach; ?>
-                </tr>
-                <?php endforeach; ?>
 
-                <tr class="row-extres">
-                    <td class="sticky-col"><strong>Extra</strong></td>
-                    <?php foreach ($months as $month): 
-                        $total = $data[$month]['TOTAL_BANQUE'] ?? 0;
-                        $sum = 0;
-                        foreach ($allCategories as $cat) $sum += ($data[$month][$cat] ?? 0);
-                        $extra = $total - $sum;
-                    ?>
-                        <td class="text-center font-bold" style="color: <?= $extra >= 0 ? '#10b981' : '#ef4444' ?>">
-                            <?= number_format($extra, 0, ',', ' ') ?> €
-                        </td>
-                    <?php endforeach; ?>
-                </tr>
-            </tbody>
-        </table>
+                    <tr class="row-extres">
+                        <td class="sticky-col"><strong>Extra</strong></td>
+                        <?php foreach ($months as $month): 
+                            $total = $data[$month]['TOTAL_BANQUE'] ?? 0;
+                            $sum = 0;
+                            foreach ($allCategories as $cat) $sum += ($data[$month][$cat] ?? 0);
+                            $extra = $total - $sum;
+                        ?>
+                            <td class="text-center font-bold" style="color: <?= $extra >= 0 ? '#10b981' : '#ef4444' ?>">
+                                <?= number_format($extra, 0, ',', ' ') ?> €
+                            </td>
+                        <?php endforeach; ?>
+                    </tr>
+                </tbody>
+            </table>
         <?php endif; ?>
     </div>
-    <?php endforeach; ?> </div>
+    <?php endforeach; ?> 
+</div>
 
 <div id="savingsModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 500px;">
-        <h3 id="savingsModalTitle" class="pf-modal-title">Saisir le mois</h3>
+    <div class="pf-modal-content" style="max-width: 600px; width: 95%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 id="savingsModalTitle" class="pf-modal-title" style="margin:0;">Saisir le mois</h3>
+            <button type="button" onclick="document.getElementById('savingsModal').style.display='none'" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+        </div>
         
         <form action="/modules/budget/includes/api/save-savings.php" method="POST" id="savingsForm">
             <input type="hidden" name="owner" id="sav_owner">
+            <input type="hidden" name="redirect_tab" id="redirect_tab" value="<?= htmlspecialchars($requestedOwner) ?>"> 
+
+            <div style="display:flex; gap:15px; margin-bottom:20px;">
+                <div class="form-group" style="flex:1; margin:0;">
+                    <label class="pf-label">Mois concerné</label>
+                    <input type="date" name="month_date" id="sav_date" required class="pf-input">
+                </div>
+
+                <div class="form-group" style="flex:1; margin:0;">
+                    <label class="pf-label">Total en Banque (€)</label>
+                    <input type="number" step="0.01" name="values[TOTAL_BANQUE]" id="sav_total" required class="pf-input no-spinners" style="font-weight:bold; color:#2563eb;">
+                </div>
+            </div>
+
+            <div class="separator" style="margin: 20px 0; border-bottom: 1px solid #e2e8f0;"></div>
             
-            <input type="hidden" name="redirect_tab" value="<?= $requestedOwner ?>"> 
-
-            <div class="form-group">
-                <label class="pf-label">Mois concerné</label>
-                <input type="date" name="month_date" id="sav_date" required class="pf-input">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <div>
+                    <h4 style="margin:0; font-size:1rem; color:#1e293b;">Ventilation</h4>
+                    <span style="font-size:0.8rem; color:#64748b;">Utilisez l'ajustement (+/-) pour recalculer automatiquement.</span>
+                </div>
+                <button type="button" class="pf-btn btn-secondary" onclick="addCustomEpargneLine()" style="padding:4px 10px; height:auto; width:auto; font-size:0.9rem;">＋ Ligne</button>
             </div>
 
-            <div class="form-group">
-                <label class="pf-label">Total (€)</label>
-                <input type="number" step="0.01" name="values[TOTAL_BANQUE]" id="sav_total" required class="pf-input" style="font-weight:bold; color:#2563eb;">
+            <div style="display:flex; gap:10px; padding:0 5px 5px 5px; font-size:0.8rem; color:#64748b; font-weight:600;">
+                <div style="flex:2;">Catégorie</div>
+                <div style="width:100px;">Actuel</div>
+                <div style="width:90px;">Ajust (+/-)</div>
+                <div style="width:100px;">Nouveau</div>
+                <div style="width:28px;"></div>
             </div>
 
-            <div class="separator" style="margin: 20px 0; border-bottom: 1px solid #eee;"></div>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h4 style="margin:0; font-size:0.9rem; color:#64748b;">Ventilation</h4>
-                <button type="button" class="btn-icon" onclick="addNewLine()" title="Ajouter une ligne" style="background:#e2e8f0;">＋</button>
-            </div>
+            <div id="linesContainer" style="max-height: 350px; overflow-y: auto; padding-right:5px; display:flex; flex-direction:column; gap:10px;">
+                </div>
 
-            <div id="linesContainer" style="max-height: 300px; overflow-y: auto; padding-right:5px; display:flex; flex-direction:column; gap:8px;"></div>
-
-            <div class="modal-footer">
-                <button type="button" onclick="document.getElementById('savingsModal').style.display='none'" class="pf-btn btn-secondary">Annuler</button>
-                <button type="submit" class="pf-btn">Enregistrer</button>
+            <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="document.getElementById('savingsModal').style.display='none'" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
+                <button type="submit" class="pf-btn" style="width:auto; margin:0;">Enregistrer</button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+// --- LOGIQUE MODALE EPARGNE ---
+
+function addCustomEpargneLine(catName = '', amount = '') {
+    const container = document.getElementById('linesContainer');
+    const baseAmount = amount !== '' ? parseFloat(amount).toFixed(2) : '0.00';
+    
+    // Assure l'envoi de `values[Catégorie]` au serveur
+    const inputName = catName ? `values[${catName}]` : '';
+
+    const html = `
+        <div class="ventilation-line" style="display:flex; gap:10px; align-items:center; background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
+            <div style="flex:2;">
+                <input type="text" class="pf-input cat-name-input" value="${catName}" placeholder="Nom (ex: Vacances)" oninput="updateCustomFieldName(this)" style="padding:6px; font-size:0.9rem;" required>
+            </div>
+            
+            <div style="width:100px;">
+                <input type="number" step="0.01" class="pf-input base-amount no-spinners" value="${baseAmount}" oninput="recalculateCustomLine(this)" style="padding:6px; font-size:0.9rem; background:#fff;">
+            </div>
+
+            <div style="width:90px;">
+                <input type="number" step="0.01" class="pf-input adjustment-amount no-spinners" placeholder="+ / -" oninput="recalculateCustomLine(this)" style="padding:6px; font-size:0.9rem; color:#f59e0b; font-weight:bold;">
+            </div>
+
+            <div style="width:100px;">
+                <input type="number" step="0.01" name="${inputName}" class="pf-input final-amount no-spinners" value="${baseAmount}" style="padding:6px; font-size:0.9rem; font-weight:bold; background:#e0f2fe; border-color:#bae6fd; color:#0369a1;" readonly>
+            </div>
+            
+            <button type="button" onclick="this.parentElement.remove()" style="width:28px; height:28px; border:none; background:#fee2e2; color:#ef4444; border-radius:4px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold;">&times;</button>
+        </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function updateCustomFieldName(inputElement) {
+    const line = inputElement.closest('.ventilation-line');
+    const finalInput = line.querySelector('.final-amount');
+    const newName = inputElement.value.trim();
+    
+    if (newName) {
+        finalInput.name = `values[${newName}]`;
+    } else {
+        finalInput.name = '';
+    }
+}
+
+function recalculateCustomLine(inputElement) {
+    const line = inputElement.closest('.ventilation-line');
+    const baseInput = line.querySelector('.base-amount');
+    const adjInput = line.querySelector('.adjustment-amount');
+    const finalInput = line.querySelector('.final-amount');
+    
+    const base = parseFloat(baseInput.value) || 0;
+    const adj = parseFloat(adjInput.value) || 0;
+    
+    finalInput.value = (base + adj).toFixed(2);
+}
+
+function editCustomSavingsMonth(monthDate, owner, rowData) {
+    document.getElementById('sav_owner').value = owner;
+    document.getElementById('sav_date').value = monthDate;
+    
+    const dateObj = new Date(monthDate);
+    const monthName = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    document.getElementById('savingsModalTitle').innerText = "Modifier : " + monthName + " (" + owner + ")";
+    
+    document.getElementById('sav_total').value = rowData['TOTAL_BANQUE'] || '';
+
+    const container = document.getElementById('linesContainer');
+    container.innerHTML = '';
+
+    for (const [cat, val] of Object.entries(rowData)) {
+        if (cat !== 'TOTAL_BANQUE') {
+            addCustomEpargneLine(cat, val);
+        }
+    }
+    
+    if (container.children.length === 0) {
+        addCustomEpargneLine();
+    }
+
+    document.getElementById('savingsModal').style.display = 'flex';
+}
+
+function openCustomSavingsModal(owner) {
+    document.getElementById('sav_owner').value = owner;
+    document.getElementById('sav_date').value = '';
+    document.getElementById('sav_total').value = '';
+    
+    document.getElementById('savingsModalTitle').innerText = "Saisir un mois (" + owner + ")";
+    
+    const container = document.getElementById('linesContainer');
+    container.innerHTML = '';
+    addCustomEpargneLine(); 
+    
+    document.getElementById('savingsModal').style.display = 'flex';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('savingsModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// --- INTERCEPTION DU FORMULAIRE POUR ÉVITER LE BUG DE REDIRECTION ---
+document.getElementById('epargneForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Empêche le rechargement classique de la page
+
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = "Enregistrement...";
+    submitBtn.disabled = true;
+
+    const formData = new FormData(this);
+
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        // Peu importe comment le backend redirige en interne,
+        // on force le navigateur à recharger la page EXACTE où l'utilisateur se trouve
+        window.location.reload(); 
+    })
+    .catch(error => {
+        console.error("Erreur:", error);
+        alert("Une erreur est survenue lors de l'enregistrement.");
+        submitBtn.innerText = originalText;
+        submitBtn.disabled = false;
+    });
+});
+
+// ============================================================================
+// ACTIONS AJAX (Suppression et Duplication)
+// ============================================================================
+
+// 1. Supprimer TOUT un mois (Bouton Poubelle rouge en haut)
+function deleteEntireMonth(monthDate, owner) {
+    if (!confirm(`Supprimer TOUT le mois pour ${owner} ?`)) return;
+
+    const formData = new FormData();
+    formData.append("action", "delete_month_global");
+    formData.append("month_date", monthDate);
+    formData.append("owner", owner);
+
+    fetch("/modules/budget/includes/api/save-savings.php", {
+        method: "POST",
+        body: formData,
+    }).then(() => window.location.reload());
+}
+
+// 2. Dupliquer le mois précédent (Bouton +1 Mois)
+function duplicateLastMonth(lastMonthDate, owner) {
+    let dateObj = new Date(lastMonthDate);
+    dateObj.setMonth(dateObj.getMonth() + 1);
+    let nextMonthStr = dateObj.toISOString().split("T")[0];
+
+    let newTotal = prompt(
+        `Dupliquer pour ${owner} vers ${nextMonthStr} ?\n\nNouveau TOTAL en banque :`,
+        ""
+    );
+
+    if (newTotal !== null && newTotal.trim() !== "") {
+        const formData = new FormData();
+        formData.append("action", "duplicate_month");
+        formData.append("source_date", lastMonthDate);
+        formData.append("target_date", nextMonthStr);
+        formData.append("new_total", newTotal);
+        formData.append("owner", owner);
+
+        fetch("/modules/budget/includes/api/save-savings.php", {
+            method: "POST",
+            body: formData,
+        })
+        .then((r) => r.json())
+        .then((d) => {
+            if (d.success) window.location.reload();
+            else alert(d.error);
+        })
+        .catch(err => alert("Erreur réseau."));
+    }
+}
+
+// 3. Supprimer une seule ligne d'un mois (Petite croix dans la cellule)
+function deleteSavingsEntry(monthDate, category, owner) {
+    if (!confirm(`Supprimer le montant pour "${category}" ?`)) return;
+
+    const formData = new FormData();
+    formData.append("action", "delete_entry");
+    formData.append("month_date", monthDate);
+    formData.append("category", category);
+    formData.append("owner", owner);
+
+    fetch("/modules/budget/includes/api/save-savings.php", {
+        method: "POST",
+        body: formData,
+    }).then(() => window.location.reload());
+}
+</script>
