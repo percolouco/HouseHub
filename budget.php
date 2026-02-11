@@ -51,5 +51,4 @@ require __DIR__ . '/header.php';
     ?>
 </section>
 </div>
-<script src="/modules/budget/budget.js"></script>
 <?php require __DIR__ . '/footer.php'; ?>
