@@ -8,31 +8,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- ACTION : SAUVEGARDER (AJOUT OU MODIF) ---
     if ($action === 'save') {
-        $id          = !empty($_POST['id']) ? $_POST['id'] : null;
-        $name        = $_POST['name'];
-        $amount      = str_replace(',', '.', $_POST['amount']); 
-        $type        = $_POST['type'];
-        $day         = !empty($_POST['payment_day']) ? $_POST['payment_day'] : null;
-        $month       = $_POST['reg_month'] ?: null;
-        $cat         = $_POST['category'];
-        $is_estimate = isset($_POST['is_estimate']) ? (int)$_POST['is_estimate'] : 0;
+    $id = $_POST['id'] ?? '';
+    $name = $_POST['name'];
+    $amount = $_POST['amount'];
+    $category = $_POST['category'];
+    $type = $_POST['type'];
+    $payment_day = $_POST['payment_day'];
+    $is_estimate = $_POST['is_estimate'];
+    $reg_month = $_POST['reg_month'];
+    
+    // NOUVEAU : Récupération des mots-clés
+    $keywords = $_POST['mapping_keywords'] ?? ''; 
 
-        if ($id) {
-            // Update : on ajoute is_estimate
-            $sql = "UPDATE pf_budget_items SET name=?, amount=?, type=?, payment_day=?, reg_month=?, category=?, is_estimate=? WHERE id=?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$name, $amount, $type, $day, $month, $cat, $is_estimate, $id]);
-        } else {
-            // Insert : on ajoute is_estimate
-            $sql = "INSERT INTO pf_budget_items (name, amount, type, payment_day, reg_month, category, is_estimate) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$name, $amount, $type, $day, $month, $cat, $is_estimate]);
-        }
-        
-        // Redirection après sauvegarde classique
-        header('Location: /budget.php?tab=recap');
-        exit;
+    if ($id) {
+        // UPDATE
+        $stmt = $pdo->prepare("UPDATE pf_budget_items SET name=?, amount=?, category=?, type=?, payment_day=?, is_estimate=?, reg_month=?, mapping_keywords=? WHERE id=?");
+        $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $id]);
+    } else {
+        // INSERT
+        $stmt = $pdo->prepare("INSERT INTO pf_budget_items (name, amount, category, type, payment_day, is_estimate, reg_month, mapping_keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords]);
     }
+    header('Location: /budget.php?tab=recap'); // Ou ta redirection habituelle
+    exit;
+}
 
     // --- ACTION : COCHER/DÉCOCHER RAPIDE (VIA JS FETCH) ---
     if ($action === 'toggle-check') {
