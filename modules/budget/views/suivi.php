@@ -226,11 +226,17 @@ $showPreview = false;
 if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $file = $_FILES['csv_file']['tmp_name'];
     $handle = fopen($file, "r");
-    $rules = []; try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
-    $existingRefs = []; try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
     
-    fgetcsv($handle, 1000, ";"); 
-    while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
+    $rules = []; 
+    try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
+    
+    $existingRefs = []; 
+    try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
+    
+    // CORRECTION ICI : Ajout des paramètres explicitement : fgetcsv(stream, length, separator, enclosure, escape)
+    fgetcsv($handle, 1000, ";", "\"", "\\"); 
+    
+    while (($data = fgetcsv($handle, 1000, ";", "\"", "\\")) !== FALSE) {
         $rawDebit = $data[8] ?? ''; 
         $rawCredit = $data[9] ?? ''; 
         
