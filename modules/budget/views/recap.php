@@ -1,12 +1,20 @@
 <?php
 // modules/budget/views/recap.php
 
-// 1. Récupération des données
+// 1. Récupération des Items du Budget
 $stmt = $pdo->query("SELECT * FROM pf_budget_items ORDER BY category DESC, sort_order ASC, name ASC");
 $items = $stmt->fetchAll();
 
-$totalDepensesMensuelles = 0;
-$totalRevenusMensuels = 0;
+// 2. Récupération des Dépenses Réelles du mois (Pour le matching auto)
+$currentMonth = date('m');
+$currentYear = date('Y');
+$stmtExp = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
+$stmtExp->execute([$currentMonth, $currentYear]);
+// On stocke tous les libellés réels dans un tableau simple
+$realExpensesLabels = $stmtExp->fetchAll(PDO::FETCH_COLUMN);
+
+$totalDepenses = 0;
+$totalRevenus = 0;
 ?>
 
 <div class="budget-view">
@@ -30,15 +38,35 @@ $totalRevenusMensuels = 0;
             </thead>
             <tbody>
                 <?php foreach ($items as $item): 
-                    // Calcul des totaux (Mensuel uniquement)
-                    if ($item['type'] === 'Mensuel') {
-                        if ($item['category'] === 'expense') {
-                            $totalDepensesMensuelles += $item['amount'];
-                        } else {
-                            $totalRevenusMensuels += $item['amount'];
+                    // --- CALCUL DES TOTAUX ---
+                    $amountToAdd = ($item['type'] === 'Annuel') ? $item['amount'] / 12 : $item['amount'];
+                    if ($item['category'] === 'expense') $totalDepenses += $amountToAdd;
+                    else $totalRevenus += $amountToAdd;
+                    
+                    // --- LOGIQUE DE DETECTION AUTOMATIQUE ---
+                    $isAutoChecked = false;
+                    // Si des mots-clés sont définis pour cet item
+                    if (!empty($item['mapping_keywords'])) {
+                        // On explose la chaine "Netflix, Spotify" en tableau
+                        $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
+                        
+                        foreach ($keywords as $kw) {
+                            if (empty($kw)) continue;
+                            // On cherche ce mot clé dans TOUTES les dépenses réelles du mois
+                            foreach ($realExpensesLabels as $realLabel) {
+                                // stripos pour insensible à la casse
+                                if (stripos($realLabel, $kw) !== false) {
+                                    $isAutoChecked = true;
+                                    break 2; // On sort des deux boucles si trouvé
+                                }
+                            }
                         }
                     }
-                    
+
+                    // L'état final est : Soit coché manuellement (BDD), soit détecté auto
+                    $isPaid = $item['is_checked'] || $isAutoChecked;
+
+                    // Styles
                     $rowClass = ($item['category'] === 'income') ? 'row-income' : 'row-expense';
                     if ($item['is_estimate']) $rowClass .= ' row-estimate';
                 ?>
@@ -46,9 +74,15 @@ $totalRevenusMensuels = 0;
                     <td style="padding:15px;">
                         <strong><?= htmlspecialchars($item['name']) ?></strong>
                         <?= $item['is_estimate'] ? ' <small style="color:#64748b;">(Est.)</small>' : '' ?>
+                        <?php if(!empty($item['mapping_keywords'])): ?>
+                            <span title="Mapping auto activé: <?= htmlspecialchars($item['mapping_keywords']) ?>" style="font-size:0.7rem; cursor:help;">🔗</span>
+                        <?php endif; ?>
                     </td>
                     <td class="cell-amount" style="font-weight:600; padding:15px; color:<?= $item['category']==='income'?'#10b981':'#1e293b' ?>;">
                         <?= number_format($item['amount'], 2, ',', ' ') ?> €
+                        <?php if($item['type'] === 'Annuel'): ?>
+                            <div style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">Soit <?= number_format($amountToAdd, 2, ',', ' ') ?>/mois</div>
+                        <?php endif; ?>
                     </td>
                     <td style="padding:15px;">
                         <span class="badge-type <?= strtolower($item['type']) ?>" style="background:#e2e8f0; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:600; color:#475569;">
@@ -58,12 +92,17 @@ $totalRevenusMensuels = 0;
                     <td style="padding:15px; color:#64748b;"><?= $item['payment_day'] ? $item['payment_day'] : '-' ?></td>
                     <td style="padding:15px;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <input type="checkbox" 
-                                   <?= $item['is_checked'] ? 'checked' : '' ?> 
-                                   onclick="toggleItemCheck(<?= $item['id'] ?>, this.checked)"
-                                   title="Marquer comme payé"
-                                   style="width:18px; height:18px; cursor:pointer;">
-                            <?= $item['is_checked'] ? ' <span style="color:#10b981; font-weight:500; font-size:0.9rem;">Payé</span>' : ' <span style="color:#f59e0b; font-weight:500; font-size:0.9rem;">Attente</span>' ?>
+                            <?php if ($isAutoChecked): ?>
+                                <input type="checkbox" checked disabled style="width:18px; height:18px; accent-color:#3b82f6; cursor:not-allowed;">
+                                <span style="color:#3b82f6; font-weight:600; font-size:0.9rem;">Auto ✅</span>
+                            <?php else: ?>
+                                <input type="checkbox" 
+                                       <?= $item['is_checked'] ? 'checked' : '' ?> 
+                                       onclick="toggleItemCheck(<?= $item['id'] ?>, this.checked)"
+                                       title="Marquer comme payé"
+                                       style="width:18px; height:18px; cursor:pointer;">
+                                <?= $item['is_checked'] ? ' <span style="color:#10b981; font-weight:500; font-size:0.9rem;">Payé</span>' : ' <span style="color:#f59e0b; font-weight:500; font-size:0.9rem;">Attente</span>' ?>
+                            <?php endif; ?>
                         </div>
                     </td>
                     <td style="padding:15px; color:#64748b; font-size:0.9rem;">
@@ -80,16 +119,16 @@ $totalRevenusMensuels = 0;
             </tbody>
             <tfoot style="background:#f8fafc;">
                 <tr>
-                    <td colspan="1" style="padding:15px;"><strong>Total Revenus Mensuels</strong></td>
-                    <td colspan="6" style="padding:15px; color:#10b981;"><strong>+ <?= number_format($totalRevenusMensuels, 2, ',', ' ') ?> €</strong></td>
+                    <td colspan="1" style="padding:15px;"><strong>Total Revenus (Lissés)</strong></td>
+                    <td colspan="6" style="padding:15px; color:#10b981;"><strong>+ <?= number_format($totalRevenus, 2, ',', ' ') ?> €</strong></td>
                 </tr>
                 <tr>
-                    <td colspan="1" style="padding:15px;"><strong>Total Dépenses Mensuelles</strong></td>
-                    <td colspan="6" style="padding:15px; color:#ef4444;"><strong>- <?= number_format($totalDepensesMensuelles, 2, ',', ' ') ?> €</strong></td>
+                    <td colspan="1" style="padding:15px;"><strong>Total Dépenses (Lissées)</strong></td>
+                    <td colspan="6" style="padding:15px; color:#ef4444;"><strong>- <?= number_format($totalDepenses, 2, ',', ' ') ?> €</strong></td>
                 </tr>
                 <tr style="border-top: 2px solid #e2e8f0; background: white;">
-                    <td colspan="1" style="padding:15px; font-size:1.1rem;"><strong>Équilibre du compte</strong></td>
-                    <?php $balance = $totalRevenusMensuels - $totalDepensesMensuelles; ?>
+                    <td colspan="1" style="padding:15px; font-size:1.1rem;"><strong>Équilibre théorique</strong></td>
+                    <?php $balance = $totalRevenus - $totalDepenses; ?>
                     <td colspan="6" style="padding:15px; font-size: 1.3em;" class="<?= $balance >= 0 ? 'text-success' : 'text-danger' ?>">
                         <strong style="color:<?= $balance >= 0 ? '#10b981' : '#ef4444' ?>;"><?= number_format($balance, 2, ',', ' ') ?> € / mois</strong>
                     </td>
@@ -99,7 +138,7 @@ $totalRevenusMensuels = 0;
     </div>
     
     <div class="budget-note" style="margin-top:15px; font-size:0.85rem; color:#64748b;">
-        <p>* Note : Les frais de type "Annuel" sont affichés pour information mais ne sont pas inclus dans le calcul de l'équilibre mensuel.</p>
+        <p>* Les lignes marquées <strong>Auto ✅</strong> ont été détectées automatiquement dans les dépenses réelles du mois.</p>
     </div>
 </div>
 
@@ -120,6 +159,12 @@ $totalRevenusMensuels = 0;
                 <input type="text" name="name" id="item_name" required class="pf-input" placeholder="Ex: Loyer, Salaire..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
             </div>
             
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Mots-clés (Détection Auto)</label>
+                <input type="text" name="mapping_keywords" id="item_keywords" class="pf-input" placeholder="Ex: NETFLIX, PRIME VIDEO (séparés par virgule)" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:#f0f9ff; border-color:#bae6fd;">
+                <small style="color:#64748b; font-size:0.75rem;">Si une dépense du mois contient ce mot, la ligne passera en "Payé".</small>
+            </div>
+
             <div style="display:flex; gap:15px; margin-bottom:15px;">
                 <div style="flex:1;">
                     <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Montant (€)</label>
@@ -181,7 +226,6 @@ $totalRevenusMensuels = 0;
 // SCRIPTS ISOLÉS POUR L'ONGLET RECAPITULATIF
 // ==========================================
 
-// Fermer au clic extérieur
 window.onclick = function(event) {
     const modal = document.getElementById('budgetRecapModal');
     if (event.target == modal) {
@@ -203,12 +247,14 @@ function closeRecapModal() {
 }
 
 function editRecapItem(item) {
-    // Si item est une string JSON (passée depuis PHP), on la parse
     const data = typeof item === "string" ? JSON.parse(item) : item;
 
     document.getElementById("recapModalTitle").innerText = "Modifier : " + data.name;
     document.getElementById("item_id").value = data.id;
     document.getElementById("item_name").value = data.name;
+    // Remplissage du nouveau champ Keywords
+    document.getElementById("item_keywords").value = data.mapping_keywords || ''; 
+    
     document.getElementById("item_amount").value = data.amount;
     document.getElementById("item_category").value = data.category;
     document.getElementById("item_type").value = data.type;
@@ -249,13 +295,11 @@ function toggleItemCheck(id, isChecked) {
     })
     .then((response) => {
         if (!response.ok) throw new Error("Erreur réseau");
-        // Optionnel : on pourrait forcer un rechargement pour mettre l'icône à jour dynamiquement
         window.location.reload(); 
     })
     .catch((error) => {
         alert("Erreur lors de la mise à jour");
         console.error(error);
-        // Si erreur, on décoche/recoche pour refléter la réalité
         window.location.reload();
     });
 }
