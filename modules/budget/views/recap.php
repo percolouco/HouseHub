@@ -51,11 +51,11 @@ $totalRevenus = 0;
                     foreach ($allExpenses as $exp) {
                         $match = false;
                         
-                        // A. Matching par ID (Prioritaire & Précis)
+                        // A. Matching par ID (Prioritaire)
                         if (!empty($exp['budget_item_id']) && (int)$exp['budget_item_id'] === (int)$item['id']) {
                             $match = true;
                         } 
-                        // B. Matching par Mots-clés (Si pas d'ID sur la dépense)
+                        // B. Matching par Mots-clés
                         elseif (empty($exp['budget_item_id']) && !empty($item['mapping_keywords'])) {
                             $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
                             foreach ($keywords as $kw) {
@@ -67,7 +67,14 @@ $totalRevenus = 0;
                         }
 
                         if ($match) {
-                            $realSum += (float)$exp['amount']; // Additionne débits (+) et crédits (-)
+                            // CORRECTION : Gestion des signes
+                            if ($item['category'] === 'income') {
+                                // Pour les revenus stockés en négatif, on prend la valeur absolue
+                                $realSum += abs((float)$exp['amount']);
+                            } else {
+                                // Pour les dépenses, on garde le signe (Débit positif, Remboursement négatif)
+                                $realSum += (float)$exp['amount'];
+                            }
                             $hasMatchingExpense = true;
                         }
                     }
