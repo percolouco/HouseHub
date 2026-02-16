@@ -119,7 +119,7 @@ if (isset($_GET['delete_expense'])) {
 }
 
 // ============================================================================
-// 2. CALCUL DES BUDGETS & LISTES DÉROULANTES
+// 2. CALCUL DES BUDGETS & CHARGES FIXES
 // ============================================================================
 
 $budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0; $budget_income_prevu = 0;
@@ -129,9 +129,23 @@ $today_day = (int)date('j');
 
 // Listes pour les selecteurs
 $fixedChargesList = [];
-$incomeList = []; // NOUVEAU : Liste des revenus
+$incomeList = []; 
 
-// Snapshot
+// --- A. RÉCUPÉRATION DONNÉES RÉELLES POUR CALCUL "Reste à venir" ---
+$currentMonth = date('m'); $currentYear = date('Y');
+
+// 1. Récupération des IDs payés ce mois-ci
+$stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL");
+$stmtIds->execute([$currentMonth, $currentYear]);
+$paidItemIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
+
+// 2. Récupération des libellés (pour le fallback mots-clés)
+$stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
+$stmtLabels->execute([$currentMonth, $currentYear]);
+$realExpensesLabels = $stmtLabels->fetchAll(PDO::FETCH_COLUMN);
+
+
+// --- B. SNAPSHOT & SOLDE THÉORIQUE ---
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
 $solde_theorique = 0;
 try {
@@ -150,8 +164,8 @@ if (!empty($snapshot['date'])) {
     } catch (Exception $e) {}
 }
 
-// Lecture Budget - Ajout de 'is_checked' à la requête
-$stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked FROM pf_budget_items ORDER BY name ASC");
+// --- C. LECTURE BUDGET ET CALCULS ---
+$stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $rawAmount = (float)$item['amount'];
     $amt = ($item['type'] === 'Annuel') ? $rawAmount / 12 : $rawAmount;
@@ -159,26 +173,52 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $pDay = (int)$item['payment_day'];
     $isChecked = (int)$item['is_checked'];
     
-    // Remplissage liste Charges Fixes
+    // Remplissage liste Charges Fixes (Selecteur)
     if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
         $fixedChargesList[] = $item;
     }
-    // Remplissage liste Revenus
+    // Remplissage liste Revenus (Selecteur)
     if ($item['category'] === 'income') {
         $incomeList[] = $item;
         $total_income += $amt;
-        // On peut vouloir suivre le budget des revenus aussi
         $budget_income_prevu += $amt; 
     } else {
         $total_expenses_prevues += $amt;
         
-        // Calcul Reste à venir
-        if ($item['category'] === 'expense' && $item['type'] === 'Mensuel') {
-            if ($isChecked === 0 && (int)$item['is_estimate'] === 0) {
+        // --- CALCUL INTELLIGENT DU "RESTE A VENIR" ---
+        if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
+            
+            $isPaid = false;
+
+            // 1. Est-ce coché manuellement ?
+            if ($isChecked === 1) {
+                $isPaid = true;
+            }
+            // 2. Est-ce lié par ID (Import CSV ou Manuel) ?
+            elseif (in_array($item['id'], $paidItemIds)) {
+                $isPaid = true;
+            }
+            // 3. Est-ce détecté par mot-clé ?
+            elseif (!empty($item['mapping_keywords'])) {
+                $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
+                foreach ($keywords as $kw) {
+                    if (empty($kw)) continue;
+                    foreach ($realExpensesLabels as $realLabel) {
+                        if (stripos($realLabel, $kw) !== false) {
+                            $isPaid = true;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            // Si ce n'est PAS payé/trouvé, on l'ajoute au reste à venir
+            if (!$isPaid) {
                 $reste_a_venir += $rawAmount;
             }
         }
 
+        // Remplissage des jauges
         if ($name === 'Estimacio F&B & beauty') $budget_fmcg = $amt;
         elseif ($name === 'Estimacio escola') $budget_school = $amt;
         elseif ($name === 'Estimation gasolina') $budget_essence = $amt;
@@ -188,15 +228,21 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// Catégories Temporaires
-$tempCats = []; $total_temp_budget = 0;
+// --- D. CATÉGORIES TEMPORAIRES (Le bloc manquant !) ---
+$tempCats = []; 
+$total_temp_budget = 0;
 try {
     $stmt = $pdo->prepare("SELECT * FROM pf_monthly_categories WHERE month_year = ?");
     $stmt->execute([$currentMonthKey]);
     $tempCats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach($tempCats as $tc) if ($tc['type'] === 'debit') $total_temp_budget += $tc['budget'];
+    foreach($tempCats as $tc) {
+        if ($tc['type'] === 'debit') {
+            $total_temp_budget += $tc['budget'];
+        }
+    }
 } catch (Exception $e) {}
 
+// --- E. CALCUL DU BUDGET "AUTRES" ---
 $budget_autres = $total_income - ($total_expenses_prevues + $total_temp_budget);
 if ($budget_autres < 0) $budget_autres = 0;
 
