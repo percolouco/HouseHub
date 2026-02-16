@@ -5,13 +5,14 @@
 $stmt = $pdo->query("SELECT * FROM pf_budget_items ORDER BY category DESC, sort_order ASC, name ASC");
 $items = $stmt->fetchAll();
 
-// 2. Récupération des Dépenses Réelles du mois (Pour le matching auto)
+// 2. Récupération des Dépenses Réelles du mois
 $currentMonth = date('m');
 $currentYear = date('Y');
-$stmtExp = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
+
+// On récupère TOUTES les dépenses du mois pour faire le calcul en PHP
+$stmtExp = $pdo->prepare("SELECT amount, label, budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
 $stmtExp->execute([$currentMonth, $currentYear]);
-// On stocke tous les libellés réels dans un tableau simple
-$realExpensesLabels = $stmtExp->fetchAll(PDO::FETCH_COLUMN);
+$allExpenses = $stmtExp->fetchAll(PDO::FETCH_ASSOC);
 
 $totalDepenses = 0;
 $totalRevenus = 0;
@@ -28,42 +29,60 @@ $totalRevenus = 0;
             <thead style="background:#f8fafc;">
                 <tr>
                     <th>Nom</th>
-                    <th>Montant</th>
+                    <th>Montant Prévu</th>
                     <th>Type</th>
                     <th>Jour</th>
-                    <th>État prélèvement</th>
+                    <th>État</th>
                     <th>Régularisation</th>
                     <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($items as $item): 
-                    // --- CALCUL DES TOTAUX ---
+                    // --- 1. CALCUL DES TOTAUX PRÉVUS ---
                     $amountToAdd = ($item['type'] === 'Annuel') ? $item['amount'] / 12 : $item['amount'];
                     if ($item['category'] === 'expense') $totalDepenses += $amountToAdd;
                     else $totalRevenus += $amountToAdd;
                     
-                    // --- LOGIQUE DE DETECTION AUTOMATIQUE ---
-                    $isAutoChecked = false;
-                    // Si des mots-clés sont définis pour cet item
-                    if (!empty($item['mapping_keywords'])) {
-                        // On explose la chaine "Netflix, Spotify" en tableau
-                        $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
+                    // --- 2. CALCUL DU RÉEL (SOMME DES LIGNES ASSOCIÉES) ---
+                    $realSum = 0;
+                    $hasMatchingExpense = false;
+
+                    foreach ($allExpenses as $exp) {
+                        $match = false;
                         
-                        foreach ($keywords as $kw) {
-                            if (empty($kw)) continue;
-                            // On cherche ce mot clé dans TOUTES les dépenses réelles du mois
-                            foreach ($realExpensesLabels as $realLabel) {
-                                // stripos pour insensible à la casse
-                                if (stripos($realLabel, $kw) !== false) {
-                                    $isAutoChecked = true;
-                                    break 2; // On sort des deux boucles si trouvé
+                        // A. Matching par ID (Prioritaire & Précis)
+                        if (!empty($exp['budget_item_id']) && (int)$exp['budget_item_id'] === (int)$item['id']) {
+                            $match = true;
+                        } 
+                        // B. Matching par Mots-clés (Si pas d'ID sur la dépense)
+                        elseif (empty($exp['budget_item_id']) && !empty($item['mapping_keywords'])) {
+                            $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
+                            foreach ($keywords as $kw) {
+                                if (!empty($kw) && stripos($exp['label'], $kw) !== false) {
+                                    $match = true; 
+                                    break;
                                 }
                             }
                         }
+
+                        if ($match) {
+                            $realSum += (float)$exp['amount']; // Additionne débits (+) et crédits (-)
+                            $hasMatchingExpense = true;
+                        }
                     }
 
-                    // L'état final est : Soit coché manuellement (BDD), soit détecté auto
+                    // --- 3. LOGIQUE D'ÉTAT (AUTO-CHECK) ---
+                    // On coche si la somme réelle atteint au moins 98% du montant prévu (tolérance petit écart)
+                    // ou si c'est coché manuellement.
+                    $isAutoChecked = false;
+                    $gap = $realSum - $item['amount'];
+                    
+                    // Seuil de tolérance (ex: 0.10€) pour considérer que c'est payé
+                    if ($hasMatchingExpense && ($realSum >= ($item['amount'] - 0.10))) {
+                        $isAutoChecked = true;
+                    }
+
                     $isPaid = $item['is_checked'] || $isAutoChecked;
 
                     // Styles
@@ -75,21 +94,40 @@ $totalRevenus = 0;
                         <strong><?= htmlspecialchars($item['name']) ?></strong>
                         <?= $item['is_estimate'] ? ' <small style="color:#64748b;">(Est.)</small>' : '' ?>
                         <?php if(!empty($item['mapping_keywords'])): ?>
-                            <span title="Mapping auto activé: <?= htmlspecialchars($item['mapping_keywords']) ?>" style="font-size:0.7rem; cursor:help;">🔗</span>
+                            <span title="<?= htmlspecialchars($item['mapping_keywords']) ?>" style="font-size:0.7rem; cursor:help;">🔗</span>
                         <?php endif; ?>
                     </td>
+                    
                     <td class="cell-amount" style="font-weight:600; padding:15px; color:<?= $item['category']==='income'?'#10b981':'#1e293b' ?>;">
                         <?= number_format($item['amount'], 2, ',', ' ') ?> €
-                        <?php if($item['type'] === 'Annuel'): ?>
+                        
+                        <?php if ($hasMatchingExpense): ?>
+                            <?php if ($gap > 0.05): ?>
+                                <div style="font-size:0.75rem; color:#ef4444; font-weight:bold;">
+                                    Dépassement : +<?= number_format($gap, 2, ',', ' ') ?> €
+                                </div>
+                            <?php elseif ($gap < -0.05): ?>
+                                <div style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">
+                                    Reste : <?= number_format(abs($gap), 2, ',', ' ') ?> €
+                                </div>
+                            <?php else: ?>
+                                <div style="font-size:0.75rem; color:#10b981; font-weight:normal;">
+                                    Montant exact ✓
+                                </div>
+                            <?php endif; ?>
+
+                        <?php elseif ($item['type'] === 'Annuel'): ?>
                             <div style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">Soit <?= number_format($amountToAdd, 2, ',', ' ') ?>/mois</div>
                         <?php endif; ?>
                     </td>
+
                     <td style="padding:15px;">
                         <span class="badge-type <?= strtolower($item['type']) ?>" style="background:#e2e8f0; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:600; color:#475569;">
                             <?= $item['type'] ?>
                         </span>
                     </td>
                     <td style="padding:15px; color:#64748b;"><?= $item['payment_day'] ? $item['payment_day'] : '-' ?></td>
+                    
                     <td style="padding:15px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <?php if ($isAutoChecked): ?>
@@ -101,10 +139,17 @@ $totalRevenus = 0;
                                        onclick="toggleItemCheck(<?= $item['id'] ?>, this.checked)"
                                        title="Marquer comme payé"
                                        style="width:18px; height:18px; cursor:pointer;">
-                                <?= $item['is_checked'] ? ' <span style="color:#10b981; font-weight:500; font-size:0.9rem;">Payé</span>' : ' <span style="color:#f59e0b; font-weight:500; font-size:0.9rem;">Attente</span>' ?>
+                                <?php if($item['is_checked']): ?>
+                                    <span style="color:#10b981; font-weight:500; font-size:0.9rem;">Payé</span>
+                                <?php elseif($hasMatchingExpense): ?>
+                                    <span style="color:#f59e0b; font-weight:bold; font-size:0.8rem;">Partiel</span>
+                                <?php else: ?>
+                                    <span style="color:#94a3b8; font-weight:500; font-size:0.9rem;">Attente</span>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </td>
+
                     <td style="padding:15px; color:#64748b; font-size:0.9rem;">
                         <em><?= htmlspecialchars($item['reg_month'] ?: '-') ?></em>
                     </td>
@@ -138,7 +183,7 @@ $totalRevenus = 0;
     </div>
     
     <div class="budget-note" style="margin-top:15px; font-size:0.85rem; color:#64748b;">
-        <p>* Les lignes marquées <strong>Auto ✅</strong> ont été détectées automatiquement dans les dépenses réelles du mois.</p>
+        <p>* Les lignes <strong>Auto ✅</strong> sont validées quand la somme des transactions atteint le montant prévu.</p>
     </div>
 </div>
 
@@ -252,9 +297,7 @@ function editRecapItem(item) {
     document.getElementById("recapModalTitle").innerText = "Modifier : " + data.name;
     document.getElementById("item_id").value = data.id;
     document.getElementById("item_name").value = data.name;
-    // Remplissage du nouveau champ Keywords
     document.getElementById("item_keywords").value = data.mapping_keywords || ''; 
-    
     document.getElementById("item_amount").value = data.amount;
     document.getElementById("item_category").value = data.category;
     document.getElementById("item_type").value = data.type;
