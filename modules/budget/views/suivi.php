@@ -58,6 +58,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
             if (isset($line['import_check'])) {
                 $cat = $line['cat'];
                 $is_credit = isset($line['is_credit']) ? (int)$line['is_credit'] : 0;
+                // Récupération ID (Charge fixe OU Revenu)
                 $budgetItemId = !empty($line['budget_item_id']) ? (int)$line['budget_item_id'] : null;
                 
                 if ($is_credit && empty($cat)) continue;
@@ -92,12 +93,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'add_expense') {
     if ($cat === 'School' && !empty($_POST['label_select'])) {
         $label = trim($_POST['label_select']);
     } 
-    elseif ($cat === 'Frais' && !empty($_POST['budget_item_id'])) {
+    // GESTION ID POUR FRAIS ET REVENUS
+    elseif (($cat === 'Frais' || $cat === 'Income') && !empty($_POST['budget_item_id'])) {
         $budgetItemId = (int)$_POST['budget_item_id'];
     }
 
     if ($label && $amount > 0) {
         $uniqueRef = "MANUAL_" . uniqid();
+        // Si c'est un revenu (Income), on s'assure que le montant est enregistré en négatif (Crédit) dans pf_expenses
+        // Sauf si l'utilisateur a déjà mis un moins, mais on part du principe qu'il saisit un montant positif
+        if ($cat === 'Income') {
+            $amount = -abs($amount);
+        }
+
         $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id) VALUES (?, ?, ?, ?, ?, ?)")
             ->execute([$date, $cat, $label, $amount, $uniqueRef, $budgetItemId]);
         header("Location: ?tab=suivi"); exit;
@@ -111,16 +119,17 @@ if (isset($_GET['delete_expense'])) {
 }
 
 // ============================================================================
-// 2. CALCUL DES BUDGETS & CHARGES FIXES
+// 2. CALCUL DES BUDGETS & LISTES DÉROULANTES
 // ============================================================================
 
-$budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0;
+$budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0; $budget_income_prevu = 0;
 $total_income = 0; $total_expenses_prevues = 0;
 $reste_a_venir = 0; 
 $today_day = (int)date('j'); 
 
-// Liste des charges pour le selecteur
+// Listes pour les selecteurs
 $fixedChargesList = [];
+$incomeList = []; // NOUVEAU : Liste des revenus
 
 // Snapshot
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
@@ -154,13 +163,16 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
         $fixedChargesList[] = $item;
     }
-
+    // Remplissage liste Revenus
     if ($item['category'] === 'income') {
+        $incomeList[] = $item;
         $total_income += $amt;
+        // On peut vouloir suivre le budget des revenus aussi
+        $budget_income_prevu += $amt; 
     } else {
         $total_expenses_prevues += $amt;
         
-        // On additionne si c'est une dépense mensuelle NON cochée
+        // Calcul Reste à venir
         if ($item['category'] === 'expense' && $item['type'] === 'Mensuel') {
             if ($isChecked === 0 && (int)$item['is_estimate'] === 0) {
                 $reste_a_venir += $rawAmount;
@@ -193,10 +205,13 @@ if ($budget_autres < 0) $budget_autres = 0;
 // ============================================================================
 
 $categoriesConfig = [
+    // NOUVEAU : Catégorie Revenus
+    'Income' => ['type'=>'credit', 'label'=>'Revenus', 'budget'=>$budget_income_prevu, 'color'=>'#10b981', 'suggestions'=>[]],
+    
     'FMCG' => ['type'=>'debit', 'label'=>'Courses (FMCG)', 'budget'=>$budget_fmcg, 'color'=>'#3b82f6', 'suggestions'=>['Action', 'Carrefour', 'Lidl']],
     'Essence' => ['type'=>'debit', 'label'=>'Essence', 'budget'=>$budget_essence, 'color'=>'#f59e0b', 'suggestions'=>['Audi', 'Polo']],
     'School' => ['type'=>'debit', 'label'=>'École / Garde', 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
-    'Frais' => ['type'=>'debit', 'label'=>'Charges Fixes', 'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>[]], // Suggestions vides car gérées par ID
+    'Frais' => ['type'=>'debit', 'label'=>'Charges Fixes', 'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>[]],
 ];
 
 $tempColors = ['#ec4899', '#06b6d4', '#84cc16', '#d946ef', '#f97316'];
@@ -256,8 +271,17 @@ foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    if ($exp['amount'] < 0) $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
-    else $totals[$cat] += $exp['amount'];
+    // Si la dépense est un crédit (montant < 0), pour Income on l'ajoute au total "reçu"
+    // Pour les autres catégories (réserves), ça augmente le budget
+    if ($exp['amount'] < 0) {
+        if ($cat === 'Income') {
+            $totals[$cat] += abs($exp['amount']); // On somme les revenus
+        } else {
+            $categoriesConfig[$cat]['budget'] += abs($exp['amount']); // Réserve
+        }
+    } else {
+        $totals[$cat] += $exp['amount'];
+    }
     
     $expensesByCategory[$cat][] = $exp;
 }
@@ -267,10 +291,14 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
 
 function getDisplayLogic($spent, $bg, $type) {
     if ($type === 'credit') {
+        // Pour Income et Réserves
+        // Income : 2200 / 4000 (Reçu / Attendu)
+        // Réserve : 50 / 400 (Restant / Initial) -> Cas particulier géré plus haut si besoin
+        // Ici on simplifie :
         $remaining = $bg - $spent;
-        $pct = ($bg > 0) ? max(0, min(100, ($remaining / $bg) * 100)) : 0;
-        $isOver = ($remaining < 0);
-        $text = number_format(ceil($remaining), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
+        $pct = ($bg > 0) ? max(0, min(100, ($spent / $bg) * 100)) : 0; // % Reçu
+        $isOver = false;
+        $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
     } else {
         $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0);
         $isOver = ($spent > $bg && $bg > 0);
@@ -313,15 +341,15 @@ function getDisplayLogic($spent, $bg, $type) {
                 </div>
             </div>
             <div style="text-align:right;">
-                <strong style="font-size:1.4rem; color:#1e293b;"><?= number_format(ceil($globalSpent), 0, ',', ' ') ?> €</strong>
-                <span style="font-size:0.85rem; color:#94a3b8;"> / <?= number_format(ceil($globalBudget), 0, ',', ' ') ?> €</span>
+                <span style="font-size:0.85rem; color:#94a3b8;">Total Mouvements</span>
             </div>
         </div>
 
         <div class="progress-grid">
             <?php foreach ($categoriesConfig as $key => $conf): 
                 $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']);
-                $barCol = $logic['isOver'] ? '#ef4444' : $conf['color'];
+                // Couleur barre : Vert pour Income, Rouge si dépassement Debit
+                $barCol = ($key === 'Income') ? '#10b981' : ($logic['isOver'] ? '#ef4444' : $conf['color']);
             ?>
             <div class="progress-card">
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:5px;">
@@ -414,16 +442,23 @@ function getDisplayLogic($spent, $bg, $type) {
                                 <td>
                                     <div style="display:flex; gap:5px;">
                                         <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="flex:1;">
-                                            <option value="">-- <?= $isCrd ? 'Ignorer (Crédit)' : 'À définir' ?> --</option>
+                                            <option value="">-- <?= $isCrd ? 'Ignorer' : 'À définir' ?> --</option>
                                             <?php foreach ($categoriesConfig as $k => $c): ?>
                                                 <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                         
-                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select" style="display:none; flex:1; border-color:#ef4444; background:#fef2f2;">
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-frais" style="display:none; flex:1; border-color:#ef4444; background:#fef2f2;">
                                             <option value="">-- Quelle Charge ? --</option>
                                             <?php foreach ($fixedChargesList as $fc): ?>
                                                 <option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?> (<?= number_format($fc['amount'],0) ?>€)</option>
+                                            <?php endforeach; ?>
+                                        </select>
+
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-income" style="display:none; flex:1; border-color:#10b981; background:#f0fdf4;">
+                                            <option value="">-- Quel Revenu ? --</option>
+                                            <?php foreach ($incomeList as $inc): ?>
+                                                <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],0) ?>€)</option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
@@ -533,6 +568,16 @@ function getDisplayLogic($spent, $bg, $type) {
                     <?php endforeach; ?>
                 </select>
             </div>
+
+            <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
+                <label class="pf-label" style="color:#10b981;">Choisir le revenu</label>
+                <select name="budget_item_id" id="incomeSelect" class="pf-input" style="border-color:#10b981; background:#f0fdf4;">
+                    <option value="">-- Sélectionner --</option>
+                    <?php foreach ($incomeList as $inc): ?>
+                        <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],2) ?>€)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             
             <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Montant (€)</label>
@@ -612,15 +657,21 @@ function openAddModal(catKey, catLabel) {
     const blockText = document.getElementById('blockInputText');
     const blockSelect = document.getElementById('blockInputSelect');
     const blockFrais = document.getElementById('blockInputFrais');
+    const blockIncome = document.getElementById('blockInputIncome');
+    
     const inputLabel = document.getElementById('modalLabelInput');
     const selectFrais = document.getElementById('fraisSelect');
+    const selectIncome = document.getElementById('incomeSelect');
 
     // Reset visibility
     blockText.style.display = 'none';
     blockSelect.style.display = 'none';
     blockFrais.style.display = 'none';
+    blockIncome.style.display = 'none';
+    
     inputLabel.required = false;
     selectFrais.required = false;
+    selectIncome.required = false;
 
     if (catKey === 'School') {
         blockSelect.style.display = 'block';
@@ -629,6 +680,11 @@ function openAddModal(catKey, catLabel) {
         blockText.style.display = 'block'; 
         blockFrais.style.display = 'block'; 
         selectFrais.required = true;
+    }
+    else if (catKey === 'Income') {
+        blockText.style.display = 'block'; 
+        blockIncome.style.display = 'block';
+        selectIncome.required = true;
     }
     else {
         blockText.style.display = 'block';
@@ -661,14 +717,22 @@ function confirmNewCat() {
 
 function handleLineCatChange(select) {
     const row = select.closest('tr');
-    const secondarySelect = row.querySelector('.budget-item-select');
+    const fraisSelect = row.querySelector('.select-frais');
+    const incomeSelect = row.querySelector('.select-income');
     
+    // Reset
+    fraisSelect.style.display = 'none';
+    incomeSelect.style.display = 'none';
+    fraisSelect.value = '';
+    incomeSelect.value = '';
+
     if (select.value === 'Frais') {
-        secondarySelect.style.display = 'block';
-    } else {
-        secondarySelect.style.display = 'none';
-        secondarySelect.value = ''; 
+        fraisSelect.style.display = 'block';
+    } 
+    else if (select.value === 'Income') {
+        incomeSelect.style.display = 'block';
     }
+    
     checkValidation();
 }
 
@@ -681,7 +745,8 @@ function checkValidation() {
         const row = cb.closest('tr');
         const isCredit = row.querySelector('.is-credit-flag').value === '1';
         const mainCat = row.querySelector('.line-select').value;
-        const subCatSelect = row.querySelector('.budget-item-select');
+        const fraisSelect = row.querySelector('.select-frais');
+        const incomeSelect = row.querySelector('.select-income');
         
         let rowValid = true;
 
@@ -689,7 +754,10 @@ function checkValidation() {
             if(!isCredit) rowValid = false; 
         } 
         else if (mainCat === 'Frais') {
-            if (subCatSelect.value === "") rowValid = false;
+            if (fraisSelect.value === "") rowValid = false;
+        }
+        else if (mainCat === 'Income') {
+            if (incomeSelect.value === "") rowValid = false;
         }
 
         if (!rowValid) {
