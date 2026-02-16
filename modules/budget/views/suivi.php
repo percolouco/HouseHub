@@ -448,14 +448,14 @@ function getDisplayLogic($spent, $bg, $type) {
                                             <?php endforeach; ?>
                                         </select>
                                         
-                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-frais" style="display:none; flex:1; border-color:#ef4444; background:#fef2f2;">
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-frais" onchange="checkValidation()" style="display:none; flex:1; border-color:#ef4444; background:#fef2f2;">
                                             <option value="">-- Quelle Charge ? --</option>
                                             <?php foreach ($fixedChargesList as $fc): ?>
                                                 <option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?> (<?= number_format($fc['amount'],0) ?>€)</option>
                                             <?php endforeach; ?>
                                         </select>
 
-                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-income" style="display:none; flex:1; border-color:#10b981; background:#f0fdf4;">
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-income" onchange="checkValidation()" style="display:none; flex:1; border-color:#10b981; background:#f0fdf4;">
                                             <option value="">-- Quel Revenu ? --</option>
                                             <?php foreach ($incomeList as $inc): ?>
                                                 <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],0) ?>€)</option>
@@ -741,6 +741,7 @@ function toggleAll(src) { document.querySelectorAll('.line-checkbox:not([disable
 function checkValidation() {
     const cbs = document.querySelectorAll('.line-checkbox:checked');
     let miss = 0;
+    
     cbs.forEach(cb => { 
         const row = cb.closest('tr');
         const isCredit = row.querySelector('.is-credit-flag').value === '1';
@@ -751,18 +752,22 @@ function checkValidation() {
         let rowValid = true;
 
         if (mainCat === "") {
+            // Si pas de catégorie : c'est une erreur pour les Débits, mais OK pour les Crédits (qu'on ignore)
             if(!isCredit) rowValid = false; 
         } 
         else if (mainCat === 'Frais') {
+            // Si Frais choisi, le sous-menu Frais doit être rempli
             if (fraisSelect.value === "") rowValid = false;
         }
         else if (mainCat === 'Income') {
+            // Si Income choisi, le sous-menu Income doit être rempli
             if (incomeSelect.value === "") rowValid = false;
         }
 
         if (!rowValid) {
             miss++;
-            row.style.background = isCredit ? '' : '#fff1f2';
+            // On met en rouge s'il y a une erreur, MÊME si c'est un crédit (car l'utilisateur a essayé de le mapper)
+            row.style.background = '#fff1f2'; 
         } else {
             row.style.background = '';
         }
@@ -770,12 +775,18 @@ function checkValidation() {
     
     const btn = document.getElementById('btnImport');
     const msg = document.getElementById('missingCount');
-    if(miss>0) { 
-        btn.disabled = true; btn.style.opacity=0.5; btn.style.cursor='not-allowed';
-        msg.style.display='inline'; msg.innerText=miss+' à définir';
+    
+    if(miss > 0) { 
+        btn.disabled = true; 
+        btn.style.opacity = 0.5; 
+        btn.style.cursor = 'not-allowed';
+        msg.style.display = 'inline'; 
+        msg.innerText = miss + ' à définir';
     } else {
-        btn.disabled = false; btn.style.opacity=1; btn.style.cursor='pointer';
-        msg.style.display='none';
+        btn.disabled = false; 
+        btn.style.opacity = 1; 
+        btn.style.cursor = 'pointer';
+        msg.style.display = 'none';
     }
 }
 
