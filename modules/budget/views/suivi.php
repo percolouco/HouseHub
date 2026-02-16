@@ -58,7 +58,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
             if (isset($line['import_check'])) {
                 $cat = $line['cat'];
                 $is_credit = isset($line['is_credit']) ? (int)$line['is_credit'] : 0;
-                // Récupération ID (Charge fixe OU Revenu)
                 $budgetItemId = !empty($line['budget_item_id']) ? (int)$line['budget_item_id'] : null;
                 
                 if ($is_credit && empty($cat)) continue;
@@ -81,8 +80,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     header("Location: ?tab=suivi&msg=imported_$count"); exit;
 }
 
-// E. AJOUT DÉPENSE MANUELLE (AVEC BUDGET_ITEM_ID)
-if (isset($_POST['action']) && $_POST['action'] === 'add_expense') {
+// E. AJOUT OU MODIFICATION DÉPENSE (MANUELLE)
+if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
+    $id = !empty($_POST['expense_id']) ? (int)$_POST['expense_id'] : null;
     $cat = $_POST['category']; 
     $amount = floatval($_POST['amount']); 
     $date = $_POST['date'];
@@ -93,21 +93,25 @@ if (isset($_POST['action']) && $_POST['action'] === 'add_expense') {
     if ($cat === 'School' && !empty($_POST['label_select'])) {
         $label = trim($_POST['label_select']);
     } 
-    // GESTION ID POUR FRAIS ET REVENUS
     elseif (($cat === 'Frais' || $cat === 'Income') && !empty($_POST['budget_item_id'])) {
         $budgetItemId = (int)$_POST['budget_item_id'];
     }
 
     if ($label && $amount > 0) {
-        $uniqueRef = "MANUAL_" . uniqid();
-        // Si c'est un revenu (Income), on s'assure que le montant est enregistré en négatif (Crédit) dans pf_expenses
-        // Sauf si l'utilisateur a déjà mis un moins, mais on part du principe qu'il saisit un montant positif
-        if ($cat === 'Income') {
-            $amount = -abs($amount);
-        }
+        // Gestion du signe (Revenu = Négatif en BDD, Dépense = Positif)
+        // Note: L'utilisateur saisit toujours du positif dans le formulaire
+        $finalAmount = ($cat === 'Income') ? -abs($amount) : abs($amount);
 
-        $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id) VALUES (?, ?, ?, ?, ?, ?)")
-            ->execute([$date, $cat, $label, $amount, $uniqueRef, $budgetItemId]);
+        if ($id) {
+            // UPDATE
+            $pdo->prepare("UPDATE pf_expenses SET date_exp=?, category=?, label=?, amount=?, budget_item_id=? WHERE id=?")
+                ->execute([$date, $cat, $label, $finalAmount, $budgetItemId, $id]);
+        } else {
+            // INSERT
+            $uniqueRef = "MANUAL_" . uniqid();
+            $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id) VALUES (?, ?, ?, ?, ?, ?)")
+                ->execute([$date, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId]);
+        }
         header("Location: ?tab=suivi"); exit;
     }
 }
@@ -127,25 +131,22 @@ $total_income = 0; $total_expenses_prevues = 0;
 $reste_a_venir = 0; 
 $today_day = (int)date('j'); 
 
-// Listes pour les selecteurs
 $fixedChargesList = [];
 $incomeList = []; 
 
-// --- A. RÉCUPÉRATION DONNÉES RÉELLES POUR CALCUL "Reste à venir" ---
 $currentMonth = date('m'); $currentYear = date('Y');
 
-// 1. Récupération des IDs payés ce mois-ci
+// 1. Récupération des IDs payés
 $stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL");
 $stmtIds->execute([$currentMonth, $currentYear]);
 $paidItemIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
 
-// 2. Récupération des libellés (pour le fallback mots-clés)
+// 2. Récupération libellés
 $stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
 $stmtLabels->execute([$currentMonth, $currentYear]);
 $realExpensesLabels = $stmtLabels->fetchAll(PDO::FETCH_COLUMN);
 
-
-// --- B. SNAPSHOT & SOLDE THÉORIQUE ---
+// Snapshot
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
 $solde_theorique = 0;
 try {
@@ -164,7 +165,7 @@ if (!empty($snapshot['date'])) {
     } catch (Exception $e) {}
 }
 
-// --- C. LECTURE BUDGET ET CALCULS ---
+// Lecture Budget
 $stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $rawAmount = (float)$item['amount'];
@@ -173,11 +174,9 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $pDay = (int)$item['payment_day'];
     $isChecked = (int)$item['is_checked'];
     
-    // Remplissage liste Charges Fixes (Selecteur)
     if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
         $fixedChargesList[] = $item;
     }
-    // Remplissage liste Revenus (Selecteur)
     if ($item['category'] === 'income') {
         $incomeList[] = $item;
         $total_income += $amt;
@@ -185,20 +184,11 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     } else {
         $total_expenses_prevues += $amt;
         
-        // --- CALCUL INTELLIGENT DU "RESTE A VENIR" ---
+        // Calcul intelligent Reste à venir
         if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
-            
             $isPaid = false;
-
-            // 1. Est-ce coché manuellement ?
-            if ($isChecked === 1) {
-                $isPaid = true;
-            }
-            // 2. Est-ce lié par ID (Import CSV ou Manuel) ?
-            elseif (in_array($item['id'], $paidItemIds)) {
-                $isPaid = true;
-            }
-            // 3. Est-ce détecté par mot-clé ?
+            if ($isChecked === 1) $isPaid = true;
+            elseif (in_array($item['id'], $paidItemIds)) $isPaid = true;
             elseif (!empty($item['mapping_keywords'])) {
                 $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
                 foreach ($keywords as $kw) {
@@ -211,14 +201,9 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     }
                 }
             }
-
-            // Si ce n'est PAS payé/trouvé, on l'ajoute au reste à venir
-            if (!$isPaid) {
-                $reste_a_venir += $rawAmount;
-            }
+            if (!$isPaid) $reste_a_venir += $rawAmount;
         }
 
-        // Remplissage des jauges
         if ($name === 'Estimacio F&B & beauty') $budget_fmcg = $amt;
         elseif ($name === 'Estimacio escola') $budget_school = $amt;
         elseif ($name === 'Estimation gasolina') $budget_essence = $amt;
@@ -228,9 +213,8 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// --- D. CATÉGORIES TEMPORAIRES (Le bloc manquant !) ---
-$tempCats = []; 
-$total_temp_budget = 0;
+// Catégories Temporaires
+$tempCats = []; $total_temp_budget = 0;
 try {
     $stmt = $pdo->prepare("SELECT * FROM pf_monthly_categories WHERE month_year = ?");
     $stmt->execute([$currentMonthKey]);
@@ -242,7 +226,6 @@ try {
     }
 } catch (Exception $e) {}
 
-// --- E. CALCUL DU BUDGET "AUTRES" ---
 $budget_autres = $total_income - ($total_expenses_prevues + $total_temp_budget);
 if ($budget_autres < 0) $budget_autres = 0;
 
@@ -251,9 +234,7 @@ if ($budget_autres < 0) $budget_autres = 0;
 // ============================================================================
 
 $categoriesConfig = [
-    // NOUVEAU : Catégorie Revenus
     'Income' => ['type'=>'credit', 'label'=>'Revenus', 'budget'=>$budget_income_prevu, 'color'=>'#10b981', 'suggestions'=>[]],
-    
     'FMCG' => ['type'=>'debit', 'label'=>'Courses (FMCG)', 'budget'=>$budget_fmcg, 'color'=>'#3b82f6', 'suggestions'=>['Action', 'Carrefour', 'Lidl']],
     'Essence' => ['type'=>'debit', 'label'=>'Essence', 'budget'=>$budget_essence, 'color'=>'#f59e0b', 'suggestions'=>['Audi', 'Polo']],
     'School' => ['type'=>'debit', 'label'=>'École / Garde', 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
@@ -305,7 +286,6 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
 }
 
 // DÉPENSES EN BDD
-$currentMonth = date('m'); $currentYear = date('Y');
 $stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? ORDER BY date_exp DESC");
 $stmt->execute([$currentMonth, $currentYear]);
 $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -317,14 +297,9 @@ foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    // Si la dépense est un crédit (montant < 0), pour Income on l'ajoute au total "reçu"
-    // Pour les autres catégories (réserves), ça augmente le budget
     if ($exp['amount'] < 0) {
-        if ($cat === 'Income') {
-            $totals[$cat] += abs($exp['amount']); // On somme les revenus
-        } else {
-            $categoriesConfig[$cat]['budget'] += abs($exp['amount']); // Réserve
-        }
+        if ($cat === 'Income') $totals[$cat] += abs($exp['amount']);
+        else $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
     } else {
         $totals[$cat] += $exp['amount'];
     }
@@ -337,12 +312,7 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
 
 function getDisplayLogic($spent, $bg, $type) {
     if ($type === 'credit') {
-        // Pour Income et Réserves
-        // Income : 2200 / 4000 (Reçu / Attendu)
-        // Réserve : 50 / 400 (Restant / Initial) -> Cas particulier géré plus haut si besoin
-        // Ici on simplifie :
-        $remaining = $bg - $spent;
-        $pct = ($bg > 0) ? max(0, min(100, ($spent / $bg) * 100)) : 0; // % Reçu
+        $pct = ($bg > 0) ? max(0, min(100, ($spent / $bg) * 100)) : 0; 
         $isOver = false;
         $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
     } else {
@@ -394,7 +364,6 @@ function getDisplayLogic($spent, $bg, $type) {
         <div class="progress-grid">
             <?php foreach ($categoriesConfig as $key => $conf): 
                 $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']);
-                // Couleur barre : Vert pour Income, Rouge si dépassement Debit
                 $barCol = ($key === 'Income') ? '#10b981' : ($logic['isOver'] ? '#ef4444' : $conf['color']);
             ?>
             <div class="progress-card">
@@ -540,7 +509,7 @@ function getDisplayLogic($spent, $bg, $type) {
                 <button class="btn-add-item" style="color:<?= $conf['color'] ?>;" onclick="openAddModal('<?= $key ?>', '<?= addslashes($conf['label']) ?>')">＋</button>
             </div>
 
-            <?php $barCol = $logic['isOver'] ? '#ef4444' : $conf['color']; ?>
+            <?php $barCol = ($key === 'Income') ? '#10b981' : ($logic['isOver'] ? '#ef4444' : $conf['color']); ?>
             <div style="background:#f1f5f9; height:4px; width:100%;">
                 <div style="width:<?= $logic['pct'] ?>%; background:<?= $barCol ?>; height:100%;"></div>
             </div>
@@ -556,7 +525,7 @@ function getDisplayLogic($spent, $bg, $type) {
                             <td style="padding:10px 5px; font-weight:500;">
                                 <?= htmlspecialchars($exp['label']) ?>
                                 <?php if(!empty($exp['budget_item_id'])): ?>
-                                    <span title="Lié à une charge fixe" style="font-size:0.7rem; cursor:help;">🔗</span>
+                                    <span title="Lié à une charge/revenu" style="font-size:0.7rem; cursor:help;">🔗</span>
                                 <?php endif; ?>
                             </td>
                             <?php if($exp['amount'] < 0): ?>
@@ -564,7 +533,10 @@ function getDisplayLogic($spent, $bg, $type) {
                             <?php else: ?>
                                 <td style="padding:10px 15px; text-align:right; font-weight:600; color:#1e293b;">-<?= number_format($exp['amount'], 2) ?></td>
                             <?php endif; ?>
-                            <td style="width:20px; padding-right:10px;"><a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('x ?')" style="color:#ef4444; text-decoration:none; font-size:1.2rem;">&times;</a></td>
+                            <td style="width:50px; padding-right:10px; text-align:right;">
+                                <button onclick='openEditModal(<?= json_encode($exp) ?>)' style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-right:5px; color:#64748b;">✏️</button>
+                                <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('x ?')" style="color:#ef4444; text-decoration:none; font-size:1.2rem;">&times;</a>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </table>
@@ -583,12 +555,20 @@ function getDisplayLogic($spent, $bg, $type) {
         </div>
         
         <form method="POST">
-            <input type="hidden" name="action" value="add_expense">
-            <input type="hidden" name="category" id="modalCatInput">
-            
+            <input type="hidden" name="action" value="save_expense_manual">
+            <input type="hidden" name="expense_id" id="modalExpenseId">
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label">Catégorie</label>
+                <select name="category" id="modalCatSelect" class="pf-input" onchange="handleModalCatChange(this)">
+                    <?php foreach($categoriesConfig as $key => $conf): ?>
+                        <option value="<?= $key ?>"><?= $conf['label'] ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Date</label>
-                <input type="date" name="date" class="pf-input" value="<?= date('Y-m-d') ?>" required>
+                <input type="date" name="date" id="modalDate" class="pf-input" value="<?= date('Y-m-d') ?>" required>
             </div>
             
             <div class="form-group" id="blockInputText" style="margin-bottom:15px;">
@@ -627,12 +607,12 @@ function getDisplayLogic($spent, $bg, $type) {
             
             <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Montant (€)</label>
-                <input type="number" step="0.01" name="amount" class="pf-input" placeholder="0.00" required>
+                <input type="number" step="0.01" name="amount" id="modalAmount" class="pf-input" placeholder="0.00" required>
             </div>
 
             <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
                 <button type="button" onclick="closeSuiviModal('manualExpenseModal')" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
-                <button type="submit" class="pf-btn" style="width:auto; margin:0;">Ajouter</button>
+                <button type="submit" class="pf-btn" style="width:auto; margin:0;">Enregistrer</button>
             </div>
         </form>
     </div>
@@ -693,13 +673,12 @@ function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'
 function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; }
 window.onclick = function(event) { if (event.target.classList.contains('pf-modal')) event.target.style.display = 'none'; }
 
-// --- SAISIE MANUELLE ---
+// --- SAISIE / EDITION MANUELLE ---
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
-function openAddModal(catKey, catLabel) {
-    openSuiviModal('manualExpenseModal');
-    document.getElementById('modalTitle').innerText = "Dépense : " + catLabel;
-    document.getElementById('modalCatInput').value = catKey;
-    
+
+// Gère l'affichage des champs selon la catégorie sélectionnée dans la modale
+function handleModalCatChange(select) {
+    const catKey = select.value;
     const blockText = document.getElementById('blockInputText');
     const blockSelect = document.getElementById('blockInputSelect');
     const blockFrais = document.getElementById('blockInputFrais');
@@ -736,10 +715,57 @@ function openAddModal(catKey, catLabel) {
         blockText.style.display = 'block';
         inputLabel.required = true;
         
+        // Update suggestions
         const list = document.getElementById('modalSuggestions');
-        list.innerHTML = ''; inputLabel.value = '';
-        if (suggestions[catKey]) suggestions[catKey].forEach(i => { const op = document.createElement('option'); op.value = i; list.appendChild(op); });
-        setTimeout(() => inputLabel.focus(), 100);
+        list.innerHTML = ''; 
+        if (suggestions[catKey]) {
+            suggestions[catKey].forEach(i => { 
+                const op = document.createElement('option'); 
+                op.value = i; 
+                list.appendChild(op); 
+            });
+        }
+    }
+}
+
+// Ouvre la modale pour AJOUTER
+function openAddModal(catKey, catLabel) {
+    openSuiviModal('manualExpenseModal');
+    document.getElementById('modalTitle').innerText = "Ajouter : " + catLabel;
+    
+    document.getElementById('modalExpenseId').value = ""; // Reset ID (ajout)
+    document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalLabelInput').value = "";
+    document.getElementById('modalAmount').value = "";
+    
+    const catSelect = document.getElementById('modalCatSelect');
+    catSelect.value = catKey;
+    handleModalCatChange(catSelect);
+    
+    setTimeout(() => document.getElementById('modalLabelInput').focus(), 100);
+}
+
+// Ouvre la modale pour MODIFIER (NOUVEAU)
+function openEditModal(expenseData) {
+    openSuiviModal('manualExpenseModal');
+    document.getElementById('modalTitle').innerText = "Modifier la dépense";
+    
+    document.getElementById('modalExpenseId').value = expenseData.id;
+    document.getElementById('modalDate').value = expenseData.date_exp;
+    document.getElementById('modalLabelInput').value = expenseData.label;
+    
+    // Le montant en BDD est signé (- pour revenus), on remet en absolu pour l'input
+    document.getElementById('modalAmount').value = Math.abs(parseFloat(expenseData.amount));
+    
+    const catSelect = document.getElementById('modalCatSelect');
+    catSelect.value = expenseData.category;
+    handleModalCatChange(catSelect);
+
+    // Pré-remplir les selects spécifiques
+    if (expenseData.category === 'Frais') {
+        document.getElementById('fraisSelect').value = expenseData.budget_item_id;
+    } else if (expenseData.category === 'Income') {
+        document.getElementById('incomeSelect').value = expenseData.budget_item_id;
     }
 }
 
@@ -787,7 +813,6 @@ function toggleAll(src) { document.querySelectorAll('.line-checkbox:not([disable
 function checkValidation() {
     const cbs = document.querySelectorAll('.line-checkbox:checked');
     let miss = 0;
-    
     cbs.forEach(cb => { 
         const row = cb.closest('tr');
         const isCredit = row.querySelector('.is-credit-flag').value === '1';
@@ -798,22 +823,18 @@ function checkValidation() {
         let rowValid = true;
 
         if (mainCat === "") {
-            // Si pas de catégorie : c'est une erreur pour les Débits, mais OK pour les Crédits (qu'on ignore)
             if(!isCredit) rowValid = false; 
         } 
         else if (mainCat === 'Frais') {
-            // Si Frais choisi, le sous-menu Frais doit être rempli
             if (fraisSelect.value === "") rowValid = false;
         }
         else if (mainCat === 'Income') {
-            // Si Income choisi, le sous-menu Income doit être rempli
             if (incomeSelect.value === "") rowValid = false;
         }
 
         if (!rowValid) {
             miss++;
-            // On met en rouge s'il y a une erreur, MÊME si c'est un crédit (car l'utilisateur a essayé de le mapper)
-            row.style.background = '#fff1f2'; 
+            row.style.background = '#fff1f2';
         } else {
             row.style.background = '';
         }
@@ -821,18 +842,12 @@ function checkValidation() {
     
     const btn = document.getElementById('btnImport');
     const msg = document.getElementById('missingCount');
-    
-    if(miss > 0) { 
-        btn.disabled = true; 
-        btn.style.opacity = 0.5; 
-        btn.style.cursor = 'not-allowed';
-        msg.style.display = 'inline'; 
-        msg.innerText = miss + ' à définir';
+    if(miss>0) { 
+        btn.disabled = true; btn.style.opacity=0.5; btn.style.cursor='not-allowed';
+        msg.style.display='inline'; msg.innerText=miss+' à définir';
     } else {
-        btn.disabled = false; 
-        btn.style.opacity = 1; 
-        btn.style.cursor = 'pointer';
-        msg.style.display = 'none';
+        btn.disabled = false; btn.style.opacity=1; btn.style.cursor='pointer';
+        msg.style.display='none';
     }
 }
 
