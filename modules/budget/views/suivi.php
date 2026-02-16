@@ -26,22 +26,20 @@ if (isset($_GET['del_cat'])) {
     header("Location: ?tab=suivi"); exit;
 }
 
-// C. SAUVEGARDE SNAPSHOT BANCAIRE (MODIFIÉ : Remplacement de l'ancien)
+// C. SAUVEGARDE SNAPSHOT BANCAIRE
 if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     $date = $_POST['snapshot_date'];
     $amount = floatval($_POST['snapshot_amount']);
-    
-    // On vide la table pour que le nouveau remplace l'ancien
-    $pdo->query("DELETE FROM pf_bank_snapshots");
-    
+    $pdo->query("DELETE FROM pf_bank_snapshots"); 
     $pdo->prepare("INSERT INTO pf_bank_snapshots (snapshot_date, amount) VALUES (?, ?)")->execute([$date, $amount]);
     header("Location: ?tab=suivi"); exit;
 }
 
-// D. SAUVEGARDE IMPORT CSV
+// D. SAUVEGARDE IMPORT CSV (AVEC BUDGET_ITEM_ID)
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
     
+    // 1. Catégories temporaires
     $tempCatMapping = [];
     if (!empty($_POST['new_temp_cats'])) {
         $stmtTemp = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, 0)");
@@ -51,7 +49,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
         }
     }
 
-    $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref) VALUES (?, ?, ?, ?, ?)");
+    // 2. Insertion avec budget_item_id
+    $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id) VALUES (?, ?, ?, ?, ?, ?)");
     $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category) VALUES (?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category)");
 
     if (isset($_POST['lines']) && is_array($_POST['lines'])) {
@@ -59,6 +58,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
             if (isset($line['import_check'])) {
                 $cat = $line['cat'];
                 $is_credit = isset($line['is_credit']) ? (int)$line['is_credit'] : 0;
+                $budgetItemId = !empty($line['budget_item_id']) ? (int)$line['budget_item_id'] : null;
                 
                 if ($is_credit && empty($cat)) continue;
                 if (!$is_credit && empty($cat)) continue;
@@ -70,7 +70,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                 $finalAmount = $is_credit ? -abs($line['amount']) : abs($line['amount']);
 
                 try {
-                    $stmtExp->execute([$line['date'], $cat, $line['label'], $finalAmount, $line['ref']]);
+                    $stmtExp->execute([$line['date'], $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId]);
                     $stmtRule->execute([$line['label'], $cat]);
                     $count++;
                 } catch (Exception $e) { continue; }
@@ -80,18 +80,26 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     header("Location: ?tab=suivi&msg=imported_$count"); exit;
 }
 
-// E. AJOUT DÉPENSE MANUELLE
+// E. AJOUT DÉPENSE MANUELLE (AVEC BUDGET_ITEM_ID)
 if (isset($_POST['action']) && $_POST['action'] === 'add_expense') {
     $cat = $_POST['category']; 
     $amount = floatval($_POST['amount']); 
     $date = $_POST['date'];
     
-    $label = ($cat === 'School' && !empty($_POST['label_select'])) ? trim($_POST['label_select']) : trim($_POST['label']);
+    $label = trim($_POST['label']);
+    $budgetItemId = null;
+
+    if ($cat === 'School' && !empty($_POST['label_select'])) {
+        $label = trim($_POST['label_select']);
+    } 
+    elseif ($cat === 'Frais' && !empty($_POST['budget_item_id'])) {
+        $budgetItemId = (int)$_POST['budget_item_id'];
+    }
 
     if ($label && $amount > 0) {
         $uniqueRef = "MANUAL_" . uniqid();
-        $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref) VALUES (?, ?, ?, ?, ?)")
-            ->execute([$date, $cat, $label, $amount, $uniqueRef]);
+        $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id) VALUES (?, ?, ?, ?, ?, ?)")
+            ->execute([$date, $cat, $label, $amount, $uniqueRef, $budgetItemId]);
         header("Location: ?tab=suivi"); exit;
     }
 }
@@ -103,7 +111,7 @@ if (isset($_GET['delete_expense'])) {
 }
 
 // ============================================================================
-// 2. CALCUL DES BUDGETS & SNAPSHOT
+// 2. CALCUL DES BUDGETS & CHARGES FIXES
 // ============================================================================
 
 $budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0;
@@ -111,49 +119,51 @@ $total_income = 0; $total_expenses_prevues = 0;
 $reste_a_venir = 0; 
 $today_day = (int)date('j'); 
 
-// --- SNAPSHOT & SOLDE THÉORIQUE ---
+// Liste des charges pour le selecteur
+$fixedChargesList = [];
+
+// Snapshot
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
 $solde_theorique = 0;
-
 try {
-    $snapStmt = $pdo->query("SELECT * FROM pf_bank_snapshots ORDER BY snapshot_date DESC, id DESC LIMIT 1");
+    $snapStmt = $pdo->query("SELECT * FROM pf_bank_snapshots ORDER BY id DESC LIMIT 1");
     if ($s = $snapStmt->fetch(PDO::FETCH_ASSOC)) {
         $snapshot = ['date' => $s['snapshot_date'], 'amount' => (float)$s['amount']];
     }
 } catch (Exception $e) {}
-
 $solde_theorique = $snapshot['amount'];
-
-// Calcul du solde théorique : On soustrait les opérations saisies APRÈS la date du snapshot
 if (!empty($snapshot['date'])) {
     try {
         $stmtCalc = $pdo->prepare("SELECT SUM(amount) as total_diff FROM pf_expenses WHERE date_exp > ?");
         $stmtCalc->execute([$snapshot['date']]);
         $resDiff = $stmtCalc->fetch(PDO::FETCH_ASSOC);
-        if ($resDiff && $resDiff['total_diff'] !== null) {
-            // amount est positif pour les débits, négatif pour les crédits
-            // On soustrait donc le total diff. (Ex: 3500 - 50 = 3450)
-            $solde_theorique -= (float)$resDiff['total_diff'];
-        }
+        if ($resDiff && $resDiff['total_diff'] !== null) $solde_theorique -= (float)$resDiff['total_diff'];
     } catch (Exception $e) {}
 }
 
-
-// --- LECTURE BUDGET PREVISIONNEL ---
-$stmt = $pdo->query("SELECT name, amount, type, category, is_estimate, payment_day FROM pf_budget_items");
+// Lecture Budget - Ajout de 'is_checked' à la requête
+$stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $rawAmount = (float)$item['amount'];
     $amt = ($item['type'] === 'Annuel') ? $rawAmount / 12 : $rawAmount;
     $name = trim($item['name']);
     $pDay = (int)$item['payment_day'];
+    $isChecked = (int)$item['is_checked'];
     
+    // Remplissage liste Charges Fixes
+    if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
+        $fixedChargesList[] = $item;
+    }
+
     if ($item['category'] === 'income') {
         $total_income += $amt;
     } else {
         $total_expenses_prevues += $amt;
         
+        // --- NOUVEAU CALCUL RESTE A VENIR ---
+        // On additionne si c'est une dépense mensuelle NON cochée
         if ($item['category'] === 'expense' && $item['type'] === 'Mensuel') {
-            if ($name === 'Estimacio escola' || $pDay > $today_day) {
+            if ($isChecked === 0) {
                 $reste_a_venir += $rawAmount;
             }
         }
@@ -173,13 +183,7 @@ try {
     $stmt = $pdo->prepare("SELECT * FROM pf_monthly_categories WHERE month_year = ?");
     $stmt->execute([$currentMonthKey]);
     $tempCats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach($tempCats as $tc) {
-        // On n'ajoute au "budget prévisionnel" que si c'est un débit. 
-        // Si c'est un crédit (réserve), l'argent est censé déjà être ou arriver sur le compte
-        if ($tc['type'] === 'debit') {
-            $total_temp_budget += $tc['budget'];
-        }
-    }
+    foreach($tempCats as $tc) if ($tc['type'] === 'debit') $total_temp_budget += $tc['budget'];
 } catch (Exception $e) {}
 
 $budget_autres = $total_income - ($total_expenses_prevues + $total_temp_budget);
@@ -193,27 +197,17 @@ $categoriesConfig = [
     'FMCG' => ['type'=>'debit', 'label'=>'Courses (FMCG)', 'budget'=>$budget_fmcg, 'color'=>'#3b82f6', 'suggestions'=>['Action', 'Carrefour', 'Lidl']],
     'Essence' => ['type'=>'debit', 'label'=>'Essence', 'budget'=>$budget_essence, 'color'=>'#f59e0b', 'suggestions'=>['Audi', 'Polo']],
     'School' => ['type'=>'debit', 'label'=>'École / Garde', 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
-    'Frais' => ['type'=>'debit', 'label'=>'Charges Fixes', 'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>['Netflix', 'Assurance', 'Prêt']],
+    'Frais' => ['type'=>'debit', 'label'=>'Charges Fixes', 'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>[]], // Suggestions vides car gérées par ID
 ];
 
 $tempColors = ['#ec4899', '#06b6d4', '#84cc16', '#d946ef', '#f97316'];
 $colorIdx = 0;
-
 foreach ($tempCats as $tc) {
     $catKey = 'TEMP_' . $tc['id'];
-    $catType = isset($tc['type']) ? $tc['type'] : 'debit';
     $categoriesConfig[$catKey] = [
-        'type' => $catType,
-        'label' => $tc['name'],
-        'budget' => $tc['budget'],
-        'color' => $tempColors[$colorIdx % count($tempColors)],
-        'suggestions' => [],
-        'is_temp' => true,
-        'id' => $tc['id']
+        'type' => $tc['type'], 'label' => $tc['name'], 'budget' => $tc['budget'], 'color' => $tempColors[$colorIdx++ % count($tempColors)], 'suggestions' => [], 'is_temp' => true, 'id' => $tc['id']
     ];
-    $colorIdx++;
 }
-
 $categoriesConfig['Autres'] = ['type'=>'debit', 'label'=>'Autres / Imprévus', 'budget'=>$budget_autres, 'color'=>'#64748b', 'suggestions'=>['Restaurant', 'Cadeau']];
 $categoriesConfig['LivretA'] = ['type'=>'debit', 'label'=>'Epargne', 'budget'=>0, 'color'=>'#8b5cf6', 'suggestions'=>['Virement']];
 
@@ -226,41 +220,24 @@ $showPreview = false;
 if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $file = $_FILES['csv_file']['tmp_name'];
     $handle = fopen($file, "r");
-    
-    $rules = []; 
-    try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
-    
-    $existingRefs = []; 
-    try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
-    
-    // CORRECTION ICI : Ajout des paramètres explicitement : fgetcsv(stream, length, separator, enclosure, escape)
+    $rules = []; try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
+    $existingRefs = []; try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
     fgetcsv($handle, 1000, ";", "\"", "\\"); 
-    
     while (($data = fgetcsv($handle, 1000, ";", "\"", "\\")) !== FALSE) {
-        $rawDebit = $data[8] ?? ''; 
-        $rawCredit = $data[9] ?? ''; 
-        
+        $rawDebit = $data[8] ?? ''; $rawCredit = $data[9] ?? ''; 
         $amount = 0; $isCredit = 0;
-        if (!empty(trim($rawCredit))) {
-            $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawCredit)));
-            $isCredit = 1;
-        } elseif (!empty(trim($rawDebit))) {
-            $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawDebit)));
-        } else {
-            continue; 
-        }
+        if (!empty(trim($rawCredit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawCredit))); $isCredit = 1; }
+        elseif (!empty(trim($rawDebit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawDebit))); }
+        else continue; 
 
         $dateParts = explode('/', $data[0]); 
         $dateSql = (count($dateParts) == 3) ? $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0] : date('Y-m-d');
         $label = trim($data[1]) ?: trim($data[2]);
         $refCSV = trim($data[3]);
-        
         $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
         $isDuplicate = in_array($uniqueKey, $existingRefs);
-        
         $suggestedCat = '';
         foreach ($rules as $kw => $c) { if (stripos($label, $kw) !== false) { $suggestedCat = $c; break; } }
-        
         $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
     }
     fclose($handle);
@@ -280,12 +257,8 @@ foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    // Si la dépense est un crédit (montant < 0 en bdd), on augmente l'enveloppe
-    if ($exp['amount'] < 0) {
-        $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
-    } else {
-        $totals[$cat] += $exp['amount'];
-    }
+    if ($exp['amount'] < 0) $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
+    else $totals[$cat] += $exp['amount'];
     
     $expensesByCategory[$cat][] = $exp;
 }
@@ -293,7 +266,6 @@ foreach ($allExpenses as $exp) {
 $globalSpent = array_sum($totals);
 $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
 
-// --- FONCTION D'AFFICHAGE ---
 function getDisplayLogic($spent, $bg, $type) {
     if ($type === 'credit') {
         $remaining = $bg - $spent;
@@ -340,7 +312,6 @@ function getDisplayLogic($spent, $bg, $type) {
                     Solde théorique au <?= date('d/m') ?> : 
                     <strong style="color:#3b82f6;"><?= number_format($solde_theorique, 2, ',', ' ') ?> €</strong>
                 </div>
-
             </div>
             <div style="text-align:right;">
                 <strong style="font-size:1.4rem; color:#1e293b;"><?= number_format(ceil($globalSpent), 0, ',', ' ') ?> €</strong>
@@ -442,12 +413,21 @@ function getDisplayLogic($spent, $bg, $type) {
                                     <?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'],2) ?> €
                                 </td>
                                 <td>
-                                    <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="checkValidation()" <?= $dis ?>>
-                                        <option value="">-- <?= $isCrd ? 'Ignorer (Crédit)' : 'À définir' ?> --</option>
-                                        <?php foreach ($categoriesConfig as $k => $c): ?>
-                                            <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <div style="display:flex; gap:5px;">
+                                        <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="flex:1;">
+                                            <option value="">-- <?= $isCrd ? 'Ignorer (Crédit)' : 'À définir' ?> --</option>
+                                            <?php foreach ($categoriesConfig as $k => $c): ?>
+                                                <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select" style="display:none; flex:1; border-color:#ef4444; background:#fef2f2;">
+                                            <option value="">-- Quelle Charge ? --</option>
+                                            <?php foreach ($fixedChargesList as $fc): ?>
+                                                <option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?> (<?= number_format($fc['amount'],0) ?>€)</option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -493,7 +473,12 @@ function getDisplayLogic($spent, $bg, $type) {
                         <?php foreach ($expensesByCategory[$key] as $exp): ?>
                         <tr style="border-bottom:1px solid #f8fafc;">
                             <td style="padding:10px 15px; color:#94a3b8;"><?= date('d/m', strtotime($exp['date_exp'])) ?></td>
-                            <td style="padding:10px 5px; font-weight:500;"><?= htmlspecialchars($exp['label']) ?></td>
+                            <td style="padding:10px 5px; font-weight:500;">
+                                <?= htmlspecialchars($exp['label']) ?>
+                                <?php if(!empty($exp['budget_item_id'])): ?>
+                                    <span title="Lié à une charge fixe" style="font-size:0.7rem; cursor:help;">🔗</span>
+                                <?php endif; ?>
+                            </td>
                             <?php if($exp['amount'] < 0): ?>
                                 <td style="padding:10px 15px; text-align:right; font-weight:600; color:#10b981;">+<?= number_format(abs($exp['amount']), 2) ?></td>
                             <?php else: ?>
@@ -537,6 +522,16 @@ function getDisplayLogic($spent, $bg, $type) {
                 <select name="label_select" id="schoolSelect" class="pf-input">
                     <option value="Ecole Pol">Ecole Pol</option>
                     <option value="Carole">Carole</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="blockInputFrais" style="margin-bottom:15px; display:none;">
+                <label class="pf-label" style="color:#ef4444;">Choisir la charge fixe</label>
+                <select name="budget_item_id" id="fraisSelect" class="pf-input" style="border-color:#ef4444; background:#fef2f2;">
+                    <option value="">-- Sélectionner --</option>
+                    <?php foreach ($fixedChargesList as $fc): ?>
+                        <option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?> (<?= number_format($fc['amount'],2) ?>€)</option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             
@@ -617,12 +612,29 @@ function openAddModal(catKey, catLabel) {
     
     const blockText = document.getElementById('blockInputText');
     const blockSelect = document.getElementById('blockInputSelect');
+    const blockFrais = document.getElementById('blockInputFrais');
     const inputLabel = document.getElementById('modalLabelInput');
+    const selectFrais = document.getElementById('fraisSelect');
+
+    // Reset visibility
+    blockText.style.display = 'none';
+    blockSelect.style.display = 'none';
+    blockFrais.style.display = 'none';
+    inputLabel.required = false;
+    selectFrais.required = false;
 
     if (catKey === 'School') {
-        blockText.style.display = 'none'; blockSelect.style.display = 'block'; inputLabel.required = false;
-    } else {
-        blockText.style.display = 'block'; blockSelect.style.display = 'none'; inputLabel.required = true;
+        blockSelect.style.display = 'block';
+    } 
+    else if (catKey === 'Frais') {
+        blockText.style.display = 'block'; 
+        blockFrais.style.display = 'block'; 
+        selectFrais.required = true;
+    }
+    else {
+        blockText.style.display = 'block';
+        inputLabel.required = true;
+        
         const list = document.getElementById('modalSuggestions');
         list.innerHTML = ''; inputLabel.value = '';
         if (suggestions[catKey]) suggestions[catKey].forEach(i => { const op = document.createElement('option'); op.value = i; list.appendChild(op); });
@@ -648,15 +660,41 @@ function confirmNewCat() {
     }
 }
 
+function handleLineCatChange(select) {
+    const row = select.closest('tr');
+    const secondarySelect = row.querySelector('.budget-item-select');
+    
+    if (select.value === 'Frais') {
+        secondarySelect.style.display = 'block';
+    } else {
+        secondarySelect.style.display = 'none';
+        secondarySelect.value = ''; 
+    }
+    checkValidation();
+}
+
 function toggleAll(src) { document.querySelectorAll('.line-checkbox:not([disabled])').forEach(c => c.checked = src.checked); checkValidation(); }
+
 function checkValidation() {
     const cbs = document.querySelectorAll('.line-checkbox:checked');
     let miss = 0;
     cbs.forEach(cb => { 
         const row = cb.closest('tr');
         const isCredit = row.querySelector('.is-credit-flag').value === '1';
-        if (row.querySelector('.line-select').value === "") {
-            if(!isCredit) miss++; 
+        const mainCat = row.querySelector('.line-select').value;
+        const subCatSelect = row.querySelector('.budget-item-select');
+        
+        let rowValid = true;
+
+        if (mainCat === "") {
+            if(!isCredit) rowValid = false; 
+        } 
+        else if (mainCat === 'Frais') {
+            if (subCatSelect.value === "") rowValid = false;
+        }
+
+        if (!rowValid) {
+            miss++;
             row.style.background = isCredit ? '' : '#fff1f2';
         } else {
             row.style.background = '';
@@ -667,11 +705,15 @@ function checkValidation() {
     const msg = document.getElementById('missingCount');
     if(miss>0) { 
         btn.disabled = true; btn.style.opacity=0.5; btn.style.cursor='not-allowed';
-        msg.style.display='inline'; msg.innerText=miss+' à définir (débits)';
+        msg.style.display='inline'; msg.innerText=miss+' à définir';
     } else {
         btn.disabled = false; btn.style.opacity=1; btn.style.cursor='pointer';
         msg.style.display='none';
     }
 }
-if(document.getElementById('formMapping')) checkValidation();
+
+if(document.getElementById('formMapping')) {
+    document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s));
+    checkValidation();
+}
 </script>
