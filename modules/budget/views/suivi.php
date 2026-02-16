@@ -160,10 +160,9 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     } else {
         $total_expenses_prevues += $amt;
         
-        // --- NOUVEAU CALCUL RESTE A VENIR ---
         // On additionne si c'est une dépense mensuelle NON cochée
         if ($item['category'] === 'expense' && $item['type'] === 'Mensuel') {
-            if ($isChecked === 0) {
+            if ($isChecked === 0 && (int)$item['is_estimate'] === 0) {
                 $reste_a_venir += $rawAmount;
             }
         }
