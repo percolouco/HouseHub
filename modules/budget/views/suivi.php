@@ -533,9 +533,17 @@ function getDisplayLogic($spent, $bg, $type) {
                             <?php else: ?>
                                 <td style="padding:10px 15px; text-align:right; font-weight:600; color:#1e293b;">-<?= number_format($exp['amount'], 2) ?></td>
                             <?php endif; ?>
-                            <td style="width:50px; padding-right:10px; text-align:right;">
-                                <button onclick='openEditModal(<?= json_encode($exp) ?>)' style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-right:5px; color:#64748b;">✏️</button>
-                                <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('x ?')" style="color:#ef4444; text-decoration:none; font-size:1.2rem;">&times;</a>
+                            <td style="width:60px; padding-right:10px; text-align:right; white-space:nowrap;">
+                                <button onclick='openEditModal(<?= json_encode($exp) ?>)' 
+                                        style="background:none; border:none; padding:0; cursor:pointer; font-size:1rem; margin-right:8px; color:#64748b; line-height:1; vertical-align:middle;">
+                                    ✏️
+                                </button>
+                                
+                                <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" 
+                                   onclick="return confirm('Supprimer ?')" 
+                                   style="color:#ef4444; text-decoration:none; font-size:1.4rem; line-height:1; vertical-align:middle;">
+                                    &times;
+                                </a>
                             </td>
                         </tr>
                         <?php endforeach; ?>
