@@ -176,10 +176,15 @@ if ($action === 'validate_transfers') {
 
             // C. MISE À JOUR / CRÉATION DES CATÉGORIES
             foreach ($data['cats'] as $catName => $catAmount) {
-                // On utilise ON DUPLICATE KEY UPDATE pour gérer "Créer ou Sommer" en une seule requête
-                // Note: category est-il unique par (month, owner)? Si ta table pf_savings n'a pas de clé unique là-dessus, il faut faire un SELECT avant.
-                // Supposons qu'il n'y a pas de contrainte UNIQUE stricte, faisons le check manuel PHP pour être sûr.
                 
+                // --- REGLE METIER : IGNORER LA CREATION DE LIGNE POUR LES ECO ---
+                // Ces montants ont déjà été ajoutés au TOTAL_BANQUE (étape B juste au-dessus),
+                // mais on ne veut pas voir apparaître une ligne "Eco Alex" dans le détail.
+                if ($catName === 'Eco Alex' || $catName === 'Eco Laia') {
+                    continue; 
+                }
+
+                // On vérifie si la catégorie existe déjà
                 $stmtCheckCat = $pdo->prepare("SELECT id FROM pf_savings WHERE owner = ? AND month_date = ? AND category = ?");
                 $stmtCheckCat->execute([$owner, $monthDate, $catName]);
                 $catId = $stmtCheckCat->fetchColumn();
