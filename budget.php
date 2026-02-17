@@ -8,47 +8,62 @@ $tab = $_GET['tab'] ?? 'recap';
 
 $pageTitle  = "PachaFamily - Budget";
 $activePage = "budget";
+// Note: budget.css est conservé pour le style global, 
+// mais budget.js n'est plus requis si tu l'as supprimé comme prévu.
 $pageCss    = "/modules/budget/budget.css";
-$pageJs     = "/modules/budget/budget.js"; 
+// $pageJs     = "/modules/budget/budget.js"; // Ligne commentée ou supprimée
 
 require __DIR__ . '/header.php';
 ?>
 
 <div class="pf-container">
     <div class="pf-hero" style="text-align: center; margin-bottom: 30px;">
-    <h1 style="margin-bottom: 20px;">Gestion du Budget</h1>
-    
-    <nav class="budget-tabs-container">
-        <a href="?tab=recap" class="tab-item <?= $tab == 'recap' ? 'active' : '' ?>">
-            <span class="tab-icon">📊</span> 
-            <span>Récapitulatif</span>
-        </a>
+        <h1 style="margin-bottom: 20px;">Gestion du Budget</h1>
         
-        <a href="?tab=suivi" class="tab-item <?= $tab == 'suivi' ? 'active' : '' ?>">
-            <span class="tab-icon">🗓️</span> 
-            <span>Suivi Mensuel</span>
-        </a>
-        
-        <a href="?tab=epargne" class="tab-item <?= $tab == 'epargne' ? 'active' : '' ?>">
-            <span class="tab-icon">🐷</span> 
-            <span>Épargne</span>
-        </a>
-    </nav>
-</div>
+        <nav class="budget-tabs-container">
+            <a href="?tab=recap" class="tab-item <?= $tab == 'recap' ? 'active' : '' ?>">
+                <span class="tab-icon">📊</span> 
+                <span>Récapitulatif</span>
+            </a>
+            
+            <a href="?tab=budget_prev" class="tab-item <?= $tab == 'budget_prev' ? 'active' : '' ?>">
+                <span class="tab-icon">🎯</span> 
+                <span>Budget 2026</span>
+            </a>
+            
+            <a href="?tab=suivi" class="tab-item <?= $tab == 'suivi' ? 'active' : '' ?>">
+                <span class="tab-icon">🗓️</span> 
+                <span>Suivi Mensuel</span>
+            </a>
+            
+            <a href="?tab=epargne" class="tab-item <?= $tab == 'epargne' ? 'active' : '' ?>">
+                <span class="tab-icon">🐷</span> 
+                <span>Épargne</span>
+            </a>
+        </nav>
+    </div>
 
     <section class="pf-section">
     <?php 
-    // On définit le chemin relatif par rapport à la racine du projet
-    $viewPath = __DIR__ . "/modules/budget/views/" . $tab . ".php";
+    // ROUTAGE DYNAMIQUE
+    // Sécurisation basique pour éviter d'inclure n'importe quoi
+    $allowedTabs = ['recap', 'suivi', 'epargne', 'budget_prev'];
     
-    if (file_exists($viewPath)) {
-        include $viewPath;
+    if (in_array($tab, $allowedTabs)) {
+        $viewPath = __DIR__ . "/modules/budget/views/" . $tab . ".php";
+        
+        if (file_exists($viewPath)) {
+            include $viewPath;
+        } else {
+            echo "<div style='text-align:center; padding:50px; color:#ef4444;'>";
+            echo "<h3>Oups ! Fichier introuvable.</h3>";
+            echo "<p>Vérifiez que le fichier <code>views/" . htmlspecialchars($tab) . ".php</code> existe bien.</p>";
+            echo "</div>";
+        }
     } else {
-        // Petit debug pour voir où PHP cherche exactement le fichier
-        echo "<p>Erreur : Le fichier est introuvable dans " . htmlspecialchars($viewPath) . "</p>";
-        echo "<p>Onglet en cours de développement...</p>";
+        echo "<p>Page non autorisée.</p>";
     }
     ?>
-</section>
+    </section>
 </div>
 <?php require __DIR__ . '/footer.php'; ?>

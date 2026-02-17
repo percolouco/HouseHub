@@ -4,9 +4,9 @@
 :root {
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
-  --success: #10b981; /* Vert */
-  --danger: #ef4444; /* Rouge */
-  --warning: #f59e0b; /* Jaune */
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
 
   --bg-page: #f1f5f9;
   --bg-card: #ffffff;
@@ -46,7 +46,6 @@
   }
 }
 
-/* En-tête de la vue */
 .view-header {
   display: flex;
   flex-wrap: wrap;
@@ -55,13 +54,46 @@
   margin-bottom: 24px;
   gap: 16px;
 }
-
 .view-header h2 {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #0f172a; /* Très sombre, quasi noir */
+  color: #0f172a;
   margin: 0;
   letter-spacing: -0.025em;
+}
+
+.nens-title.theme-pol {
+  color: #1e3a8a !important;
+  background: #eaf2ff !important;
+  border-left: 4px solid #1e3a8a !important;
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
+}
+
+.nens-table.theme-pol thead th {
+  background: #f5f9ff !important;
+  color: #1e3a8a !important;
+}
+
+.nens-table.theme-pol {
+  border-top: 2px solid #bcd3ff !important;
+}
+
+.nens-title.theme-pep {
+  color: #14532d !important;
+  background: #eaf7ea !important;
+  border-left: 4px solid #14532d !important;
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
+}
+
+.nens-table.theme-pep thead th {
+  background: #f6fdf6 !important;
+  color: #14532d !important;
+}
+
+.nens-table.theme-pep {
+  border-top: 2px solid #b9e3b9 !important;
 }
 
 /* --- 3. NAVIGATION TABS (Pills) --- */
@@ -75,7 +107,6 @@
   position: relative;
   z-index: 10;
 }
-
 .tab-item {
   display: flex;
   align-items: center;
@@ -89,32 +120,27 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
 }
-
 .tab-item:hover {
   background-color: var(--bg-page);
   color: var(--text-main);
 }
-
 .tab-item.active {
   background: var(--primary);
   color: white;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   transform: scale(1.02);
 }
-
 .tab-icon {
   font-size: 1.1em;
   line-height: 1;
 }
 
-/* Sous-onglets propriétaire (Alex/Laia) */
 .owner-tabs {
   display: inline-flex;
   background: #e2e8f0;
   border-radius: 8px;
   padding: 4px;
 }
-
 .owner-tab {
   padding: 6px 20px;
   border-radius: 6px;
@@ -123,28 +149,35 @@
   font-weight: 600;
   transition: 0.2s;
 }
-
 .owner-tab.active {
   background: var(--bg-card);
   color: var(--primary);
   box-shadow: var(--shadow-sm);
 }
 
-/* --- 4. BOUTONS --- */
+/* --- 4. BOUTONS UNIFIÉS (Global) --- */
+
+/* Style de Base (Taille Standard : 40px) */
 .pf-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-  border-radius: 50px;
-  padding: 10px 24px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+
+  height: 40px; /* Hauteur Fixe */
+  padding: 0 24px;
+
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: 1px solid transparent;
+  border-radius: 50px;
+
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
 
 .pf-btn:hover {
@@ -152,22 +185,23 @@
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
+/* Variante Secondaire (Fond Blanc) */
 .pf-btn.btn-secondary {
-  background: var(--bg-card);
+  background: white;
   color: var(--text-muted);
   border: 1px solid #cbd5e1;
   box-shadow: none;
-  margin-bottom: 5px;
 }
 
 .pf-btn.btn-secondary:hover {
-  background: var(--bg-page);
+  background: #f8fafc;
   color: var(--text-main);
   border-color: #94a3b8;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.btn-icon,
-.btn-icon-small {
+/* Boutons Icônes seuls */
+.btn-icon {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -175,25 +209,39 @@
   border-radius: var(--radius-s);
   transition: background 0.2s;
 }
-
 .btn-icon {
   font-size: 1.1rem;
 }
-.btn-icon-small {
-  font-size: 0.9rem;
-  padding: 4px;
-}
 
-.btn-icon:hover,
-.btn-icon-small:hover {
+.btn-icon:hover:hover {
   background: #e2e8f0;
   transform: scale(1.1);
 }
 
-/* Actions groupées */
 .action-buttons {
   display: flex;
   gap: 8px;
+}
+
+.month-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.month-actions .btn-icon-small {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  height: 24px;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* --- 5. TABLEAU MODERNE --- */
@@ -206,7 +254,6 @@
   border-spacing: 0;
   overflow: hidden;
 }
-
 .pf-table th {
   background: #f8fafc;
   padding: 16px;
@@ -219,14 +266,12 @@
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
 }
-
 .pf-table td {
-  padding: 3px 16px; /* Ajusté pour être moins haut */
+  padding: 3px 16px;
   border-bottom: 1px solid var(--bg-page);
   vertical-align: middle;
   font-size: 0.95rem;
 }
-
 .pf-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -234,7 +279,6 @@
   background-color: #f8fafc;
 }
 
-/* Styles spécifiques aux lignes */
 .row-income td:first-child {
   border-left: 4px solid var(--success);
 }
@@ -249,16 +293,6 @@
   font-style: italic;
 }
 
-/* Styles tableau épargne */
-.savings-table .row-total td {
-  background: var(--bg-page);
-  border-bottom: 2px solid #cbd5e1;
-}
-.savings-table .row-extres td {
-  background: #fffbeb;
-  border-top: 2px solid #e2e8f0;
-}
-
 .table-responsive {
   overflow-x: auto;
 }
@@ -271,12 +305,10 @@
   min-width: 150px;
 }
 
-/* Cellules spéciales */
 .cell-amount {
   font-family: "Consolas", "Monaco", monospace;
   font-weight: 700;
 }
-
 .cell-content {
   position: relative;
   display: flex;
@@ -286,35 +318,41 @@
   height: 100%;
 }
 
-/* Bouton supprimer au survol */
+.savings-table .row-extres td {
+  background: #fffbeb;
+  border-top: 2px solid #e2e8f0;
+}
+
+/* Bouton supprimer au survol (Style Epargne) */
 .btn-cell-delete {
   display: none;
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger);
   border: none;
   border-radius: 4px;
-  width: 20px;
-  height: 20px;
-  font-size: 14px;
+  width: 24px;
+  height: 24px;
+  font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
   padding: 0;
   align-items: center;
   justify-content: center;
   position: absolute;
-  right: -5px;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  text-decoration: none;
+  transition: all 0.2s;
 }
-
 .btn-cell-delete:hover {
   background: var(--danger);
   color: white;
 }
-
 td:hover .btn-cell-delete {
   display: flex;
 }
 
-/* Footer du tableau */
 .pf-table tfoot {
   background: #f8fafc;
   border-top: 2px solid #e2e8f0;
@@ -332,7 +370,6 @@ td:hover .btn-cell-delete {
   font-size: 0.85rem;
   margin-bottom: 6px;
 }
-
 .pf-input {
   width: 100%;
   padding: 10px 12px;
@@ -344,26 +381,22 @@ td:hover .btn-cell-delete {
   box-sizing: border-box;
   transition: all 0.2s;
 }
-
 .pf-input:focus {
   background: var(--bg-card);
   border-color: var(--primary);
   outline: none;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
-
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
 }
-
 .form-group {
   margin-bottom: 16px;
 }
 
-/* Checkbox Custom */
 input[type="checkbox"] {
   appearance: none;
   width: 20px;
@@ -378,17 +411,26 @@ input[type="checkbox"] {
   vertical-align: middle;
   margin-right: 8px;
 }
-
 input[type="checkbox"]:checked {
   background-color: var(--success);
   border-color: var(--success);
 }
-
 input[type="checkbox"]:checked::after {
   content: "✓";
   color: white;
   font-size: 14px;
   font-weight: bold;
+}
+
+/* Suppression flèches input number (Cross-browser) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* --- 7. MODALE --- */
@@ -399,12 +441,11 @@ input[type="checkbox"]:checked::after {
   z-index: 9999;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px); /* Safari support */
+  -webkit-backdrop-filter: blur(4px);
   align-items: center;
   justify-content: center;
   padding: 20px;
 }
-
 .pf-modal-content {
   background: var(--bg-card);
   width: 100%;
@@ -418,7 +459,6 @@ input[type="checkbox"]:checked::after {
   flex-direction: column;
   gap: 10px;
 }
-
 @keyframes modalPop {
   from {
     transform: scale(0.95) translateY(10px);
@@ -429,7 +469,6 @@ input[type="checkbox"]:checked::after {
     opacity: 1;
   }
 }
-
 .pf-modal-title {
   margin-top: 0;
   font-size: 1.5rem;
@@ -439,7 +478,6 @@ input[type="checkbox"]:checked::after {
   padding-bottom: 15px;
   margin-bottom: 8px;
 }
-
 .modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -462,7 +500,6 @@ input[type="checkbox"]:checked::after {
 .font-bold {
   font-weight: 700;
 }
-
 .badge-type {
   display: inline-block;
   padding: 4px 10px;
@@ -479,7 +516,6 @@ input[type="checkbox"]:checked::after {
   background: #f3e8ff;
   color: #9333ea;
 }
-
 .budget-note {
   margin-top: 15px;
   font-size: 0.85em;
@@ -496,7 +532,6 @@ input[type="checkbox"]:checked::after {
     border-radius: 15px;
     justify-content: space-between;
   }
-
   .tab-item {
     padding: 10px 15px;
     flex: 1;
@@ -504,196 +539,230 @@ input[type="checkbox"]:checked::after {
     white-space: nowrap;
     font-size: 0.85rem;
   }
-
   .view-header {
     flex-direction: column;
     align-items: flex-start;
   }
-
   .pf-btn {
     width: 100%;
     justify-content: center;
     margin-top: 5px;
   }
-
   .pf-table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
   }
-
-  /* Sur mobile, les formulaires passent en 1 colonne */
   .form-row {
     grid-template-columns: 1fr;
   }
 }
 
-/* --- EN-TÊTE DES COLONNES MOIS (Optimisé) --- */
+/* --- 10. BUDGET PREVISIONNEL (TIMELINE 2025) --- */
 
-/* Conteneur principal dans le <th> */
-.month-header-container {
+.prev-container {
   display: flex;
-  flex-direction: column; /* Empile texte et boutons */
-  align-items: center; /* Centre horizontalement */
-  justify-content: center;
-  gap: 6px; /* Espace entre le texte et les boutons */
-  min-width: 100px; /* Largeur min pour éviter l'écrasement */
+  flex-direction: column;
+  gap: 30px;
 }
-
-/* Le texte du mois */
-.month-name {
+.prev-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.prev-section-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--text-main);
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.85rem;
-  color: var(--text-main);
   letter-spacing: 0.05em;
-  line-height: 1.2;
 }
 
-/* Conteneur des boutons */
-.month-actions {
-  display: flex;
-  gap: 4px;
-  opacity: 0.5; /* Un peu transparent par défaut pour ne pas surcharger */
-  transition: opacity 0.2s ease;
-}
-
-/* On affiche les boutons pleinement au survol de la colonne */
-th:hover .month-actions {
-  opacity: 1;
-}
-
-/* Style spécifique pour réduire la taille des boutons d'en-tête */
-.month-actions .btn-icon-small {
-  font-size: 0.75rem; /* Icône plus petite */
-  padding: 2px 6px; /* Padding réduit */
-  height: 24px; /* Hauteur fixe et petite */
-  width: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: white;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.month-actions .btn-icon-small:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* --- LIGNES DYNAMIQUES (Modale Épargne) --- */
-
-.savings-line-item {
-  display: flex; /* Flexbox pour aligner horizontalement */
-  align-items: center; /* Centrage vertical */
-  gap: 10px; /* Espace entre les éléments */
-  margin-bottom: 8px;
+/* Inputs "Invisible" */
+.prev-input {
   width: 100%;
-}
-
-/* La catégorie prend tout l'espace disponible */
-.savings-line-item .input-category-wrapper {
-  flex: 1;
-  position: relative;
-}
-
-/* Le montant a une largeur fixe pour être aligné proprement */
-.savings-line-item .input-amount {
-  width: 110px !important; /* Force la largeur */
-  text-align: right;
-}
-
-/* Le bouton de suppression */
-.savings-line-item .btn-remove {
-  background: transparent;
   border: 1px solid transparent;
-  color: #ef4444; /* Rouge */
-  cursor: pointer;
-  font-size: 1.2rem;
-  line-height: 1;
-  padding: 4px 8px;
+  background: transparent;
+  text-align: center;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  font-weight: 500;
+  padding: 4px 0;
   border-radius: 4px;
   transition: all 0.2s;
+}
+.prev-input:hover,
+.prev-input:focus {
+  background: #eef2ff;
+  border-color: #6366f1;
+  outline: none;
+}
+.prev-input.bold-blue {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+/* Tableaux Config & Alloc */
+.prev-salary-table {
+  width: 100%;
+  max-width: 900px;
+  background: var(--bg-card);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-sm);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+.prev-salary-table th {
+  background: #f8fafc;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+.prev-salary-table th:first-child {
+  text-align: left;
+}
+.prev-salary-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: center;
+}
+
+.prev-timeline-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-l);
+  background: var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-top: 15px;
+}
+.prev-alloc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+}
+.prev-alloc-table th {
+  padding: 6px 10px;
+  border-right: 1px solid #f1f5f9;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.prev-alloc-table td {
+  padding: 3px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+/* Colonne Sticky */
+.col-sticky {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 10;
+  background-color: var(--bg-card);
+  border-right: 2px solid #e2e8f0;
+  text-align: left !important;
+  min-width: 220px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.col-sticky.header-cell {
+  top: 0;
+  z-index: 30 !important;
+  background-color: #f8fafc;
+  color: var(--text-muted);
+}
+.col-sticky small {
+  display: block;
+  font-weight: normal;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.75rem;
+}
+
+/* En-têtes Mois */
+.th-month {
+  background: #1e293b !important;
+  color: white !important;
+  font-size: 0.85rem !important;
+  border-left: 2px solid white;
+  padding: 8px !important;
+}
+.th-month.current {
+  background: var(--primary) !important;
+}
+.th-sub {
+  font-size: 0.7rem !important;
+  text-transform: uppercase;
+  background: #f8fafc;
+  color: var(--text-muted);
+}
+
+/* Lignes */
+.row-total td {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #334155;
+  border-top: 2px solid #e2e8f0;
+}
+.row-restant td {
+  background: #eff6ff;
+  font-weight: 700;
+  border-bottom: 2px solid #bfdbfe;
+}
+
+/* Couleurs */
+.txt-alex {
+  color: #0891b2;
+}
+.txt-laia {
+  color: #f59e0b;
+}
+.txt-global {
+  color: var(--text-muted);
+  font-weight: 700;
+  background: #f8fafc;
+}
+.val-ok {
+  color: var(--success);
+}
+.val-ko {
+  color: var(--danger);
+}
+
+/* Navigation */
+.nav-group {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 5px;
 }
-
-.savings-line-item .btn-remove:hover {
-  background: #fef2f2;
-  border-color: #fca5a5;
+.btn-nav {
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: var(--radius-s);
+  text-decoration: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: 0.2s;
 }
-
-/* --- THÈMES NENS (POL & PEP) --- */
-
-/* Style du Titre pour Pol (Bleu) */
-.nens-title.theme-pol {
-  color: #1e3a8a !important; /* Bleu foncé */
-  background: #eaf2ff !important; /* Bleu très pâle */
-  border-left: 4px solid #1e3a8a !important;
-  border-radius: 0 8px 8px 0; /* Petit effet onglet */
-  padding: 8px 12px;
-}
-
-/* Style du Tableau pour Pol */
-.nens-table.theme-pol thead th {
-  background: #f5f9ff !important; /* Bleu glace */
-  color: #1e3a8a !important;
-}
-.nens-table.theme-pol {
-  border-top: 2px solid #bcd3ff !important; /* Bordure bleue */
-}
-
-/* Style du Titre pour Pep (Vert) */
-.nens-title.theme-pep {
-  color: #14532d !important; /* Vert foncé */
-  background: #eaf7ea !important; /* Vert très pâle */
-  border-left: 4px solid #14532d !important;
-  border-radius: 0 8px 8px 0;
-  padding: 8px 12px;
-}
-
-/* Style du Tableau pour Pep */
-.nens-table.theme-pep thead th {
-  background: #f6fdf6 !important; /* Vert glace */
-  color: #14532d !important;
-}
-.nens-table.theme-pep {
-  border-top: 2px solid #b9e3b9 !important; /* Bordure verte */
-}
-
-/* Styles spécifiques Suivi Mensuel */
-
-/* Animation d'apparition */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Scrollbar fine pour les listes */
-.cat-card div::-webkit-scrollbar {
-  width: 6px;
-}
-.cat-card div::-webkit-scrollbar-track {
+.btn-nav:hover {
   background: #f1f5f9;
-}
-.cat-card div::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-.cat-card div::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Input datalist chrome fix */
-input::-webkit-calendar-picker-indicator {
-  opacity: 100;
+  color: var(--text-main);
+  border-color: #94a3b8;
 }
