@@ -575,11 +575,10 @@ input[type="number"] {
 }
 .prev-section-header h2 {
   margin: 0;
-  font-size: 1.2rem;
-  color: var(--text-main);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
 }
 
 /* Inputs "Invisible" */
@@ -765,4 +764,239 @@ input[type="number"] {
   background: #f1f5f9;
   color: var(--text-main);
   border-color: #94a3b8;
+}
+
+/* --- ACTIONS SUR LIGNES (Edit / Delete) --- */
+.row-actions {
+  display: none; /* Masqué par défaut */
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.9); /* Petit fond pour lisibilité */
+  padding: 2px;
+  border-radius: 4px;
+}
+
+/* On affiche au survol de la cellule */
+td:hover .row-actions {
+  display: flex;
+}
+
+.btn-icon-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.btn-icon-action.edit {
+  color: #3b82f6;
+} /* Bleu */
+.btn-icon-action.edit:hover {
+  background: #eff6ff;
+}
+
+.btn-icon-action.delete {
+  color: #ef4444;
+} /* Rouge */
+.btn-icon-action.delete:hover {
+  background: #fef2f2;
+}
+
+/* --- 11. RÉCAPITULATIF VIREMENTS (Tableau Unique) --- */
+
+.recap-wrapper {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: center; /* Centré */
+}
+
+.recap-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  width: 100%;
+  max-width: 600px; /* Pas trop large pour rester lisible */
+}
+
+.recap-header {
+  background: #1e293b;
+  color: white;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.recap-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.recap-table th,
+.recap-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.recap-table th {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  color: #64748b;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* Colonne Labels (Gauche) */
+.recap-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Colonne Alex (Cyan) */
+.col-alex {
+  background-color: #ecfeff;
+  color: #0891b2;
+  border-left: 1px solid #cffafe;
+}
+th.col-alex {
+  background-color: #cffafe;
+  border-bottom-color: #a5f3fc;
+}
+
+/* Colonne Laia (Ambre) */
+.col-laia {
+  background-color: #fffbeb;
+  color: #d97706;
+  border-left: 1px solid #fef3c7;
+}
+th.col-laia {
+  background-color: #fef3c7;
+  border-bottom-color: #fde68a;
+}
+
+/* Colonne Global */
+.col-global {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  border-left: 2px solid #e2e8f0;
+}
+
+/* Ligne Grand Total */
+.row-grand-total td {
+  background-color: #1e293b;
+  color: white;
+  font-weight: 800;
+  border: none;
+  padding: 12px 15px;
+}
+/* On garde les couleurs de texte même sur fond sombre pour la lisibilité */
+.row-grand-total .col-alex {
+  background: #164e63;
+  color: #67e8f9;
+  border: none;
+}
+.row-grand-total .col-laia {
+  background: #78350f;
+  color: #fcd34d;
+  border: none;
+}
+.row-grand-total .col-global {
+  background: #334155;
+  color: white;
+  border: none;
+}
+
+/* --- 12. OPTIMISATIONS MOBILES (Responsive) --- */
+
+@media (max-width: 768px) {
+  /* 1. Header du Budget Prévisionnel : On empile verticalement */
+  .prev-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  /* On s'assure que les sous-groupes (Titre + Nav) prennent toute la largeur */
+  .prev-section-header > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* 2. Colonne Fixe (Sticky) : On réduit la largeur pour laisser voir les données */
+  .col-sticky {
+    min-width: 140px !important; /* Réduit de 220px à 140px */
+    max-width: 140px;
+    font-size: 0.85rem; /* Texte un peu plus petit */
+    white-space: normal; /* Autorise le retour à la ligne du nom */
+    line-height: 1.2;
+  }
+
+  /* Ajustement du petit texte (cible) */
+  .col-sticky small {
+    font-size: 0.65rem;
+    margin-top: 2px;
+  }
+
+  /* 3. Actions (Edit/Delete) : Toujours visibles sur mobile */
+  /* Car pas de "hover" avec le doigt */
+  .row-actions {
+    display: flex !important; /* Force l'affichage */
+    background: rgba(255, 255, 255, 0.8); /* Fond semi-transparent */
+    border: 1px solid #e2e8f0;
+    right: 2px;
+    padding: 1px;
+  }
+
+  .btn-icon-action {
+    width: 28px; /* Zone de touche un peu plus grande */
+    height: 28px;
+    font-size: 1.2rem;
+  }
+
+  /* 4. Tableau Récapitulatif */
+  .recap-wrapper {
+    padding-top: 10px;
+  }
+
+  .recap-card {
+    border-radius: 8px; /* Coins moins arrondis pour gagner de la place */
+    border-left: none;
+    border-right: none; /* Enlever les bordures latérales sur tout petits écrans */
+  }
+
+  .recap-table th,
+  .recap-table td {
+    padding: 8px 6px; /* Padding réduit */
+    font-size: 0.85rem;
+  }
+
+  /* 5. Inputs du tableau : Plus facile à toucher */
+  .prev-input {
+    font-size: 16px; /* Évite que l'iPhone zoom quand on clique dessus */
+    padding: 8px 0;
+  }
 }

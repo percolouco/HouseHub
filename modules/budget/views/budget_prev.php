@@ -156,44 +156,124 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                         <?php endforeach; ?>
                     </tr>
 
-                    <?php foreach ($cats as $cat): ?>
-                    <tr>
-                        <td class="col-sticky" style="position:relative;">
-                            <div style="font-weight:600; color:var(--text-main); "><?= htmlspecialchars($cat['name']) ?></div>
-                            <div style="font-size:0.75rem; color:var(--text-muted); font-style:italic; text-align:right;"><?= htmlspecialchars($cat['target']) ?></div>
-                            
+                    <?php foreach ($cats as $cat): 
+                    // Détection des lignes indicatives
+                    $isIndicative = ($cat['name'] === 'Eco Alex' || $cat['name'] === 'Eco Laia');
+                    $rowClass = $isIndicative ? 'row-indicative' : '';
+                    $inputClass = $isIndicative ? 'ignore-calc' : ''; // Classe pour le JS
+                    $rowStyle = $isIndicative ? 'background:#f8fafc; color:#94a3b8;' : '';
+                ?>
+                <tr class="<?= $rowClass ?>" style="<?= $rowStyle ?>">
+                    <td class="col-sticky" style="position:relative; <?= $isIndicative ? 'opacity:0.8;' : '' ?>">
+                        <div style="font-weight:600; color:<?= $isIndicative ? '#64748b' : 'var(--text-main)' ?>;">
+                            <?= htmlspecialchars($cat['name']) ?> 
+                            <?php if($isIndicative): ?><span style="font-size:0.7rem; border:1px solid #cbd5e1; border-radius:4px; padding:0 4px; margin-left:5px;">Info</span><?php endif; ?>
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); font-style:italic; text-align:right;">
+                            <?= htmlspecialchars($cat['target']) ?>
+                        </div>
+                        
+                        <div class="row-actions">
+                            <button type="button" 
+                                    class="btn-icon-action edit" 
+                                    title="Modifier"
+                                    data-id="<?= $cat['id'] ?>"
+                                    data-name="<?= htmlspecialchars($cat['name']) ?>" 
+                                    data-target="<?= htmlspecialchars($cat['target']) ?>"
+                                    onclick="openEditModal(this)">
+                                ✎
+                            </button>
+
                             <a href="?tab=budget_prev&id=<?= $cat['id'] ?>&action=delete_category" 
                                onclick="return confirm('Supprimer cette ligne et tout son historique ?')" 
-                               class="btn-cell-delete"
-                               title="Supprimer la ligne">
+                               class="btn-icon-action delete" title="Supprimer">
                                &times;
                             </a>
+                        </div>
+                    </td>
+                    <?php foreach ($months as $m): 
+                        $val = $allocs[$m][$cat['id']] ?? ['amount_alex'=>0, 'amount_laia'=>0];
+                    ?>
+                        <td class="txt-global" style="border-left:2px solid #e2e8f0; <?= $isIndicative?'color:#94a3b8; font-weight:normal;':'' ?>" id="g_<?= $m ?>_<?= $cat['id'] ?>">0</td>
+                        
+                        <td>
+                            <input type="number" step="1" class="prev-input txt-alex inp-alex-<?= $m ?> <?= $inputClass ?>" 
+                                   style="<?= $isIndicative ? 'color:#64748b;' : '' ?>"
+                                   value="<?= $val['amount_alex'] == 0 ? '' : round($val['amount_alex']) ?>" 
+                                   placeholder="-"
+                                   data-target="<?= htmlspecialchars($cat['target']) ?>"
+                                   onchange="updateAlloc('<?= $m ?>', <?= $cat['id'] ?>, 'amount_alex', this)">
                         </td>
-                        <?php foreach ($months as $m): 
-                            $val = $allocs[$m][$cat['id']] ?? ['amount_alex'=>0, 'amount_laia'=>0];
-                        ?>
-                            <td class="txt-global" style="border-left:2px solid #e2e8f0;" id="g_<?= $m ?>_<?= $cat['id'] ?>">0</td>
-                            
-                            <td>
-                                <input type="number" step="1" class="prev-input txt-alex inp-alex-<?= $m ?>" 
-                                       value="<?= $val['amount_alex'] == 0 ? '' : round($val['amount_alex']) ?>" 
-                                       placeholder="-"
-                                       onchange="updateAlloc('<?= $m ?>', <?= $cat['id'] ?>, 'amount_alex', this)">
-                            </td>
-                            
-                            <td>
-                                <input type="number" step="1" class="prev-input txt-laia inp-laia-<?= $m ?>" 
-                                       value="<?= $val['amount_laia'] == 0 ? '' : round($val['amount_laia']) ?>" 
-                                       placeholder="-"
-                                       onchange="updateAlloc('<?= $m ?>', <?= $cat['id'] ?>, 'amount_laia', this)">
-                            </td>
-                        <?php endforeach; ?>
-                    </tr>
+                        
+                        <td>
+                            <input type="number" step="1" class="prev-input txt-laia inp-laia-<?= $m ?> <?= $inputClass ?>" 
+                                   style="<?= $isIndicative ? 'color:#64748b;' : '' ?>"
+                                   value="<?= $val['amount_laia'] == 0 ? '' : round($val['amount_laia']) ?>" 
+                                   placeholder="-"
+                                   data-target="<?= htmlspecialchars($cat['target']) ?>"
+                                   onchange="updateAlloc('<?= $m ?>', <?= $cat['id'] ?>, 'amount_laia', this)">
+                        </td>
                     <?php endforeach; ?>
+                </tr>
+                <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
     </div>
+<?php
+    $focusMonth = $months[0]; 
+    
+    // On initialise toutes les cibles possibles pour avoir les lignes prêtes
+    // Note : On utilise md5() sur la cible pour créer des ID compatibles HTML (sans espaces/points)
+    $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
+    
+    // On récupère toutes les cibles uniques utilisées dans les catégories + celles par défaut
+    $allTargets = $targetsOrder;
+    foreach($cats as $c) {
+        if(!empty($c['target']) && !in_array($c['target'], $allTargets)) $allTargets[] = $c['target'];
+    }
+    $allTargets = array_unique($allTargets);
+    ?>
+
+    <div class="recap-wrapper">
+        <div class="recap-card">
+            <div class="recap-header">
+                Virements à effectuer - <?= date('F Y', strtotime($focusMonth)) ?>
+            </div>
+            
+            <table class="recap-table">
+                <thead>
+                    <tr>
+                        <th style="text-align:left;">Destination</th>
+                        <th class="col-alex">Alex</th>
+                        <th class="col-laia">Laia</th>
+                        <th class="col-global">Global</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach($allTargets as $target): 
+                        $tId = md5($target); // ID unique pour le JS
+                    ?>
+                    <tr id="row_summary_<?= $tId ?>">
+                        <td><?= htmlspecialchars($target) ?></td>
+                        <td class="col-alex" id="sum_alex_<?= $tId ?>">0 €</td>
+                        <td class="col-laia" id="sum_laia_<?= $tId ?>">0 €</td>
+                        <td class="col-global" id="sum_global_<?= $tId ?>">0 €</td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+                <tfoot>
+                    <tr class="row-grand-total">
+                        <td>GRAND TOTAL</td>
+                        <td class="col-alex" id="grand_total_alex">0 €</td>
+                        <td class="col-laia" id="grand_total_laia">0 €</td>
+                        <td class="col-global" id="grand_total_global">0 €</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
 </div>
 
 <div id="addCatModal" class="pf-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15, 23, 42, 0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
@@ -209,13 +289,14 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 <input type="text" name="name" class="pf-input" required>
             </div>
             <div class="form-group" style="margin-bottom:20px;">
-                <label class="pf-label">Cible (ex: vers L.Pol)</label>
-                <input type="text" name="target" class="pf-input" list="targets">
-                <datalist id="targets">
-                    <option value="vers L.Pol">
-                    <option value="vers L.Perso">
-                    <option value="vers commune">
-                </datalist>
+                <label class="pf-label">Cible (Destination)</label>
+                <select name="target" class="pf-input" required>
+                    <option value="" disabled selected>-- Choisir --</option>
+                    <option value="vers L.Pol">vers L.Pol</option>
+                    <option value="vers L.Pep">vers L.Pep</option>
+                    <option value="vers L.Perso">vers L.Perso</option>
+                    <option value="vers commune">vers commune</option>
+                </select>
             </div>
             <div class="modal-footer">
                 <button type="button" onclick="document.getElementById('addCatModal').style.display='none'" class="pf-btn btn-secondary">Annuler</button>
@@ -223,6 +304,59 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             </div>
         </form>
     </div>
+</div>
+<div id="editCatModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width:400px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 class="pf-modal-title" style="margin:0; border:none; font-size:1.2rem;">Modifier la ligne</h3>
+            <button onclick="document.getElementById('editCatModal').style.display='none'" style="border:none; background:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <form action="/modules/budget/includes/api/save-budget.php" method="POST">
+            <input type="hidden" name="action" value="update_category">
+            <input type="hidden" name="cat_id" id="edit_cat_id">
+            
+            <div class="form-group">
+                <label class="pf-label">Nom</label>
+                <input type="text" name="name" id="edit_cat_name" class="pf-input" required>
+            </div>
+            <div class="form-group">
+                <label class="pf-label">Cible (Destination)</label>
+                <select name="target" id="edit_cat_target" class="pf-input" required>
+                    <option value="vers L.Pol">vers L.Pol</option>
+                    <option value="vers L.Pep">vers L.Pep</option>
+                    <option value="vers L.Perso">vers L.Perso</option>
+                    <option value="vers commune">vers commune</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="document.getElementById('editCatModal').style.display='none'" class="pf-btn btn-secondary">Annuler</button>
+                <button type="submit" class="pf-btn">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Fonction pour ouvrir la modale et pré-remplir les valeurs
+function openEditModal(btn) {
+    // 1. Récupération des données depuis le bouton
+    // getAttribute est plus sûr pour éviter les bugs si des données sont manquantes
+    const id = btn.getAttribute('data-id');
+    const name = btn.getAttribute('data-name');
+    const target = btn.getAttribute('data-target');
+
+    // 2. Remplissage du formulaire
+    document.getElementById('edit_cat_id').value = id;
+    document.getElementById('edit_cat_name').value = name;
+    
+    // Pour le SELECT, définir la .value sélectionne automatiquement la bonne option
+    // Si la valeur actuelle en base n'existe pas dans la liste, ça sélectionnera la 1ère par défaut
+    document.getElementById('edit_cat_target').value = target;
+    
+    // 3. Affichage
+    document.getElementById('editCatModal').style.display = 'flex';
+}
+</script>
 </div>
 
 <script>
@@ -311,10 +445,16 @@ function recalcAllAllocations() {
         let sumAlex = 0;
         let sumLaia = 0;
 
+        // Boucle sur colonne Alex
         document.querySelectorAll('.inp-alex-' + m).forEach(inp => {
             const val = parseFloat(inp.value) || 0;
-            sumAlex += val;
             
+            // 1. On ajoute au TOTAL COLONNE seulement si ce n'est PAS une ligne indicative
+            if (!inp.classList.contains('ignore-calc')) {
+                sumAlex += val;
+            }
+            
+            // 2. Calcul du GLOBAL LIGNE (On le fait toujours, même pour les indicatifs)
             const row = inp.closest('tr');
             const laiaVal = parseFloat(row.querySelector('.inp-laia-' + m).value) || 0;
             const globalSum = val + laiaVal;
@@ -327,13 +467,20 @@ function recalcAllAllocations() {
             }
         });
 
-        document.querySelectorAll('.inp-laia-' + m).forEach(inp => sumLaia += (parseFloat(inp.value) || 0));
+        // Boucle sur colonne Laia (Juste pour le total colonne)
+        document.querySelectorAll('.inp-laia-' + m).forEach(inp => {
+            const val = parseFloat(inp.value) || 0;
+            if (!inp.classList.contains('ignore-calc')) {
+                sumLaia += val;
+            }
+        });
 
-        // Totaux arrondis
+        // Totaux
         document.getElementById('total_alex_' + m).innerText = Math.round(sumAlex) + ' €';
         document.getElementById('total_laia_' + m).innerText = Math.round(sumLaia) + ' €';
         document.getElementById('total_global_' + m).innerText = Math.round(sumAlex + sumLaia) + ' €';
 
+        // Restants
         const restAlex = budgetAlex - sumAlex;
         const restLaia = budgetLaia - sumLaia;
 
@@ -346,6 +493,76 @@ function recalcAllAllocations() {
         elRestLaia.innerText = Math.round(restLaia) + ' €';
         elRestLaia.className = 'val-' + (restLaia >= 0 ? 'ok' : 'ko');
     });
+    updateSummaryTable();
+}
+
+function updateSummaryTable() {
+    // 1. On identifie le mois focus (colonne de gauche)
+    const focusMonth = months[0];
+    
+    // 2. Objet pour stocker les sommes par cible
+    // Structure : { 'md5_target': { alex: 0, laia: 0 } }
+    const sums = {};
+
+    // 3. On parcourt les inputs ALEX du mois focus
+    document.querySelectorAll('.inp-alex-' + focusMonth).forEach(inp => {
+        const val = parseFloat(inp.value) || 0;
+        const target = inp.getAttribute('data-target'); // Récupéré de l'étape 1
+        
+        if (target) { }
+    });
+    
+    // On reset les totaux
+    let grandTotalAlex = 0;
+    let grandTotalLaia = 0;    
+    const dataByTarget = {};
+
+    // Calcul Alex
+    document.querySelectorAll('.inp-alex-' + focusMonth).forEach(inp => {
+        const target = inp.getAttribute('data-target');
+        if(target) {
+            if(!dataByTarget[target]) dataByTarget[target] = { alex: 0, laia: 0 };
+            dataByTarget[target].alex += (parseFloat(inp.value) || 0);
+        }
+    });
+
+    // Calcul Laia
+    document.querySelectorAll('.inp-laia-' + focusMonth).forEach(inp => {
+        const target = inp.getAttribute('data-target');
+        if(target) {
+            if(!dataByTarget[target]) dataByTarget[target] = { alex: 0, laia: 0 };
+            dataByTarget[target].laia += (parseFloat(inp.value) || 0);
+        }
+    });
+
+    // Mise à jour du tableau
+    // On parcourt toutes les lignes du tbody du récap
+    const tbody = document.querySelector('.recap-table tbody');
+    if(tbody) {
+        Array.from(tbody.rows).forEach(row => {
+            const targetName = row.cells[0].innerText.trim(); // "vers L.Pol"
+            
+            const alexSum = dataByTarget[targetName] ? dataByTarget[targetName].alex : 0;
+            const laiaSum = dataByTarget[targetName] ? dataByTarget[targetName].laia : 0;
+            const globalSum = alexSum + laiaSum;
+
+            // Mise à jour des cellules (Index 1=Alex, 2=Laia, 3=Global)
+            row.cells[1].innerText = Math.round(alexSum).toLocaleString('fr-FR') + ' €';
+            row.cells[2].innerText = Math.round(laiaSum).toLocaleString('fr-FR') + ' €';
+            row.cells[3].innerText = Math.round(globalSum).toLocaleString('fr-FR') + ' €';
+
+            // Gestion visuelle : Masquer la ligne si tout est à 0 (Optionnel)
+            // row.style.display = globalSum === 0 ? 'none' : ''; 
+
+            grandTotalAlex += alexSum;
+            grandTotalLaia += laiaSum;
+        });
+    }
+
+    // Mise à jour du Footer Grand Total
+    document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString('fr-FR') + ' €';
+    document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString('fr-FR') + ' €';
+    document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString('fr-FR') + ' €';
 }
 
 function saveData(action, data) {
