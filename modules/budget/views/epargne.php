@@ -91,7 +91,8 @@ input[type="number"].no-spinners {
                                     <span class="month-name"><?= date('M Y', strtotime($month)) ?></span>
                                     <div class="month-actions">
                                         <button class="btn-icon-small" title="Modifier"
-                                                onclick='editCustomSavingsMonth("<?= $month ?>", "<?= $currentOwner ?>", <?= json_encode($data[$month] ?? []) ?>)'>
+                                                data-json="<?= htmlspecialchars(json_encode($data[$month] ?? []), ENT_QUOTES, 'UTF-8') ?>"
+                                                onclick='editCustomSavingsMonth("<?= $month ?>", "<?= $currentOwner ?>", JSON.parse(this.getAttribute("data-json")))'>
                                             ✏️
                                         </button>
                                         <button class="btn-icon-small" title="Supprimer"
@@ -211,9 +212,10 @@ input[type="number"].no-spinners {
 
 function addCustomEpargneLine(catName = '', amount = '') {
     const container = document.getElementById('linesContainer');
-    const baseAmount = amount !== '' ? parseFloat(amount).toFixed(2) : '0.00';
+    // Si amount est vide, on met '0.00', sinon on formate
+    const baseAmount = (amount !== '' && amount !== null) ? parseFloat(amount).toFixed(2) : '0.00';
     
-    // Assure l'envoi de `values[Catégorie]` au serveur
+    // Nom du champ input pour le serveur
     const inputName = catName ? `values[${catName}]` : '';
 
     const html = `
@@ -245,10 +247,11 @@ function updateCustomFieldName(inputElement) {
     const finalInput = line.querySelector('.final-amount');
     const newName = inputElement.value.trim();
     
+    // Mise à jour dynamique de l'attribut name pour que PHP le reçoive correctement
     if (newName) {
         finalInput.name = `values[${newName}]`;
     } else {
-        finalInput.name = '';
+        finalInput.name = ''; // Si vide, ne sera pas envoyé
     }
 }
 
@@ -264,25 +267,31 @@ function recalculateCustomLine(inputElement) {
     finalInput.value = (base + adj).toFixed(2);
 }
 
+// Fonction d'ouverture pour ÉDITION
 function editCustomSavingsMonth(monthDate, owner, rowData) {
     document.getElementById('sav_owner').value = owner;
     document.getElementById('sav_date').value = monthDate;
     
+    // Formatage date pour le titre
     const dateObj = new Date(monthDate);
     const monthName = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
     document.getElementById('savingsModalTitle').innerText = "Modifier : " + monthName + " (" + owner + ")";
     
+    // Remplissage Total Banque
     document.getElementById('sav_total').value = rowData['TOTAL_BANQUE'] || '';
 
+    // Remplissage des lignes
     const container = document.getElementById('linesContainer');
     container.innerHTML = '';
 
+    // On parcourt les données JSON reçues
     for (const [cat, val] of Object.entries(rowData)) {
         if (cat !== 'TOTAL_BANQUE') {
             addCustomEpargneLine(cat, val);
         }
     }
     
+    // Si aucune ligne de détail, on en ajoute une vide
     if (container.children.length === 0) {
         addCustomEpargneLine();
     }
@@ -290,6 +299,7 @@ function editCustomSavingsMonth(monthDate, owner, rowData) {
     document.getElementById('savingsModal').style.display = 'flex';
 }
 
+// Fonction d'ouverture pour AJOUT (Nouveau mois)
 function openCustomSavingsModal(owner) {
     document.getElementById('sav_owner').value = owner;
     document.getElementById('sav_date').value = '';
@@ -304,6 +314,7 @@ function openCustomSavingsModal(owner) {
     document.getElementById('savingsModal').style.display = 'flex';
 }
 
+// Fermeture modale au clic extérieur
 window.onclick = function(event) {
     const modal = document.getElementById('savingsModal');
     if (event.target == modal) {
@@ -311,61 +322,85 @@ window.onclick = function(event) {
     }
 }
 
-// --- INTERCEPTION DU FORMULAIRE POUR ÉVITER LE BUG DE REDIRECTION ---
-document.getElementById('epargneForm').addEventListener('submit', function(e) {
-    e.preventDefault(); // Empêche le rechargement classique de la page
+// --- SOUMISSION DU FORMULAIRE (AJAX) ---
+const savingsForm = document.getElementById('savingsForm');
+if (savingsForm) {
+    savingsForm.addEventListener('submit', function(e) {
+        e.preventDefault(); // On bloque le rechargement standard
 
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = "Enregistrement...";
-    submitBtn.disabled = true;
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+        submitBtn.innerText = "Enregistrement...";
+        submitBtn.disabled = true;
 
-    const formData = new FormData(this);
+        const formData = new FormData(this);
 
-    fetch(this.action, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        // Peu importe comment le backend redirige en interne,
-        // on force le navigateur à recharger la page EXACTE où l'utilisateur se trouve
-        window.location.reload(); 
-    })
-    .catch(error => {
-        console.error("Erreur:", error);
-        alert("Une erreur est survenue lors de l'enregistrement.");
-        submitBtn.innerText = originalText;
-        submitBtn.disabled = false;
+        fetch(this.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text()) // On lit la réponse texte (parfois PHP renvoie du HTML ou vide)
+        .then(text => {
+            // Rechargement forcé pour voir les modifications
+            window.location.reload(); 
+        })
+        .catch(error => {
+            console.error("Erreur:", error);
+            alert("Une erreur technique est survenue.");
+            submitBtn.innerText = originalText;
+            submitBtn.disabled = false;
+        });
     });
-});
+}
 
 // ============================================================================
-// ACTIONS AJAX (Suppression et Duplication)
+// ACTIONS DE SUPPRESSION / DUPLICATION
 // ============================================================================
 
-// 1. Supprimer TOUT un mois (Bouton Poubelle rouge en haut)
 function deleteEntireMonth(monthDate, owner) {
-    if (!confirm(`Supprimer TOUT le mois pour ${owner} ?`)) return;
+    if (!confirm(`Supprimer TOUT le mois de ${monthDate} pour ${owner} ?`)) return;
 
     const formData = new FormData();
-    formData.append("action", "delete_month_global");
+    formData.append("action", "delete_month_global"); // Action gérée par save-savings.php
     formData.append("month_date", monthDate);
     formData.append("owner", owner);
 
     fetch("/modules/budget/includes/api/save-savings.php", {
         method: "POST",
         body: formData,
-    }).then(() => window.location.reload());
+    })
+    .then(() => window.location.reload())
+    .catch(err => alert("Erreur lors de la suppression."));
 }
 
-// 2. Dupliquer le mois précédent (Bouton +1 Mois)
+function deleteSavingsEntry(monthDate, category, owner) {
+    if (!confirm(`Supprimer la ligne "${category}" ?`)) return;
+
+    const formData = new FormData();
+    formData.append("action", "delete_entry");
+    formData.append("month_date", monthDate);
+    formData.append("category", category);
+    formData.append("owner", owner);
+
+    fetch("/modules/budget/includes/api/save-savings.php", {
+        method: "POST",
+        body: formData,
+    })
+    .then(() => window.location.reload())
+    .catch(err => alert("Erreur lors de la suppression de la ligne."));
+}
+
 function duplicateLastMonth(lastMonthDate, owner) {
+    // Calcul du mois suivant
     let dateObj = new Date(lastMonthDate);
     dateObj.setMonth(dateObj.getMonth() + 1);
-    let nextMonthStr = dateObj.toISOString().split("T")[0];
+    // Astuce pour gérer les fuseaux horaires et garder YYYY-MM-01
+    let year = dateObj.getFullYear();
+    let month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    let nextMonthStr = `${year}-${month}-01`;
 
     let newTotal = prompt(
-        `Dupliquer pour ${owner} vers ${nextMonthStr} ?\n\nNouveau TOTAL en banque :`,
+        `Dupliquer les données de ${lastMonthDate} vers ${nextMonthStr} ?\n\nNouveau TOTAL en banque (€) :`,
         ""
     );
 
@@ -381,28 +416,15 @@ function duplicateLastMonth(lastMonthDate, owner) {
             method: "POST",
             body: formData,
         })
-        .then((r) => r.json())
-        .then((d) => {
+        .then(r => r.json())
+        .then(d => {
             if (d.success) window.location.reload();
-            else alert(d.error);
+            else alert("Erreur serveur : " + (d.error || "Inconnue"));
         })
-        .catch(err => alert("Erreur réseau."));
+        .catch(err => {
+            console.error(err);
+            alert("Erreur réseau lors de la duplication.");
+        });
     }
-}
-
-// 3. Supprimer une seule ligne d'un mois (Petite croix dans la cellule)
-function deleteSavingsEntry(monthDate, category, owner) {
-    if (!confirm(`Supprimer le montant pour "${category}" ?`)) return;
-
-    const formData = new FormData();
-    formData.append("action", "delete_entry");
-    formData.append("month_date", monthDate);
-    formData.append("category", category);
-    formData.append("owner", owner);
-
-    fetch("/modules/budget/includes/api/save-savings.php", {
-        method: "POST",
-        body: formData,
-    }).then(() => window.location.reload());
 }
 </script>
