@@ -44,6 +44,30 @@ $allocs = [];
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $allocs[$row['month_date']][$row['cat_id']] = $row;
 }
+
+// 5. Récupération de l'ID de la catégorie système
+// On cherche l'ID de la catégorie 'SYSTEM_VALIDATION'
+$sysCatId = null;
+foreach ($cats as $key => $c) {
+    if ($c['name'] === 'SYSTEM_VALIDATION') {
+        $sysCatId = $c['id'];
+        // IMPORTANT : On retire cette catégorie de la liste affichable ($cats)
+        // pour qu'elle n'apparaisse pas dans le tableau HTML !
+        unset($cats[$key]); 
+        break;
+    }
+}
+
+// 6. Lecture des statuts de validation (1 = Validé, 0 = Non)
+$focusDate = $months[0];
+$isValidatedAlex = false;
+$isValidatedLaia = false;
+
+if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
+    $row = $allocs[$focusDate][$sysCatId];
+    $isValidatedAlex = ($row['amount_alex'] == 1);
+    $isValidatedLaia = ($row['amount_laia'] == 1);
+}
 ?>
 
 <div class="prev-container">
@@ -221,18 +245,46 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         </div>
     </div>
 <?php
-    $focusMonth = $months[0]; 
+    $focusMonth = $months[0]; // Mois affiché à gauche
     
-    // On initialise toutes les cibles possibles pour avoir les lignes prêtes
-    // Note : On utilise md5() sur la cible pour créer des ID compatibles HTML (sans espaces/points)
+    // 1. Initialisation des cibles par défaut
     $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
     
-    // On récupère toutes les cibles uniques utilisées dans les catégories + celles par défaut
+    // 2. CORRECTION : On reconstruit la liste complète $allTargets
+    // On part des cibles par défaut
     $allTargets = $targetsOrder;
+    
+    // On ajoute les cibles personnalisées trouvées dans les catégories actives
     foreach($cats as $c) {
-        if(!empty($c['target']) && !in_array($c['target'], $allTargets)) $allTargets[] = $c['target'];
+        $t = trim($c['target']);
+        if(!empty($t) && !in_array($t, $allTargets)) {
+            $allTargets[] = $t;
+        }
     }
     $allTargets = array_unique($allTargets);
+
+    // 3. Calcul des sommes (Logiciel d'affichage)
+    $summaryData = [];
+    foreach($allTargets as $t) $summaryData[$t] = ['Alex' => 0, 'Laia' => 0];
+
+    foreach ($cats as $cat) {
+        $t = trim($cat['target']);
+        if (empty($t)) continue;
+
+        $val = $allocs[$focusMonth][$cat['id']] ?? ['amount_alex'=>0, 'amount_laia'=>0];
+        
+        if (!isset($summaryData[$t])) {
+            $summaryData[$t] = ['Alex' => 0, 'Laia' => 0];
+        }
+
+        $summaryData[$t]['Alex'] += $val['amount_alex'];
+        $summaryData[$t]['Laia'] += $val['amount_laia'];
+    }
+
+    // Récupération des totaux pour le footer
+    $grandTotalAlex = 0;
+    $grandTotalLaia = 0;
+    $grandTotalGlobal = 0;
     ?>
 
     <div class="recap-wrapper">
@@ -245,8 +297,37 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 <thead>
                     <tr>
                         <th style="text-align:left;">Destination</th>
-                        <th class="col-alex">Alex</th>
-                        <th class="col-laia">Laia</th>
+                        
+                        <th class="col-alex">
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+                                <span>ALEX</span>
+                                <?php if($isValidatedAlex): ?>
+                                    <div style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.7rem; display:flex; align-items:center; gap:4px;">
+                                        ✓ FAIT
+                                    </div>
+                                <?php else: ?>
+                                    <button onclick="validateTransfers('Alex', '<?= $focusMonth ?>')" class="pf-btn btn-small" style="background:white; color:#0891b2; border:1px solid #0891b2; font-size:0.7rem; padding:2px 8px; height:auto;">
+                                        Valider
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </th>
+
+                        <th class="col-laia">
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
+                                <span>LAIA</span>
+                                <?php if($isValidatedLaia): ?>
+                                    <div style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.7rem; display:flex; align-items:center; gap:4px;">
+                                        ✓ FAIT
+                                    </div>
+                                <?php else: ?>
+                                    <button onclick="validateTransfers('Laia', '<?= $focusMonth ?>')" class="pf-btn btn-small" style="background:white; color:#d97706; border:1px solid #d97706; font-size:0.7rem; padding:2px 8px; height:auto;">
+                                        Valider
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </th>
+                        
                         <th class="col-global">Global</th>
                     </tr>
                 </thead>
@@ -618,4 +699,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function validateTransfers(person, month) {
+    if (!confirm(`Confirmer que ${person} a bien effectué tous ses virements pour ${month} ?\n\nCela mettra à jour l'Épargne automatiquement.`)) return;
+
+    const formData = new FormData();
+    formData.append('action', 'validate_transfers');
+    formData.append('person', person);
+    formData.append('month_date', month);
+
+    // On récupère aussi les données calculées du tableau pour les envoyer au backend
+    // Mais pour plus de sécurité, le backend recalculera tout lui-même.
+    
+    fetch('/modules/budget/includes/api/save-budget.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            window.location.reload();
+        } else {
+            alert("Erreur: " + data.error);
+        }
+    })
+    .catch(e => alert("Erreur technique"));
+}
 </script>
