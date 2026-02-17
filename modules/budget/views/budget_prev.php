@@ -574,3 +574,48 @@ function saveData(action, data) {
 
 document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du clic sur mobile pour afficher les actions
+    if (window.innerWidth <= 768) {
+        
+        // 1. On écoute les clics sur tout le document
+        document.addEventListener('click', function(e) {
+            
+            // On récupère la cellule "sticky" (catégorie) si elle a été cliquée
+            const clickedCell = e.target.closest('.col-sticky');
+            
+            // Si on a cliqué sur une cellule de catégorie...
+            if (clickedCell) {
+                const actionsDiv = clickedCell.querySelector('.row-actions');
+                
+                // Si on a cliqué DIRECTEMENT sur un bouton d'action (crayon/poubelle), on ne fait rien
+                // (on laisse le bouton faire son travail : ouvrir la modale ou supprimer)
+                if (e.target.closest('.btn-icon-action')) return;
+
+                // Sinon, on Toggle (Affiche/Cache) le menu de CETTE ligne
+                if (actionsDiv) {
+                    // Est-ce qu'il est déjà ouvert ?
+                    const isOpen = actionsDiv.classList.contains('show-actions');
+                    
+                    // D'abord, on ferme TOUS les autres menus ouverts pour ne pas en avoir partout
+                    document.querySelectorAll('.row-actions.show-actions').forEach(el => {
+                        el.classList.remove('show-actions');
+                    });
+                    
+                    // Si c'était fermé, on l'ouvre
+                    if (!isOpen) {
+                        actionsDiv.classList.add('show-actions');
+                    }
+                }
+            } 
+            else {
+                // Si on a cliqué AILLEURS (pas sur une catéogrie), on ferme tout
+                document.querySelectorAll('.row-actions.show-actions').forEach(el => {
+                    el.classList.remove('show-actions');
+                });
+            }
+        });
+    }
+});
+</script>

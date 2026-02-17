@@ -930,73 +930,89 @@ th.col-laia {
   border: none;
 }
 
-/* --- 12. OPTIMISATIONS MOBILES (Responsive) --- */
+/* --- 12. OPTIMISATIONS MOBILES (Mode Largeur Fixe 680px) --- */
 
 @media (max-width: 768px) {
-  /* 1. Header du Budget Prévisionnel : On empile verticalement */
-  .prev-section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
+  /* 1. ON FORCE TOUT LE SITE A FAIRE MINIMUM 680px */
+  /* Cela inclut le Header et le Footer global */
+  html,
+  body {
+    min-width: 680px !important;
+    overflow-x: auto !important; /* Active le scroll horizontal global si besoin */
+    position: relative;
   }
 
-  /* On s'assure que les sous-groupes (Titre + Nav) prennent toute la largeur */
-  .prev-section-header > div {
+  /* Si ton header/footer a des classes spécifiques, ajoute-les ici */
+  header,
+  footer,
+  .navbar,
+  .site-header,
+  .site-footer {
+    min-width: 680px !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* Le conteneur principal du budget */
+  .budget-view {
+    min-width: 680px !important;
     width: 100%;
-    justify-content: space-between;
+    padding-right: 10px; /* Petite marge de sécurité */
   }
 
-  /* 2. Colonne Fixe (Sticky) : On réduit la largeur pour laisser voir les données */
-  .col-sticky {
-    min-width: 140px !important; /* Réduit de 220px à 140px */
-    max-width: 140px;
-    font-size: 0.85rem; /* Texte un peu plus petit */
-    white-space: normal; /* Autorise le retour à la ligne du nom */
-    line-height: 1.2;
+  /* 2. TABLEAU REVENUS (Doit s'afficher en entier sans scroll interne) */
+  .prev-salary-table {
+    min-width: 100%; /* Prend toute la largeur dispo (680px) */
+    width: 100%;
   }
 
-  /* Ajustement du petit texte (cible) */
-  .col-sticky small {
-    font-size: 0.65rem;
-    margin-top: 2px;
+  /* 3. TABLEAU REPARTITION (Timeline) */
+  /* Lui est très large (> 1000px). On le laisse scroller DANS la page de 680px */
+  .prev-timeline-wrapper {
+    width: 100%;
+    overflow-x: auto !important; /* Scrollbar interne */
+    display: block;
   }
 
-  /* 3. Actions (Edit/Delete) : Toujours visibles sur mobile */
-  /* Car pas de "hover" avec le doigt */
+  /* 4. ACTIONS (Crayon/Poubelle) */
+  /* On garde la logique "au clic" car c'est plus sûr sur mobile */
   .row-actions {
-    display: flex !important; /* Force l'affichage */
-    background: rgba(255, 255, 255, 0.8); /* Fond semi-transparent */
-    border: 1px solid #e2e8f0;
-    right: 2px;
-    padding: 1px;
+    display: none !important;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: #ffffff;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    padding: 0 10px;
+    align-items: center;
+    gap: 10px;
+    z-index: 50;
+    border-left: 1px solid #e2e8f0;
+  }
+  .row-actions.show-actions {
+    display: flex !important;
   }
 
+  /* On ajuste la taille des icônes à cette vue dézoomée */
   .btn-icon-action {
-    width: 28px; /* Zone de touche un peu plus grande */
-    height: 28px;
     font-size: 1.2rem;
+    padding: 5px;
+    width: 34px;
+    height: 34px;
   }
 
-  /* 4. Tableau Récapitulatif */
-  .recap-wrapper {
-    padding-top: 10px;
+  /* 5. COLONNE STICKY */
+  /* Puisque la page est large, on peut laisser une largeur confortable */
+  .col-sticky {
+    min-width: 180px !important;
+    position: sticky !important;
+    left: 0;
   }
 
-  .recap-card {
-    border-radius: 8px; /* Coins moins arrondis pour gagner de la place */
-    border-left: none;
-    border-right: none; /* Enlever les bordures latérales sur tout petits écrans */
-  }
-
-  .recap-table th,
-  .recap-table td {
-    padding: 8px 6px; /* Padding réduit */
-    font-size: 0.85rem;
-  }
-
-  /* 5. Inputs du tableau : Plus facile à toucher */
-  .prev-input {
-    font-size: 16px; /* Évite que l'iPhone zoom quand on clique dessus */
-    padding: 8px 0;
+  /* 6. HEADER DE SECTION (Alignement) */
+  .prev-section-header {
+    flex-direction: row; /* On peut garder aligné car on a de la place (680px) */
+    align-items: center;
   }
 }
