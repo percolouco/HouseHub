@@ -98,8 +98,8 @@ require __DIR__ . '/header.php';
           </colgroup>
           <thead>
             <tr>
-              <th rowspan="3" class="col-month">Mois</th>
-              <th rowspan="3" class="col-month">Sem.</th>
+              <th rowspan="3" class="col-month col-sticky-mois">Mois</th>
+              <th rowspan="3" class="col-month col-sticky-mois">Sem.</th>
               <th rowspan="3" class="col-day">Lun</th>
               <th rowspan="3" class="col-day">Mar</th>
               <th rowspan="3" class="col-day">Mer</th>
@@ -140,7 +140,7 @@ require __DIR__ . '/header.php';
                 <h2 class="pf-card-title">Légende</h2>
                 <div class="pf-card-body">
                     <div class="pf-legend-grid">
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span>Vacances</span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span>Vacances Scolaires</span></div>
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span>Férié</span></div>
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-off-carole"></div><span>Off Carole</span></div>
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-extra-off-carole"></div><span>Extra Off</span></div>

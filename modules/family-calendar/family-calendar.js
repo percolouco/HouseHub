@@ -1,5 +1,5 @@
 /**
- * family-calendar.js (Version Sécurisée)
+ * family-calendar.js (Version Optimisée - API BDD & Décalage Vendredi)
  */
 document.addEventListener("DOMContentLoaded", () => {
   const CONGE_TYPES = ["OFF_CAROLE", "EXTRA_OFF_CAROLE"];
@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   class FamilyCalendar {
     constructor() {
-      // Éléments DOM (avec sécurité null)
       this.planningBody = document.getElementById("planningBody");
       this.selectionMenu = document.getElementById("selectionMenu");
       this.schoolHolidaysTableBody = document.querySelector(
@@ -19,7 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "fc-month-selectionMenu",
       );
 
-      // Déplacement des menus dans le body pour affichage correct
       if (
         this.selectionMenu &&
         this.selectionMenu.parentElement !== document.body
@@ -37,15 +35,15 @@ document.addEventListener("DOMContentLoaded", () => {
       this.currentMonth.setDate(1);
       this.viewMode = "1month";
       this.currentSchoolYearStart = null;
+      this.modalSelectedYear = null; // Pour la modale des vacances
 
       this.isSelecting = false;
       this.selectedCells = [];
       this.monthSelectedCells = [];
       this._currentBulkInfo = null;
 
-      // Données
       this.dbEvents = [];
-      this.fixedEvents = [];
+      this.fixedEvents = []; // Fériés statiques
       this.events = [];
       this.leaves = [];
       this.weeks = [];
@@ -54,13 +52,16 @@ document.addEventListener("DOMContentLoaded", () => {
         3: { CP: {}, JRA: {}, JA: {} },
       };
 
-      // Si le tableau principal n'est pas là, on arrête tout pour ne pas crasher
-      if (!this.planningBody) {
-        console.warn("Element #planningBody introuvable. Le JS s'arrête.");
-        return;
-      }
+      if (!this.planningBody) return;
 
       this.init();
+    }
+
+    getLocalIsoDate(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const d = String(dateObj.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
     }
 
     async init() {
@@ -68,9 +69,32 @@ document.addEventListener("DOMContentLoaded", () => {
       const now = new Date();
       this.currentSchoolYearStart =
         now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+      this.modalSelectedYear = this.currentSchoolYearStart;
 
+      this.setupModalUI(); // Prépare le selecteur d'année dans la modale
       await this.refreshAllData();
       this.updateSchoolYearLabel();
+    }
+
+    // Modifie dynamiquement le titre de la modale pour y insérer le selecteur d'année
+    setupModalUI() {
+      const headerH2 = document.querySelector(".fc-modal-header h2");
+      if (headerH2 && !document.getElementById("holidayYearSelect")) {
+        headerH2.innerHTML = `Vacances Scolaires (Zone C) 
+          <select id="holidayYearSelect" style="margin-left:15px; font-size:1rem; padding:4px; border-radius:4px; border:1px solid #cbd5e1;">
+            <option value="${this.currentSchoolYearStart - 1}">${this.currentSchoolYearStart - 1} - ${this.currentSchoolYearStart}</option>
+            <option value="${this.currentSchoolYearStart}" selected>${this.currentSchoolYearStart} - ${this.currentSchoolYearStart + 1}</option>
+            <option value="${this.currentSchoolYearStart + 1}">${this.currentSchoolYearStart + 1} - ${this.currentSchoolYearStart + 2}</option>
+            <option value="${this.currentSchoolYearStart + 2}">${this.currentSchoolYearStart + 2} - ${this.currentSchoolYearStart + 3}</option>
+          </select>`;
+
+        document
+          .getElementById("holidayYearSelect")
+          .addEventListener("change", (e) => {
+            this.modalSelectedYear = parseInt(e.target.value);
+            this.renderModalHolidays();
+          });
+      }
     }
 
     async refreshAllData() {
@@ -88,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
           duration: parseFloat(e.duration),
         }));
 
-        this.fixedEvents = await this.fetchPublicAndSchoolHolidays();
+        this.fixedEvents = this.getPublicHolidays(); // Uniquement les jours fériés maintenant
 
         const leavesData = await this.fetchApi(
           "/modules/family-calendar/includes/api/get-leaves.php",
@@ -100,6 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         this.leaveBalances = balancesData.balances || [];
 
+        // Les vacances scolaires sont maintenant dans dbEvents !
         this.events = [...this.dbEvents, ...this.fixedEvents];
         this.publicHolidayDates = new Set(
           this.fixedEvents
@@ -108,14 +133,23 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         this.reprocessAndRender();
+        this.renderModalHolidays(); // Met à jour la modale
       } catch (e) {
         console.error("Erreur chargement données:", e);
       }
     }
 
-    async fetchPublicAndSchoolHolidays() {
-      // 1. Jours fériés (Statique)
-      const publicHolidays = [
+    // Les jours fériés restent hardcodés car ils sont fixes.
+    getPublicHolidays() {
+      return [
+        "2025-01-01",
+        "2025-04-21",
+        "2025-05-01",
+        "2025-05-08",
+        "2025-05-29",
+        "2025-06-09",
+        "2025-07-14",
+        "2025-08-15",
         "2025-11-01",
         "2025-11-11",
         "2025-12-25",
@@ -127,79 +161,189 @@ document.addEventListener("DOMContentLoaded", () => {
         "2026-05-25",
         "2026-07-14",
         "2026-08-15",
+        "2026-11-01",
+        "2026-11-11",
+        "2026-12-25",
       ].map((date, idx) => ({
         id: `ph-${idx}`,
         date,
         type: "PUBLIC_HOLIDAY",
         duration: 1,
       }));
+    }
 
-      const schoolHolidayEvents = [];
+    // --- RECONSTRUCTION DE LA MODALE VIA LA BDD (Par blocs consécutifs) ---
+    renderModalHolidays() {
+      if (!this.schoolHolidaysTableBody) return;
 
+      // Filtrer les événements de type VACANCES_SCOLAIRES pour l'année scolaire sélectionnée
+      const startDate = `${this.modalSelectedYear}-09-01`;
+      const endDate = `${this.modalSelectedYear + 1}-08-31`;
+
+      const yearHolidays = this.events.filter(
+        (e) =>
+          e.type === "VACANCES_SCOLAIRES" &&
+          e.date >= startDate &&
+          e.date <= endDate,
+      );
+
+      // S'il n'y a pas de vacances en base pour cette année, on affiche le bouton "Générer"
+      if (yearHolidays.length === 0) {
+        this.schoolHolidaysTableBody.innerHTML = `
+          <tr>
+            <td colspan="3" style="text-align:center; padding: 30px;">
+              <p style="color:#64748b; margin-bottom:15px;">Les vacances de cette année ne sont pas encore enregistrées.</p>
+              <button id="btnFetchGovHolidays" class="pf-btn">Importer depuis l'API Gouvernement</button>
+            </td>
+          </tr>
+        `;
+
+        document
+          .getElementById("btnFetchGovHolidays")
+          .addEventListener("click", (e) => {
+            e.target.innerText = "Téléchargement en cours...";
+            e.target.disabled = true;
+            this.fetchAndSaveGovHolidays(this.modalSelectedYear);
+          });
+        return;
+      }
+
+      // 1. Tri chronologique strict des jours
+      yearHolidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // 2. Regroupement par blocs de jours consécutifs
+      const blocks = [];
+      let currentBlock = null;
+
+      yearHolidays.forEach((e) => {
+        const d = new Date(e.date + "T00:00:00"); // Force locale
+
+        if (!currentBlock) {
+          currentBlock = { start: d, end: d };
+          blocks.push(currentBlock);
+        } else {
+          // Calcul de l'écart en jours entre la date actuelle et la fin du bloc en cours
+          const diffTime = d.getTime() - currentBlock.end.getTime();
+          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+          // Si l'écart est minime (<= 4 jours, pour absorber un éventuel week-end non stocké)
+          // on considère qu'on est toujours dans la même période de vacances.
+          if (diffDays <= 4) {
+            currentBlock.end = d;
+          } else {
+            // Sinon, l'écart est grand : c'est une NOUVELLE période de vacances
+            currentBlock = { start: d, end: d };
+            blocks.push(currentBlock);
+          }
+        }
+      });
+
+      // 3. Rendu HTML et déduction des noms
+      let html = "";
+      blocks.forEach((block) => {
+        // Déduction intelligente du nom selon le mois de départ ET la durée
+        const m = block.start.getMonth() + 1;
+        const durationDays =
+          Math.round(
+            (block.end.getTime() - block.start.getTime()) /
+              (1000 * 60 * 60 * 24),
+          ) + 1;
+
+        let name = "Vacances scolaires";
+
+        if (m === 10 || m === 11) {
+          name = "Vacances de la Toussaint";
+        } else if (m === 12 || m === 1) {
+          name = "Vacances de Noël";
+        } else if (m === 2 || m === 3) {
+          name = "Vacances d'Hiver";
+        } else if (m === 4 || (m === 5 && durationDays > 6)) {
+          name = "Vacances de Printemps";
+        } else if (m === 5 && durationDays <= 6) {
+          name = "Pont de Mai (Ascension)";
+        } else if (m === 7 || m === 8) {
+          name = "Vacances d'Été";
+        }
+
+        html += `
+          <tr>
+            <td><strong>${name}</strong></td>
+            <td>${block.start.toLocaleDateString("fr-FR")}</td>
+            <td>${block.end.toLocaleDateString("fr-FR")}</td>
+          </tr>
+        `;
+      });
+
+      this.schoolHolidaysTableBody.innerHTML = html;
+    }
+
+    // --- IMPORTATION DEPUIS L'API & SAUVEGARDE EN BDD ---
+    async fetchAndSaveGovHolidays(yearStart) {
       try {
-        // API Gouv
-        const url =
-          "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='2025-2026' AND zones LIKE '%Zone C%'&limit=100";
+        const yearStr = `${yearStart}-${yearStart + 1}`;
+        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone C%'&limit=100`;
+
         const res = await fetch(url);
         const data = await res.json();
         const rawRecords = data.results || [];
 
         // Dédoublonnage
-        const uniqueHolidaysMap = new Map();
+        const uniqueMap = new Map();
         rawRecords.forEach((r) => {
           const key = `${r.description}|${r.start_date}`;
-          if (!uniqueHolidaysMap.has(key)) uniqueHolidaysMap.set(key, r);
+          if (!uniqueMap.has(key)) uniqueMap.set(key, r);
         });
-        const uniqueRecords = Array.from(uniqueHolidaysMap.values());
 
-        // APPEL DE LA MÉTHODE D'AFFICHAGE (séparée pour la propreté)
-        this.renderSchoolHolidaysTable(uniqueRecords);
+        const payload = [];
 
-        // Génération des events pour le calendrier (cases colorées)
-        uniqueRecords.forEach((r, idx) => {
-          let curr = new Date(r.start_date);
-          const end = new Date(r.end_date);
+        Array.from(uniqueMap.values()).forEach((r) => {
+          const startDateStr = r.start_date.split("T")[0];
+          const endDateStr = r.end_date.split("T")[0];
+
+          let curr = new Date(startDateStr + "T00:00:00");
+          const end = new Date(endDateStr + "T00:00:00");
+
+          // REGLE METIER : Si le 1er jour est un VENDREDI (jour=5), on décale le début au SAMEDI.
+          if (curr.getDay() === 5) {
+            curr.setDate(curr.getDate() + 1);
+          }
+
           while (curr < end) {
-            const iso = curr.toISOString().split("T")[0];
-            schoolHolidayEvents.push({
-              id: `sh-${iso}-${idx}`,
+            const iso = this.getLocalIsoDate(curr);
+            payload.push({
               date: iso,
               type: "VACANCES_SCOLAIRES",
               duration: 1,
+              person: r.description, // ASTUCE: On stocke le nom de la vacance ici !
             });
             curr.setDate(curr.getDate() + 1);
           }
         });
+
+        if (payload.length > 0) {
+          // On envoie le gros lot à la base de données via l'API existante
+          await this.postApi(
+            "/modules/family-calendar/includes/api/save-events.php",
+            payload,
+          );
+          await this.refreshAllData(); // Recharge tout, ce qui mettra à jour la modale
+        } else {
+          alert(
+            "Aucune donnée trouvée sur l'API du gouvernement pour cette année.",
+          );
+          document.getElementById("btnFetchGovHolidays").innerText =
+            "Réessayer";
+          document.getElementById("btnFetchGovHolidays").disabled = false;
+        }
       } catch (e) {
-        console.warn("Erreur API Vacances (pas grave, on continue)", e);
+        console.error("Erreur API", e);
+        alert("Erreur lors de la connexion à l'API gouvernementale.");
       }
-
-      // On retourne TOUJOURS les événements, même si l'affichage du tableau échoue
-      return [...publicHolidays, ...schoolHolidayEvents];
     }
 
-    renderSchoolHolidaysTable(records) {
-      // Si le tableau HTML n'existe pas (ex: on n'est pas sur la bonne page), on ne fait rien
-      if (!this.schoolHolidaysTableBody) return;
-
-      // 1. Tri chronologique strict (du plus ancien au plus récent)
-      records.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
-
-      // 2. Génération du HTML
-      this.schoolHolidaysTableBody.innerHTML = records
-        .map(
-          (r) => `
-         <tr>
-           <td>${r.description}</td>
-           <td>${new Date(r.start_date).toLocaleDateString("fr-FR")}</td>
-           <td>${new Date(r.end_date).toLocaleDateString("fr-FR")}</td>
-         </tr>
-       `,
-        )
-        .join("");
-    }
-
-    // ================== LOGIQUE MÉTIER ==================
+    // ================================================================
+    // LE RESTE DU CODE (AFFICHAGE) RESTE INCHANGÉ MAIS OPTIMISÉ
+    // ================================================================
 
     reprocessAndRender() {
       this.reprocessEvents();
@@ -246,7 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let workingDays = 0;
         Object.values(w.dayDates).forEach((d) => {
-          if (!this.publicHolidayDates.has(d.toISOString().split("T")[0]))
+          if (!this.publicHolidayDates.has(this.getLocalIsoDate(d)))
             workingDays++;
         });
         w.totals.presencePep = Math.max(
@@ -304,9 +448,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const periodStart = `${refYear}-${periodStartMonth}`;
 
             Object.keys(usageByMonth[pid]?.[type] || {}).forEach((usedYm) => {
-              if (usedYm >= periodStart && usedYm < ym) {
+              if (usedYm >= periodStart && usedYm < ym)
                 usedBefore += usageByMonth[pid][type][usedYm];
-              }
             });
 
             const available = Math.max(0, initial - usedBefore);
@@ -346,21 +489,21 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!processedMonths[w.monthKey]) {
           processedMonths[w.monthKey] = true;
           const td = document.createElement("td");
-          td.className = "col-month";
+          td.className = "col-month col-sticky-mois";
           td.textContent = w.monthName;
           td.rowSpan = monthSpans[w.monthKey];
           tr.appendChild(td);
         }
 
         const tdW = document.createElement("td");
-        tdW.className = "col-month";
+        tdW.className = "col-month col-sticky-sem";
         tdW.textContent = w.weekLabel;
         tr.appendChild(tdW);
 
         ["mon", "tue", "wed", "thu", "fri"].forEach((d) => {
           const td = document.createElement("td");
           const dateObj = w.dayDates[d];
-          const iso = dateObj.toISOString().split("T")[0];
+          const iso = this.getLocalIsoDate(dateObj);
           td.dataset.date = iso;
           td.textContent = String(dateObj.getDate()).padStart(2, "0");
           td.className = "col-day";
@@ -470,7 +613,6 @@ document.addEventListener("DOMContentLoaded", () => {
         this.renderTwoMonthsView();
         return;
       }
-
       this.monthCalendar.innerHTML = this.generateMonthHTML(y, m);
     }
 
@@ -499,79 +641,82 @@ document.addEventListener("DOMContentLoaded", () => {
     generateMonthHTML(year, month) {
       let html = `<table class="fc-month-table"><thead><tr>`;
       ["L", "M", "M", "J", "V"].forEach((d) => (html += `<th>${d}</th>`));
-      html += `</tr></thead><tbody>`;
+      html += `</tr></thead><tbody><tr>`;
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      let currentRenderedCols = 0;
 
       const firstDay = new Date(year, month, 1);
-      const startDay = (firstDay.getDay() + 6) % 7;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      let dayCounter = 1;
+      let startDay = (firstDay.getDay() + 6) % 7;
 
-      for (let row = 0; row < 6; row++) {
-        html += `<tr>`;
-        for (let col = 0; col < 5; col++) {
-          if (
-            (row === 0 && col < startDay && startDay < 5) ||
-            dayCounter > daysInMonth
-          ) {
-            html += `<td class="fc-day--other-month"></td>`;
-          } else if (row === 0 && startDay >= 5) {
-            html += `<td class="fc-day--other-month"></td>`;
-          } else {
-            const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayCounter).padStart(2, "0")}`;
-            let cls = "fc-month-day";
-            const dayEvts = this.events.filter((e) => e.date === iso);
-            if (dayEvts.some((e) => e.type === "VACANCES_SCOLAIRES"))
-              cls += " fc-day--school-holiday";
-            if (dayEvts.some((e) => e.type === "PUBLIC_HOLIDAY"))
-              cls += " fc-day--public-holiday";
-            if (dayEvts.some((e) => e.type === "OFF_CAROLE"))
-              cls += " fc-day--off-carole";
-            if (dayEvts.some((e) => e.type === "EXTRA_OFF_CAROLE"))
-              cls += " fc-day--extra-off-carole";
-            if (dayEvts.some((e) => ["CENTRE", "AVIS"].includes(e.type))) {
-              cls += " fc-day--has-guard";
-              if (dayEvts.some((e) => e.type === "CENTRE"))
-                cls += " fc-day--centre";
-              if (dayEvts.some((e) => e.type === "AVIS"))
-                cls += " fc-day--avis";
-            }
-
-            let content = `<div style="position:relative; height:100%;">${dayCounter}`;
-            if (dayEvts.some((e) => e.type === "PEP_SICK"))
-              content += `<span style="position:absolute; bottom:2px; right:2px;">🤒</span>`;
-            const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
-            if (dayLeaves.length) {
-              content += `<div style="position:absolute; bottom:2px; left:2px; font-size:10px; font-weight:bold;">`;
-              if (dayLeaves.some((l) => l.person_id === 2))
-                content += `<span style="color:#0f766e">A</span> `;
-              if (dayLeaves.some((l) => l.person_id === 3))
-                content += `<span style="color:#b45309">L</span>`;
-              content += `</div>`;
-            }
-            content += `</div>`;
-            html += `<td class="${cls}" data-date="${iso}">${content}</td>`;
-            dayCounter++;
-          }
+      if (startDay < 5) {
+        for (let i = 0; i < startDay; i++) {
+          html += `<td class="fc-day--other-month"></td>`;
+          currentRenderedCols++;
         }
-        html += `</tr>`;
-        if (dayCounter > daysInMonth) break;
       }
-      html += `</tbody></table>`;
+
+      for (let dayCounter = 1; dayCounter <= daysInMonth; dayCounter++) {
+        const dateObj = new Date(year, month, dayCounter);
+        const dayOfWeek = dateObj.getDay();
+
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+        if (currentRenderedCols === 5) {
+          html += `</tr><tr>`;
+          currentRenderedCols = 0;
+        }
+
+        const iso = this.getLocalIsoDate(dateObj);
+        let cls = "fc-month-day";
+        const dayEvts = this.events.filter((e) => e.date === iso);
+
+        if (dayEvts.some((e) => e.type === "VACANCES_SCOLAIRES"))
+          cls += " fc-day--school-holiday";
+        if (dayEvts.some((e) => e.type === "PUBLIC_HOLIDAY"))
+          cls += " fc-day--public-holiday";
+        if (dayEvts.some((e) => e.type === "OFF_CAROLE"))
+          cls += " fc-day--off-carole";
+        if (dayEvts.some((e) => e.type === "EXTRA_OFF_CAROLE"))
+          cls += " fc-day--extra-off-carole";
+        if (dayEvts.some((e) => ["CENTRE", "AVIS"].includes(e.type))) {
+          cls += " fc-day--has-guard";
+          if (dayEvts.some((e) => e.type === "CENTRE"))
+            cls += " fc-day--centre";
+          if (dayEvts.some((e) => e.type === "AVIS")) cls += " fc-day--avis";
+        }
+
+        let content = `<div style="position:relative; height:100%;">${dayCounter}`;
+        if (dayEvts.some((e) => e.type === "PEP_SICK"))
+          content += `<span style="position:absolute; bottom:2px; right:2px;">🤒</span>`;
+        const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
+        if (dayLeaves.length) {
+          content += `<div style="position:absolute; bottom:2px; left:2px; font-size:10px; font-weight:bold;">`;
+          if (dayLeaves.some((l) => l.person_id === 2))
+            content += `<span style="color:#0f766e">A</span> `;
+          if (dayLeaves.some((l) => l.person_id === 3))
+            content += `<span style="color:#b45309">L</span>`;
+          content += `</div>`;
+        }
+        content += `</div>`;
+        html += `<td class="${cls}" data-date="${iso}">${content}</td>`;
+        currentRenderedCols++;
+      }
+
+      while (currentRenderedCols < 5 && currentRenderedCols > 0) {
+        html += `<td class="fc-day--other-month"></td>`;
+        currentRenderedCols++;
+      }
+
+      html += `</tr></tbody></table>`;
       return html;
     }
 
-    // --- NOUVELLES MÉTHODES POUR LE RÉCAPITULATIF DYNAMIQUE ---
-
-    /**
-     * Initialise les menus déroulants (Année / Mois)
-     */
     initSummaryControls() {
       const typeSelect = document.getElementById("summType");
       const valueSelect = document.getElementById("summValue");
-
       if (!typeSelect || !valueSelect) return;
 
-      // 1. Scanner les données pour trouver les années et mois disponibles
       const years = new Set();
       const months = new Set();
 
@@ -586,12 +731,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const sortedYears = Array.from(years).sort();
       const sortedMonths = Array.from(months).sort();
 
-      // 2. Fonction interne pour remplir le 2ème menu (Valeurs)
       const populateValues = () => {
         const currentType = typeSelect.value;
-        const previousValue = valueSelect.value; // Pour essayer de garder la sélection si possible
-
-        valueSelect.innerHTML = ""; // On vide
+        const previousValue = valueSelect.value;
+        valueSelect.innerHTML = "";
 
         if (currentType === "year") {
           sortedYears.forEach((y) => {
@@ -600,8 +743,6 @@ document.addEventListener("DOMContentLoaded", () => {
             opt.textContent = y;
             valueSelect.appendChild(opt);
           });
-
-          // Sélection intelligente : garder l'ancienne ou prendre l'année en cours
           if (sortedYears.includes(parseInt(previousValue))) {
             valueSelect.value = previousValue;
           } else {
@@ -610,34 +751,28 @@ document.addEventListener("DOMContentLoaded", () => {
               valueSelect.value = currentYear;
           }
         } else {
-          // Mode Mois
           sortedMonths.forEach((m) => {
             const [y, mo] = m.split("-");
             const dateObj = new Date(y, mo - 1, 1);
-            // Format : "octobre 2025"
             const label = new Intl.DateTimeFormat("fr-FR", {
               month: "long",
               year: "numeric",
             }).format(dateObj);
-
             const opt = document.createElement("option");
             opt.value = m;
             opt.textContent = label;
             valueSelect.appendChild(opt);
           });
 
-          // Sélection intelligente : mois courant
-          const nowIso = new Date().toISOString().slice(0, 7); // "2025-01"
+          const now = new Date();
+          const nowIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
           if (sortedMonths.includes(nowIso)) {
             valueSelect.value = nowIso;
           }
         }
-
-        // Une fois rempli, on met à jour les chiffres
         this.updateGlobalSummary();
       };
 
-      // 3. Attacher les écouteurs (UNE SEULE FOIS)
       if (!this.summaryListenersAttached) {
         typeSelect.addEventListener("change", populateValues);
         valueSelect.addEventListener("change", () =>
@@ -645,49 +780,35 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         this.summaryListenersAttached = true;
       }
-
-      // 4. Premier appel pour remplir dès le chargement
       populateValues();
     }
 
-    /**
-     * Calcule et affiche les KPIs en fonction des filtres
-     */
     updateGlobalSummary() {
       const div = document.getElementById("globalSummary");
       const typeSelect = document.getElementById("summType");
       const valueSelect = document.getElementById("summValue");
 
-      if (!div) return;
-
-      // Si les contrôles n'ont pas encore de valeur (chargement initial), on attend
-      if (typeSelect && valueSelect && !valueSelect.value) return;
+      if (!div || (typeSelect && valueSelect && !valueSelect.value)) return;
 
       const filterType = typeSelect ? typeSelect.value : "year";
       const filterValue = valueSelect
         ? valueSelect.value
-        : new Date().getFullYear().toString(); // Fallback
+        : new Date().getFullYear().toString();
 
       const stats = { off: 0, extra: 0, sick: 0, pep: 0, totalWorking: 0 };
 
-      // Parcours précis jour par jour
       this.weeks.forEach((w) => {
         Object.entries(w.dayDates).forEach(([dayName, dateObj]) => {
-          // Vérification du filtre
           let match = false;
           if (filterType === "year") {
             if (dateObj.getFullYear().toString() === filterValue) match = true;
           } else {
-            // Month (YYYY-MM)
-            const isoMonth = dateObj.toISOString().slice(0, 7);
+            const isoMonth = this.getLocalIsoDate(dateObj).slice(0, 7);
             if (isoMonth === filterValue) match = true;
           }
 
           if (match) {
-            // Récupérer les events de CE jour spécifique
             const dayEvents = w.dayFlags[dayName].events;
-
-            // Additions
             dayEvents.forEach((e) => {
               const dur = parseFloat(e.duration) || 1;
               if (e.type === "OFF_CAROLE") stats.off += dur;
@@ -695,15 +816,9 @@ document.addEventListener("DOMContentLoaded", () => {
               if (e.type === "PEP_SICK") stats.sick += dur;
             });
 
-            // Calcul présence (Jour ouvré - Absences)
-            // Est-ce un jour ouvré ? (Pas férié, pas we - WE déjà exclu par structure semainier lun-ven)
-            // NOTE : Ma structure `weeks` ne contient que Lun-Ven par défaut.
-            const dateIso = dateObj.toISOString().split("T")[0];
+            const dateIso = this.getLocalIsoDate(dateObj);
             if (!this.publicHolidayDates.has(dateIso)) {
-              // C'est un jour potentiellement ouvré
               stats.totalWorking++;
-
-              // Calcul des absences sur ce jour
               let dayAbsence = 0;
               dayEvents.forEach((e) => {
                 if (
@@ -714,31 +829,17 @@ document.addEventListener("DOMContentLoaded", () => {
                   dayAbsence += parseFloat(e.duration) || 1;
                 }
               });
-
               stats.pep += Math.max(0, 1 - dayAbsence);
             }
           }
         });
       });
 
-      // Affichage HTML Vertical
       div.innerHTML = `
-         <div class="fc-summary-item">
-            <span class="fc-summary-label">Off Carole</span>
-            <span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} jours</span>
-         </div>
-         <div class="fc-summary-item">
-            <span class="fc-summary-label">Extra Off Carole</span>
-            <span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} jours</span>
-         </div>
-         <div class="fc-summary-item">
-            <span class="fc-summary-label">Pep Malade</span>
-            <span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} jours</span>
-         </div>
-         <div class="fc-summary-item">
-            <span class="fc-summary-label">Présence Pep</span>
-            <span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} jours</span>
-         </div>
+         <div class="fc-summary-item"><span class="fc-summary-label">Off Carole</span><span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} jours</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">Extra Off Carole</span><span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} jours</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">Pep Malade</span><span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} jours</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">Présence Pep</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} jours</span></div>
        `;
     }
 
@@ -805,24 +906,41 @@ document.addEventListener("DOMContentLoaded", () => {
       await this.refreshAllData();
     }
 
-    // ================== INTERACTIONS ==================
-
     setupEventListeners() {
-      // Planning Hebdo
       if (this.planningBody) {
+        // Souris (PC)
         this.planningBody.addEventListener("mousedown", (e) =>
           this.handleMouseDown(e),
         );
         document.addEventListener("mousemove", (e) => this.handleMouseMove(e));
         document.addEventListener("mouseup", (e) => this.handleMouseUp(e));
+
+        // Tactile (Mobile/Tablette) - NOUVEAU
+        this.planningBody.addEventListener(
+          "touchstart",
+          (e) => this.handleTouchStart(e),
+          { passive: false },
+        );
+        document.addEventListener("touchmove", (e) => this.handleTouchMove(e), {
+          passive: false,
+        });
+        document.addEventListener("touchend", (e) => this.handleTouchEnd(e));
       }
 
-      // Modale
       const btnOpen = document.getElementById("btnOpenHolidays");
       const btnClose = document.getElementById("btnCloseHolidays");
       const modal = document.getElementById("modalHolidays");
-      if (btnOpen && modal)
-        btnOpen.addEventListener("click", () => (modal.style.display = "flex"));
+
+      if (btnOpen && modal) {
+        btnOpen.addEventListener("click", () => {
+          modal.style.display = "flex";
+          // Remet l'année par défaut sur l'année actuellement affichée dans le calendrier
+          const yearSelect = document.getElementById("holidayYearSelect");
+          if (yearSelect) yearSelect.value = this.currentSchoolYearStart;
+          this.modalSelectedYear = this.currentSchoolYearStart;
+          this.renderModalHolidays();
+        });
+      }
       if (btnClose && modal)
         btnClose.addEventListener(
           "click",
@@ -833,29 +951,26 @@ document.addEventListener("DOMContentLoaded", () => {
           if (e.target === modal) modal.style.display = "none";
         });
 
-      // Calendrier Mensuel
       if (this.monthCalendar) {
         this.monthCalendar.addEventListener("click", (e) => {
           const td = e.target.closest("td[data-date]");
-          if (td) {
+          if (td && td.dataset.date) {
             this.monthSelectedCells = [td];
             this.showMenu(e.pageX, e.pageY, [td.dataset.date], true);
           }
         });
       }
 
-      // Menus
       document.addEventListener("click", (e) => this.closeMenusIfOutside(e));
       const handleMenu = (e) => {
         const btn = e.target.closest("button");
-        if (btn) this.handleMenuAction(btn.dataset);
+        if (btn && btn.dataset.action) this.handleMenuAction(btn.dataset);
       };
       if (this.selectionMenu)
         this.selectionMenu.addEventListener("click", handleMenu);
       if (this.monthSelectionMenu)
         this.monthSelectionMenu.addEventListener("click", handleMenu);
 
-      // Nav Mensuelle
       document
         .getElementById("fc-prev-month")
         ?.addEventListener("click", () => {
@@ -868,8 +983,6 @@ document.addEventListener("DOMContentLoaded", () => {
           this.currentMonth.setMonth(this.currentMonth.getMonth() + 1);
           this.renderMonthCalendar();
         });
-
-      // Nav Année
       document
         .getElementById("fc-prev-school-year")
         ?.addEventListener("click", () => this.changeSchoolYear(-1));
@@ -877,7 +990,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .getElementById("fc-next-school-year")
         ?.addEventListener("click", () => this.changeSchoolYear(1));
 
-      // Boutons Vue
       document.querySelectorAll(".fc-view-button").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           document
@@ -907,15 +1019,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
     handleMouseUp(e) {
       if (!this.isSelecting) return;
-      // Fix : inclure la dernière cellule
       const td = e.target.closest("#planningTable td[data-date]");
       if (td && !this.selectedCells.includes(td)) this.selectCell(td);
+      this.isSelecting = false;
+      if (!this.selectedCells.length) return;
+      const dates = this.selectedCells.map((c) => c.dataset.date);
+      this.showMenu(e.pageX, e.pageY, dates, false);
+    }
 
+    // --- GESTION DU TACTILE (Swipe pour sélectionner) ---
+    handleTouchStart(e) {
+      const td = e.target.closest("#planningTable td[data-date]");
+      if (!td) return;
+
+      // Si l'utilisateur touche une case, on bloque le scroll de la page pour le laisser sélectionner
+      e.preventDefault();
+
+      this.clearSelection();
+      this.isSelecting = true;
+      this.selectCell(td);
+    }
+
+    handleTouchMove(e) {
+      if (!this.isSelecting) return;
+      e.preventDefault(); // Bloque le défilement de l'écran pendant qu'on glisse le doigt
+
+      const touch = e.touches[0];
+      // elementFromPoint permet de savoir sur quelle case se trouve le doigt actuellement
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (!target) return;
+
+      const td = target.closest("#planningTable td[data-date]");
+      if (td && !this.selectedCells.includes(td)) this.selectCell(td);
+    }
+
+    handleTouchEnd(e) {
+      if (!this.isSelecting) return;
       this.isSelecting = false;
       if (!this.selectedCells.length) return;
 
       const dates = this.selectedCells.map((c) => c.dataset.date);
-      this.showMenu(e.pageX, e.pageY, dates, false);
+      // Sur mobile, on s'en fiche de X et Y car le menu s'affiche en bas de l'écran
+      this.showMenu(0, 0, dates, false);
     }
 
     selectCell(cell) {
@@ -950,45 +1095,23 @@ document.addEventListener("DOMContentLoaded", () => {
         dates.length > 1
           ? `${dates.length} jours`
           : new Date(dates[0]).toLocaleDateString("fr-FR");
-
       let html = `<div class="fc-menu-section"><strong>${dateLabel}</strong></div>`;
-
-      // Carole
-      html += `<div class="fc-menu-section"><strong>Congés Carole</strong><div class="fc-menu-grid">`;
-      html += `<button class="fc-menu-btn" data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off Carole</button>`;
-      html += `<button class="fc-menu-btn" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra Off</button>`;
-      html += `</div><button class="fc-menu-danger" data-action="clear-type" data-cat="CONGE">Effacer congés Carole</button></div>`;
-
-      // Garde
-      html += `<div class="fc-menu-section"><strong>Garde</strong><div class="fc-menu-grid">`;
-      html += `<button class="fc-menu-btn" data-action="add" data-type="CENTRE">Centre</button>`;
-      html += `<button class="fc-menu-btn" data-action="add" data-type="AVIS">Avis</button>`;
-      html += `</div><button class="fc-menu-danger" data-action="clear-type" data-cat="GARDE">Effacer Garde</button></div>`;
-
-      // Pep
-      html += `<div class="fc-menu-section"><strong>Pep</strong>`;
-      html += `<button class="fc-menu-btn" data-action="add" data-type="PEP_SICK" style="width:100%">Pep Malade</button>`;
-      html += `<button class="fc-menu-danger" data-action="clear-type" data-cat="PEP">Effacer Pep</button></div>`;
-
-      // Alex/Laia
+      html += `<div class="fc-menu-section"><strong>Congés Carole</strong><div class="fc-menu-grid"><button class="fc-menu-btn" data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off Carole</button><button class="fc-menu-btn" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra Off</button></div><button class="fc-menu-danger" data-action="clear-type" data-cat="CONGE">Effacer congés Carole</button></div>`;
+      html += `<div class="fc-menu-section"><strong>Garde</strong><div class="fc-menu-grid"><button class="fc-menu-btn" data-action="add" data-type="CENTRE">Centre</button><button class="fc-menu-btn" data-action="add" data-type="AVIS">Avis</button></div><button class="fc-menu-danger" data-action="clear-type" data-cat="GARDE">Effacer Garde</button></div>`;
+      html += `<div class="fc-menu-section"><strong>Pep</strong><button class="fc-menu-btn" data-action="add" data-type="PEP_SICK" style="width:100%">Pep Malade</button><button class="fc-menu-danger" data-action="clear-type" data-cat="PEP">Effacer Pep</button></div>`;
       html += `<div class="fc-menu-section"><strong>Congés Alex / Laia</strong><div class="fc-menu-leaves-table"><table><thead><tr><th>Alex</th><th>Laia</th></tr></thead><tbody>`;
       ["CP", "JRA", "JA"].forEach((t) => {
-        html += `<tr><td><button class="fc-menu-btn" data-action="add-leave" data-pid="2" data-type="${t}">${t}</button></td>`;
-        html += `<td><button class="fc-menu-btn" data-action="add-leave" data-pid="3" data-type="${t}">${t}</button></td></tr>`;
+        html += `<tr><td><button class="fc-menu-btn" data-action="add-leave" data-pid="2" data-type="${t}">${t}</button></td><td><button class="fc-menu-btn" data-action="add-leave" data-pid="3" data-type="${t}">${t}</button></td></tr>`;
       });
-      html += `</tbody></table></div>`;
-      html += `<button class="fc-menu-danger" data-action="clear-leaves">Effacer Alex/Laia</button></div>`;
+      html += `</tbody></table></div><button class="fc-menu-danger" data-action="clear-leaves">Effacer Alex/Laia</button></div>`;
 
       menu.innerHTML = html;
-
       const menuWidth = 240;
       let left = x + 10;
       if (left + menuWidth > window.innerWidth) left = x - menuWidth - 10;
-
       menu.style.left = `${left}px`;
       menu.style.top = `${y + 10}px`;
       menu.style.display = "block";
-
       this.menuJustOpened = true;
       setTimeout(() => (this.menuJustOpened = false), 100);
     }
@@ -1012,11 +1135,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (typesToClear.length) {
             await this.postApi(
               "/modules/family-calendar/includes/api/manage-event.php",
-              {
-                action: "bulk_delete_day_types",
-                dates,
-                types: typesToClear,
-              },
+              { action: "bulk_delete_day_types", dates, types: typesToClear },
             );
           }
           const payload = dates.map((d) => ({
@@ -1037,20 +1156,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-event.php",
-            {
-              action: "bulk_delete_day_types",
-              dates,
-              types: typesToClear,
-            },
+            { action: "bulk_delete_day_types", dates, types: typesToClear },
           );
         } else if (action === "add-leave") {
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
-            {
-              action: "bulk_delete_day_person",
-              dates,
-              person_id: pid,
-            },
+            { action: "bulk_delete_day_person", dates, person_id: pid },
           );
           const payload = dates.map((d) => ({
             date: d,

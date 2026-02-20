@@ -796,3 +796,88 @@
     justify-content: center;
   }
 }
+
+/* --- SUPERPOSITION : GARDE/CONGÉS + VACANCES SCOLAIRES --- */
+
+/* 1. OFF CAROLE + VACANCES
+   On force le fond orange/pêche, et on met la barre violette en bas */
+.fc-day--off-carole.fc-day--school-holiday {
+  background: var(--c-off-carole) !important;
+  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
+}
+
+/* 2. EXTRA OFF CAROLE + VACANCES
+   On force le fond rouge clair, et on met la barre violette en bas */
+.fc-day--extra-off-carole.fc-day--school-holiday {
+  background: var(--c-extra-off) !important;
+  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
+}
+
+/* 3. CENTRE / AVIS + VACANCES
+   Comme ce sont juste des icônes sur fond normal, on se contente d'ajouter la barre violette */
+.fc-day--centre.fc-day--school-holiday,
+.fc-day--avis.fc-day--school-holiday {
+  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
+}
+
+/* =========================================================
+   8. OPTIMISATIONS MOBILES ET ERGONOMIE (AJOUTS)
+   ========================================================= */
+
+/* --- A. COLONNES MOIS ET SEMAINE FIGÉES (Sticky Left) --- */
+.col-sticky-mois {
+  position: sticky !important;
+  left: 0;
+  z-index: 15;
+  background: white;
+  box-shadow: 1px 0 2px rgba(0, 0, 0, 0.05); /* Petite ombre pour séparer */
+}
+
+.col-sticky-sem {
+  position: sticky !important;
+  left: 50px; /* On décale de la largeur de la colonne 'Mois' (50px) */
+  z-index: 15;
+  background: white;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+/* On s'assure que l'en-tête reste bien au-dessus du reste */
+#planningTable thead .col-sticky-mois,
+#planningTable thead .col-sticky-sem {
+  z-index: 25;
+  background: var(--bg-header);
+}
+
+/* --- B. MENU BOTTOM SHEET (Mobile Uniquement) --- */
+@media (max-width: 768px) {
+  .fc-selection-menu {
+    position: fixed !important; /* Fixé à l'écran, pas au tableau */
+    top: auto !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    border-radius: 24px 24px 0 0; /* Bords arrondis en haut */
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+    padding: 24px 20px;
+    /* Padding dynamique pour les iPhone (encoche du bas) */
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+    transform: translateY(100%); /* Caché en bas par défaut */
+    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  @keyframes slideUpSheet {
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /* Optionnel : On grossit un peu les boutons pour les gros doigts */
+  .fc-menu-btn,
+  .fc-menu-danger {
+    padding: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+}
