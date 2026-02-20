@@ -825,27 +825,38 @@
    ========================================================= */
 
 /* --- A. COLONNES MOIS ET SEMAINE FIGÉES (Sticky Left) --- */
+
+/* 1. Les cellules du corps (td) : Fixées uniquement à gauche */
 .col-sticky-mois {
   position: sticky !important;
-  left: 0;
-  z-index: 15;
+  left: 0 !important;
+  z-index: 15 !important;
   background: white;
-  box-shadow: 1px 0 2px rgba(0, 0, 0, 0.05); /* Petite ombre pour séparer */
 }
 
 .col-sticky-sem {
   position: sticky !important;
-  left: 50px; /* On décale de la largeur de la colonne 'Mois' (50px) */
-  z-index: 15;
+  left: 52px !important; /* 50px de largeur + 2px de bordure */
+  z-index: 14 !important; /* Légèrement en dessous du mois en cas de chevauchement */
   background: white;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05); /* Ombre pour marquer la fin de la zone figée */
 }
 
-/* On s'assure que l'en-tête reste bien au-dessus du reste */
-#planningTable thead .col-sticky-mois,
-#planningTable thead .col-sticky-sem {
-  z-index: 25;
-  background: var(--bg-header);
+/* 2. Les En-têtes (th) : Fixés en Haut ET à Gauche (Priorité absolue) */
+#planningTable thead th.col-sticky-mois {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 30 !important; /* Le plus haut niveau, passe au-dessus de TOUT */
+  background: var(--bg-header) !important;
+}
+
+#planningTable thead th.col-sticky-sem {
+  position: sticky !important;
+  top: 0 !important;
+  left: 52px !important;
+  z-index: 29 !important; /* Reste sous la colonne Mois, mais au-dessus du reste du tableau */
+  background: var(--bg-header) !important;
 }
 
 /* --- B. MENU BOTTOM SHEET (Mobile Uniquement) --- */
