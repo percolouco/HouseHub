@@ -4,14 +4,11 @@ require __DIR__ . '/includes/db.php';
 require_login('/login.php');
 
 // Gestion de l'onglet actif (par défaut 'recap')
-$tab = $_GET['tab'] ?? 'recap';
+$tab = $_GET['tab'] ?? 'suivi';
 
 $pageTitle  = "PachaFamily - Budget";
 $activePage = "budget";
-// Note: budget.css est conservé pour le style global, 
-// mais budget.js n'est plus requis si tu l'as supprimé comme prévu.
 $pageCss    = "/modules/budget/budget.css";
-// $pageJs     = "/modules/budget/budget.js"; // Ligne commentée ou supprimée
 
 require __DIR__ . '/header.php';
 ?>
@@ -21,24 +18,24 @@ require __DIR__ . '/header.php';
         <h1 style="margin-bottom: 20px;">Gestion du Budget</h1>
         
         <nav class="budget-tabs-container">
-            <a href="?tab=recap" class="tab-item <?= $tab == 'recap' ? 'active' : '' ?>">
-                <span class="tab-icon">📊</span> 
-                <span>Récapitulatif</span>
-            </a>
-            
-            <a href="?tab=budget_prev" class="tab-item <?= $tab == 'budget_prev' ? 'active' : '' ?>">
-                <span class="tab-icon">🎯</span> 
-                <span>Budget 2026</span>
-            </a>
-            
             <a href="?tab=suivi" class="tab-item <?= $tab == 'suivi' ? 'active' : '' ?>">
                 <span class="tab-icon">🗓️</span> 
                 <span>Suivi Mensuel</span>
-            </a>
-            
+            </a>  
+                      
+            <a href="?tab=budget_prev" class="tab-item <?= $tab == 'budget_prev' ? 'active' : '' ?>">
+                <span class="tab-icon">🎯</span> 
+                <span>Budget 2026</span>
+            </a>  
+
             <a href="?tab=epargne" class="tab-item <?= $tab == 'epargne' ? 'active' : '' ?>">
                 <span class="tab-icon">🐷</span> 
                 <span>Épargne</span>
+            </a>
+
+            <a href="?tab=recap" class="tab-item <?= $tab == 'recap' ? 'active' : '' ?>">
+                <span class="tab-icon">📊</span> 
+                <span>Récapitulatif</span>
             </a>
         </nav>
     </div>
