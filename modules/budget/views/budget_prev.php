@@ -68,6 +68,9 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
     $isValidatedAlex = ($row['amount_alex'] == 1);
     $isValidatedLaia = ($row['amount_laia'] == 1);
 }
+
+// 7. Récupération des vacances actives pour les lier au budget
+$activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN ('draft', 'planned', 'booked') ORDER BY start_date ASC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="prev-container">
@@ -191,6 +194,7 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
                     <td class="col-sticky" style="position:relative; <?= $isIndicative ? 'opacity:0.8;' : '' ?>">
                         <div style="font-weight:600; color:<?= $isIndicative ? '#64748b' : 'var(--text-main)' ?>;">
                             <?= htmlspecialchars($cat['name']) ?> 
+                            <?php if(!empty($cat['holiday_id'])) echo " 🌴"; ?>
                             <?php if($isIndicative): ?><span style="font-size:0.7rem; border:1px solid #cbd5e1; border-radius:4px; padding:0 4px; margin-left:5px;">Info</span><?php endif; ?>
                         </div>
                         <div style="font-size:0.75rem; color:var(--text-muted); font-style:italic; text-align:right;">
@@ -204,6 +208,7 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
                                     data-id="<?= $cat['id'] ?>"
                                     data-name="<?= htmlspecialchars($cat['name']) ?>" 
                                     data-target="<?= htmlspecialchars($cat['target']) ?>"
+                                    data-holiday="<?= $cat['holiday_id'] ?? '' ?>"
                                     onclick="openEditModal(this)">
                                 ✎
                             </button>
@@ -369,7 +374,7 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
                 <label class="pf-label">Nom (ex: Vacances)</label>
                 <input type="text" name="name" class="pf-input" required>
             </div>
-            <div class="form-group" style="margin-bottom:20px;">
+            <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Cible (Destination)</label>
                 <select name="target" class="pf-input" required>
                     <option value="" disabled selected>-- Choisir --</option>
@@ -379,6 +384,15 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
                     <option value="vers commune">vers commune</option>
                 </select>
             </div>
+            <div class="form-group" style="margin-bottom:20px;">
+                <label class="pf-label" style="color:#8b5cf6;">🌴 Lier à un voyage (Optionnel)</label>
+                <select name="holiday_id" class="pf-input" style="border-color:#8b5cf6; background:#f5f3ff;">
+                    <option value="">-- Ne pas associer --</option>
+                    <?php foreach ($activeHolidays as $hol): ?>
+                        <option value="<?= $hol['id'] ?>"><?= htmlspecialchars($hol['title']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <div class="modal-footer">
                 <button type="button" onclick="document.getElementById('addCatModal').style.display='none'" class="pf-btn btn-secondary">Annuler</button>
                 <button type="submit" class="pf-btn">Ajouter</button>
@@ -386,6 +400,7 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
         </form>
     </div>
 </div>
+
 <div id="editCatModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:400px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -396,17 +411,26 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
             <input type="hidden" name="action" value="update_category">
             <input type="hidden" name="cat_id" id="edit_cat_id">
             
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Nom</label>
                 <input type="text" name="name" id="edit_cat_name" class="pf-input" required>
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Cible (Destination)</label>
                 <select name="target" id="edit_cat_target" class="pf-input" required>
                     <option value="vers L.Pol">vers L.Pol</option>
                     <option value="vers L.Pep">vers L.Pep</option>
                     <option value="vers L.Perso">vers L.Perso</option>
                     <option value="vers commune">vers commune</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:20px;">
+                <label class="pf-label" style="color:#8b5cf6;">🌴 Lier à un voyage (Optionnel)</label>
+                <select name="holiday_id" id="edit_cat_holiday" class="pf-input" style="border-color:#8b5cf6; background:#f5f3ff;">
+                    <option value="">-- Ne pas associer --</option>
+                    <?php foreach ($activeHolidays as $hol): ?>
+                        <option value="<?= $hol['id'] ?>"><?= htmlspecialchars($hol['title']) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="modal-footer">
@@ -420,21 +444,16 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
 <script>
 // Fonction pour ouvrir la modale et pré-remplir les valeurs
 function openEditModal(btn) {
-    // 1. Récupération des données depuis le bouton
-    // getAttribute est plus sûr pour éviter les bugs si des données sont manquantes
     const id = btn.getAttribute('data-id');
     const name = btn.getAttribute('data-name');
     const target = btn.getAttribute('data-target');
+    const holiday = btn.getAttribute('data-holiday'); // NOUVEAU
 
-    // 2. Remplissage du formulaire
     document.getElementById('edit_cat_id').value = id;
     document.getElementById('edit_cat_name').value = name;
-    
-    // Pour le SELECT, définir la .value sélectionne automatiquement la bonne option
-    // Si la valeur actuelle en base n'existe pas dans la liste, ça sélectionnera la 1ère par défaut
     document.getElementById('edit_cat_target').value = target;
+    document.getElementById('edit_cat_holiday').value = holiday; // NOUVEAU
     
-    // 3. Affichage
     document.getElementById('editCatModal').style.display = 'flex';
 }
 </script>

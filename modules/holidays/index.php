@@ -1,14 +1,18 @@
 <?php
 // modules/holidays/index.php
 
-// 1. Récupération des voyages + Calcul du coût total
+// 1. Récupération des voyages + Calculs (Coût Total ET Montant déjà financé)
 $sql = "
     SELECT h.*, 
            (
              COALESCE(h.budget_food, 0) + 
              COALESCE(h.budget_extra, 0) + 
              COALESCE((SELECT SUM(amount) FROM pf_holidays_items WHERE holiday_id = h.id), 0)
-           ) as total_cost
+           ) as total_cost,
+           (
+             COALESCE((SELECT SUM(ABS(amount)) FROM pf_expenses WHERE holiday_id = h.id), 0) +
+             COALESCE((SELECT SUM(amount) FROM pf_savings WHERE holiday_id = h.id), 0)
+           ) as total_funded
     FROM pf_holidays h
     ORDER BY FIELD(status, 'booked', 'planned', 'draft', 'passed', 'archived'), 
              start_date ASC
@@ -154,18 +158,13 @@ $history = array_filter($holidays, fn($h) => in_array($h['status'], ['passed', '
 
 <?php
 function renderHolidayCard($h, $pdo) {
-    // Récupérer le détail des items pour l'affichage JS futur
     $stmt = $pdo->prepare("SELECT * FROM pf_holidays_items WHERE holiday_id = ?");
     $stmt->execute([$h['id']]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // JSON pour le JS
     $json = htmlspecialchars(json_encode(['main' => $h, 'items' => $items]), ENT_QUOTES, 'UTF-8');
-    
-    // Affichage des dates
     $dateDisplay = htmlspecialchars($h['period_hint'] ?? '');
     
-    // MODIFICATION ICI : Format d/m/Y (jj/mm/aaaa)
     if (empty($dateDisplay) && $h['start_date']) {
         $dateDisplay = date('d/m/Y', strtotime($h['start_date']));
         if ($h['end_date']) $dateDisplay .= ' → ' . date('d/m/Y', strtotime($h['end_date']));
@@ -177,6 +176,17 @@ function renderHolidayCard($h, $pdo) {
         'passed' => 'bg-gray-100 text-gray-600',
         default => 'bg-yellow-50 text-yellow-800'
     };
+
+    // --- NOUVEAU : Calcul de la progression ---
+    $cost = (float)$h['total_cost'];
+    $funded = (float)$h['total_funded'];
+    $leftToPay = max(0, $cost - $funded);
+    
+    // Pourcentage pour la barre de progression (max 100%)
+    $percent = $cost > 0 ? min(100, round(($funded / $cost) * 100)) : 0;
+    
+    // Couleur de la barre : Rouge si < 50%, Jaune si < 100%, Vert si tout est payé
+    $barColor = $percent === 100 ? '#10b981' : ($percent > 50 ? '#f59e0b' : '#ef4444');
 
     echo "
     <div class='hol-idea-card' onclick='editHoliday($json)'>
@@ -190,9 +200,22 @@ function renderHolidayCard($h, $pdo) {
             <span>🗓️ ".($dateDisplay ?: 'Dates à définir')."</span>
         </div>
         
-        <div style='margin-top:auto; padding-top:10px; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;'>
-            <span style='font-size:0.85rem; color:#64748b;'>Budget Total</span>
-            <span style='font-size:1.1rem; font-weight:bold; color:#1e293b;'>".number_format($h['total_cost'], 0, ',', ' ')." €</span>
+        <div style='margin-top:auto; padding-top:10px; border-top:1px solid #f1f5f9;'>
+            
+            <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;'>
+                <span style='font-size:0.85rem; color:#64748b;'>Budget Total</span>
+                <span style='font-size:1rem; font-weight:bold; color:#1e293b;'>".number_format($cost, 0, ',', ' ')." €</span>
+            </div>
+
+            <div style='width:100%; height:6px; background:#e2e8f0; border-radius:3px; margin-bottom:8px; overflow:hidden;'>
+                <div style='width:{$percent}%; height:100%; background:{$barColor}; transition:width 0.3s ease;'></div>
+            </div>
+
+            <div style='display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;'>
+                <span style='color:#10b981; font-weight:600;'>✓ Financé : ".number_format($funded, 0, ',', ' ')." €</span>
+                <span style='color:#ef4444; font-weight:600;'>Reste : ".number_format($leftToPay, 0, ',', ' ')." €</span>
+            </div>
+            
         </div>
     </div>
     ";

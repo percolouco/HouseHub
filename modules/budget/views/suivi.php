@@ -35,11 +35,11 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     header("Location: ?tab=suivi"); exit;
 }
 
-// D. SAUVEGARDE IMPORT CSV (AVEC BUDGET_ITEM_ID)
+// D. SAUVEGARDE IMPORT CSV (AVEC BUDGET_ITEM_ID ET HOLIDAY_ID)
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
     
-    // 1. Catégories temporaires
+    // 1. Catégories temporaires (Inchangé)
     $tempCatMapping = [];
     if (!empty($_POST['new_temp_cats'])) {
         $stmtTemp = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, 0)");
@@ -49,8 +49,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
         }
     }
 
-    // 2. Insertion avec budget_item_id
-    $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id) VALUES (?, ?, ?, ?, ?, ?)");
+    // 2. Insertion avec budget_item_id ET holiday_id
+    $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
     $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category) VALUES (?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category)");
 
     if (isset($_POST['lines']) && is_array($_POST['lines'])) {
@@ -59,6 +59,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                 $cat = $line['cat'];
                 $is_credit = isset($line['is_credit']) ? (int)$line['is_credit'] : 0;
                 $budgetItemId = !empty($line['budget_item_id']) ? (int)$line['budget_item_id'] : null;
+                $holidayId = !empty($line['holiday_id']) ? (int)$line['holiday_id'] : null; // NOUVEAU
                 
                 if ($is_credit && empty($cat)) continue;
                 if (!$is_credit && empty($cat)) continue;
@@ -70,7 +71,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                 $finalAmount = $is_credit ? -abs($line['amount']) : abs($line['amount']);
 
                 try {
-                    $stmtExp->execute([$line['date'], $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId]);
+                    $stmtExp->execute([$line['date'], $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId, $holidayId]);
                     $stmtRule->execute([$line['label'], $cat]);
                     $count++;
                 } catch (Exception $e) { continue; }
@@ -89,6 +90,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
     
     $label = trim($_POST['label']);
     $budgetItemId = null;
+    $holidayId = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null; // NOUVEAU
 
     if ($cat === 'School' && !empty($_POST['label_select'])) {
         $label = trim($_POST['label_select']);
@@ -98,19 +100,17 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
     }
 
     if ($label && $amount > 0) {
-        // Gestion du signe (Revenu = Négatif en BDD, Dépense = Positif)
-        // Note: L'utilisateur saisit toujours du positif dans le formulaire
-        $finalAmount = ($cat === 'Income') ? -abs($amount) : abs($amount);
-
+        $is_credit = isset($_POST['is_credit']) ? (int)$_POST['is_credit'] : 0;
+        $finalAmount = $is_credit ? -abs($amount) : abs($amount);
         if ($id) {
             // UPDATE
-            $pdo->prepare("UPDATE pf_expenses SET date_exp=?, category=?, label=?, amount=?, budget_item_id=? WHERE id=?")
-                ->execute([$date, $cat, $label, $finalAmount, $budgetItemId, $id]);
+            $pdo->prepare("UPDATE pf_expenses SET date_exp=?, category=?, label=?, amount=?, budget_item_id=?, holiday_id=? WHERE id=?")
+                ->execute([$date, $cat, $label, $finalAmount, $budgetItemId, $holidayId, $id]);
         } else {
             // INSERT
             $uniqueRef = "MANUAL_" . uniqid();
-            $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id) VALUES (?, ?, ?, ?, ?, ?)")
-                ->execute([$date, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId]);
+            $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                ->execute([$date, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId, $holidayId]);
         }
         header("Location: ?tab=suivi"); exit;
     }
@@ -121,6 +121,9 @@ if (isset($_GET['delete_expense'])) {
     $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_GET['delete_expense']]);
     header("Location: ?tab=suivi"); exit;
 }
+
+// G. RECUPERATION VACANCES
+$activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN ('draft', 'planned', 'booked') ORDER BY start_date ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // ============================================================================
 // 2. CALCUL DES BUDGETS & CHARGES FIXES
@@ -318,7 +321,13 @@ function getDisplayLogic($spent, $bg, $type) {
     } else {
         $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0);
         $isOver = ($spent > $bg && $bg > 0);
-        $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
+        
+        // MODIFICATION ICI : On cache le "/ 0 €" si le budget est à 0
+        if ($bg > 0) {
+            $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
+        } else {
+            $text = number_format(ceil($spent), 0, ',', ' ') . ' €';
+        }
     }
     return ['pct' => $pct, 'isOver' => $isOver, 'text' => $text];
 }
@@ -476,6 +485,12 @@ function getDisplayLogic($spent, $bg, $type) {
                                                 <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],0) ?>€)</option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <select name="lines[<?= $idx ?>][holiday_id]" class="pf-input" style="flex:1; border-color:#8b5cf6; background:#f5f3ff;" <?= $dis ?>>
+                                            <option value="">-- Voyage (Optionnel) --</option>
+                                            <?php foreach ($activeHolidays as $hol): ?>
+                                                <option value="<?= $hol['id'] ?>"><?= htmlspecialchars($hol['title']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                 </td>
                             </tr>
@@ -565,12 +580,21 @@ function getDisplayLogic($spent, $bg, $type) {
         <form method="POST">
             <input type="hidden" name="action" value="save_expense_manual">
             <input type="hidden" name="expense_id" id="modalExpenseId">
+            
             <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Catégorie</label>
                 <select name="category" id="modalCatSelect" class="pf-input" onchange="handleModalCatChange(this)">
                     <?php foreach($categoriesConfig as $key => $conf): ?>
                         <option value="<?= $key ?>"><?= $conf['label'] ?></option>
                     <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label">Type de mouvement</label>
+                <select name="is_credit" id="modalIsCredit" class="pf-input" style="font-weight:bold;">
+                    <option value="0">Dépense ( - sur le compte )</option>
+                    <option value="1">Revenu / Remboursement ( + sur le compte )</option>
                 </select>
             </div>
 
@@ -609,6 +633,16 @@ function getDisplayLogic($spent, $bg, $type) {
                     <option value="">-- Sélectionner --</option>
                     <?php foreach ($incomeList as $inc): ?>
                         <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],2) ?>€)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label" style="color:#8b5cf6;">🌴 Associer à un voyage (Optionnel)</label>
+                <select name="holiday_id" id="modalHolidayId" class="pf-input" style="border-color:#8b5cf6; background:#f5f3ff;">
+                    <option value="">-- Ne pas associer --</option>
+                    <?php foreach ($activeHolidays as $hol): ?>
+                        <option value="<?= $hol['id'] ?>"><?= htmlspecialchars($hol['title']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -741,14 +775,18 @@ function openAddModal(catKey, catLabel) {
     openSuiviModal('manualExpenseModal');
     document.getElementById('modalTitle').innerText = "Ajouter : " + catLabel;
     
-    document.getElementById('modalExpenseId').value = ""; // Reset ID (ajout)
+    document.getElementById('modalExpenseId').value = ""; 
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('modalLabelInput').value = "";
     document.getElementById('modalAmount').value = "";
+    document.getElementById('modalHolidayId').value = "";
     
     const catSelect = document.getElementById('modalCatSelect');
     catSelect.value = catKey;
     handleModalCatChange(catSelect);
+    
+    // Auto-sélection : Si on clique sur le + de "Revenus", on pré-sélectionne "Revenu"
+    document.getElementById('modalIsCredit').value = (catKey === 'Income') ? "1" : "0";
     
     setTimeout(() => document.getElementById('modalLabelInput').focus(), 100);
 }
@@ -762,14 +800,17 @@ function openEditModal(expenseData) {
     document.getElementById('modalDate').value = expenseData.date_exp;
     document.getElementById('modalLabelInput').value = expenseData.label;
     
-    // Le montant en BDD est signé (- pour revenus), on remet en absolu pour l'input
-    document.getElementById('modalAmount').value = Math.abs(parseFloat(expenseData.amount));
+    // NOUVEAU : On lit la vraie valeur en BDD pour définir le type (+ ou -)
+    const rawAmount = parseFloat(expenseData.amount);
+    document.getElementById('modalIsCredit').value = rawAmount < 0 ? "1" : "0";
+    
+    document.getElementById('modalAmount').value = Math.abs(rawAmount);
+    document.getElementById('modalHolidayId').value = expenseData.holiday_id || ""; 
     
     const catSelect = document.getElementById('modalCatSelect');
     catSelect.value = expenseData.category;
     handleModalCatChange(catSelect);
 
-    // Pré-remplir les selects spécifiques
     if (expenseData.category === 'Frais') {
         document.getElementById('fraisSelect').value = expenseData.budget_item_id;
     } else if (expenseData.category === 'Income') {

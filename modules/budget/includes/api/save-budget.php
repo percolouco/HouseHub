@@ -5,8 +5,6 @@ require __DIR__ . '/../../../../includes/auth.php';
 require __DIR__ . '/../../../../includes/db.php';
 require_login();
 
-// Note : On ne force pas le header JSON partout car add/delete/update utilisent des redirections
-// header('Content-Type: application/json'); 
 
 $action = $_POST['action'] ?? '';
 
@@ -30,7 +28,7 @@ if ($action === 'update_salary_config') {
 
 // 2. MISE A JOUR TABLEAU REPARTITION (AJAX)
 if ($action === 'update_allocation') {
-    header('Content-Type: application/json'); // On précise JSON ici
+    header('Content-Type: application/json'); 
     $date = $_POST['month_date'];
     $catId = $_POST['cat_id'];
     $person = $_POST['person']; // 'amount_alex' ou 'amount_laia'
@@ -46,25 +44,26 @@ if ($action === 'update_allocation') {
 if ($action === 'add_category') {
     $name = trim($_POST['name']);
     $target = trim($_POST['target']);
+    $holiday_id = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
     
     if (!empty($name)) {
-        $stmt = $pdo->prepare("INSERT INTO pf_alloc_categories (name, target) VALUES (?, ?)");
-        $stmt->execute([$name, $target]);
+        $stmt = $pdo->prepare("INSERT INTO pf_alloc_categories (name, target, holiday_id) VALUES (?, ?, ?)");
+        $stmt->execute([$name, $target, $holiday_id]);
     }
-    // Redirection vers la page précédente
     header("Location: " . $_SERVER['HTTP_REFERER']); 
     exit;
 }
 
-// 4. MODIFICATION D'UNE CATEGORIE (Nom / Cible) - NOUVEAU BLOC
+// 4. MODIFICATION D'UNE CATEGORIE
 if ($action === 'update_category') {
     $id = (int)$_POST['cat_id'];
     $name = trim($_POST['name']);
     $target = trim($_POST['target']);
+    $holiday_id = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
 
     if ($id > 0 && !empty($name)) {
-        $stmt = $pdo->prepare("UPDATE pf_alloc_categories SET name = ?, target = ? WHERE id = ?");
-        $stmt->execute([$name, $target, $id]);
+        $stmt = $pdo->prepare("UPDATE pf_alloc_categories SET name = ?, target = ?, holiday_id = ? WHERE id = ?");
+        $stmt->execute([$name, $target, $holiday_id, $id]);
     }
     header("Location: " . $_SERVER['HTTP_REFERER']); 
     exit;
@@ -72,11 +71,11 @@ if ($action === 'update_category') {
 
 // 5. SUPPRESSION CATEGORIE
 if ($action === 'delete_category') {
-    $id = (int)$_GET['id'] ?? (int)$_POST['id']; // Peut venir du GET (lien) ou POST
+    $id = (int)$_GET['id'] ?? (int)$_POST['id']; 
     
     if ($id > 0) {
         $pdo->prepare("DELETE FROM pf_alloc_categories WHERE id = ?")->execute([$id]);
-        $pdo->prepare("DELETE FROM pf_alloc_values WHERE cat_id = ?")->execute([$id]); // Nettoyage valeurs
+        $pdo->prepare("DELETE FROM pf_alloc_values WHERE cat_id = ?")->execute([$id]); 
     }
     // Redirection vers la page précédente
     header("Location: " . $_SERVER['HTTP_REFERER']); 
@@ -86,17 +85,14 @@ if ($action === 'delete_category') {
 // 6. VALIDATION DES VIREMENTS (Complex Business Logic)
 if ($action === 'validate_transfers') {
     header('Content-Type: application/json');
-    
-    $person = $_POST['person']; // Alex ou Laia
+    $person = $_POST['person'];
     $monthDate = $_POST['month_date'];
 
     try {
         $pdo->beginTransaction();
 
-        // 1. Récupérer tous les virements prévus pour ce mois/personne dans le BUDGET
-        // On joint avec les catégories pour avoir le nom et la cible
         $stmt = $pdo->prepare("
-            SELECT v.*, c.name as cat_name, c.target 
+            SELECT v.*, c.name as cat_name, c.target, c.holiday_id 
             FROM pf_alloc_values v 
             JOIN pf_alloc_categories c ON v.cat_id = c.id
             WHERE v.month_date = ?
@@ -104,28 +100,21 @@ if ($action === 'validate_transfers') {
         $stmt->execute([$monthDate]);
         $budgetLines = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // On prépare les totaux à transférer par Cible
-        // Structure : ['Alex' => ['total'=>100, 'cats'=>['Noel'=>50, 'Eco'=>50]], 'Pol' => ...]
         $transfersToDo = [];
 
         foreach ($budgetLines as $line) {
             $amount = ($person === 'Alex') ? $line['amount_alex'] : $line['amount_laia'];
-            if ($amount <= 0) continue; // Rien à virer
+            if ($amount <= 0) continue; 
 
             $target = trim($line['target']);
             $catName = trim($line['cat_name']);
+            $holidayId = $line['holiday_id']; 
 
-            // MAPPING DES PROPRIÉTAIRES CIBLES
             $targetOwner = null;
-            if ($target === 'vers L.Perso') {
-                $targetOwner = $person; // Alex -> Alex, Laia -> Laia
-            } elseif ($target === 'vers L.Pol') {
-                $targetOwner = 'Pol';
-            } elseif ($target === 'vers L.Pep') {
-                $targetOwner = 'Pep';
-            } elseif ($target === 'vers commune') {
-                continue; // On ignore (Business Rule)
-            }
+            if ($target === 'vers L.Perso') { $targetOwner = $person; } 
+            elseif ($target === 'vers L.Pol') { $targetOwner = 'Pol'; } 
+            elseif ($target === 'vers L.Pep') { $targetOwner = 'Pep'; } 
+            elseif ($target === 'vers commune') { continue; }
 
             if ($targetOwner) {
                 if (!isset($transfersToDo[$targetOwner])) {
@@ -134,69 +123,55 @@ if ($action === 'validate_transfers') {
                 $transfersToDo[$targetOwner]['total_add'] += $amount;
                 
                 if (!isset($transfersToDo[$targetOwner]['cats'][$catName])) {
-                    $transfersToDo[$targetOwner]['cats'][$catName] = 0;
+                    $transfersToDo[$targetOwner]['cats'][$catName] = ['amount' => 0, 'holiday_id' => $holidayId];
                 }
-                $transfersToDo[$targetOwner]['cats'][$catName] += $amount;
+                $transfersToDo[$targetOwner]['cats'][$catName]['amount'] += $amount;
             }
         }
 
-        // 2. Traiter chaque Propriétaire Cible (Alex, Laia, Pol, Pep)
         foreach ($transfersToDo as $owner => $data) {
-            
-            // A. VÉRIFIER SI LE MOIS EXISTE EN EPARGNE
+            // A. VERIFIER EXISTENCE (Inchangé)
             $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM pf_savings WHERE owner = ? AND month_date = ? AND category = 'TOTAL_BANQUE'");
             $stmtCheck->execute([$owner, $monthDate]);
             $exists = $stmtCheck->fetchColumn() > 0;
 
             if (!$exists) {
-                // SCENARIO : LE MOIS N'EXISTE PAS -> DUPLICATION DEPUIS M-1
                 $prevDate = date('Y-m-d', strtotime($monthDate . ' -1 month'));
-                
-                // Récup M-1
-                $stmtPrev = $pdo->prepare("SELECT category, amount FROM pf_savings WHERE owner = ? AND month_date = ?");
+                $stmtPrev = $pdo->prepare("SELECT category, amount, holiday_id FROM pf_savings WHERE owner = ? AND month_date = ?");
                 $stmtPrev->execute([$owner, $prevDate]);
-                $prevLines = $stmtPrev->fetchAll(PDO::FETCH_KEY_PAIR); // [Cat => Montant]
+                $prevLines = $stmtPrev->fetchAll(PDO::FETCH_ASSOC);
 
-                if (empty($prevLines)) {
-                    // Si M-1 n'existe pas non plus, on initialise à 0 (ou on lève une erreur selon préférence)
-                    $prevLines = ['TOTAL_BANQUE' => 0];
-                }
+                if (empty($prevLines)) { $prevLines = [['category' => 'TOTAL_BANQUE', 'amount' => 0, 'holiday_id' => null]]; }
 
-                // Insertion M (Copie de M-1)
-                $stmtInsert = $pdo->prepare("INSERT INTO pf_savings (month_date, owner, category, amount) VALUES (?, ?, ?, ?)");
-                foreach ($prevLines as $cat => $amt) {
-                    $stmtInsert->execute([$monthDate, $owner, $cat, $amt]);
+                $stmtInsert = $pdo->prepare("INSERT INTO pf_savings (month_date, owner, category, amount, holiday_id) VALUES (?, ?, ?, ?, ?)");
+                foreach ($prevLines as $row) {
+                    $stmtInsert->execute([$monthDate, $owner, $row['category'], $row['amount'], $row['holiday_id']]);
                 }
             }
 
-            // B. MISE À JOUR DU TOTAL_BANQUE
-            // On ajoute le montant du virement au montant existant (qu'il vienne d'être créé ou non)
+            // B. UPDATE TOTAL (Inchangé)
             $stmtUpdTotal = $pdo->prepare("UPDATE pf_savings SET amount = amount + ? WHERE owner = ? AND month_date = ? AND category = 'TOTAL_BANQUE'");
             $stmtUpdTotal->execute([$data['total_add'], $owner, $monthDate]);
 
-            // C. MISE À JOUR / CRÉATION DES CATÉGORIES
-            foreach ($data['cats'] as $catName => $catAmount) {
-                
-                // --- REGLE METIER : IGNORER LA CREATION DE LIGNE POUR LES ECO ---
-                // Ces montants ont déjà été ajoutés au TOTAL_BANQUE (étape B juste au-dessus),
-                // mais on ne veut pas voir apparaître une ligne "Eco Alex" dans le détail.
-                if ($catName === 'Eco Alex' || $catName === 'Eco Laia') {
-                    continue; 
-                }
+            // C. UPDATE CATÉGORIES (Modifié pour gérer le holiday_id)
+            foreach ($data['cats'] as $catName => $catInfo) {
+                $catAmount = $catInfo['amount'];
+                $catHolidayId = $catInfo['holiday_id']; // NOUVEAU
 
-                // On vérifie si la catégorie existe déjà
+                if ($catName === 'Eco Alex' || $catName === 'Eco Laia') { continue; }
+
                 $stmtCheckCat = $pdo->prepare("SELECT id FROM pf_savings WHERE owner = ? AND month_date = ? AND category = ?");
                 $stmtCheckCat->execute([$owner, $monthDate, $catName]);
                 $catId = $stmtCheckCat->fetchColumn();
 
                 if ($catId) {
-                    // Update : Sommer
-                    $stmtUpdateCat = $pdo->prepare("UPDATE pf_savings SET amount = amount + ? WHERE id = ?");
-                    $stmtUpdateCat->execute([$catAmount, $catId]);
+                    // Update : On actualise aussi le holiday_id au cas où il aurait changé
+                    $stmtUpdateCat = $pdo->prepare("UPDATE pf_savings SET amount = amount + ?, holiday_id = ? WHERE id = ?");
+                    $stmtUpdateCat->execute([$catAmount, $catHolidayId, $catId]);
                 } else {
-                    // Insert : Créer
-                    $stmtInsertCat = $pdo->prepare("INSERT INTO pf_savings (month_date, owner, category, amount) VALUES (?, ?, ?, ?)");
-                    $stmtInsertCat->execute([$monthDate, $owner, $catName, $catAmount]);
+                    // Insert
+                    $stmtInsertCat = $pdo->prepare("INSERT INTO pf_savings (month_date, owner, category, amount, holiday_id) VALUES (?, ?, ?, ?, ?)");
+                    $stmtInsertCat->execute([$monthDate, $owner, $catName, $catAmount, $catHolidayId]);
                 }
             }
         }
@@ -209,9 +184,6 @@ if ($action === 'validate_transfers') {
         $sysCatId = $stmtSys->fetchColumn();
 
         if ($sysCatId) {
-            // b. Mettre à jour la valeur (1 = Validé)
-            // On utilise une astuce SQL : on met à jour uniquement la colonne de la personne concernée
-            // Si la ligne n'existe pas, on l'insère avec 1 pour la personne et 0 pour l'autre.
             
             if ($person === 'Alex') {
                 $sql = "INSERT INTO pf_alloc_values (month_date, cat_id, amount_alex, amount_laia) 
