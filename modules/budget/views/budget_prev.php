@@ -69,6 +69,10 @@ if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
     $isValidatedLaia = ($row['amount_laia'] == 1);
 }
 
+$stmtNote = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'budget_prev' AND reference_id = ?");
+$stmtNote->execute([$focusDate]);
+$currentNote = $stmtNote->fetchColumn();
+
 // 7. Récupération des vacances actives pour les lier au budget
 $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN ('draft', 'planned', 'booked') ORDER BY start_date ASC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -249,13 +253,42 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
             </table>
         </div>
     </div>
+
+    <div style="margin: 20px 0; background: white; padding: 20px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">
+            📝 Notes pour <?= date('F Y', strtotime($focusDate)) ?>
+        </h3>
+        <span id="note-save-indicator" style="font-size:0.85rem; color:#10b981; font-weight:bold; opacity:0; transition:opacity 0.3s;">
+            ✓ Enregistré
+        </span>
+    </div>
+    
+    <textarea 
+        id="monthNoteArea" 
+        class="pf-input" 
+        rows="3" 
+        placeholder="Écrivez vos remarques, rappels ou commentaires pour ce mois ici..." 
+        style="width: 100%; resize: vertical; border-color: #cbd5e1; background: #f8fafc; margin-bottom: 10px;"
+    ><?= htmlspecialchars((string)$currentNote) ?></textarea>
+    
+    <div style="text-align: right;">
+        <button type="button" class="pf-btn" style="width: auto; display: inline-flex;" 
+                onclick="saveGenericNote('budget_prev', '<?= $focusDate ?>', document.getElementById('monthNoteArea').value)">
+            Enregistrer la note
+        </button>
+    </div>
+</div>
+    
+
+
 <?php
     $focusMonth = $months[0]; // Mois affiché à gauche
     
     // 1. Initialisation des cibles par défaut
     $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
     
-    // 2. CORRECTION : On reconstruit la liste complète $allTargets
+    // 2. On reconstruit la liste complète $allTargets
     // On part des cibles par défaut
     $allTargets = $targetsOrder;
     
@@ -743,5 +776,44 @@ function validateTransfers(person, month) {
         }
     })
     .catch(e => alert("Erreur technique"));
+}
+
+// --- SAUVEGARDE GÉNÉRIQUE DES NOTES ---
+function saveGenericNote(noteType, refId, content) {
+    const formData = new FormData();
+    formData.append('action', 'save_note');
+    formData.append('note_type', noteType);    // ex: 'budget_prev'
+    formData.append('reference_id', refId);    // ex: '2026-03-01'
+    formData.append('content', content);       // Le texte
+
+    fetch('/modules/budget/includes/api/save-budget.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(async r => {
+        const text = await r.text();
+        if (!r.ok) throw new Error(`Erreur HTTP ${r.status} : ${text}`);
+        if (!text) throw new Error("Le serveur a renvoyé une réponse vide.");
+        try {
+            return JSON.parse(text);
+        } catch(e) {
+            throw new Error("Réponse inattendue (non JSON) : " + text);
+        }
+    })
+    .then(data => {
+        if(data.success) {
+            const indicator = document.getElementById('note-save-indicator');
+            if(indicator) {
+                indicator.style.opacity = '1';
+                setTimeout(() => indicator.style.opacity = '0', 2000);
+            }
+        } else {
+            alert("Erreur lors de la sauvegarde : " + data.error);
+        }
+    })
+    .catch(e => {
+        console.error('Erreur technique:', e);
+        alert(e.message);
+    });
 }
 </script>

@@ -5,11 +5,10 @@
 $stmt = $pdo->query("SELECT * FROM pf_budget_items ORDER BY category DESC, sort_order ASC, name ASC");
 $items = $stmt->fetchAll();
 
-// 2. Récupération des Dépenses Réelles du mois
+// 2. Récupération des Dépenses Réelles du mois (Pour valider les états)
 $currentMonth = date('m');
 $currentYear = date('Y');
 
-// On récupère TOUTES les dépenses du mois pour faire le calcul en PHP
 $stmtExp = $pdo->prepare("SELECT amount, label, budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
 $stmtExp->execute([$currentMonth, $currentYear]);
 $allExpenses = $stmtExp->fetchAll(PDO::FETCH_ASSOC);
@@ -32,8 +31,7 @@ $totalRevenus = 0;
                     <th>Montant Prévu</th>
                     <th>Type</th>
                     <th>Jour</th>
-                    <th>État</th>
-                    <th>Régularisation</th>
+                    <th>État du mois (<?= date('M') ?>)</th>
                     <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
@@ -51,11 +49,9 @@ $totalRevenus = 0;
                     foreach ($allExpenses as $exp) {
                         $match = false;
                         
-                        // A. Matching par ID (Prioritaire)
                         if (!empty($exp['budget_item_id']) && (int)$exp['budget_item_id'] === (int)$item['id']) {
                             $match = true;
                         } 
-                        // B. Matching par Mots-clés
                         elseif (empty($exp['budget_item_id']) && !empty($item['mapping_keywords'])) {
                             $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
                             foreach ($keywords as $kw) {
@@ -67,30 +63,21 @@ $totalRevenus = 0;
                         }
 
                         if ($match) {
-                            // CORRECTION : Gestion des signes
                             if ($item['category'] === 'income') {
-                                // Pour les revenus stockés en négatif, on prend la valeur absolue
                                 $realSum += abs((float)$exp['amount']);
                             } else {
-                                // Pour les dépenses, on garde le signe (Débit positif, Remboursement négatif)
                                 $realSum += (float)$exp['amount'];
                             }
                             $hasMatchingExpense = true;
                         }
                     }
 
-                    // --- 3. LOGIQUE D'ÉTAT (AUTO-CHECK) ---
-                    // On coche si la somme réelle atteint au moins 98% du montant prévu (tolérance petit écart)
-                    // ou si c'est coché manuellement.
-                    $isAutoChecked = false;
+                    // --- 3. LOGIQUE D'ÉTAT (Uniquement dynamique) ---
                     $gap = $realSum - $item['amount'];
-                    
-                    // Seuil de tolérance (ex: 0.10€) pour considérer que c'est payé
+                    $isAutoChecked = false;
                     if ($hasMatchingExpense && ($realSum >= ($item['amount'] - 0.10))) {
                         $isAutoChecked = true;
                     }
-
-                    $isPaid = $item['is_checked'] || $isAutoChecked;
 
                     // Styles
                     $rowClass = ($item['category'] === 'income') ? 'row-income' : 'row-expense';
@@ -100,8 +87,15 @@ $totalRevenus = 0;
                     <td style="padding:15px;">
                         <strong><?= htmlspecialchars($item['name']) ?></strong>
                         <?= $item['is_estimate'] ? ' <small style="color:#64748b;">(Est.)</small>' : '' ?>
+                        
                         <?php if(!empty($item['mapping_keywords'])): ?>
                             <span title="<?= htmlspecialchars($item['mapping_keywords']) ?>" style="font-size:0.7rem; cursor:help;">🔗</span>
+                        <?php endif; ?>
+                        
+                        <?php if(!empty($item['reg_month'])): ?>
+                            <div style="font-size:0.75rem; color:#94a3b8; font-style:italic; margin-top:2px;">
+                                📅 Régul. prévue en <?= htmlspecialchars($item['reg_month']) ?>
+                            </div>
                         <?php endif; ?>
                     </td>
                     
@@ -122,7 +116,6 @@ $totalRevenus = 0;
                                     Montant exact ✓
                                 </div>
                             <?php endif; ?>
-
                         <?php elseif ($item['type'] === 'Annuel'): ?>
                             <div style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">Soit <?= number_format($amountToAdd, 2, ',', ' ') ?>/mois</div>
                         <?php endif; ?>
@@ -133,33 +126,24 @@ $totalRevenus = 0;
                             <?= $item['type'] ?>
                         </span>
                     </td>
-                    <td style="padding:15px; color:#64748b;"><?= $item['payment_day'] ? $item['payment_day'] : '-' ?></td>
+                    <td style="padding:15px; color:#64748b; font-weight:bold;"><?= $item['payment_day'] ? $item['payment_day'] : '-' ?></td>
                     
                     <td style="padding:15px;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <?php if ($isAutoChecked): ?>
-                                <input type="checkbox" checked disabled style="width:18px; height:18px; accent-color:#3b82f6; cursor:not-allowed;">
-                                <span style="color:#3b82f6; font-weight:600; font-size:0.9rem;">Auto ✅</span>
-                            <?php else: ?>
-                                <input type="checkbox" 
-                                       <?= $item['is_checked'] ? 'checked' : '' ?> 
-                                       onclick="toggleItemCheck(<?= $item['id'] ?>, this.checked)"
-                                       title="Marquer comme payé"
-                                       style="width:18px; height:18px; cursor:pointer;">
-                                <?php if($item['is_checked']): ?>
-                                    <span style="color:#10b981; font-weight:500; font-size:0.9rem;">Payé</span>
-                                <?php elseif($hasMatchingExpense): ?>
-                                    <span style="color:#f59e0b; font-weight:bold; font-size:0.8rem;">Partiel</span>
-                                <?php else: ?>
-                                    <span style="color:#94a3b8; font-weight:500; font-size:0.9rem;">Attente</span>
-                                <?php endif; ?>
-                            <?php endif; ?>
-                        </div>
+                        <?php if ($isAutoChecked): ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#f0fdf4; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #bbf7d0;">
+                                <span>✓</span> Validé
+                            </div>
+                        <?php elseif($hasMatchingExpense): ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#d97706; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #fde68a;">
+                                <span>⏳</span> Partiel
+                            </div>
+                        <?php else: ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #e2e8f0;">
+                                <span>○</span> En attente
+                            </div>
+                        <?php endif; ?>
                     </td>
 
-                    <td style="padding:15px; color:#64748b; font-size:0.9rem;">
-                        <em><?= htmlspecialchars($item['reg_month'] ?: '-') ?></em>
-                    </td>
                     <td style="padding:15px; text-align:right;">
                         <div class="action-buttons" style="display:flex; gap:5px; justify-content:flex-end;">
                             <button class="btn-icon" onclick='editRecapItem(<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>)' title="Modifier" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">✏️</button>
@@ -172,16 +156,16 @@ $totalRevenus = 0;
             <tfoot style="background:#f8fafc;">
                 <tr>
                     <td colspan="1" style="padding:15px;"><strong>Total Revenus (Lissés)</strong></td>
-                    <td colspan="6" style="padding:15px; color:#10b981;"><strong>+ <?= number_format($totalRevenus, 2, ',', ' ') ?> €</strong></td>
+                    <td colspan="5" style="padding:15px; color:#10b981;"><strong>+ <?= number_format($totalRevenus, 2, ',', ' ') ?> €</strong></td>
                 </tr>
                 <tr>
                     <td colspan="1" style="padding:15px;"><strong>Total Dépenses (Lissées)</strong></td>
-                    <td colspan="6" style="padding:15px; color:#ef4444;"><strong>- <?= number_format($totalDepenses, 2, ',', ' ') ?> €</strong></td>
+                    <td colspan="5" style="padding:15px; color:#ef4444;"><strong>- <?= number_format($totalDepenses, 2, ',', ' ') ?> €</strong></td>
                 </tr>
                 <tr style="border-top: 2px solid #e2e8f0; background: white;">
                     <td colspan="1" style="padding:15px; font-size:1.1rem;"><strong>Équilibre théorique</strong></td>
                     <?php $balance = $totalRevenus - $totalDepenses; ?>
-                    <td colspan="6" style="padding:15px; font-size: 1.3em;" class="<?= $balance >= 0 ? 'text-success' : 'text-danger' ?>">
+                    <td colspan="5" style="padding:15px; font-size: 1.3em;" class="<?= $balance >= 0 ? 'text-success' : 'text-danger' ?>">
                         <strong style="color:<?= $balance >= 0 ? '#10b981' : '#ef4444' ?>;"><?= number_format($balance, 2, ',', ' ') ?> € / mois</strong>
                     </td>
                 </tr>
@@ -190,7 +174,7 @@ $totalRevenus = 0;
     </div>
     
     <div class="budget-note" style="margin-top:15px; font-size:0.85rem; color:#64748b;">
-        <p>* Les lignes <strong>Auto ✅</strong> sont validées quand la somme des transactions atteint le montant prévu.</p>
+        <p>* L'état de paiement se met à jour automatiquement en fonction des opérations importées dans l'onglet "Suivi Mensuel".</p>
     </div>
 </div>
 
@@ -274,10 +258,6 @@ $totalRevenus = 0;
 </div>
 
 <script>
-// ==========================================
-// SCRIPTS ISOLÉS POUR L'ONGLET RECAPITULATIF
-// ==========================================
-
 window.onclick = function(event) {
     const modal = document.getElementById('budgetRecapModal');
     if (event.target == modal) {
@@ -331,26 +311,5 @@ function deleteRecapItem(id) {
             console.error(err);
         });
     }
-}
-
-function toggleItemCheck(id, isChecked) {
-    const formData = new FormData();
-    formData.append("action", "toggle-check");
-    formData.append("id", id);
-    formData.append("status", isChecked ? 1 : 0);
-
-    fetch("/modules/budget/includes/api/manage-item.php", {
-        method: "POST",
-        body: formData,
-    })
-    .then((response) => {
-        if (!response.ok) throw new Error("Erreur réseau");
-        window.location.reload(); 
-    })
-    .catch((error) => {
-        alert("Erreur lors de la mise à jour");
-        console.error(error);
-        window.location.reload();
-    });
 }
 </script>

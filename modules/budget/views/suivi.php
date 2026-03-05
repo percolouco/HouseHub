@@ -2,10 +2,24 @@
 // modules/budget/views/suivi.php
 
 // ============================================================================
-// 1. GESTION DES ACTIONS (POST/GET)
+// 1. GESTION DES ACTIONS ET DE LA NAVIGATION
 // ============================================================================
 
-$currentMonthKey = date('m-Y');
+// --- NAVIGATION PAR MOIS ---
+$currentMonth = isset($_GET['m']) ? str_pad((int)$_GET['m'], 2, '0', STR_PAD_LEFT) : date('m');
+$currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y');
+$currentMonthKey = $currentMonth . '-' . $currentYear;
+
+// Calcul des liens de navigation
+$prevM = (int)$currentMonth - 1; $prevY = $currentYear;
+if ($prevM < 1) { $prevM = 12; $prevY--; }
+$nextM = (int)$currentMonth + 1; $nextY = $currentYear;
+if ($nextM > 12) { $nextM = 1; $nextY++; }
+
+$prevLink = "?tab=suivi&m=$prevM&y=$prevY";
+$nextLink = "?tab=suivi&m=$nextM&y=$nextY";
+$todayLink = "?tab=suivi";
+
 
 // A. AJOUT CATÉGORIE TEMPORAIRE MANUELLE
 if (isset($_POST['action']) && $_POST['action'] === 'add_temp_cat') {
@@ -16,14 +30,14 @@ if (isset($_POST['action']) && $_POST['action'] === 'add_temp_cat') {
     if ($name && $budget >= 0) {
         $stmt = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, ?)");
         $stmt->execute([$currentMonthKey, $name, $type, $budget]);
-        header("Location: ?tab=suivi"); exit;
+        header("Location: ?tab=suivi&m=$currentMonth&y=$currentYear"); exit;
     }
 }
 
 // B. SUPPRESSION CATÉGORIE TEMPORAIRE
 if (isset($_GET['del_cat'])) {
     $pdo->prepare("DELETE FROM pf_monthly_categories WHERE id = ?")->execute([(int)$_GET['del_cat']]);
-    header("Location: ?tab=suivi"); exit;
+    header("Location: ?tab=suivi&m=$currentMonth&y=$currentYear"); exit;
 }
 
 // C. SAUVEGARDE SNAPSHOT BANCAIRE
@@ -32,14 +46,18 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     $amount = floatval($_POST['snapshot_amount']);
     $pdo->query("DELETE FROM pf_bank_snapshots"); 
     $pdo->prepare("INSERT INTO pf_bank_snapshots (snapshot_date, amount) VALUES (?, ?)")->execute([$date, $amount]);
-    header("Location: ?tab=suivi"); exit;
+    header("Location: ?tab=suivi&m=$currentMonth&y=$currentYear"); exit;
 }
 
-// D. SAUVEGARDE IMPORT CSV (AVEC BUDGET_ITEM_ID ET HOLIDAY_ID)
+// D. SAUVEGARDE IMPORT CSV (LIGNE PAR LIGNE AVEC CHECKBOX)
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
     
-    // 1. Catégories temporaires (Inchangé)
+    // On récupère le mois affiché sur l'écran lors de l'import
+    $viewMonth = $_POST['view_month'] ?? $currentMonth;
+    $viewYear = $_POST['view_year'] ?? $currentYear;
+    
+    // 1. Catégories temporaires
     $tempCatMapping = [];
     if (!empty($_POST['new_temp_cats'])) {
         $stmtTemp = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, 0)");
@@ -49,7 +67,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
         }
     }
 
-    // 2. Insertion avec budget_item_id ET holiday_id
     $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
     $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category) VALUES (?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category)");
 
@@ -59,7 +76,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                 $cat = $line['cat'];
                 $is_credit = isset($line['is_credit']) ? (int)$line['is_credit'] : 0;
                 $budgetItemId = !empty($line['budget_item_id']) ? (int)$line['budget_item_id'] : null;
-                $holidayId = !empty($line['holiday_id']) ? (int)$line['holiday_id'] : null; // NOUVEAU
+                $holidayId = !empty($line['holiday_id']) ? (int)$line['holiday_id'] : null;
                 
                 if ($is_credit && empty($cat)) continue;
                 if (!$is_credit && empty($cat)) continue;
@@ -69,16 +86,30 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                 }
 
                 $finalAmount = $is_credit ? -abs($line['amount']) : abs($line['amount']);
+                
+                // NOUVEAU : GESTION DU DÉCALAGE SI LA COCHE EST SÉLECTIONNÉE
+                $dateToSave = $line['date'];
+                if (!empty($line['force_current'])) {
+                    $day = date('d', strtotime($dateToSave));
+                    // On vérifie que la date existe (ex: pour éviter le 31 Février)
+                    if (checkdate((int)$viewMonth, (int)$day, (int)$viewYear)) {
+                        $dateToSave = "$viewYear-$viewMonth-$day";
+                    } else {
+                        // Sinon, on met au dernier jour du mois visé
+                        $dateToSave = date('Y-m-t', strtotime("$viewYear-$viewMonth-01"));
+                    }
+                }
 
                 try {
-                    $stmtExp->execute([$line['date'], $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId, $holidayId]);
+                    $stmtExp->execute([$dateToSave, $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId, $holidayId]);
                     $stmtRule->execute([$line['label'], $cat]);
                     $count++;
                 } catch (Exception $e) { continue; }
             }
         }
     }
-    header("Location: ?tab=suivi&msg=imported_$count"); exit;
+    
+    header("Location: ?tab=suivi&m=$viewMonth&y=$viewYear&msg=imported_$count"); exit;
 }
 
 // E. AJOUT OU MODIFICATION DÉPENSE (MANUELLE)
@@ -90,7 +121,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
     
     $label = trim($_POST['label']);
     $budgetItemId = null;
-    $holidayId = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null; // NOUVEAU
+    $holidayId = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
 
     if ($cat === 'School' && !empty($_POST['label_select'])) {
         $label = trim($_POST['label_select']);
@@ -102,24 +133,23 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
     if ($label && $amount > 0) {
         $is_credit = isset($_POST['is_credit']) ? (int)$_POST['is_credit'] : 0;
         $finalAmount = $is_credit ? -abs($amount) : abs($amount);
+        
         if ($id) {
-            // UPDATE
             $pdo->prepare("UPDATE pf_expenses SET date_exp=?, category=?, label=?, amount=?, budget_item_id=?, holiday_id=? WHERE id=?")
                 ->execute([$date, $cat, $label, $finalAmount, $budgetItemId, $holidayId, $id]);
         } else {
-            // INSERT
             $uniqueRef = "MANUAL_" . uniqid();
             $pdo->prepare("INSERT INTO pf_expenses (date_exp, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$date, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId, $holidayId]);
         }
-        header("Location: ?tab=suivi"); exit;
+        header("Location: ?tab=suivi&m=$currentMonth&y=$currentYear"); exit;
     }
 }
 
 // F. SUPPRESSION DÉPENSE
 if (isset($_GET['delete_expense'])) {
     $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_GET['delete_expense']]);
-    header("Location: ?tab=suivi"); exit;
+    header("Location: ?tab=suivi&m=$currentMonth&y=$currentYear"); exit;
 }
 
 // G. RECUPERATION VACANCES
@@ -137,15 +167,13 @@ $today_day = (int)date('j');
 $fixedChargesList = [];
 $incomeList = []; 
 
-$currentMonth = date('m'); $currentYear = date('Y');
-
-// 1. Récupération des IDs payés
-$stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL");
+// 1. Récupération des IDs de charges fixes déjà payées (Dépenses uniquement)
+$stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL AND amount > 0");
 $stmtIds->execute([$currentMonth, $currentYear]);
 $paidItemIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
 
-// 2. Récupération libellés
-$stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
+// 2. Récupération libellés (Uniquement les dépenses pour éviter qu'un revenu ne valide une charge)
+$stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND amount > 0");
 $stmtLabels->execute([$currentMonth, $currentYear]);
 $realExpensesLabels = $stmtLabels->fetchAll(PDO::FETCH_COLUMN);
 
@@ -168,7 +196,7 @@ if (!empty($snapshot['date'])) {
     } catch (Exception $e) {}
 }
 
-// Lecture Budget
+// Lecture Budget Prévisionnel
 $stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $rawAmount = (float)$item['amount'];
@@ -322,7 +350,6 @@ function getDisplayLogic($spent, $bg, $type) {
         $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0);
         $isOver = ($spent > $bg && $bg > 0);
         
-        // MODIFICATION ICI : On cache le "/ 0 €" si le budget est à 0
         if ($bg > 0) {
             $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
         } else {
@@ -331,25 +358,27 @@ function getDisplayLogic($spent, $bg, $type) {
     }
     return ['pct' => $pct, 'isOver' => $isOver, 'text' => $text];
 }
+
+// Nom du mois en français (Compatible PHP 8+)
+$moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+$monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 ?>
 
-<style>
-    .cat-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-    .btn-add-item { background: rgba(255, 255, 255, 0.6); color: inherit; border: 1px solid rgba(0, 0, 0, 0.1); width: 28px; height: 28px; border-radius: 50%; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    .btn-add-item:hover { background: white; transform: rotate(90deg) scale(1.1); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); border-color: currentColor; }
-    .pf-modal { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
-    .pf-modal-content { background: white; width: 95%; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); padding: 30px; position: relative; }
-    .progress-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
-    .fade-pulse { animation: pulseText 2s infinite; }
-    @keyframes pulseText { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
-</style>
 
 <div class="budget-view">
 
     <div style="background:white; padding:20px; border-radius:16px; box-shadow:var(--shadow-sm); margin-bottom:30px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
             <div>
-                <h2 style="margin:0;">Suivi : <?= date('F Y') ?></h2>
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:5px;">
+                <h2 style="margin:0; text-transform:capitalize;">Suivi : <?= $monthName ?></h2>
+                    <div class="suivi-nav-group">
+                        <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
+                        <a href="<?= $todayLink ?>" class="suivi-btn-nav">Auj.</a>
+                        <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
+                    </div>
+                </div>
+                
                 <div style="margin-top:4px; font-size:0.9rem; color:#64748b;">
                     Charges à venir : <strong class="fade-pulse" style="color:#f59e0b;"><?= number_format(ceil($reste_a_venir), 0, ',', ' ') ?> €</strong>
                 </div>
@@ -427,10 +456,16 @@ function getDisplayLogic($spent, $bg, $type) {
         <?php else: ?>
             <form method="POST" id="formMapping">
                 <input type="hidden" name="action" value="save_import">
+                <input type="hidden" name="view_month" value="<?= $currentMonth ?>">
+                <input type="hidden" name="view_year" value="<?= $currentYear ?>">
                 <div id="dynamicNewCats"></div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h3 style="margin:0;">Valider l'importation</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <h3 style="margin:0;">Valider l'importation</h3>
+                        
+                    </div>
+                    
                     <div>
                         <span id="missingCount" style="color:#ef4444; background:#fee2e2; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; display:none; margin-right:10px;"></span>
                         <button type="button" class="btn-icon-small" onclick="openSuiviModal('newCatModal')" title="Créer une catégorie" style="display:inline-flex; vertical-align:middle; width:auto; padding:4px 10px;">➕ Catégorie</button>
@@ -440,7 +475,7 @@ function getDisplayLogic($spent, $bg, $type) {
                 <div style="max-height:350px; overflow-y:auto; background:white; border:1px solid #eee; border-radius:8px;">
                     <table class="pf-table" style="margin:0;">
                         <thead style="position:sticky; top:0; z-index:10;">
-                            <tr><th><input type="checkbox" onclick="toggleAll(this)" checked></th><th>Libellé</th><th>Montant</th><th>Catégorie</th></tr>
+                            <tr><th><input type="checkbox" onclick="toggleAll(this)" checked></th><th>Date</th><th>Libellé</th><th>Montant</th><th>Catégorie</th></tr>
                         </thead>
                         <tbody>
                             <?php foreach ($csvData as $idx => $row): 
@@ -456,11 +491,27 @@ function getDisplayLogic($spent, $bg, $type) {
                                     <input type="hidden" name="lines[<?= $idx ?>][ref]" value="<?= $row['ref'] ?>">
                                     <input type="hidden" class="is-credit-flag" name="lines[<?= $idx ?>][is_credit]" value="<?= $isCrd ?>">
                                 </td>
+                                <td style="white-space:nowrap; vertical-align: top; padding-top: 12px;">
+                                    <div style="font-weight:600; color:#1e293b; line-height:1;"><?= date('d/m/Y', strtotime($row['date'])) ?></div>
+                                    
+                                    <?php 
+                                    // On vérifie si la transaction appartient à un autre mois que celui affiché
+                                    $transMonthStr = date('m-Y', strtotime($row['date']));
+                                    $viewMonthStr = str_pad($currentMonth, 2, '0', STR_PAD_LEFT) . '-' . $currentYear;
+                                    
+                                    if ($transMonthStr !== $viewMonthStr): 
+                                    ?>
+                                        <label style="display:inline-flex; align-items:center; margin-top:6px; font-size:0.7rem; color:#4f46e5; cursor:pointer; background:#e0e7ff; padding:2px 6px; border-radius:4px; border:1px solid #c7d2fe; transition:all 0.2s;" onmouseover="this.style.background='#c7d2fe'" onmouseout="this.style.background='#e0e7ff'">
+                                            <input type="checkbox" name="lines[<?= $idx ?>][force_current]" value="1" style="appearance:auto; width:12px; height:12px; margin:0 4px 0 0; border:none;">
+                                            → <?= $moisFr[(int)$currentMonth] ?>
+                                        </label>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?= htmlspecialchars($row['label']) ?>
                                     <?php if($dup): ?><small style="color:#ef4444; font-weight:bold; margin-left:5px;">(déjà importé)</small><?php endif; ?>
                                 </td>
-                                <td style="font-weight:bold; color:<?= $isCrd ? '#10b981' : '#1e293b' ?>;">
+                                <td style="font-weight:bold; color:<?= $isCrd ? '#10b981' : '#1e293b' ?>; white-space:nowrap;">
                                     <?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'],2) ?> €
                                 </td>
                                 <td>
@@ -485,7 +536,8 @@ function getDisplayLogic($spent, $bg, $type) {
                                                 <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],0) ?>€)</option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <select name="lines[<?= $idx ?>][holiday_id]" class="pf-input" style="flex:1; border-color:#8b5cf6; background:#f5f3ff;" <?= $dis ?>>
+                                        
+                                        <select name="lines[<?= $idx ?>][holiday_id]" class="pf-input select-holiday" style="display:none; flex:1; border-color:#8b5cf6; background:#f5f3ff;" <?= $dis ?>>
                                             <option value="">-- Voyage (Optionnel) --</option>
                                             <?php foreach ($activeHolidays as $hol): ?>
                                                 <option value="<?= $hol['id'] ?>"><?= htmlspecialchars($hol['title']) ?></option>
@@ -514,7 +566,7 @@ function getDisplayLogic($spent, $bg, $type) {
                     <h3 style="margin:0; font-size:1rem; color:<?= $conf['color'] ?>;">
                         <?= $conf['label'] ?>
                         <?php if (isset($conf['is_temp'])): ?>
-                            <a href="?tab=suivi&del_cat=<?= $conf['id'] ?>" onclick="return confirm('Supprimer cette catégorie ?')" style="color:#ef4444; text-decoration:none; font-size:0.8rem; margin-left:5px;">&times;</a>
+                            <a href="?tab=suivi&del_cat=<?= $conf['id'] ?>&m=<?= $currentMonth ?>&y=<?= $currentYear ?>" onclick="return confirm('Supprimer cette catégorie ?')" style="color:#ef4444; text-decoration:none; font-size:0.8rem; margin-left:5px;">&times;</a>
                         <?php endif; ?>
                     </h3>
                     <div style="font-size:0.85rem; color:#64748b; font-weight:600; margin-top:2px;">
@@ -554,7 +606,7 @@ function getDisplayLogic($spent, $bg, $type) {
                                     ✏️
                                 </button>
                                 
-                                <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" 
+                                <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>&m=<?= $currentMonth ?>&y=<?= $currentYear ?>" 
                                    onclick="return confirm('Supprimer ?')" 
                                    style="color:#ef4444; text-decoration:none; font-size:1.4rem; line-height:1; vertical-align:middle;">
                                     &times;
@@ -637,7 +689,7 @@ function getDisplayLogic($spent, $bg, $type) {
                 </select>
             </div>
             
-            <div class="form-group" style="margin-bottom:15px;">
+            <div class="form-group" id="blockHoliday" style="margin-bottom:15px; display:none;">
                 <label class="pf-label" style="color:#8b5cf6;">🌴 Associer à un voyage (Optionnel)</label>
                 <select name="holiday_id" id="modalHolidayId" class="pf-input" style="border-color:#8b5cf6; background:#f5f3ff;">
                     <option value="">-- Ne pas associer --</option>
@@ -718,13 +770,15 @@ window.onclick = function(event) { if (event.target.classList.contains('pf-modal
 // --- SAISIE / EDITION MANUELLE ---
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
 
-// Gère l'affichage des champs selon la catégorie sélectionnée dans la modale
 function handleModalCatChange(select) {
     const catKey = select.value;
+    const catText = select.options[select.selectedIndex].text.toLowerCase();
+    
     const blockText = document.getElementById('blockInputText');
     const blockSelect = document.getElementById('blockInputSelect');
     const blockFrais = document.getElementById('blockInputFrais');
     const blockIncome = document.getElementById('blockInputIncome');
+    const blockHoliday = document.getElementById('blockHoliday');
     
     const inputLabel = document.getElementById('modalLabelInput');
     const selectFrais = document.getElementById('fraisSelect');
@@ -735,10 +789,18 @@ function handleModalCatChange(select) {
     blockSelect.style.display = 'none';
     blockFrais.style.display = 'none';
     blockIncome.style.display = 'none';
+    blockHoliday.style.display = 'none';
     
     inputLabel.required = false;
     selectFrais.required = false;
     selectIncome.required = false;
+
+    // Affichage conditionnel des Vacances (Si Epargne/LivretA OU si la catégorie contient le mot vacance)
+    if (catKey === 'LivretA' || catText.includes('vacance')) {
+        blockHoliday.style.display = 'block';
+    } else {
+        document.getElementById('modalHolidayId').value = ''; // On reset si on cache
+    }
 
     if (catKey === 'School') {
         blockSelect.style.display = 'block';
@@ -757,7 +819,6 @@ function handleModalCatChange(select) {
         blockText.style.display = 'block';
         inputLabel.required = true;
         
-        // Update suggestions
         const list = document.getElementById('modalSuggestions');
         list.innerHTML = ''; 
         if (suggestions[catKey]) {
@@ -785,13 +846,12 @@ function openAddModal(catKey, catLabel) {
     catSelect.value = catKey;
     handleModalCatChange(catSelect);
     
-    // Auto-sélection : Si on clique sur le + de "Revenus", on pré-sélectionne "Revenu"
     document.getElementById('modalIsCredit').value = (catKey === 'Income') ? "1" : "0";
     
     setTimeout(() => document.getElementById('modalLabelInput').focus(), 100);
 }
 
-// Ouvre la modale pour MODIFIER (NOUVEAU)
+// Ouvre la modale pour MODIFIER
 function openEditModal(expenseData) {
     openSuiviModal('manualExpenseModal');
     document.getElementById('modalTitle').innerText = "Modifier la dépense";
@@ -800,10 +860,8 @@ function openEditModal(expenseData) {
     document.getElementById('modalDate').value = expenseData.date_exp;
     document.getElementById('modalLabelInput').value = expenseData.label;
     
-    // NOUVEAU : On lit la vraie valeur en BDD pour définir le type (+ ou -)
     const rawAmount = parseFloat(expenseData.amount);
     document.getElementById('modalIsCredit').value = rawAmount < 0 ? "1" : "0";
-    
     document.getElementById('modalAmount').value = Math.abs(rawAmount);
     document.getElementById('modalHolidayId').value = expenseData.holiday_id || ""; 
     
@@ -840,17 +898,30 @@ function handleLineCatChange(select) {
     const row = select.closest('tr');
     const fraisSelect = row.querySelector('.select-frais');
     const incomeSelect = row.querySelector('.select-income');
+    const holidaySelect = row.querySelector('.select-holiday');
     
+    const catKey = select.value;
+    const catText = select.options[select.selectedIndex].text.toLowerCase();
+
     // Reset
     fraisSelect.style.display = 'none';
     incomeSelect.style.display = 'none';
+    holidaySelect.style.display = 'none';
+    
     fraisSelect.value = '';
     incomeSelect.value = '';
 
-    if (select.value === 'Frais') {
+    // Condition d'affichage pour les vacances
+    if (catKey === 'LivretA' || catText.includes('vacance')) {
+        holidaySelect.style.display = 'block';
+    } else {
+        holidaySelect.value = '';
+    }
+
+    if (catKey === 'Frais') {
         fraisSelect.style.display = 'block';
     } 
-    else if (select.value === 'Income') {
+    else if (catKey === 'Income') {
         incomeSelect.style.display = 'block';
     }
     

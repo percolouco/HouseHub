@@ -8,6 +8,38 @@ require_login();
 
 $action = $_POST['action'] ?? '';
 
+// =================================================================
+// 7. SAUVEGARDE D'UNE NOTE GÉNÉRIQUE (pf_notes)
+// =================================================================
+if ($action === 'save_note') {
+    // On affiche les erreurs s'il y a un souci SQL pour pouvoir déboguer
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    header('Content-Type: application/json');
+    
+    try {
+        $noteType = $_POST['note_type'] ?? '';
+        $refId = $_POST['reference_id'] ?? '';
+        $content = $_POST['content'] ?? '';
+
+        if (empty($noteType) || empty($refId)) {
+            throw new Exception("Le type et la référence de la note sont requis.");
+        }
+
+        // Insère ou met à jour la note si elle existe déjà
+        $stmt = $pdo->prepare("INSERT INTO pf_notes (note_type, reference_id, content) 
+                               VALUES (?, ?, ?) 
+                               ON DUPLICATE KEY UPDATE content = VALUES(content)");
+        $stmt->execute([$noteType, $refId, $content]);
+        
+        echo json_encode(['success' => true]);
+    } catch (\Throwable $e) {
+        echo json_encode(['success' => false, 'error' => 'Erreur SQL: ' . $e->getMessage()]);
+    }
+    exit;
+}
+// =================================================================
+
 // 1. MISE A JOUR TABLEAU SALAIRES (AJAX)
 if ($action === 'update_salary_config') {
     header('Content-Type: application/json'); // On précise JSON ici
@@ -207,4 +239,6 @@ if ($action === 'validate_transfers') {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;
+
+    
 }
