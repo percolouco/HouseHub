@@ -328,11 +328,15 @@ foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    if ($exp['amount'] < 0) {
-        if ($cat === 'Income') $totals[$cat] += abs($exp['amount']);
-        else $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
+    
+    if ($cat === 'Income') {
+        $totals[$cat] += abs($exp['amount']);
     } else {
-        $totals[$cat] += $exp['amount'];
+        if ($exp['amount'] < 0) {
+            $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
+        } else {
+            $totals[$cat] += $exp['amount'];
+        }
     }
     
     $expensesByCategory[$cat][] = $exp;
@@ -343,10 +347,17 @@ $globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
 
 function getDisplayLogic($spent, $bg, $type) {
     if ($type === 'credit') {
-        $pct = ($bg > 0) ? max(0, min(100, ($spent / $bg) * 100)) : 0; 
-        $isOver = false;
-        $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
+        // Pour les revenus : $spent = revenu perçu, $bg = revenu prévu
+        $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0); 
+        $isOver = false; // On n'est jamais "dans le rouge" avec les revenus !
+        
+        if ($bg > 0) {
+            $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
+        } else {
+            $text = number_format(ceil($spent), 0, ',', ' ') . ' €';
+        }
     } else {
+        // Pour les dépenses
         $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0);
         $isOver = ($spent > $bg && $bg > 0);
         
