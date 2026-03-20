@@ -181,12 +181,15 @@ $solde_actuel = $snapshot['amount'];
 $solde_theorique = $solde_actuel; // On part du solde actuel
 $today_day = (int)date('j'); 
 
+// CALCUL DU THEORIQUE PARTIE 1 : Appliquer les mouvements saisis après la date du relevé
 if (!empty($snapshot['date'])) {
     try {
         $stmtCalc = $pdo->prepare("SELECT SUM(amount) as total_diff FROM pf_expenses WHERE date_exp > ?");
         $stmtCalc->execute([$snapshot['date']]);
         $resDiff = $stmtCalc->fetch(PDO::FETCH_ASSOC);
         if ($resDiff && $resDiff['total_diff'] !== null) {
+            // total_diff est positif pour les dépenses, négatif pour les revenus.
+            // On le soustrait donc au solde théorique.
             $solde_theorique -= (float)$resDiff['total_diff'];
         }
     } catch (Exception $e) {}
@@ -230,6 +233,7 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
             
             if (!$isPaid) {
                 $reste_a_venir += $rawAmount;
+                // CALCUL DU THEORIQUE PARTIE 2 : Déduire les charges qui auraient dû passer
                 if ($pDay > 0 && $pDay <= $today_day) {
                     $solde_theorique -= $rawAmount;
                 }
@@ -325,39 +329,57 @@ $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $totals = array_fill_keys(array_keys($categoriesConfig), 0);
 $expensesByCategory = array_fill_keys(array_keys($categoriesConfig), []);
 
+// Préparation de la capacité max
+$capacite_max = 0;
+
 foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    // Le Vase d'Expansion fonctionne ici : 
+    $val = (float)$exp['amount'];
+    
+    // Remplissage des totaux des cartes
     if ($cat === 'Income') {
-        $totals[$cat] += abs($exp['amount']);
+        $totals[$cat] += abs($val);
     } else {
-        if ($exp['amount'] < 0) {
-            $categoriesConfig[$cat]['budget'] += abs($exp['amount']);
+        if ($val < 0) {
+            $categoriesConfig[$cat]['budget'] += abs($val);
         } else {
-            $totals[$cat] += $exp['amount'];
+            $totals[$cat] += $val;
         }
     }
     $expensesByCategory[$cat][] = $exp;
+
+    // Calcul de la Capacité Max de la jauge
+    if ($cat === 'Income') {
+        // Règle 1 : Somme des virements Revenus (val est négatif en base)
+        $capacite_max -= $val; 
+    } else {
+        // Règle 2 : Tout autre virement positif (val est négatif) non charge fixe
+        if ($val < 0 && $cat !== 'Frais') {
+            $capacite_max += abs($val);
+        }
+    }
 }
 
-// --- Calculs pour la Barre de Déchargement ---
+// Sécurité : Si 0 injection ce mois-ci, on se base sur le prévisionnel pour avoir une jauge visuelle
+if ($capacite_max <= 0) {
+    $capacite_max = $budget_income_prevu > 0 ? $budget_income_prevu : 1;
+}
+
+// --- Calculs finaux pour la Barre de Déchargement ---
 $solde_actuel = max(0, $snapshot['amount']); 
 $charges_a_venir = max(0, $reste_a_venir);
 $solde_net = max(0, $solde_actuel - $charges_a_venir);
-$charges_visibles = min($solde_actuel, $charges_a_venir); // On ne peut pas afficher plus de charges que ce qu'il reste sur le compte
+$charges_visibles = min($solde_actuel, $charges_a_venir); 
 
-// L'échelle max (100% de la barre) s'adapte à ton solde max ou ton budget prévu
-$max_scale = max($solde_actuel, $solde_theorique, $budget_income_prevu, 1);
+// Echelle Max (+10% pour l'esthétique)
+$max_scale = max($solde_actuel, $solde_theorique, $capacite_max, 1) * 1.1; 
 
-// Pourcentages (largeurs)
-$pct_net = ($solde_net / $max_scale) * 100;
-$pct_charges = ($charges_visibles / $max_scale) * 100;
-
-// Placements des repères (bloqués entre 0 et 100%)
-$pct_theorique = min(100, max(0, ($solde_theorique / $max_scale) * 100));
+$pct_net = min(100, max(0, ($solde_net / $max_scale) * 100));
+$pct_charges = min(100 - $pct_net, max(0, ($charges_visibles / $max_scale) * 100));
 $pct_actuel = min(100, max(0, ($solde_actuel / $max_scale) * 100));
+$pct_theorique = min(100, max(0, ($solde_theorique / $max_scale) * 100));
 
 function getDisplayLogic($spent, $bg, $type) {
     if ($type === 'credit') {
@@ -393,7 +415,6 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
         </div>
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:25px;">
-            
             <div style="padding:15px; background:#f8fafc; border-radius:12px; position:relative; border:1px solid #e2e8f0;">
                 <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde bancaire <span style="font-size:0.75rem;">(au <?= date('d/m', strtotime($snapshot['date'])) ?>)</span></div>
                 <div style="font-size:1.4rem; font-weight:700; color:#0f172a;">
@@ -404,7 +425,7 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 
             <div style="padding:15px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
                 <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde théorique <span style="font-size:0.75rem;">(au <?= date('d/m') ?>)</span></div>
-                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;" title="Argent qu'il devrait rester sur le compte d'après l'application.">
+                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;" title="Calcul : Solde du relevé + Apports depuis le relevé - Dépenses depuis le relevé - Charges en attente.">
                     <?= number_format($solde_theorique, 2, ',', ' ') ?> €
                 </div>
             </div>
@@ -415,51 +436,34 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
                     - <?= number_format($reste_a_venir, 2, ',', ' ') ?> €
                 </div>
             </div>
-            
         </div>
 
-        <?php
-            $solde_net = max(0, $solde_actuel - $reste_a_venir);
+        <div style="margin-top: 40px; padding: 30px 10px 45px 10px; position:relative;">
             
-            // Le 100% de la jauge (Total des revenus prévus + 10% de marge visuelle)
-            $cap_max_prevue = max($total_income, $snapshot['amount'], $solde_theorique, 1);
-            $max_scale = $cap_max_prevue * 1.1; 
-            
-            $pct_net = min(100, max(0, ($solde_net / $max_scale) * 100));
-            $pct_charges = min(100 - $pct_net, max(0, ($reste_a_venir / $max_scale) * 100));
-            
-            $pct_actuel = min(100, max(0, ($solde_actuel / $max_scale) * 100));
-            $pct_theorique = min(100, max(0, ($solde_theorique / $max_scale) * 100));
-        ?>
-        
-        <div style="margin-top: 10px; padding: 55px 10px 70px 10px; position:relative;">
-            
-            <div style="position: absolute; top: 20px; left: 0px; font-size: 0.75rem; color: #94a3b8; font-weight: 600;">0 €</div>
-            <div style="position: absolute; top: 20px; right: 0px; font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-align:right;">
-                Capacité Max : <?= number_format($cap_max_prevue, 0, ',', ' ') ?> € 
+            <div style="position: absolute; top: 0px; left: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700;">0 €</div>
+            <div style="position: absolute; top: 0px; right: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700; text-align:right;">
+                Capacité Max : <?= number_format($capacite_max, 0, ',', ' ') ?> €
             </div>
 
-            <div style="position: absolute; top: 5px; left: <?= $pct_actuel ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
-                <div style="color: #475569; font-size: 0.75rem; font-weight: 700; white-space: nowrap; margin-bottom: 2px;">Actuel</div>
-                <div style="font-size: 0.95rem; color:#0f172a; font-weight:700;"><?= number_format($solde_actuel, 0, ',', ' ') ?> €</div>
-                <div style="width: 2px; height: 12px; background: #475569; margin: 0 auto; border-radius: 2px;"></div>
+            <div style="position: absolute; top: 12px; left: <?= $pct_actuel ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
+                <div style="color: #334155; font-size: 0.75rem; font-weight: 800; white-space: nowrap; margin-bottom: 2px;">Actuel</div>
+                <div style="width: 3px; height: 18px; background: #334155; margin: 0 auto; border-radius: 2px;"></div>
             </div>
 
-            <div style="height: 18px; background: #e2e8f0; border-radius: 9px; display: flex; overflow: hidden; position: relative;">
-                <div style="width: <?= $pct_net ?>%; background: #2a6b8e; transition: 0.5s;"></div>
-                <div style="width: <?= $pct_charges ?>%; background: repeating-linear-gradient(45deg, #d18a66, #d18a66 6px, #cbd5e1 6px, #cbd5e1 12px); transition: 0.5s;" title="Provisions pour charges à venir"></div>
+            <div style="height: 24px; background: #e2e8f0; border-radius: 12px; display: flex; overflow: hidden; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="width: <?= $pct_net ?>%; background: linear-gradient(90deg, #3b82f6, #0ea5e9); transition: width 0.5s;"></div>
+                <div style="width: <?= $pct_charges ?>%; background: repeating-linear-gradient(45deg, #f59e0b, #f59e0b 8px, #fbbf24 8px, #fbbf24 16px); transition: width 0.5s;" title="Provisions pour charges à venir"></div>
             </div>
-            
-            <div style="position: absolute; top: 73px; left: <?= $pct_theorique ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
-                <div style="width: 2px; height: 12px; background: #3b82f6; margin: 0 auto 2px auto; border-radius: 2px;"></div>
-                <div style="font-size: 0.95rem; color:#3b82f6; font-weight:700;"><?= number_format($solde_theorique, 0, ',', ' ') ?> €</div>
-                <div style="color: #3b82f6; font-size: 0.75rem; font-weight: 700; white-space: nowrap;">Théorique</div>
+
+            <div style="position: absolute; top: 54px; left: <?= $pct_theorique ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
+                <div style="width: 3px; height: 18px; background: #8b5cf6; margin: 0 auto 2px auto; border-radius: 2px;"></div>
+                <div style="color: #8b5cf6; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">Théorique</div>
             </div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#64748b; font-weight:600; padding: 15px 10px 0 10px; border-top: 1px solid #f1f5f9;">
-            <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:#2a6b8e;"></span> Dispo Net : <strong style="color:#0f172a;"><?= number_format($solde_net, 0, ',', ' ') ?> €</strong></span>
-            <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:repeating-linear-gradient(45deg, #d18a66, #d18a66 4px, #cbd5e1 4px, #cbd5e1 8px);"></span> Provisions : <strong style="color:#0f172a;"><?= number_format($reste_a_venir, 0, ',', ' ') ?> €</strong></span>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#64748b; font-weight:600; padding: 15px 10px 0 10px; border-top: 1px solid #f1f5f9;">
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:#3b82f6;"></span> Dispo Net : <strong style="color:#0f172a;"><?= number_format($solde_net, 0, ',', ' ') ?> €</strong></span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:repeating-linear-gradient(45deg, #f59e0b, #f59e0b 4px, #fbbf24 4px, #fbbf24 8px);"></span> Provisions : <strong style="color:#0f172a;"><?= number_format($reste_a_venir, 0, ',', ' ') ?> €</strong></span>
         </div>
 
     </div>
