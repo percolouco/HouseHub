@@ -20,7 +20,6 @@ $prevLink = "?tab=suivi&m=$prevM&y=$prevY";
 $nextLink = "?tab=suivi&m=$nextM&y=$nextY";
 $todayLink = "?tab=suivi";
 
-
 // A. AJOUT CATÉGORIE TEMPORAIRE MANUELLE
 if (isset($_POST['action']) && $_POST['action'] === 'add_temp_cat') {
     $name = trim($_POST['cat_name']);
@@ -52,12 +51,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
 // D. SAUVEGARDE IMPORT CSV (LIGNE PAR LIGNE AVEC CHECKBOX)
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
-    
-    // On récupère le mois affiché sur l'écran lors de l'import
     $viewMonth = $_POST['view_month'] ?? $currentMonth;
     $viewYear = $_POST['view_year'] ?? $currentYear;
     
-    // 1. Catégories temporaires
     $tempCatMapping = [];
     if (!empty($_POST['new_temp_cats'])) {
         $stmtTemp = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, 0)");
@@ -87,15 +83,12 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
 
                 $finalAmount = $is_credit ? -abs($line['amount']) : abs($line['amount']);
                 
-                // NOUVEAU : GESTION DU DÉCALAGE SI LA COCHE EST SÉLECTIONNÉE
                 $dateToSave = $line['date'];
                 if (!empty($line['force_current'])) {
                     $day = date('d', strtotime($dateToSave));
-                    // On vérifie que la date existe (ex: pour éviter le 31 Février)
                     if (checkdate((int)$viewMonth, (int)$day, (int)$viewYear)) {
                         $dateToSave = "$viewYear-$viewMonth-$day";
                     } else {
-                        // Sinon, on met au dernier jour du mois visé
                         $dateToSave = date('Y-m-t', strtotime("$viewYear-$viewMonth-01"));
                     }
                 }
@@ -167,32 +160,35 @@ $today_day = (int)date('j');
 $fixedChargesList = [];
 $incomeList = []; 
 
-// 1. Récupération des IDs de charges fixes déjà payées (Dépenses uniquement)
 $stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL AND amount > 0");
 $stmtIds->execute([$currentMonth, $currentYear]);
 $paidItemIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
 
-// 2. Récupération libellés (Uniquement les dépenses pour éviter qu'un revenu ne valide une charge)
 $stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND amount > 0");
 $stmtLabels->execute([$currentMonth, $currentYear]);
 $realExpensesLabels = $stmtLabels->fetchAll(PDO::FETCH_COLUMN);
 
 // Snapshot
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
-$solde_theorique = 0;
 try {
     $snapStmt = $pdo->query("SELECT * FROM pf_bank_snapshots ORDER BY id DESC LIMIT 1");
     if ($s = $snapStmt->fetch(PDO::FETCH_ASSOC)) {
         $snapshot = ['date' => $s['snapshot_date'], 'amount' => (float)$s['amount']];
     }
 } catch (Exception $e) {}
-$solde_theorique = $snapshot['amount'];
+
+$solde_actuel = $snapshot['amount'];
+$solde_theorique = $solde_actuel; // On part du solde actuel
+$today_day = (int)date('j'); 
+
 if (!empty($snapshot['date'])) {
     try {
         $stmtCalc = $pdo->prepare("SELECT SUM(amount) as total_diff FROM pf_expenses WHERE date_exp > ?");
         $stmtCalc->execute([$snapshot['date']]);
         $resDiff = $stmtCalc->fetch(PDO::FETCH_ASSOC);
-        if ($resDiff && $resDiff['total_diff'] !== null) $solde_theorique -= (float)$resDiff['total_diff'];
+        if ($resDiff && $resDiff['total_diff'] !== null) {
+            $solde_theorique -= (float)$resDiff['total_diff'];
+        }
     } catch (Exception $e) {}
 }
 
@@ -215,7 +211,6 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     } else {
         $total_expenses_prevues += $amt;
         
-        // Calcul intelligent Reste à venir
         if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
             $isPaid = false;
             if ($isChecked === 1) $isPaid = true;
@@ -232,7 +227,13 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     }
                 }
             }
-            if (!$isPaid) $reste_a_venir += $rawAmount;
+            
+            if (!$isPaid) {
+                $reste_a_venir += $rawAmount;
+                if ($pDay > 0 && $pDay <= $today_day) {
+                    $solde_theorique -= $rawAmount;
+                }
+            }
         }
 
         if ($name === 'Estimacio F&B & beauty') $budget_fmcg = $amt;
@@ -328,7 +329,7 @@ foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    
+    // Le Vase d'Expansion fonctionne ici : 
     if ($cat === 'Income') {
         $totals[$cat] += abs($exp['amount']);
     } else {
@@ -338,39 +339,41 @@ foreach ($allExpenses as $exp) {
             $totals[$cat] += $exp['amount'];
         }
     }
-    
     $expensesByCategory[$cat][] = $exp;
 }
 
-$globalSpent = array_sum($totals);
-$globalBudget = array_sum(array_column($categoriesConfig, 'budget'));
+// --- Calculs pour la Barre de Déchargement ---
+$solde_actuel = max(0, $snapshot['amount']); 
+$charges_a_venir = max(0, $reste_a_venir);
+$solde_net = max(0, $solde_actuel - $charges_a_venir);
+$charges_visibles = min($solde_actuel, $charges_a_venir); // On ne peut pas afficher plus de charges que ce qu'il reste sur le compte
+
+// L'échelle max (100% de la barre) s'adapte à ton solde max ou ton budget prévu
+$max_scale = max($solde_actuel, $solde_theorique, $budget_income_prevu, 1);
+
+// Pourcentages (largeurs)
+$pct_net = ($solde_net / $max_scale) * 100;
+$pct_charges = ($charges_visibles / $max_scale) * 100;
+
+// Placements des repères (bloqués entre 0 et 100%)
+$pct_theorique = min(100, max(0, ($solde_theorique / $max_scale) * 100));
+$pct_actuel = min(100, max(0, ($solde_actuel / $max_scale) * 100));
 
 function getDisplayLogic($spent, $bg, $type) {
     if ($type === 'credit') {
-        // Pour les revenus : $spent = revenu perçu, $bg = revenu prévu
         $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0); 
-        $isOver = false; // On n'est jamais "dans le rouge" avec les revenus !
-        
-        if ($bg > 0) {
-            $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
-        } else {
-            $text = number_format(ceil($spent), 0, ',', ' ') . ' €';
-        }
+        $isOver = false;
+        if ($bg > 0) { $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €'; } 
+        else { $text = number_format(ceil($spent), 0, ',', ' ') . ' €'; }
     } else {
-        // Pour les dépenses
         $pct = ($bg > 0) ? min(100, ($spent / $bg) * 100) : ($spent > 0 ? 100 : 0);
         $isOver = ($spent > $bg && $bg > 0);
-        
-        if ($bg > 0) {
-            $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €';
-        } else {
-            $text = number_format(ceil($spent), 0, ',', ' ') . ' €';
-        }
+        if ($bg > 0) { $text = number_format(ceil($spent), 0, ',', ' ') . ' / ' . number_format(ceil($bg), 0, ',', ' ') . ' €'; } 
+        else { $text = number_format(ceil($spent), 0, ',', ' ') . ' €'; }
     }
     return ['pct' => $pct, 'isOver' => $isOver, 'text' => $text];
 }
 
-// Nom du mois en français (Compatible PHP 8+)
 $moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 ?>
@@ -378,54 +381,87 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 
 <div class="budget-view">
 
-    <div style="background:white; padding:20px; border-radius:16px; box-shadow:var(--shadow-sm); margin-bottom:30px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
-            <div>
-                <div style="display:flex; align-items:center; gap:15px; margin-bottom:5px;">
-                <h2 style="margin:0; text-transform:capitalize;">Suivi : <?= $monthName ?></h2>
-                    <div class="suivi-nav-group">
-                        <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
-                        <a href="<?= $todayLink ?>" class="suivi-btn-nav">Auj.</a>
-                        <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
-                    </div>
-                </div>
-                
-                <div style="margin-top:4px; font-size:0.9rem; color:#64748b;">
-                    Charges à venir : <strong class="fade-pulse" style="color:#f59e0b;"><?= number_format(ceil($reste_a_venir), 0, ',', ' ') ?> €</strong>
-                </div>
-                
-                <div style="margin-top:4px; font-size:0.9rem; color:#64748b; display:flex; align-items:center; gap:5px;">
-                    Solde au <?= date('d/m', strtotime($snapshot['date'])) ?> : 
-                    <strong style="color:#1e293b;"><?= number_format($snapshot['amount'], 2, ',', ' ') ?> €</strong>
-                    <button onclick="openSuiviModal('snapshotModal')" style="background:none; border:none; cursor:pointer; font-size:0.9rem; padding:0; filter:grayscale(1);">✏️</button>
-                </div>
-
-                <div style="margin-top:4px; font-size:0.9rem; color:#64748b; display:flex; align-items:center; gap:5px;">
-                    Solde théorique au <?= date('d/m') ?> : 
-                    <strong style="color:#3b82f6;"><?= number_format($solde_theorique, 2, ',', ' ') ?> €</strong>
-                </div>
-            </div>
-            <div style="text-align:right;">
-                <span style="font-size:0.85rem; color:#94a3b8;">Total Mouvements</span>
+    <div style="background:white; padding:20px; border-radius:16px; box-shadow:var(--shadow-sm); margin-bottom:24px; border:1px solid #e2e8f0;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom: 20px;">
+            <h2 style="margin:0; font-size:1.3rem; color:#0f172a; text-transform:capitalize;">Suivi : <?= $monthName ?></h2>
+            <div class="suivi-nav-group">
+                <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
+                <a href="<?= $todayLink ?>" class="suivi-btn-nav">Auj.</a>
+                <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
             </div>
         </div>
 
-        <div class="progress-grid">
-            <?php foreach ($categoriesConfig as $key => $conf): 
-                $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']);
-                $barCol = ($key === 'Income') ? '#10b981' : ($logic['isOver'] ? '#ef4444' : $conf['color']);
-            ?>
-            <div class="progress-card">
-                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:5px;">
-                    <span style="font-weight:600; color:<?= $conf['color'] ?>"><?= $conf['label'] ?></span>
-                    <span><?= $logic['text'] ?></span>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:25px;">
+            
+            <div style="padding:15px; background:#f8fafc; border-radius:12px; position:relative; border:1px solid #e2e8f0;">
+                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde bancaire <span style="font-size:0.75rem;">(au <?= date('d/m', strtotime($snapshot['date'])) ?>)</span></div>
+                <div style="font-size:1.4rem; font-weight:700; color:#0f172a;">
+                    <?= number_format($solde_actuel, 2, ',', ' ') ?> €
                 </div>
-                <div style="background:#f1f5f9; height:8px; border-radius:4px; overflow:hidden;">
-                    <div style="width:<?= $logic['pct'] ?>%; background:<?= $barCol ?>; height:100%;"></div>
+                <button onclick="openSuiviModal('snapshotModal')" style="position:absolute; top:12px; right:12px; background:white; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:0.8rem; color:#475569; transition:0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">✏️ MàJ</button>
+            </div>
+
+            <div style="padding:15px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde théorique <span style="font-size:0.75rem;">(au <?= date('d/m') ?>)</span></div>
+                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;" title="Argent qu'il devrait rester sur le compte d'après l'application.">
+                    <?= number_format($solde_theorique, 2, ',', ' ') ?> €
                 </div>
             </div>
-            <?php endforeach; ?>
+
+            <div style="padding:15px; background:#fef2f2; border-radius:12px; border:1px solid #fecaca;">
+                <div style="font-size:0.85rem; color:#991b1b; margin-bottom:4px;">Charges fixes à venir</div>
+                <div style="font-size:1.4rem; font-weight:700; color:#b91c1c;">
+                    - <?= number_format($reste_a_venir, 2, ',', ' ') ?> €
+                </div>
+            </div>
+            
         </div>
+
+        <?php
+            $solde_net = max(0, $solde_actuel - $reste_a_venir);
+            
+            // Le 100% de la jauge (Total des revenus prévus + 10% de marge visuelle)
+            $cap_max_prevue = max($total_income, $snapshot['amount'], $solde_theorique, 1);
+            $max_scale = $cap_max_prevue * 1.1; 
+            
+            $pct_net = min(100, max(0, ($solde_net / $max_scale) * 100));
+            $pct_charges = min(100 - $pct_net, max(0, ($reste_a_venir / $max_scale) * 100));
+            
+            $pct_actuel = min(100, max(0, ($solde_actuel / $max_scale) * 100));
+            $pct_theorique = min(100, max(0, ($solde_theorique / $max_scale) * 100));
+        ?>
+        
+        <div style="margin-top: 10px; padding: 55px 10px 70px 10px; position:relative;">
+            
+            <div style="position: absolute; top: 20px; left: 0px; font-size: 0.75rem; color: #94a3b8; font-weight: 600;">0 €</div>
+            <div style="position: absolute; top: 20px; right: 0px; font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-align:right;">
+                Capacité Max : <?= number_format($cap_max_prevue, 0, ',', ' ') ?> € 
+            </div>
+
+            <div style="position: absolute; top: 5px; left: <?= $pct_actuel ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
+                <div style="color: #475569; font-size: 0.75rem; font-weight: 700; white-space: nowrap; margin-bottom: 2px;">Actuel</div>
+                <div style="font-size: 0.95rem; color:#0f172a; font-weight:700;"><?= number_format($solde_actuel, 0, ',', ' ') ?> €</div>
+                <div style="width: 2px; height: 12px; background: #475569; margin: 0 auto; border-radius: 2px;"></div>
+            </div>
+
+            <div style="height: 18px; background: #e2e8f0; border-radius: 9px; display: flex; overflow: hidden; position: relative;">
+                <div style="width: <?= $pct_net ?>%; background: #2a6b8e; transition: 0.5s;"></div>
+                <div style="width: <?= $pct_charges ?>%; background: repeating-linear-gradient(45deg, #d18a66, #d18a66 6px, #cbd5e1 6px, #cbd5e1 12px); transition: 0.5s;" title="Provisions pour charges à venir"></div>
+            </div>
+            
+            <div style="position: absolute; top: 73px; left: <?= $pct_theorique ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
+                <div style="width: 2px; height: 12px; background: #3b82f6; margin: 0 auto 2px auto; border-radius: 2px;"></div>
+                <div style="font-size: 0.95rem; color:#3b82f6; font-weight:700;"><?= number_format($solde_theorique, 0, ',', ' ') ?> €</div>
+                <div style="color: #3b82f6; font-size: 0.75rem; font-weight: 700; white-space: nowrap;">Théorique</div>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#64748b; font-weight:600; padding: 15px 10px 0 10px; border-top: 1px solid #f1f5f9;">
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:#2a6b8e;"></span> Dispo Net : <strong style="color:#0f172a;"><?= number_format($solde_net, 0, ',', ' ') ?> €</strong></span>
+            <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:repeating-linear-gradient(45deg, #d18a66, #d18a66 4px, #cbd5e1 4px, #cbd5e1 8px);"></span> Provisions : <strong style="color:#0f172a;"><?= number_format($reste_a_venir, 0, ',', ' ') ?> €</strong></span>
+        </div>
+
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px;">
@@ -474,9 +510,7 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                     <div style="display:flex; align-items:center; gap:15px;">
                         <h3 style="margin:0;">Valider l'importation</h3>
-                        
                     </div>
-                    
                     <div>
                         <span id="missingCount" style="color:#ef4444; background:#fee2e2; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; display:none; margin-right:10px;"></span>
                         <button type="button" class="btn-icon-small" onclick="openSuiviModal('newCatModal')" title="Créer une catégorie" style="display:inline-flex; vertical-align:middle; width:auto; padding:4px 10px;">➕ Catégorie</button>
@@ -504,9 +538,7 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
                                 </td>
                                 <td style="white-space:nowrap; vertical-align: top; padding-top: 12px;">
                                     <div style="font-weight:600; color:#1e293b; line-height:1;"><?= date('d/m/Y', strtotime($row['date'])) ?></div>
-                                    
                                     <?php 
-                                    // On vérifie si la transaction appartient à un autre mois que celui affiché
                                     $transMonthStr = date('m-Y', strtotime($row['date']));
                                     $viewMonthStr = str_pad($currentMonth, 2, '0', STR_PAD_LEFT) . '-' . $currentYear;
                                     
