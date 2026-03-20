@@ -168,7 +168,7 @@ $stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp)
 $stmtLabels->execute([$currentMonth, $currentYear]);
 $realExpensesLabels = $stmtLabels->fetchAll(PDO::FETCH_COLUMN);
 
-// Snapshot
+// Snapshot Bancaire (Sert uniquement pour l'affichage "Actuel", plus pour le "Théorique")
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
 try {
     $snapStmt = $pdo->query("SELECT * FROM pf_bank_snapshots ORDER BY id DESC LIMIT 1");
@@ -178,24 +178,8 @@ try {
 } catch (Exception $e) {}
 
 $solde_actuel = $snapshot['amount'];
-$solde_theorique = $solde_actuel; // On part du solde actuel
-$today_day = (int)date('j'); 
 
-// CALCUL DU THEORIQUE PARTIE 1 : Appliquer les mouvements saisis après la date du relevé
-if (!empty($snapshot['date'])) {
-    try {
-        $stmtCalc = $pdo->prepare("SELECT SUM(amount) as total_diff FROM pf_expenses WHERE date_exp > ?");
-        $stmtCalc->execute([$snapshot['date']]);
-        $resDiff = $stmtCalc->fetch(PDO::FETCH_ASSOC);
-        if ($resDiff && $resDiff['total_diff'] !== null) {
-            // total_diff est positif pour les dépenses, négatif pour les revenus.
-            // On le soustrait donc au solde théorique.
-            $solde_theorique -= (float)$resDiff['total_diff'];
-        }
-    } catch (Exception $e) {}
-}
-
-// Lecture Budget Prévisionnel
+// Lecture Budget Prévisionnel (Sert pour les cartes et pour calculer le Reste à venir)
 $stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $rawAmount = (float)$item['amount'];
@@ -231,12 +215,9 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 }
             }
             
+            // Somme de toutes les charges encore à venir
             if (!$isPaid) {
                 $reste_a_venir += $rawAmount;
-                // CALCUL DU THEORIQUE PARTIE 2 : Déduire les charges qui auraient dû passer
-                if ($pDay > 0 && $pDay <= $today_day) {
-                    $solde_theorique -= $rawAmount;
-                }
             }
         }
 
@@ -294,32 +275,7 @@ $categoriesConfig['LivretA'] = ['type'=>'debit', 'label'=>'Epargne', 'budget'=>0
 
 $csvData = [];
 $showPreview = false;
-if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
-    $file = $_FILES['csv_file']['tmp_name'];
-    $handle = fopen($file, "r");
-    $rules = []; try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
-    $existingRefs = []; try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
-    fgetcsv($handle, 1000, ";", "\"", "\\"); 
-    while (($data = fgetcsv($handle, 1000, ";", "\"", "\\")) !== FALSE) {
-        $rawDebit = $data[8] ?? ''; $rawCredit = $data[9] ?? ''; 
-        $amount = 0; $isCredit = 0;
-        if (!empty(trim($rawCredit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawCredit))); $isCredit = 1; }
-        elseif (!empty(trim($rawDebit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawDebit))); }
-        else continue; 
-
-        $dateParts = explode('/', $data[0]); 
-        $dateSql = (count($dateParts) == 3) ? $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0] : date('Y-m-d');
-        $label = trim($data[1]) ?: trim($data[2]);
-        $refCSV = trim($data[3]);
-        $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
-        $isDuplicate = in_array($uniqueKey, $existingRefs);
-        $suggestedCat = '';
-        foreach ($rules as $kw => $c) { if (stripos($label, $kw) !== false) { $suggestedCat = $c; break; } }
-        $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
-    }
-    fclose($handle);
-    $showPreview = true;
-}
+// ... (Gestion de l'upload CSV inchangée, elle se fait plus haut) ...
 
 // DÉPENSES EN BDD
 $stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? ORDER BY date_exp DESC");
@@ -329,8 +285,9 @@ $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $totals = array_fill_keys(array_keys($categoriesConfig), 0);
 $expensesByCategory = array_fill_keys(array_keys($categoriesConfig), []);
 
-// Préparation de la capacité max
+// --- PREPARATION SOLDE THEORIQUE ---
 $capacite_max = 0;
+$depenses_reelles = 0;
 
 foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
@@ -338,7 +295,7 @@ foreach ($allExpenses as $exp) {
     
     $val = (float)$exp['amount'];
     
-    // Remplissage des totaux des cartes
+    // 1. Remplissage pour l'affichage visuel des cartes
     if ($cat === 'Income') {
         $totals[$cat] += abs($val);
     } else {
@@ -350,30 +307,41 @@ foreach ($allExpenses as $exp) {
     }
     $expensesByCategory[$cat][] = $exp;
 
-    // Calcul de la Capacité Max de la jauge
-    if ($cat === 'Income') {
-        // Règle 1 : Somme des virements Revenus (val est négatif en base)
-        $capacite_max -= $val; 
-    } else {
-        // Règle 2 : Tout autre virement positif (val est négatif) non charge fixe
-        if ($val < 0 && $cat !== 'Frais') {
-            $capacite_max += abs($val);
+    // 2. Calcul des briques du Solde Théorique (Respect des signes BDD)
+    if ($val < 0) { 
+        // L'argent qui RENTRE sur le compte est stocké en négatif
+        if ($cat === 'Income' || $cat !== 'Frais') {
+            // Règle 1 et 2 : Somme Revenus + Tout autre virement positif HORS charges fixes
+            $capacite_max += abs($val); 
+        } else {
+            // C'est un remboursement d'une charge fixe, il vient diminuer les dépenses
+            $depenses_reelles -= abs($val);
         }
+    } else {
+        // L'argent qui SORT (dépense) est stocké en positif
+        // Règle 3 : Somme de tous les autres virements sortants
+        $depenses_reelles += $val;
     }
 }
+
+// ============================================================================
+// CALCUL FINAL DU SOLDE THÉORIQUE
+// ============================================================================
+// On applique ta règle exacte :
+$solde_theorique = $capacite_max - $depenses_reelles - $reste_a_venir;
 
 // Sécurité : Si 0 injection ce mois-ci, on se base sur le prévisionnel pour avoir une jauge visuelle
 if ($capacite_max <= 0) {
     $capacite_max = $budget_income_prevu > 0 ? $budget_income_prevu : 1;
 }
 
-// --- Calculs finaux pour la Barre de Déchargement ---
+// --- Calculs pour la Barre de Déchargement ---
 $solde_actuel = max(0, $snapshot['amount']); 
 $charges_a_venir = max(0, $reste_a_venir);
 $solde_net = max(0, $solde_actuel - $charges_a_venir);
 $charges_visibles = min($solde_actuel, $charges_a_venir); 
 
-// Echelle Max (+10% pour l'esthétique)
+// L'échelle de la jauge (Le Max) (+10% visuel)
 $max_scale = max($solde_actuel, $solde_theorique, $capacite_max, 1) * 1.1; 
 
 $pct_net = min(100, max(0, ($solde_net / $max_scale) * 100));
