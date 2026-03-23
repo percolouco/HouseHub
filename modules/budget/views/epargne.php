@@ -86,7 +86,7 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
                         <th class="sticky-col" style="background:#f8fafc;">Poste / Mois</th>
                         <?php foreach ($months as $month): ?>
                             <th>
-                                <div class="month-header-container">
+                                <div class="month-header-container" style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
                                     <div style="display:flex; flex-direction:column; text-align:center;">
                                         <span class="month-name"><?= date('M Y', strtotime($month)) ?></span>
                                         <?php 
@@ -96,7 +96,7 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
                                         }
                                         ?>
                                     </div>
-                                    <div class="month-actions">
+                                    <div class="month-actions" style="justify-content: center; width: 100%;">
                                         <button class="btn-icon-small" title="Modifier avec Modale"
                                                 data-json="<?= htmlspecialchars(json_encode($data[$month] ?? []), ENT_QUOTES, 'UTF-8') ?>"
                                                 onclick='editCustomSavingsMonth("<?= $month ?>", "<?= $currentOwner ?>", JSON.parse(this.getAttribute("data-json")))'>
@@ -147,7 +147,6 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
                                            value="<?= $amount != 0 ? round($amount) : '' ?>" 
                                            placeholder="-"
                                            onchange="updateEpargneCell('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= $currentOwner ?>', this)">
-                                    <span style="color:var(--text-muted); font-size:0.8rem;">€</span>
                                 </div>
                             </td>
                         <?php endforeach; ?>
