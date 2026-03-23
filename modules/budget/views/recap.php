@@ -9,7 +9,7 @@ $items = $stmt->fetchAll();
 $currentMonth = date('m');
 $currentYear = date('Y');
 
-$stmtExp = $pdo->prepare("SELECT amount, label, budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
+$stmtExp = $pdo->prepare("SELECT amount, label, category, budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
 $stmtExp->execute([$currentMonth, $currentYear]);
 $allExpenses = $stmtExp->fetchAll(PDO::FETCH_ASSOC);
 
@@ -54,6 +54,9 @@ $totalRevenus = 0;
                         if (!empty($exp['budget_item_id']) && (int)$exp['budget_item_id'] === (int)$item['id']) {
                             $match = true;
                         } 
+                        elseif ($exp['category'] === 'School' && trim($item['name']) === 'Estimacio escola') {
+                            $match = true;
+                        }
                         elseif (empty($exp['budget_item_id']) && !empty($item['mapping_keywords'])) {
                             $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
                             foreach ($keywords as $kw) {
@@ -65,9 +68,6 @@ $totalRevenus = 0;
                         }
 
                         if ($match) {
-                            // Avec la nouvelle norme, on additionne simplement les montants.
-                            // Si c'est une dépense, ça s'additionne en négatif.
-                            // S'il y a un remboursement partiel, le "+" vient réduire le "-". C'est mathématiquement parfait.
                             $realSum += (float)$exp['amount'];
                             $hasMatchingExpense = true;
                         }

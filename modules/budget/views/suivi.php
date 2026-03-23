@@ -18,13 +18,37 @@ $prevLink = "?tab=suivi&m=$prevM&y=$prevY";
 $nextLink = "?tab=suivi&m=$nextM&y=$nextY";
 $todayLink = "?tab=suivi";
 
+// ============================================================================
+// NOUVEAU : CONFIGURATION DU CYCLE (Dates personnalisées)
+// ============================================================================
+// 1. On lit la configuration du mois en cours
+$stmtConfig = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'month_config' AND reference_id = ?");
+$stmtConfig->execute([$currentMonthKey]);
+$configJson = $stmtConfig->fetchColumn();
+$monthConfig = $configJson ? json_decode($configJson, true) : null;
+
+$customStartDate = $monthConfig['start_date'] ?? "$currentYear-$currentMonth-01";
+$customStartBalance = $monthConfig['start_balance'] ?? 0;
+
+// 2. On lit la configuration du mois SUIVANT pour fermer le cycle proprement
+$nextMonthKey = str_pad($nextM, 2, '0', STR_PAD_LEFT) . '-' . $nextY;
+$stmtNextConfig = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'month_config' AND reference_id = ?");
+$stmtNextConfig->execute([$nextMonthKey]);
+$nextConfigJson = $stmtNextConfig->fetchColumn();
+$nextConfig = $nextConfigJson ? json_decode($nextConfigJson, true) : null;
+
+// La date de fin est soit la veille du prochain cycle, soit la fin du mois calendaire
+if ($nextConfig && !empty($nextConfig['start_date'])) {
+    $customEndDate = date('Y-m-d', strtotime($nextConfig['start_date'] . ' -1 day'));
+} else {
+    $customEndDate = date('Y-m-t', strtotime("$currentYear-$currentMonth-01"));
+}
+
 // A. AJOUT CATÉGORIE TEMPORAIRE MANUELLE
 if (isset($_POST['action']) && $_POST['action'] === 'add_temp_cat') {
     $name = trim($_POST['cat_name']);
-    $budget = floatval($_POST['cat_budget']); // Saisi en positif par l'utilisateur
+    $budget = floatval($_POST['cat_budget']); 
     $type = $_POST['cat_type'] === 'credit' ? 'credit' : 'debit';
-    
-    // Si c'est un budget alloué (débit), on le stocke en négatif
     if ($type === 'debit') $budget = -$budget;
 
     if ($name) {
@@ -82,7 +106,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                     $cat = 'TEMP_' . $tempCatMapping[$cat];
                 }
 
-                // LOGIQUE INVERSÉE : Crédit = Positif, Débit = Négatif
                 $finalAmount = $is_credit ? abs($line['amount']) : -abs($line['amount']);
                 
                 $dateToSave = $line['date'];
@@ -103,7 +126,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
             }
         }
     }
-    
     header("Location: ?tab=suivi&m=$viewMonth&y=$viewYear&msg=imported_$count"); exit;
 }
 
@@ -113,22 +135,15 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
     $cat = $_POST['category']; 
     $amount = floatval($_POST['amount']); 
     $date = $_POST['date'];
-    
     $label = trim($_POST['label']);
     $budgetItemId = null;
     $holidayId = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
 
-    if ($cat === 'School' && !empty($_POST['label_select'])) {
-        $label = trim($_POST['label_select']);
-    } 
-    elseif (($cat === 'Frais' || $cat === 'Income') && !empty($_POST['budget_item_id'])) {
-        $budgetItemId = (int)$_POST['budget_item_id'];
-    }
+    if ($cat === 'School' && !empty($_POST['label_select'])) $label = trim($_POST['label_select']);
+    elseif (($cat === 'Frais' || $cat === 'Income') && !empty($_POST['budget_item_id'])) $budgetItemId = (int)$_POST['budget_item_id'];
 
     if ($label && $amount > 0) {
         $is_credit = isset($_POST['is_credit']) ? (int)$_POST['is_credit'] : 0;
-        
-        // LOGIQUE INVERSÉE : Crédit = Positif, Débit = Négatif
         $finalAmount = $is_credit ? abs($amount) : -abs($amount);
         
         if ($id) {
@@ -160,18 +175,16 @@ $budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0; $b
 $total_income = 0; $total_expenses_prevues = 0;
 $reste_a_venir = 0; 
 $today_day = (int)date('j'); 
-
 $fixedChargesList = [];
 $incomeList = []; 
 
-// On sélectionne les charges qui ont un montant NÉGATIF ou POSITIF selon la nouvelle règle (plus besoin de filtrer sur > 0)
-$stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL");
-$stmtIds->execute([$currentMonth, $currentYear]);
+// MODIFICATION : Les requêtes ciblent désormais les bornes du CYCLE personnalisé, plus le mois strict !
+$stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE date_exp >= ? AND date_exp <= ? AND budget_item_id IS NOT NULL");
+$stmtIds->execute([$customStartDate, $customEndDate]);
 $paidItemIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
 
-// On récupère uniquement les libellés des dépenses (montant < 0)
-$stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND amount < 0");
-$stmtLabels->execute([$currentMonth, $currentYear]);
+$stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE date_exp >= ? AND date_exp <= ? AND amount < 0");
+$stmtLabels->execute([$customStartDate, $customEndDate]);
 $realExpensesLabels = $stmtLabels->fetchAll(PDO::FETCH_COLUMN);
 
 // Snapshot Bancaire
@@ -188,16 +201,15 @@ $solde_actuel = $snapshot['amount'];
 // Lecture Budget Prévisionnel
 $stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    // Les montants en base ont leur vrai signe (- pour dépense, + pour revenu)
     $rawAmount = (float)$item['amount'];
-    $absAmount = abs($rawAmount); // On utilise l'absolu pour le visuel des jauges
+    $absAmount = abs($rawAmount); 
     $amt = ($item['type'] === 'Annuel') ? $absAmount / 12 : $absAmount;
     $name = trim($item['name']);
     $pDay = (int)$item['payment_day'];
     $isChecked = (int)$item['is_checked'];
     
     if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
-        $fixedChargesList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount]; // Passé en array propre pour l'HTML
+        $fixedChargesList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount]; 
     }
     if ($item['category'] === 'income') {
         $incomeList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount];
@@ -222,10 +234,7 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     }
                 }
             }
-            
-            if (!$isPaid) {
-                $reste_a_venir += $absAmount;
-            }
+            if (!$isPaid) $reste_a_venir += $absAmount;
         }
 
         if ($name === 'Estimacio F&B & beauty') $budget_fmcg = $amt;
@@ -237,25 +246,18 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// Catégories Temporaires
 $tempCats = []; $total_temp_budget = 0;
 try {
     $stmt = $pdo->prepare("SELECT * FROM pf_monthly_categories WHERE month_year = ?");
     $stmt->execute([$currentMonthKey]);
     $tempCats = $stmt->fetchAll(PDO::FETCH_ASSOC);
     foreach($tempCats as $tc) {
-        if ($tc['type'] === 'debit') {
-            $total_temp_budget += abs($tc['budget']);
-        }
+        if ($tc['type'] === 'debit') $total_temp_budget += abs($tc['budget']);
     }
 } catch (Exception $e) {}
 
 $budget_autres = $total_income - ($total_expenses_prevues + $total_temp_budget);
 if ($budget_autres < 0) $budget_autres = 0;
-
-// ============================================================================
-// 3. CONFIGURATION CATÉGORIES
-// ============================================================================
 
 $categoriesConfig = [
     'Income' => ['type'=>'credit', 'label'=>'Revenus', 'budget'=>$budget_income_prevu, 'color'=>'#10b981', 'suggestions'=>[]],
@@ -277,11 +279,11 @@ $categoriesConfig['Autres'] = ['type'=>'debit', 'label'=>'Autres / Imprévus', '
 $categoriesConfig['LivretA'] = ['type'=>'debit', 'label'=>'Epargne', 'budget'=>0, 'color'=>'#8b5cf6', 'suggestions'=>['Virement']];
 
 // ============================================================================
-// 4. DONNÉES RÉELLES & IMPORT
+// 4. DONNÉES RÉELLES (Sur la période du cycle)
 // ============================================================================
-
 $csvData = [];
 $showPreview = false;
+// ... (Gestion CSV Upload inchangée ici)
 if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $file = $_FILES['csv_file']['tmp_name'];
     $handle = fopen($file, "r");
@@ -309,54 +311,55 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $showPreview = true;
 }
 
-// DÉPENSES EN BDD
-$stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? ORDER BY date_exp DESC");
-$stmt->execute([$currentMonth, $currentYear]);
+// MODIFICATION : Dépenses ciblées sur les bornes du cycle !
+$stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE date_exp >= ? AND date_exp <= ? ORDER BY date_exp DESC");
+$stmt->execute([$customStartDate, $customEndDate]);
 $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $totals = array_fill_keys(array_keys($categoriesConfig), 0);
 $expensesByCategory = array_fill_keys(array_keys($categoriesConfig), []);
 
-$capacite_max = 0;
+// --- PREPARATION SOLDE THEORIQUE SUR LE CYCLE ---
+$solde_initial = $customStartBalance; 
+$total_rentrees = 0;
 $depenses_reelles = 0;
 
 foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    $val = (float)$exp['amount']; // NOUVELLE RÈGLE : + = Revenu/Remboursement, - = Dépense
+    $val = (float)$exp['amount'];
     
-    // 1. Remplissage Visuel des cartes
-    if ($cat === 'Income') {
-        $totals[$cat] += $val;
+    // 1. UI Cards
+    if ($cat === 'Income') { 
+        $totals[$cat] += $val; 
     } else {
-        if ($val > 0) {
-            // C'est un remboursement d'une dépense (+), il augmente le budget
-            $categoriesConfig[$cat]['budget'] += $val;
-        } else {
-            // C'est une dépense normale (-), on l'ajoute au total dépensé (en valeur absolue pour l'UI)
-            $totals[$cat] += abs($val);
-        }
+        if ($val > 0) $categoriesConfig[$cat]['budget'] += $val;
+        else $totals[$cat] += abs($val);
     }
     $expensesByCategory[$cat][] = $exp;
 
-    // 2. Calcul du Théorique
+    // 2. Mathématiques pures
     if ($val > 0) { 
         if ($cat === 'Income' || $cat !== 'Frais') {
-            $capacite_max += $val; 
+            $total_rentrees += $val; // Rentrées d'argent
         } else {
-            $depenses_reelles -= $val;
+            $depenses_reelles -= $val; // Remboursement d'une charge fixe
         }
     } else {
         $depenses_reelles += abs($val);
     }
 }
 
-$solde_theorique = $capacite_max - $depenses_reelles - $reste_a_venir;
+// 3. Calcul de la Capacité Max Dynamique
+$rentrees_salaires_reels = $totals['Income'];
+$rentrees_autres = $total_rentrees - $rentrees_salaires_reels;
 
-if ($capacite_max <= 0) {
-    $capacite_max = $budget_income_prevu > 0 ? $budget_income_prevu : 1;
-}
+// Capacité Max = Solde de départ + (le plus grand entre le salaire prévu et reçu) + rentrées annexes
+$capacite_max = $solde_initial + max($rentrees_salaires_reels, $budget_income_prevu) + $rentrees_autres;
+
+// SOLDE THÉORIQUE = Solde initial + Toutes les rentrées réelles - Dépenses - Charges à venir
+$solde_theorique = ($solde_initial + $total_rentrees) - $depenses_reelles - $reste_a_venir;
 
 $solde_net = max(0, $solde_actuel - $reste_a_venir);
 $charges_visibles = min($solde_actuel, $reste_a_venir); 
@@ -385,19 +388,27 @@ function getDisplayLogic($spent, $bg, $type) {
 
 $moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
+$cycleDisplay = date('d/m', strtotime($customStartDate)) . ' au ' . date('d/m', strtotime($customEndDate));
 ?>
-
 
 <div class="budget-view">
 
     <div style="background:white; padding:20px; border-radius:16px; box-shadow:var(--shadow-sm); margin-bottom:24px; border:1px solid #e2e8f0;">
         
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom: 20px;">
-            <h2 style="margin:0; font-size:1.3rem; color:#0f172a; text-transform:capitalize;">Suivi : <?= $monthName ?></h2>
-            <div class="suivi-nav-group">
-                <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
-                <a href="<?= $todayLink ?>" class="suivi-btn-nav">Auj.</a>
-                <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <h2 style="margin:0; font-size:1.3rem; color:#0f172a; text-transform:capitalize;">Suivi : <?= $monthName ?></h2>
+                <span style="background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:600; border:1px solid #bae6fd;">
+                    Cycle du <?= $cycleDisplay ?>
+                </span>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="document.getElementById('configMonthModal').style.display='flex'" class="pf-btn btn-secondary" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem; border:1px solid #cbd5e1; color:#475569;">⚙️ Cycle</button>
+                <div class="suivi-nav-group">
+                    <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
+                    <a href="<?= $todayLink ?>" class="suivi-btn-nav">Auj.</a>
+                    <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
+                </div>
             </div>
         </div>
 
@@ -411,8 +422,8 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
             </div>
 
             <div style="padding:15px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
-                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde théorique <span style="font-size:0.75rem;">(au <?= date('d/m') ?>)</span></div>
-                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;" title="Calcul : Capacité Max - Dépenses Réelles - Charges en attente.">
+                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde théorique <span style="font-size:0.75rem;">(Fin de cycle)</span></div>
+                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;" title="Solde Initial + Rentrées - Sorties - Charges à venir">
                     <?= number_format($solde_theorique, 2, ',', ' ') ?> €
                 </div>
             </div>
@@ -426,7 +437,6 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
         </div>
 
         <div style="margin-top: 40px; padding: 30px 10px 45px 10px; position:relative;">
-            
             <div style="position: absolute; top: 0px; left: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700;">0 €</div>
             <div style="position: absolute; top: 0px; right: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700; text-align:right;">
                 Capacité Max : <?= number_format($capacite_max, 0, ',', ' ') ?> €
@@ -452,7 +462,6 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
             <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:#3b82f6;"></span> Dispo Net : <strong style="color:#0f172a;"><?= number_format($solde_net, 0, ',', ' ') ?> €</strong></span>
             <span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:3px; background:repeating-linear-gradient(45deg, #f59e0b, #f59e0b 4px, #fbbf24 4px, #fbbf24 8px);"></span> Provisions : <strong style="color:#0f172a;"><?= number_format($reste_a_venir, 0, ',', ' ') ?> €</strong></span>
         </div>
-
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:20px;">
@@ -529,17 +538,6 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
                                 </td>
                                 <td style="white-space:nowrap; vertical-align: top; padding-top: 12px;">
                                     <div style="font-weight:600; color:#1e293b; line-height:1;"><?= date('d/m/Y', strtotime($row['date'])) ?></div>
-                                    <?php 
-                                    $transMonthStr = date('m-Y', strtotime($row['date']));
-                                    $viewMonthStr = str_pad($currentMonth, 2, '0', STR_PAD_LEFT) . '-' . $currentYear;
-                                    
-                                    if ($transMonthStr !== $viewMonthStr): 
-                                    ?>
-                                        <label style="display:inline-flex; align-items:center; margin-top:6px; font-size:0.7rem; color:#4f46e5; cursor:pointer; background:#e0e7ff; padding:2px 6px; border-radius:4px; border:1px solid #c7d2fe; transition:all 0.2s;" onmouseover="this.style.background='#c7d2fe'" onmouseout="this.style.background='#e0e7ff'">
-                                            <input type="checkbox" name="lines[<?= $idx ?>][force_current]" value="1" style="appearance:auto; width:12px; height:12px; margin:0 4px 0 0; border:none;">
-                                            → <?= $moisFr[(int)$currentMonth] ?>
-                                        </label>
-                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?= htmlspecialchars($row['label']) ?>
@@ -557,14 +555,14 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
                                             <?php endforeach; ?>
                                         </select>
                                         
-                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-frais" onchange="checkValidation()" style="display:none; flex:1; border-color:#ef4444; background:#fef2f2;">
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-frais" onchange="checkValidation()" style="display:none; flex:1; border-color:#ef4444; background:#fef2f2;" disabled>
                                             <option value="">-- Quelle Charge ? --</option>
                                             <?php foreach ($fixedChargesList as $fc): ?>
                                                 <option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?> (<?= number_format($fc['amount'],0) ?>€)</option>
                                             <?php endforeach; ?>
                                         </select>
 
-                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-income" onchange="checkValidation()" style="display:none; flex:1; border-color:#10b981; background:#f0fdf4;">
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input budget-item-select select-income" onchange="checkValidation()" style="display:none; flex:1; border-color:#10b981; background:#f0fdf4;" disabled>
                                             <option value="">-- Quel Revenu ? --</option>
                                             <?php foreach ($incomeList as $inc): ?>
                                                 <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],0) ?>€)</option>
@@ -705,7 +703,7 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 
             <div class="form-group" id="blockInputFrais" style="margin-bottom:15px; display:none;">
                 <label class="pf-label" style="color:#ef4444;">Choisir la charge fixe</label>
-                <select name="budget_item_id" id="fraisSelect" class="pf-input" style="border-color:#ef4444; background:#fef2f2;">
+                <select name="budget_item_id" id="fraisSelect" class="pf-input" style="border-color:#ef4444; background:#fef2f2;" disabled>
                     <option value="">-- Sélectionner --</option>
                     <?php foreach ($fixedChargesList as $fc): ?>
                         <option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?> (<?= number_format($fc['amount'],2) ?>€)</option>
@@ -715,7 +713,7 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 
             <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
                 <label class="pf-label" style="color:#10b981;">Choisir le revenu</label>
-                <select name="budget_item_id" id="incomeSelect" class="pf-input" style="border-color:#10b981; background:#f0fdf4;">
+                <select name="budget_item_id" id="incomeSelect" class="pf-input" style="border-color:#10b981; background:#f0fdf4;" disabled>
                     <option value="">-- Sélectionner --</option>
                     <?php foreach ($incomeList as $inc): ?>
                         <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?> (<?= number_format($inc['amount'],2) ?>€)</option>
@@ -770,6 +768,35 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
     </div>
 </div>
 
+<div id="configMonthModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width:350px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0;">Configuration du Cycle</h3>
+            <button type="button" onclick="closeSuiviModal('configMonthModal')" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+        </div>
+        
+        <div style="font-size:0.85rem; color:#475569; margin-bottom:20px; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
+            Le cycle démarre généralement à la réception de votre paie principale. Le solde initial que vous déclarez deviendra votre Capacité Max de départ pour ce mois.
+        </div>
+
+        <div class="form-group" style="margin-bottom:15px;">
+            <label class="pf-label">Date de début du cycle</label>
+            <input type="date" id="conf_start_date" class="pf-input" value="<?= $customStartDate ?>" required>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:15px;">
+            <label class="pf-label">Solde de départ (€)</label>
+            <input type="number" step="0.01" id="conf_start_balance" class="pf-input" value="<?= $customStartBalance ?>" placeholder="-50.00" required>
+            <small style="color:#94a3b8;">Solde bancaire exact avant toute nouvelle rentrée d'argent de ce mois.</small>
+        </div>
+
+        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" onclick="closeSuiviModal('configMonthModal')" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
+            <button type="button" onclick="saveMonthConfig()" class="pf-btn" style="width:auto; margin:0;">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
 <div id="newCatModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:350px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
@@ -801,6 +828,28 @@ function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'
 function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; }
 window.onclick = function(event) { if (event.target.classList.contains('pf-modal')) event.target.style.display = 'none'; }
 
+// --- SAUVEGARDE CONFIGURATION CYCLE (Utilise la route save_note existante) ---
+function saveMonthConfig() {
+    const formData = new FormData();
+    formData.append('action', 'save_note');
+    formData.append('note_type', 'month_config');
+    formData.append('reference_id', '<?= $currentMonthKey ?>');
+    
+    const configData = {
+        start_date: document.getElementById('conf_start_date').value,
+        start_balance: parseFloat(document.getElementById('conf_start_balance').value) || 0
+    };
+    
+    formData.append('content', JSON.stringify(configData));
+
+    fetch('/modules/budget/includes/api/save-budget.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(() => window.location.reload())
+    .catch(e => alert("Erreur lors de la sauvegarde du cycle."));
+}
+
 // --- SAISIE / EDITION MANUELLE ---
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
 
@@ -819,7 +868,6 @@ function handleModalCatChange(select) {
     const selectIncome = document.getElementById('incomeSelect');
     const selectHoliday = document.getElementById('modalHolidayId');
 
-    // On cache tout par défaut
     blockText.style.display = 'none';
     blockSelect.style.display = 'none';
     blockFrais.style.display = 'none';
@@ -846,13 +894,13 @@ function handleModalCatChange(select) {
         blockText.style.display = 'block'; 
         blockFrais.style.display = 'block'; 
         selectFrais.required = true;
-        selectFrais.disabled = false; 
+        selectFrais.disabled = false;
     }
     else if (catKey === 'Income') {
         blockText.style.display = 'block'; 
         blockIncome.style.display = 'block';
         selectIncome.required = true;
-        selectIncome.disabled = false; 
+        selectIncome.disabled = false;
     }
     else {
         blockText.style.display = 'block';
@@ -900,7 +948,6 @@ function openEditModal(expenseData) {
     document.getElementById('modalLabelInput').value = expenseData.label;
     
     const rawAmount = parseFloat(expenseData.amount);
-    // LOGIQUE INVERSÉE POUR L'INTERFACE : Si > 0 c'est un crédit
     document.getElementById('modalIsCredit').value = rawAmount > 0 ? "1" : "0";
     document.getElementById('modalAmount').value = Math.abs(rawAmount);
     document.getElementById('modalHolidayId').value = expenseData.holiday_id || ""; 
@@ -943,7 +990,6 @@ function handleLineCatChange(select) {
     const catKey = select.value;
     const catText = select.options[select.selectedIndex].text.toLowerCase();
 
-    // On cache et on vide
     fraisSelect.style.display = 'none';
     incomeSelect.style.display = 'none';
     holidaySelect.style.display = 'none';
@@ -962,11 +1008,11 @@ function handleLineCatChange(select) {
 
     if (catKey === 'Frais') {
         fraisSelect.style.display = 'block';
-        fraisSelect.disabled = false; // On l'active
+        fraisSelect.disabled = false;
     } 
     else if (catKey === 'Income') {
         incomeSelect.style.display = 'block';
-        incomeSelect.disabled = false; // On l'active
+        incomeSelect.disabled = false;
     }
     
     checkValidation();
