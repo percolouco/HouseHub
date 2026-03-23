@@ -123,7 +123,7 @@ input[type="number"].no-spinners {
                             <td class="text-center text-muted">
                                 <?php if ($amount != 0): ?>
                                     <div class="cell-content">
-                                        <span>- <?= number_format($amount, 0, ',', ' ') ?> €</span>
+                                        <span style="color:#1e293b; font-weight:500;"><?= number_format($amount, 0, ',', ' ') ?> €</span>
                                         <button class="btn-cell-delete" 
                                                 onclick="deleteSavingsEntry('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= $currentOwner ?>')">
                                             &times;
@@ -140,6 +140,7 @@ input[type="number"].no-spinners {
                         <?php foreach ($months as $month): 
                             $total = $data[$month]['TOTAL_BANQUE'] ?? 0;
                             $sum = 0;
+                            // Le calcul reste identique : Total de la banque - Somme des enveloppes
                             foreach ($allCategories as $cat) $sum += ($data[$month][$cat] ?? 0);
                             $extra = $total - $sum;
                         ?>

@@ -38,7 +38,9 @@ $totalRevenus = 0;
             <tbody>
                 <?php foreach ($items as $item): 
                     // --- 1. CALCUL DES TOTAUX PRÉVUS ---
-                    $amountToAdd = ($item['type'] === 'Annuel') ? $item['amount'] / 12 : $item['amount'];
+                    $targetAbs = abs((float)$item['amount']); // On utilise l'absolu pour l'affichage
+                    $amountToAdd = ($item['type'] === 'Annuel') ? $targetAbs / 12 : $targetAbs;
+                    
                     if ($item['category'] === 'expense') $totalDepenses += $amountToAdd;
                     else $totalRevenus += $amountToAdd;
                     
@@ -63,19 +65,20 @@ $totalRevenus = 0;
                         }
 
                         if ($match) {
-                            if ($item['category'] === 'income') {
-                                $realSum += abs((float)$exp['amount']);
-                            } else {
-                                $realSum += (float)$exp['amount'];
-                            }
+                            // Avec la nouvelle norme, on additionne simplement les montants.
+                            // Si c'est une dépense, ça s'additionne en négatif.
+                            // S'il y a un remboursement partiel, le "+" vient réduire le "-". C'est mathématiquement parfait.
+                            $realSum += (float)$exp['amount'];
                             $hasMatchingExpense = true;
                         }
                     }
 
-                    // --- 3. LOGIQUE D'ÉTAT (Uniquement dynamique) ---
-                    $gap = $realSum - $item['amount'];
+                    // On convertit le résultat réel en positif pour simplifier la comparaison visuelle UI
+                    $realAbs = abs($realSum);
+
+                    // --- 3. LOGIQUE D'ÉTAT ---
                     $isAutoChecked = false;
-                    if ($hasMatchingExpense && ($realSum >= ($item['amount'] - 0.10))) {
+                    if ($hasMatchingExpense && ($realAbs >= ($targetAbs - 0.10))) {
                         $isAutoChecked = true;
                     }
 
@@ -100,12 +103,17 @@ $totalRevenus = 0;
                     </td>
                     
                     <td class="cell-amount" style="font-weight:600; padding:15px; color:<?= $item['category']==='income'?'#10b981':'#1e293b' ?>;">
-                        <?= number_format($item['amount'], 2, ',', ' ') ?> €
+                        <?= number_format($targetAbs, 2, ',', ' ') ?> €
                         
                         <?php if ($hasMatchingExpense): ?>
-                            <?php if ($gap > 0.05): ?>
+                            <?php 
+                            // Le "Gap" est la différence visuelle. 
+                            // S'il y a plus de $realAbs que prévu, c'est un dépassement ou un bonus.
+                            $gap = $realAbs - $targetAbs; 
+                            
+                            if ($gap > 0.05): ?>
                                 <div style="font-size:0.75rem; color:#ef4444; font-weight:bold;">
-                                    Dépassement : +<?= number_format($gap, 2, ',', ' ') ?> €
+                                    <?= $item['category'] === 'income' ? 'Bonus :' : 'Dépassement :' ?> +<?= number_format($gap, 2, ',', ' ') ?> €
                                 </div>
                             <?php elseif ($gap < -0.05): ?>
                                 <div style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">
@@ -198,7 +206,7 @@ $totalRevenus = 0;
             <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Mots-clés (Détection Auto)</label>
                 <input type="text" name="mapping_keywords" id="item_keywords" class="pf-input" placeholder="Ex: NETFLIX, PRIME VIDEO (séparés par virgule)" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:#f0f9ff; border-color:#bae6fd;">
-                <small style="color:#64748b; font-size:0.75rem;">Si une dépense du mois contient ce mot, la ligne passera en "Payé".</small>
+                <small style="color:#64748b; font-size:0.75rem;">Si une dépense du mois contient ce mot, la ligne passera en "Validé".</small>
             </div>
 
             <div style="display:flex; gap:15px; margin-bottom:15px;">
@@ -285,7 +293,8 @@ function editRecapItem(item) {
     document.getElementById("item_id").value = data.id;
     document.getElementById("item_name").value = data.name;
     document.getElementById("item_keywords").value = data.mapping_keywords || ''; 
-    document.getElementById("item_amount").value = data.amount;
+    // On affiche toujours la valeur en positif dans le formulaire
+    document.getElementById("item_amount").value = Math.abs(data.amount);
     document.getElementById("item_category").value = data.category;
     document.getElementById("item_type").value = data.type;
     document.getElementById("item_day").value = data.payment_day;
