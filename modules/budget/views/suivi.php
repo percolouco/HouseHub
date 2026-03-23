@@ -817,7 +817,9 @@ function handleModalCatChange(select) {
     const inputLabel = document.getElementById('modalLabelInput');
     const selectFrais = document.getElementById('fraisSelect');
     const selectIncome = document.getElementById('incomeSelect');
+    const selectHoliday = document.getElementById('modalHolidayId');
 
+    // On cache tout par défaut
     blockText.style.display = 'none';
     blockSelect.style.display = 'none';
     blockFrais.style.display = 'none';
@@ -828,10 +830,13 @@ function handleModalCatChange(select) {
     selectFrais.required = false;
     selectIncome.required = false;
 
+    selectFrais.disabled = true;
+    selectIncome.disabled = true;
+
     if (catKey === 'LivretA' || catText.includes('vacance')) {
         blockHoliday.style.display = 'block';
     } else {
-        document.getElementById('modalHolidayId').value = '';
+        selectHoliday.value = '';
     }
 
     if (catKey === 'School') {
@@ -841,11 +846,13 @@ function handleModalCatChange(select) {
         blockText.style.display = 'block'; 
         blockFrais.style.display = 'block'; 
         selectFrais.required = true;
+        selectFrais.disabled = false; 
     }
     else if (catKey === 'Income') {
         blockText.style.display = 'block'; 
         blockIncome.style.display = 'block';
         selectIncome.required = true;
+        selectIncome.disabled = false; 
     }
     else {
         blockText.style.display = 'block';
@@ -936,12 +943,16 @@ function handleLineCatChange(select) {
     const catKey = select.value;
     const catText = select.options[select.selectedIndex].text.toLowerCase();
 
+    // On cache et on vide
     fraisSelect.style.display = 'none';
     incomeSelect.style.display = 'none';
     holidaySelect.style.display = 'none';
     
     fraisSelect.value = '';
     incomeSelect.value = '';
+
+    fraisSelect.disabled = true;
+    incomeSelect.disabled = true;
 
     if (catKey === 'LivretA' || catText.includes('vacance')) {
         holidaySelect.style.display = 'block';
@@ -951,9 +962,11 @@ function handleLineCatChange(select) {
 
     if (catKey === 'Frais') {
         fraisSelect.style.display = 'block';
+        fraisSelect.disabled = false; // On l'active
     } 
     else if (catKey === 'Income') {
         incomeSelect.style.display = 'block';
+        incomeSelect.disabled = false; // On l'active
     }
     
     checkValidation();
