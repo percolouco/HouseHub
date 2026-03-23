@@ -5,12 +5,10 @@
 // 1. GESTION DES ACTIONS ET DE LA NAVIGATION
 // ============================================================================
 
-// --- NAVIGATION PAR MOIS ---
 $currentMonth = isset($_GET['m']) ? str_pad((int)$_GET['m'], 2, '0', STR_PAD_LEFT) : date('m');
 $currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y');
 $currentMonthKey = $currentMonth . '-' . $currentYear;
 
-// Calcul des liens de navigation
 $prevM = (int)$currentMonth - 1; $prevY = $currentYear;
 if ($prevM < 1) { $prevM = 12; $prevY--; }
 $nextM = (int)$currentMonth + 1; $nextY = $currentYear;
@@ -23,10 +21,13 @@ $todayLink = "?tab=suivi";
 // A. AJOUT CATÉGORIE TEMPORAIRE MANUELLE
 if (isset($_POST['action']) && $_POST['action'] === 'add_temp_cat') {
     $name = trim($_POST['cat_name']);
-    $budget = floatval($_POST['cat_budget']);
+    $budget = floatval($_POST['cat_budget']); // Saisi en positif par l'utilisateur
     $type = $_POST['cat_type'] === 'credit' ? 'credit' : 'debit';
     
-    if ($name && $budget >= 0) {
+    // Si c'est un budget alloué (débit), on le stocke en négatif
+    if ($type === 'debit') $budget = -$budget;
+
+    if ($name) {
         $stmt = $pdo->prepare("INSERT INTO pf_monthly_categories (month_year, name, type, budget) VALUES (?, ?, ?, ?)");
         $stmt->execute([$currentMonthKey, $name, $type, $budget]);
         header("Location: ?tab=suivi&m=$currentMonth&y=$currentYear"); exit;
@@ -48,7 +49,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     header("Location: ?tab=suivi&m=$currentMonth&y=$currentYear"); exit;
 }
 
-// D. SAUVEGARDE IMPORT CSV (LIGNE PAR LIGNE AVEC CHECKBOX)
+// D. SAUVEGARDE IMPORT CSV
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
     $viewMonth = $_POST['view_month'] ?? $currentMonth;
@@ -81,7 +82,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                     $cat = 'TEMP_' . $tempCatMapping[$cat];
                 }
 
-                $finalAmount = $is_credit ? -abs($line['amount']) : abs($line['amount']);
+                // LOGIQUE INVERSÉE : Crédit = Positif, Débit = Négatif
+                $finalAmount = $is_credit ? abs($line['amount']) : -abs($line['amount']);
                 
                 $dateToSave = $line['date'];
                 if (!empty($line['force_current'])) {
@@ -125,7 +127,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
 
     if ($label && $amount > 0) {
         $is_credit = isset($_POST['is_credit']) ? (int)$_POST['is_credit'] : 0;
-        $finalAmount = $is_credit ? -abs($amount) : abs($amount);
+        
+        // LOGIQUE INVERSÉE : Crédit = Positif, Débit = Négatif
+        $finalAmount = $is_credit ? abs($amount) : -abs($amount);
         
         if ($id) {
             $pdo->prepare("UPDATE pf_expenses SET date_exp=?, category=?, label=?, amount=?, budget_item_id=?, holiday_id=? WHERE id=?")
@@ -160,15 +164,17 @@ $today_day = (int)date('j');
 $fixedChargesList = [];
 $incomeList = []; 
 
-$stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL AND amount > 0");
+// On sélectionne les charges qui ont un montant NÉGATIF ou POSITIF selon la nouvelle règle (plus besoin de filtrer sur > 0)
+$stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND budget_item_id IS NOT NULL");
 $stmtIds->execute([$currentMonth, $currentYear]);
 $paidItemIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
 
-$stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND amount > 0");
+// On récupère uniquement les libellés des dépenses (montant < 0)
+$stmtLabels = $pdo->prepare("SELECT label FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? AND amount < 0");
 $stmtLabels->execute([$currentMonth, $currentYear]);
 $realExpensesLabels = $stmtLabels->fetchAll(PDO::FETCH_COLUMN);
 
-// Snapshot Bancaire (Sert uniquement pour l'affichage "Actuel", plus pour le "Théorique")
+// Snapshot Bancaire
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
 try {
     $snapStmt = $pdo->query("SELECT * FROM pf_bank_snapshots ORDER BY id DESC LIMIT 1");
@@ -179,20 +185,22 @@ try {
 
 $solde_actuel = $snapshot['amount'];
 
-// Lecture Budget Prévisionnel (Sert pour les cartes et pour calculer le Reste à venir)
+// Lecture Budget Prévisionnel
 $stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, is_checked, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    // Les montants en base ont leur vrai signe (- pour dépense, + pour revenu)
     $rawAmount = (float)$item['amount'];
-    $amt = ($item['type'] === 'Annuel') ? $rawAmount / 12 : $rawAmount;
+    $absAmount = abs($rawAmount); // On utilise l'absolu pour le visuel des jauges
+    $amt = ($item['type'] === 'Annuel') ? $absAmount / 12 : $absAmount;
     $name = trim($item['name']);
     $pDay = (int)$item['payment_day'];
     $isChecked = (int)$item['is_checked'];
     
     if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
-        $fixedChargesList[] = $item;
+        $fixedChargesList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount]; // Passé en array propre pour l'HTML
     }
     if ($item['category'] === 'income') {
-        $incomeList[] = $item;
+        $incomeList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount];
         $total_income += $amt;
         $budget_income_prevu += $amt; 
     } else {
@@ -215,9 +223,8 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 }
             }
             
-            // Somme de toutes les charges encore à venir
             if (!$isPaid) {
-                $reste_a_venir += $rawAmount;
+                $reste_a_venir += $absAmount;
             }
         }
 
@@ -225,7 +232,7 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
         elseif ($name === 'Estimacio escola') $budget_school = $amt;
         elseif ($name === 'Estimation gasolina') $budget_essence = $amt;
         elseif ((int)$item['is_estimate'] === 0 && $item['type'] === 'Mensuel' && $item['category'] === 'expense') {
-            $budget_frais += $rawAmount;
+            $budget_frais += $absAmount;
         }
     }
 }
@@ -238,7 +245,7 @@ try {
     $tempCats = $stmt->fetchAll(PDO::FETCH_ASSOC);
     foreach($tempCats as $tc) {
         if ($tc['type'] === 'debit') {
-            $total_temp_budget += $tc['budget'];
+            $total_temp_budget += abs($tc['budget']);
         }
     }
 } catch (Exception $e) {}
@@ -263,7 +270,7 @@ $colorIdx = 0;
 foreach ($tempCats as $tc) {
     $catKey = 'TEMP_' . $tc['id'];
     $categoriesConfig[$catKey] = [
-        'type' => $tc['type'], 'label' => $tc['name'], 'budget' => $tc['budget'], 'color' => $tempColors[$colorIdx++ % count($tempColors)], 'suggestions' => [], 'is_temp' => true, 'id' => $tc['id']
+        'type' => $tc['type'], 'label' => $tc['name'], 'budget' => abs($tc['budget']), 'color' => $tempColors[$colorIdx++ % count($tempColors)], 'suggestions' => [], 'is_temp' => true, 'id' => $tc['id']
     ];
 }
 $categoriesConfig['Autres'] = ['type'=>'debit', 'label'=>'Autres / Imprévus', 'budget'=>$budget_autres, 'color'=>'#64748b', 'suggestions'=>['Restaurant', 'Cadeau']];
@@ -275,7 +282,32 @@ $categoriesConfig['LivretA'] = ['type'=>'debit', 'label'=>'Epargne', 'budget'=>0
 
 $csvData = [];
 $showPreview = false;
-// ... (Gestion de l'upload CSV inchangée, elle se fait plus haut) ...
+if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
+    $file = $_FILES['csv_file']['tmp_name'];
+    $handle = fopen($file, "r");
+    $rules = []; try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
+    $existingRefs = []; try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
+    fgetcsv($handle, 1000, ";", "\"", "\\"); 
+    while (($data = fgetcsv($handle, 1000, ";", "\"", "\\")) !== FALSE) {
+        $rawDebit = $data[8] ?? ''; $rawCredit = $data[9] ?? ''; 
+        $amount = 0; $isCredit = 0;
+        if (!empty(trim($rawCredit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawCredit))); $isCredit = 1; }
+        elseif (!empty(trim($rawDebit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawDebit))); }
+        else continue; 
+
+        $dateParts = explode('/', $data[0]); 
+        $dateSql = (count($dateParts) == 3) ? $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0] : date('Y-m-d');
+        $label = trim($data[1]) ?: trim($data[2]);
+        $refCSV = trim($data[3]);
+        $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
+        $isDuplicate = in_array($uniqueKey, $existingRefs);
+        $suggestedCat = '';
+        foreach ($rules as $kw => $c) { if (stripos($label, $kw) !== false) { $suggestedCat = $c; break; } }
+        $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
+    }
+    fclose($handle);
+    $showPreview = true;
+}
 
 // DÉPENSES EN BDD
 $stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ? ORDER BY date_exp DESC");
@@ -285,7 +317,6 @@ $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $totals = array_fill_keys(array_keys($categoriesConfig), 0);
 $expensesByCategory = array_fill_keys(array_keys($categoriesConfig), []);
 
-// --- PREPARATION SOLDE THEORIQUE ---
 $capacite_max = 0;
 $depenses_reelles = 0;
 
@@ -293,55 +324,43 @@ foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
     
-    $val = (float)$exp['amount'];
+    $val = (float)$exp['amount']; // NOUVELLE RÈGLE : + = Revenu/Remboursement, - = Dépense
     
-    // 1. Remplissage pour l'affichage visuel des cartes
+    // 1. Remplissage Visuel des cartes
     if ($cat === 'Income') {
-        $totals[$cat] += abs($val);
+        $totals[$cat] += $val;
     } else {
-        if ($val < 0) {
-            $categoriesConfig[$cat]['budget'] += abs($val);
+        if ($val > 0) {
+            // C'est un remboursement d'une dépense (+), il augmente le budget
+            $categoriesConfig[$cat]['budget'] += $val;
         } else {
-            $totals[$cat] += $val;
+            // C'est une dépense normale (-), on l'ajoute au total dépensé (en valeur absolue pour l'UI)
+            $totals[$cat] += abs($val);
         }
     }
     $expensesByCategory[$cat][] = $exp;
 
-    // 2. Calcul des briques du Solde Théorique (Respect des signes BDD)
-    if ($val < 0) { 
-        // L'argent qui RENTRE sur le compte est stocké en négatif
+    // 2. Calcul du Théorique
+    if ($val > 0) { 
         if ($cat === 'Income' || $cat !== 'Frais') {
-            // Règle 1 et 2 : Somme Revenus + Tout autre virement positif HORS charges fixes
-            $capacite_max += abs($val); 
+            $capacite_max += $val; 
         } else {
-            // C'est un remboursement d'une charge fixe, il vient diminuer les dépenses
-            $depenses_reelles -= abs($val);
+            $depenses_reelles -= $val;
         }
     } else {
-        // L'argent qui SORT (dépense) est stocké en positif
-        // Règle 3 : Somme de tous les autres virements sortants
-        $depenses_reelles += $val;
+        $depenses_reelles += abs($val);
     }
 }
 
-// ============================================================================
-// CALCUL FINAL DU SOLDE THÉORIQUE
-// ============================================================================
-// On applique ta règle exacte :
 $solde_theorique = $capacite_max - $depenses_reelles - $reste_a_venir;
 
-// Sécurité : Si 0 injection ce mois-ci, on se base sur le prévisionnel pour avoir une jauge visuelle
 if ($capacite_max <= 0) {
     $capacite_max = $budget_income_prevu > 0 ? $budget_income_prevu : 1;
 }
 
-// --- Calculs pour la Barre de Déchargement ---
-$solde_actuel = max(0, $snapshot['amount']); 
-$charges_a_venir = max(0, $reste_a_venir);
-$solde_net = max(0, $solde_actuel - $charges_a_venir);
-$charges_visibles = min($solde_actuel, $charges_a_venir); 
+$solde_net = max(0, $solde_actuel - $reste_a_venir);
+$charges_visibles = min($solde_actuel, $reste_a_venir); 
 
-// L'échelle de la jauge (Le Max) (+10% visuel)
 $max_scale = max($solde_actuel, $solde_theorique, $capacite_max, 1) * 1.1; 
 
 $pct_net = min(100, max(0, ($solde_net / $max_scale) * 100));
@@ -393,7 +412,7 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 
             <div style="padding:15px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
                 <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde théorique <span style="font-size:0.75rem;">(au <?= date('d/m') ?>)</span></div>
-                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;" title="Calcul : Solde du relevé + Apports depuis le relevé - Dépenses depuis le relevé - Charges en attente.">
+                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;" title="Calcul : Capacité Max - Dépenses Réelles - Charges en attente.">
                     <?= number_format($solde_theorique, 2, ',', ' ') ?> €
                 </div>
             </div>
@@ -610,10 +629,10 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
                                     <span title="Lié à une charge/revenu" style="font-size:0.7rem; cursor:help;">🔗</span>
                                 <?php endif; ?>
                             </td>
-                            <?php if($exp['amount'] < 0): ?>
-                                <td style="padding:10px 15px; text-align:right; font-weight:600; color:#10b981;">+<?= number_format(abs($exp['amount']), 2) ?></td>
+                            <?php if($exp['amount'] > 0): ?>
+                                <td style="padding:10px 15px; text-align:right; font-weight:600; color:#10b981;">+<?= number_format($exp['amount'], 2) ?></td>
                             <?php else: ?>
-                                <td style="padding:10px 15px; text-align:right; font-weight:600; color:#1e293b;">-<?= number_format($exp['amount'], 2) ?></td>
+                                <td style="padding:10px 15px; text-align:right; font-weight:600; color:#1e293b;">-<?= number_format(abs($exp['amount']), 2) ?></td>
                             <?php endif; ?>
                             <td style="width:60px; padding-right:10px; text-align:right; white-space:nowrap;">
                                 <button onclick='openEditModal(<?= json_encode($exp) ?>)' 
@@ -640,7 +659,7 @@ $monthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
 <div id="manualExpenseModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:400px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0;" id="modalTitle">Nouvelle dépense</h3>
+            <h3 style="margin:0;" id="modalTitle">Nouvelle transaction</h3>
             <button type="button" onclick="closeSuiviModal('manualExpenseModal')" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
         </div>
         
@@ -799,7 +818,6 @@ function handleModalCatChange(select) {
     const selectFrais = document.getElementById('fraisSelect');
     const selectIncome = document.getElementById('incomeSelect');
 
-    // Reset visibility
     blockText.style.display = 'none';
     blockSelect.style.display = 'none';
     blockFrais.style.display = 'none';
@@ -810,11 +828,10 @@ function handleModalCatChange(select) {
     selectFrais.required = false;
     selectIncome.required = false;
 
-    // Affichage conditionnel des Vacances (Si Epargne/LivretA OU si la catégorie contient le mot vacance)
     if (catKey === 'LivretA' || catText.includes('vacance')) {
         blockHoliday.style.display = 'block';
     } else {
-        document.getElementById('modalHolidayId').value = ''; // On reset si on cache
+        document.getElementById('modalHolidayId').value = '';
     }
 
     if (catKey === 'School') {
@@ -869,14 +886,15 @@ function openAddModal(catKey, catLabel) {
 // Ouvre la modale pour MODIFIER
 function openEditModal(expenseData) {
     openSuiviModal('manualExpenseModal');
-    document.getElementById('modalTitle').innerText = "Modifier la dépense";
+    document.getElementById('modalTitle').innerText = "Modifier la transaction";
     
     document.getElementById('modalExpenseId').value = expenseData.id;
     document.getElementById('modalDate').value = expenseData.date_exp;
     document.getElementById('modalLabelInput').value = expenseData.label;
     
     const rawAmount = parseFloat(expenseData.amount);
-    document.getElementById('modalIsCredit').value = rawAmount < 0 ? "1" : "0";
+    // LOGIQUE INVERSÉE POUR L'INTERFACE : Si > 0 c'est un crédit
+    document.getElementById('modalIsCredit').value = rawAmount > 0 ? "1" : "0";
     document.getElementById('modalAmount').value = Math.abs(rawAmount);
     document.getElementById('modalHolidayId').value = expenseData.holiday_id || ""; 
     
@@ -918,7 +936,6 @@ function handleLineCatChange(select) {
     const catKey = select.value;
     const catText = select.options[select.selectedIndex].text.toLowerCase();
 
-    // Reset
     fraisSelect.style.display = 'none';
     incomeSelect.style.display = 'none';
     holidaySelect.style.display = 'none';
@@ -926,7 +943,6 @@ function handleLineCatChange(select) {
     fraisSelect.value = '';
     incomeSelect.value = '';
 
-    // Condition d'affichage pour les vacances
     if (catKey === 'LivretA' || catText.includes('vacance')) {
         holidaySelect.style.display = 'block';
     } else {

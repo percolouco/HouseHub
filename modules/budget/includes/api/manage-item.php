@@ -10,17 +10,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save') {
         $id = $_POST['id'] ?? '';
         $name = $_POST['name'];
-        $amount = $_POST['amount'];
         $category = $_POST['category'];
         $type = $_POST['type'];
-        $payment_day = $_POST['payment_day'];
+        $payment_day = empty($_POST['payment_day']) ? null : (int)$_POST['payment_day'];
         $is_estimate = $_POST['is_estimate'];
         $reg_month = $_POST['reg_month'];
-        
         $keywords = $_POST['mapping_keywords'] ?? ''; 
-        
-        // NOUVEAU : Récupération de l'ID des vacances
         $holiday_id = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
+
+        // ==========================================
+        // NOUVELLE NORME COMPTABLE : Dépense = Négatif
+        // ==========================================
+        // On récupère le montant en valeur absolue (pour éviter les erreurs si l'utilisateur a tapé un '-')
+        $amount = abs((float)$_POST['amount']); 
+        
+        // Si c'est un frais, on l'enregistre en négatif
+        if ($category === 'expense') {
+            $amount = -$amount;
+        }
+        // ==========================================
 
         if ($id) {
             // UPDATE
@@ -31,6 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("INSERT INTO pf_budget_items (name, amount, category, type, payment_day, is_estimate, reg_month, mapping_keywords, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id]);
         }
+        
+        // Redirection
         header('Location: /budget.php?tab=recap');
         exit;
     }
