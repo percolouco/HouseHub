@@ -19,9 +19,8 @@ $nextLink = "?tab=suivi&m=$nextM&y=$nextY";
 $todayLink = "?tab=suivi";
 
 // ============================================================================
-// NOUVEAU : CONFIGURATION DU CYCLE (Dates personnalisées)
+// CONFIGURATION DU CYCLE (Dates personnalisées)
 // ============================================================================
-// 1. On lit la configuration du mois en cours
 $stmtConfig = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'month_config' AND reference_id = ?");
 $stmtConfig->execute([$currentMonthKey]);
 $configJson = $stmtConfig->fetchColumn();
@@ -30,14 +29,12 @@ $monthConfig = $configJson ? json_decode($configJson, true) : null;
 $customStartDate = $monthConfig['start_date'] ?? "$currentYear-$currentMonth-01";
 $customStartBalance = $monthConfig['start_balance'] ?? 0;
 
-// 2. On lit la configuration du mois SUIVANT pour fermer le cycle proprement
 $nextMonthKey = str_pad($nextM, 2, '0', STR_PAD_LEFT) . '-' . $nextY;
 $stmtNextConfig = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'month_config' AND reference_id = ?");
 $stmtNextConfig->execute([$nextMonthKey]);
 $nextConfigJson = $stmtNextConfig->fetchColumn();
 $nextConfig = $nextConfigJson ? json_decode($nextConfigJson, true) : null;
 
-// La date de fin est soit la veille du prochain cycle, soit la fin du mois calendaire
 if ($nextConfig && !empty($nextConfig['start_date'])) {
     $customEndDate = date('Y-m-d', strtotime($nextConfig['start_date'] . ' -1 day'));
 } else {
@@ -177,8 +174,8 @@ $reste_a_venir = 0;
 $today_day = (int)date('j'); 
 $fixedChargesList = [];
 $incomeList = []; 
+$pending_charges = []; // Stockage détaillé des charges à venir
 
-// MODIFICATION : Les requêtes ciblent désormais les bornes du CYCLE personnalisé, plus le mois strict !
 $stmtIds = $pdo->prepare("SELECT DISTINCT budget_item_id FROM pf_expenses WHERE date_exp >= ? AND date_exp <= ? AND budget_item_id IS NOT NULL");
 $stmtIds->execute([$customStartDate, $customEndDate]);
 $paidItemIds = $stmtIds->fetchAll(PDO::FETCH_COLUMN);
@@ -234,7 +231,10 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     }
                 }
             }
-            if (!$isPaid) $reste_a_venir += $absAmount;
+            if (!$isPaid) {
+                $reste_a_venir += $absAmount;
+                $pending_charges[] = ['name' => $name, 'amount' => $absAmount];
+            }
         }
 
         if ($name === 'Estimacio F&B & beauty') $budget_fmcg = $amt;
@@ -283,7 +283,7 @@ $categoriesConfig['LivretA'] = ['type'=>'debit', 'label'=>'Epargne', 'budget'=>0
 // ============================================================================
 $csvData = [];
 $showPreview = false;
-// ... (Gestion CSV Upload inchangée ici)
+
 if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $file = $_FILES['csv_file']['tmp_name'];
     $handle = fopen($file, "r");
@@ -311,7 +311,6 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $showPreview = true;
 }
 
-// MODIFICATION : Dépenses ciblées sur les bornes du cycle !
 $stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE date_exp >= ? AND date_exp <= ? ORDER BY date_exp DESC");
 $stmt->execute([$customStartDate, $customEndDate]);
 $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -330,7 +329,6 @@ foreach ($allExpenses as $exp) {
     
     $val = (float)$exp['amount'];
     
-    // 1. UI Cards
     if ($cat === 'Income') { 
         $totals[$cat] += $val; 
     } else {
@@ -339,26 +337,29 @@ foreach ($allExpenses as $exp) {
     }
     $expensesByCategory[$cat][] = $exp;
 
-    // 2. Mathématiques pures
     if ($val > 0) { 
         if ($cat === 'Income' || $cat !== 'Frais') {
-            $total_rentrees += $val; // Rentrées d'argent
+            $total_rentrees += $val; 
         } else {
-            $depenses_reelles -= $val; // Remboursement d'une charge fixe
+            $depenses_reelles -= $val; 
         }
     } else {
         $depenses_reelles += abs($val);
     }
 }
 
-// 3. Calcul de la Capacité Max Dynamique
 $rentrees_salaires_reels = $totals['Income'];
 $rentrees_autres = $total_rentrees - $rentrees_salaires_reels;
-
-// Capacité Max = Solde de départ + (le plus grand entre le salaire prévu et reçu) + rentrées annexes
 $capacite_max = $solde_initial + max($rentrees_salaires_reels, $budget_income_prevu) + $rentrees_autres;
 
-// SOLDE THÉORIQUE = Solde initial + Toutes les rentrées réelles - Dépenses - Charges à venir
+// Ajout du reste estimé pour l'École dans les charges à venir
+$ecole_depense = isset($totals['School']) ? $totals['School'] : 0;
+$reste_ecole = max(0, $budget_school - $ecole_depense);
+if ($reste_ecole > 0) {
+    $reste_a_venir += $reste_ecole;
+    $pending_charges[] = ['name' => 'École / Garde (Reste estimé)', 'amount' => $reste_ecole];
+}
+
 $solde_theorique = ($solde_initial + $total_rentrees) - $depenses_reelles - $reste_a_venir;
 
 $solde_net = max(0, $solde_actuel - $reste_a_venir);
@@ -428,10 +429,26 @@ $cycleDisplay = date('d/m', strtotime($customStartDate)) . ' au ' . date('d/m', 
                 </div>
             </div>
 
-            <div style="padding:15px; background:#fef2f2; border-radius:12px; border:1px solid #fecaca;">
-                <div style="font-size:0.85rem; color:#991b1b; margin-bottom:4px;">Charges fixes à venir</div>
+            <div style="padding:15px; background:#fef2f2; border-radius:12px; border:1px solid #fecaca; position: relative;">
+                <div style="font-size:0.85rem; color:#991b1b; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>Charges à venir</span>
+                    <button onclick="toggleDiv('pendingDetailsList')" style="background:none; border:none; cursor:pointer; font-size:1rem; padding:0; filter: grayscale(1); opacity: 0.7; transition: 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="Voir le détail">👁️</button>
+                </div>
                 <div style="font-size:1.4rem; font-weight:700; color:#b91c1c;">
                     - <?= number_format($reste_a_venir, 2, ',', ' ') ?> €
+                </div>
+                
+                <div id="pendingDetailsList" style="display:none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #fca5a5; font-size: 0.8rem; color: #7f1d1d;">
+                    <?php if (empty($pending_charges)): ?>
+                        <div style="text-align:center; font-style:italic; opacity:0.8;">Tout est payé ! 🎉</div>
+                    <?php else: ?>
+                        <?php foreach($pending_charges as $pc): ?>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;"><?= htmlspecialchars($pc['name']) ?></span>
+                                <strong><?= number_format($pc['amount'], 0, ',', ' ') ?> €</strong>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -822,13 +839,11 @@ $cycleDisplay = date('d/m', strtotime($customStartDate)) . ' au ' . date('d/m', 
 </div>
 
 <script>
-// --- UI ---
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
 function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; }
 window.onclick = function(event) { if (event.target.classList.contains('pf-modal')) event.target.style.display = 'none'; }
 
-// --- SAUVEGARDE CONFIGURATION CYCLE (Utilise la route save_note existante) ---
 function saveMonthConfig() {
     const formData = new FormData();
     formData.append('action', 'save_note');
@@ -850,7 +865,6 @@ function saveMonthConfig() {
     .catch(e => alert("Erreur lors de la sauvegarde du cycle."));
 }
 
-// --- SAISIE / EDITION MANUELLE ---
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
 
 function handleModalCatChange(select) {
@@ -918,7 +932,6 @@ function handleModalCatChange(select) {
     }
 }
 
-// Ouvre la modale pour AJOUTER
 function openAddModal(catKey, catLabel) {
     openSuiviModal('manualExpenseModal');
     document.getElementById('modalTitle').innerText = "Ajouter : " + catLabel;
@@ -938,7 +951,6 @@ function openAddModal(catKey, catLabel) {
     setTimeout(() => document.getElementById('modalLabelInput').focus(), 100);
 }
 
-// Ouvre la modale pour MODIFIER
 function openEditModal(expenseData) {
     openSuiviModal('manualExpenseModal');
     document.getElementById('modalTitle').innerText = "Modifier la transaction";
@@ -963,7 +975,6 @@ function openEditModal(expenseData) {
     }
 }
 
-// --- IMPORT CSV ---
 let newCatIndex = 0;
 function confirmNewCat() {
     const name = document.getElementById('newCatName').value.trim();
