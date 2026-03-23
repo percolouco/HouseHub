@@ -51,10 +51,18 @@ $totalRevenus = 0;
                     foreach ($allExpenses as $exp) {
                         $match = false;
                         
+                        // 1. Lien direct via l'ID de la charge
                         if (!empty($exp['budget_item_id']) && (int)$exp['budget_item_id'] === (int)$item['id']) {
                             $match = true;
                         } 
+                        // 2. Lien forcé pour l'École
                         elseif ($exp['category'] === 'School' && trim($item['name']) === 'Estimacio escola') {
+                            $match = true;
+                        }
+                        elseif ($exp['category'] === 'Essence' && trim($item['name']) === 'Estimation gasolina') {
+                            $match = true;
+                        }
+                        elseif ($exp['category'] === 'FMCG' && trim($item['name']) === 'Estimacio F&B & beauty') {
                             $match = true;
                         }
                         elseif (empty($exp['budget_item_id']) && !empty($item['mapping_keywords'])) {
