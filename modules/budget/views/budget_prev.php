@@ -11,7 +11,6 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $salaryConfig[$row['person']] = $row;
 }
 
-// Init si vide
 foreach (['Alex', 'Laia'] as $p) {
     if (!isset($salaryConfig[$p])) {
         $salaryConfig[$p] = ['salary'=>0, 'mensualite'=>0, 'frais_func'=>0, 'eco_perso'=>0, 'eco_family'=>0];
@@ -25,15 +24,25 @@ $cats = $pdo->query("SELECT * FROM pf_alloc_categories ORDER BY sort_order ASC, 
 $focusDate = isset($_GET['focus_date']) ? $_GET['focus_date'] : date('Y-m-01');
 $focusTs = strtotime($focusDate);
 
-// On affiche 6 mois (Timeline inversée)
 $months = [];
 for ($i = 0; $i < 6; $i++) {
     $months[] = date('Y-m-01', strtotime("-$i months", $focusTs));
 }
 
-// Liens navigation
 $prevMonthLink = date('Y-m-01', strtotime("-1 month", $focusTs));
 $nextMonthLink = date('Y-m-01', strtotime("+1 month", $focusTs));
+
+// NOUVEAU : Récupération des Cycles configurés dans pf_notes
+$cycleConfigs = [];
+$stmtNotes = $pdo->query("SELECT reference_id, content FROM pf_notes WHERE note_type = 'month_config'");
+while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
+    // Convertit "03-2026" en "2026-03-01" (Notre Tiroir)
+    $parts = explode('-', $row['reference_id']);
+    if (count($parts) == 2) {
+        $mKey = $parts[1] . '-' . $parts[0] . '-01';
+        $cycleConfigs[$mKey] = json_decode($row['content'], true);
+    }
+}
 
 // 4. Récupération Valeurs Répartition
 $inQuery = implode(',', array_fill(0, count($months), '?'));
@@ -46,19 +55,16 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 }
 
 // 5. Récupération de l'ID de la catégorie système
-// On cherche l'ID de la catégorie 'SYSTEM_VALIDATION'
 $sysCatId = null;
 foreach ($cats as $key => $c) {
     if ($c['name'] === 'SYSTEM_VALIDATION') {
         $sysCatId = $c['id'];
-        // IMPORTANT : On retire cette catégorie de la liste affichable ($cats)
-        // pour qu'elle n'apparaisse pas dans le tableau HTML !
         unset($cats[$key]); 
         break;
     }
 }
 
-// 6. Lecture des statuts de validation (1 = Validé, 0 = Non)
+// 6. Lecture des statuts de validation
 $focusDate = $months[0];
 $isValidatedAlex = false;
 $isValidatedLaia = false;
@@ -73,7 +79,7 @@ $stmtNote = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'budge
 $stmtNote->execute([$focusDate]);
 $currentNote = $stmtNote->fetchColumn();
 
-// 7. Récupération des vacances actives pour les lier au budget
+// 7. Récupération des vacances actives
 $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN ('draft', 'planned', 'booked') ORDER BY start_date ASC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -154,6 +160,13 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                         ?>
                             <th colspan="3" class="th-month <?= $cls ?>">
                                 <?= date('F Y', strtotime($month)) ?>
+                                <?php 
+                                // AFFICHAGE DU CYCLE CONFIGURÉ
+                                if (isset($cycleConfigs[$month]) && !empty($cycleConfigs[$month]['start_date'])) {
+                                    $cStart = date('d/m', strtotime($cycleConfigs[$month]['start_date']));
+                                    echo "<div style='font-size:0.75rem; font-weight:normal; color:#64748b; margin-top:2px;'>Dès le $cStart</div>";
+                                }
+                                ?>
                             </th>
                         <?php endforeach; ?>
                     </tr>
@@ -188,10 +201,9 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                     </tr>
 
                     <?php foreach ($cats as $cat): 
-                    // Détection des lignes indicatives
                     $isIndicative = ($cat['name'] === 'Eco Alex' || $cat['name'] === 'Eco Laia');
                     $rowClass = $isIndicative ? 'row-indicative' : '';
-                    $inputClass = $isIndicative ? 'ignore-calc' : ''; // Classe pour le JS
+                    $inputClass = $isIndicative ? 'ignore-calc' : ''; 
                     $rowStyle = $isIndicative ? 'background:#f8fafc; color:#94a3b8;' : '';
                 ?>
                 <tr class="<?= $rowClass ?>" style="<?= $rowStyle ?>">
@@ -283,16 +295,11 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
 
 
 <?php
-    $focusMonth = $months[0]; // Mois affiché à gauche
+    $focusMonth = $months[0]; 
     
-    // 1. Initialisation des cibles par défaut
     $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
     
-    // 2. On reconstruit la liste complète $allTargets
-    // On part des cibles par défaut
     $allTargets = $targetsOrder;
-    
-    // On ajoute les cibles personnalisées trouvées dans les catégories actives
     foreach($cats as $c) {
         $t = trim($c['target']);
         if(!empty($t) && !in_array($t, $allTargets)) {
@@ -301,7 +308,6 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
     }
     $allTargets = array_unique($allTargets);
 
-    // 3. Calcul des sommes (Logiciel d'affichage)
     $summaryData = [];
     foreach($allTargets as $t) $summaryData[$t] = ['Alex' => 0, 'Laia' => 0];
 
@@ -319,7 +325,6 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
         $summaryData[$t]['Laia'] += $val['amount_laia'];
     }
 
-    // Récupération des totaux pour le footer
     $grandTotalAlex = 0;
     $grandTotalLaia = 0;
     $grandTotalGlobal = 0;
@@ -371,7 +376,7 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                 </thead>
                 <tbody>
                     <?php foreach($allTargets as $target): 
-                        $tId = md5($target); // ID unique pour le JS
+                        $tId = md5($target); 
                     ?>
                     <tr id="row_summary_<?= $tId ?>">
                         <td><?= htmlspecialchars($target) ?></td>
@@ -475,17 +480,16 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
 </div>
 
 <script>
-// Fonction pour ouvrir la modale et pré-remplir les valeurs
 function openEditModal(btn) {
     const id = btn.getAttribute('data-id');
     const name = btn.getAttribute('data-name');
     const target = btn.getAttribute('data-target');
-    const holiday = btn.getAttribute('data-holiday'); // NOUVEAU
+    const holiday = btn.getAttribute('data-holiday'); 
 
     document.getElementById('edit_cat_id').value = id;
     document.getElementById('edit_cat_name').value = name;
     document.getElementById('edit_cat_target').value = target;
-    document.getElementById('edit_cat_holiday').value = holiday; // NOUVEAU
+    document.getElementById('edit_cat_holiday').value = holiday; 
     
     document.getElementById('editCatModal').style.display = 'flex';
 }
@@ -496,7 +500,6 @@ function openEditModal(btn) {
 const currentYear = <?= $currentYear ?>;
 const months = <?= json_encode($months) ?>;
 
-// --- SALAIRES ---
 function updateSalary(person, input) {
     const row = input.closest('tr');
     const salary = parseFloat(row.querySelector('[data-field="salary"]').value) || 0;
@@ -506,28 +509,23 @@ function updateSalary(person, input) {
     const ecoF = parseFloat(row.querySelector('[data-field="eco_family"]').value) || 0;
 
     const restant = salary - (mens + frais + ecoP + ecoF);
-    // Affichage sans décimale
     document.getElementById('restant_' + person).innerText = Math.round(restant).toLocaleString('fr-FR') + ' €';
 
     saveData('update_salary_config', { year: currentYear, person: person, field: input.dataset.field, value: input.value });
     recalcAllAllocations();
 }
 
-// --- ALLOCATIONS ---
 function updateAlloc(month, catId, personField, input) {
     saveData('update_allocation', { month_date: month, cat_id: catId, person: personField, value: input.value || 0 });
     recalcAllAllocations();
 }
 
-// Fonction utilitaire : Retourne le mois en MAJUSCULES (ex: "FÉVRIER")
 function getMonthName(dateStr) {
     const date = new Date(dateStr);
     return date.toLocaleDateString('fr-FR', { month: 'long' }).toUpperCase();
 }
 
 function duplicateMonth() {
-    // months[0] = Le mois affiché le plus à gauche (Cible)
-    // months[1] = Le mois juste à droite (Source)
     const targetDateStr = months[0];
     const sourceDateStr = months[1];
 
@@ -536,23 +534,25 @@ function duplicateMonth() {
         return;
     }
 
-    const targetName = getMonthName(targetDateStr); // ex: MARS
-    const sourceName = getMonthName(sourceDateStr); // ex: FÉVRIER
+    // Formatage propre (ex: "Mars 2026")
+    const formatMonth = (d) => {
+        let str = new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    };
 
-    // On utilise des tirets ou étoiles pour attirer l'attention à défaut de gras
-    const message = `Voulez-vous copier les valeurs de  ${sourceName}  vers  ${targetName}  ?\n\n` +
-                    `Cela écrasera toutes les valeurs présentes sur ${targetName}.`;
+    const sourceName = formatMonth(sourceDateStr); 
+    const targetName = formatMonth(targetDateStr); 
+
+    const message = `Voulez-vous copier les données de ${sourceName} vers ${targetName} ?\n\n⚠️ Cela écrasera toutes les valeurs déjà présentes pour ${targetName}.`;
 
     if(!confirm(message)) return;
     
-    // Le reste du code de copie reste identique...
     document.querySelectorAll('.inp-alex-' + sourceDateStr).forEach(sourceInput => {
         const catIdMatch = sourceInput.getAttribute('onchange').match(/, (\d+),/);
         if(!catIdMatch) return;
         const catId = catIdMatch[1];
         const row = sourceInput.closest('tr');
 
-        // Copie Alex
         const valAlex = sourceInput.value;
         const targetAlex = row.querySelector('.inp-alex-' + targetDateStr);
         if(targetAlex) { 
@@ -560,7 +560,6 @@ function duplicateMonth() {
             updateAlloc(targetDateStr, catId, 'amount_alex', targetAlex); 
         }
 
-        // Copie Laia
         const valLaia = row.querySelector('.inp-laia-' + sourceDateStr).value;
         const targetLaia = row.querySelector('.inp-laia-' + targetDateStr);
         if(targetLaia) { 
@@ -578,16 +577,10 @@ function recalcAllAllocations() {
         let sumAlex = 0;
         let sumLaia = 0;
 
-        // Boucle sur colonne Alex
         document.querySelectorAll('.inp-alex-' + m).forEach(inp => {
             const val = parseFloat(inp.value) || 0;
+            if (!inp.classList.contains('ignore-calc')) sumAlex += val;
             
-            // 1. On ajoute au TOTAL COLONNE seulement si ce n'est PAS une ligne indicative
-            if (!inp.classList.contains('ignore-calc')) {
-                sumAlex += val;
-            }
-            
-            // 2. Calcul du GLOBAL LIGNE (On le fait toujours, même pour les indicatifs)
             const row = inp.closest('tr');
             const laiaVal = parseFloat(row.querySelector('.inp-laia-' + m).value) || 0;
             const globalSum = val + laiaVal;
@@ -600,20 +593,15 @@ function recalcAllAllocations() {
             }
         });
 
-        // Boucle sur colonne Laia (Juste pour le total colonne)
         document.querySelectorAll('.inp-laia-' + m).forEach(inp => {
             const val = parseFloat(inp.value) || 0;
-            if (!inp.classList.contains('ignore-calc')) {
-                sumLaia += val;
-            }
+            if (!inp.classList.contains('ignore-calc')) sumLaia += val;
         });
 
-        // Totaux
         document.getElementById('total_alex_' + m).innerText = Math.round(sumAlex) + ' €';
         document.getElementById('total_laia_' + m).innerText = Math.round(sumLaia) + ' €';
         document.getElementById('total_global_' + m).innerText = Math.round(sumAlex + sumLaia) + ' €';
 
-        // Restants
         const restAlex = budgetAlex - sumAlex;
         const restLaia = budgetLaia - sumLaia;
 
@@ -630,27 +618,12 @@ function recalcAllAllocations() {
 }
 
 function updateSummaryTable() {
-    // 1. On identifie le mois focus (colonne de gauche)
     const focusMonth = months[0];
-    
-    // 2. Objet pour stocker les sommes par cible
-    // Structure : { 'md5_target': { alex: 0, laia: 0 } }
     const sums = {};
-
-    // 3. On parcourt les inputs ALEX du mois focus
-    document.querySelectorAll('.inp-alex-' + focusMonth).forEach(inp => {
-        const val = parseFloat(inp.value) || 0;
-        const target = inp.getAttribute('data-target'); // Récupéré de l'étape 1
-        
-        if (target) { }
-    });
-    
-    // On reset les totaux
     let grandTotalAlex = 0;
     let grandTotalLaia = 0;    
     const dataByTarget = {};
 
-    // Calcul Alex
     document.querySelectorAll('.inp-alex-' + focusMonth).forEach(inp => {
         const target = inp.getAttribute('data-target');
         if(target) {
@@ -659,7 +632,6 @@ function updateSummaryTable() {
         }
     });
 
-    // Calcul Laia
     document.querySelectorAll('.inp-laia-' + focusMonth).forEach(inp => {
         const target = inp.getAttribute('data-target');
         if(target) {
@@ -668,31 +640,23 @@ function updateSummaryTable() {
         }
     });
 
-    // Mise à jour du tableau
-    // On parcourt toutes les lignes du tbody du récap
     const tbody = document.querySelector('.recap-table tbody');
     if(tbody) {
         Array.from(tbody.rows).forEach(row => {
-            const targetName = row.cells[0].innerText.trim(); // "vers L.Pol"
-            
+            const targetName = row.cells[0].innerText.trim(); 
             const alexSum = dataByTarget[targetName] ? dataByTarget[targetName].alex : 0;
             const laiaSum = dataByTarget[targetName] ? dataByTarget[targetName].laia : 0;
             const globalSum = alexSum + laiaSum;
 
-            // Mise à jour des cellules (Index 1=Alex, 2=Laia, 3=Global)
             row.cells[1].innerText = Math.round(alexSum).toLocaleString('fr-FR') + ' €';
             row.cells[2].innerText = Math.round(laiaSum).toLocaleString('fr-FR') + ' €';
             row.cells[3].innerText = Math.round(globalSum).toLocaleString('fr-FR') + ' €';
-
-            // Gestion visuelle : Masquer la ligne si tout est à 0 (Optionnel)
-            // row.style.display = globalSum === 0 ? 'none' : ''; 
 
             grandTotalAlex += alexSum;
             grandTotalLaia += laiaSum;
         });
     }
 
-    // Mise à jour du Footer Grand Total
     document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString('fr-FR') + ' €';
     document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString('fr-FR') + ' €';
     document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString('fr-FR') + ' €';
@@ -709,41 +673,20 @@ document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gestion du clic sur mobile pour afficher les actions
     if (window.innerWidth <= 768) {
-        
-        // 1. On écoute les clics sur tout le document
         document.addEventListener('click', function(e) {
-            
-            // On récupère la cellule "sticky" (catégorie) si elle a été cliquée
             const clickedCell = e.target.closest('.col-sticky');
-            
-            // Si on a cliqué sur une cellule de catégorie...
             if (clickedCell) {
                 const actionsDiv = clickedCell.querySelector('.row-actions');
-                
-                // Si on a cliqué DIRECTEMENT sur un bouton d'action (crayon/poubelle), on ne fait rien
-                // (on laisse le bouton faire son travail : ouvrir la modale ou supprimer)
                 if (e.target.closest('.btn-icon-action')) return;
-
-                // Sinon, on Toggle (Affiche/Cache) le menu de CETTE ligne
                 if (actionsDiv) {
-                    // Est-ce qu'il est déjà ouvert ?
                     const isOpen = actionsDiv.classList.contains('show-actions');
-                    
-                    // D'abord, on ferme TOUS les autres menus ouverts pour ne pas en avoir partout
                     document.querySelectorAll('.row-actions.show-actions').forEach(el => {
                         el.classList.remove('show-actions');
                     });
-                    
-                    // Si c'était fermé, on l'ouvre
-                    if (!isOpen) {
-                        actionsDiv.classList.add('show-actions');
-                    }
+                    if (!isOpen) actionsDiv.classList.add('show-actions');
                 }
-            } 
-            else {
-                // Si on a cliqué AILLEURS (pas sur une catéogrie), on ferme tout
+            } else {
                 document.querySelectorAll('.row-actions.show-actions').forEach(el => {
                     el.classList.remove('show-actions');
                 });
@@ -759,9 +702,6 @@ function validateTransfers(person, month) {
     formData.append('action', 'validate_transfers');
     formData.append('person', person);
     formData.append('month_date', month);
-
-    // On récupère aussi les données calculées du tableau pour les envoyer au backend
-    // Mais pour plus de sécurité, le backend recalculera tout lui-même.
     
     fetch('/modules/budget/includes/api/save-budget.php', {
         method: 'POST',
@@ -769,22 +709,18 @@ function validateTransfers(person, month) {
     })
     .then(r => r.json())
     .then(data => {
-        if(data.success) {
-            window.location.reload();
-        } else {
-            alert("Erreur: " + data.error);
-        }
+        if(data.success) window.location.reload();
+        else alert("Erreur: " + data.error);
     })
     .catch(e => alert("Erreur technique"));
 }
 
-// --- SAUVEGARDE GÉNÉRIQUE DES NOTES ---
 function saveGenericNote(noteType, refId, content) {
     const formData = new FormData();
     formData.append('action', 'save_note');
-    formData.append('note_type', noteType);    // ex: 'budget_prev'
-    formData.append('reference_id', refId);    // ex: '2026-03-01'
-    formData.append('content', content);       // Le texte
+    formData.append('note_type', noteType);    
+    formData.append('reference_id', refId);    
+    formData.append('content', content);       
 
     fetch('/modules/budget/includes/api/save-budget.php', {
         method: 'POST',
