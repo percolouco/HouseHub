@@ -3,6 +3,33 @@ require __DIR__ . '/../../../../includes/auth.php';
 require __DIR__ . '/../../../../includes/db.php';
 require_login();
 
+// =================================================================
+// MISE À JOUR D'UNE CELLULE EN DIRECT (AJAX)
+// =================================================================
+if ($action === 'update_single_entry') {
+    header('Content-Type: application/json');
+    $month = $_POST['month_date'];
+    $cat = $_POST['category'];
+    $owner = $_POST['owner'];
+    $amount = (float)$_POST['amount'];
+
+    try {
+        if ($amount == 0 && $cat !== 'TOTAL_BANQUE') {
+            // Si on met à 0 une ligne (autre que le total), on supprime l'entrée pour garder la base propre
+            $stmt = $pdo->prepare("DELETE FROM pf_savings WHERE month_date=? AND owner=? AND category=?");
+            $stmt->execute([$month, $owner, $cat]);
+        } else {
+            // Sinon on insère ou on met à jour
+            $stmt = $pdo->prepare("INSERT INTO pf_savings (month_date, owner, category, amount) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE amount = VALUES(amount)");
+            $stmt->execute([$month, $owner, $cat, $amount]);
+        }
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // --- ACTION : SUPPRESSION D'UNE ENTRÉE UNIQUE ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_entry') {
     $owner = $_POST['owner'];
