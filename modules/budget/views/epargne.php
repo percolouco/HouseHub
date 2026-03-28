@@ -434,10 +434,17 @@ function duplicateLastMonth(lastMonthDate, owner) {
         formData.append("owner", owner);
 
         fetch("/modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) window.location.reload();
-            else alert("Erreur serveur : " + (d.error || "Inconnue"));
+        .then(async r => {
+            const text = await r.text(); // On lit en texte brut d'abord
+            try {
+                const d = JSON.parse(text); // On essaie de parser en JSON
+                if (d.success) window.location.reload();
+                else alert("Erreur serveur : " + (d.error || "Inconnue"));
+            } catch(e) {
+                // Si ça plante (HTML, redirection, erreur PHP masquée), on force le rechargement
+                console.log("Avertissement : La réponse serveur n'était pas du JSON. Rechargement...");
+                window.location.reload();
+            }
         })
         .catch(err => {
             console.error(err);
