@@ -2,6 +2,7 @@
 // modules/holidays/index.php
 
 // 1. Récupération des voyages + Calculs (Coût Total ET Montant déjà financé)
+// 1. Récupération des voyages + Calculs (Coût Total ET Montant déjà financé)
 $sql = "
     SELECT h.*, 
            (
@@ -14,8 +15,11 @@ $sql = "
              COALESCE((SELECT SUM(amount) FROM pf_savings WHERE holiday_id = h.id), 0)
            ) as total_funded
     FROM pf_holidays h
-    ORDER BY FIELD(status, 'booked', 'planned', 'draft', 'passed', 'archived'), 
-             start_date ASC
+    ORDER BY 
+        -- COALESCE permet de rejeter les voyages sans date tout à la fin de la liste (ex: l'an 2999)
+        COALESCE(start_date, '2999-12-31') ASC, 
+        
+        FIELD(status, 'booked', 'planned', 'draft', 'passed', 'archived')
 ";
 $holidays = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
