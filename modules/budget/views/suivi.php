@@ -38,7 +38,7 @@ $nextConfig = $nextConfigJson ? json_decode($nextConfigJson, true) : null;
 if ($nextConfig && !empty($nextConfig['start_date'])) {
     $customEndDate = date('Y-m-d', strtotime($nextConfig['start_date'] . ' -1 day'));
 } else {
-    $customEndDate = date('Y-m-t', strtotime("$currentYear-$currentMonth-01"));
+    $customEndDate = date('Y-m-d', strtotime($customStartDate . ' +1 month -1 day'));
 }
 
 // A. AJOUT CATÉGORIE TEMPORAIRE MANUELLE
