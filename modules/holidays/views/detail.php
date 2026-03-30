@@ -66,30 +66,29 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <div class="pf-holidays-detail">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <div style="display:flex; align-items:center; gap:15px;">
+    
+    <div class="hol-detail-header">
+        <div class="hol-detail-title-group">
             <a href="?tab=list" class="pf-btn btn-secondary" style="padding:6px 12px; height:auto; width:auto; text-decoration:none;">◀ Retour</a>
-            <h1 style="margin:0; font-size:1.5rem;"><?= htmlspecialchars($holiday['title']) ?></h1>
-            <span style="font-size:0.75rem; padding:4px 10px; border-radius:12px; font-weight:bold; background:#e0f2fe; color:#0369a1;">
-                <?= strtoupper($holiday['status']) ?>
-            </span>
+            <h1><?= htmlspecialchars($holiday['title']) ?></h1>
+            <span class="hol-badge-status"><?= strtoupper($holiday['status']) ?></span>
         </div>
-        <button onclick='editHoliday(<?= htmlspecialchars(json_encode(['main' => $holiday, 'items' => $generalItems]), ENT_QUOTES, 'UTF-8') ?>)' class="pf-btn btn-secondary" style="width:auto;">⚙️ Modifier les bases</button>
+        <button onclick='editHoliday(<?= htmlspecialchars(json_encode(['main' => $holiday, 'items' => $generalItems]), ENT_QUOTES, 'UTF-8') ?>)' class="pf-btn btn-secondary" style="width:auto; margin:0;">⚙️ Modifier les bases</button>
     </div>
 
-    <div style="background:white; padding:20px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0; margin-bottom:24px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px; flex-wrap:wrap; gap:15px;">
-            <div>
-                <div style="font-size:0.85rem; color:#64748b;">Période</div>
-                <div style="font-weight:600; color:#1e293b;"><?= $dateDisplay ?: 'À définir' ?></div>
+    <div class="hol-summary-card">
+        <div class="hol-summary-grid">
+            <div class="hol-summary-item">
+                <div class="hol-summary-label">Période</div>
+                <div class="hol-summary-value"><?= $dateDisplay ?: 'À définir' ?></div>
             </div>
-            <div>
-                <div style="font-size:0.85rem; color:#64748b;">Budget Food & Extras</div>
-                <div style="font-weight:600; color:#1e293b;">🍔 <?= number_format($holiday['budget_food'], 0) ?> € | 🎁 <?= number_format($holiday['budget_extra'], 0) ?> €</div>
+            <div class="hol-summary-item">
+                <div class="hol-summary-label">Budget Food & Extras</div>
+                <div class="hol-summary-value">🍔 <?= number_format($holiday['budget_food'], 0) ?> € | 🎁 <?= number_format($holiday['budget_extra'], 0) ?> €</div>
             </div>
-            <div style="text-align:right;">
-                <div style="font-size:0.85rem; color:#64748b;">Coût Total Estimé</div>
-                <div style="font-size:1.4rem; font-weight:bold; color:#0f172a;"><?= number_format($cost, 0, ',', ' ') ?> €</div>
+            <div class="hol-summary-item" style="text-align:right;">
+                <div class="hol-summary-label">Coût Total Estimé</div>
+                <div class="hol-summary-value total"><?= number_format($cost, 0, ',', ' ') ?> €</div>
             </div>
         </div>
 
@@ -104,53 +103,54 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
         </div>
     </div>
 
-    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; align-items: stretch;">
-        <div style="background:white; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0; overflow:hidden; display:flex; flex-direction:column; height: 600px;">
-            <div style="padding:15px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; font-size:1.1rem;">🗺️ Itinéraire & Checkpoints</h3>
-                <button class="pf-btn" onclick="openCheckpointModal('add')" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">📍 Placer une étape</button>
+    <div class="hol-layout-grid">
+        
+        <div class="hol-panel">
+            <div class="hol-panel-header">
+                <h3>🗺️ Itinéraire & Checkpoints</h3>
+                <button class="pf-btn" onclick="openCheckpointModal('add')" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem; margin:0;">📍 Placer une étape</button>
             </div>
             <div id="tripMap" style="flex:1; width:100%; background:#f1f5f9;"></div>
         </div>
 
-        <div style="background:white; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0; display:flex; flex-direction:column; height: 600px;">
-            <div style="padding:15px 20px; border-bottom:1px solid #e2e8f0; background:#f8fafc; border-radius:16px 16px 0 0;">
-                <h3 style="margin:0; font-size:1.1rem;">📝 Détail des étapes</h3>
+        <div class="hol-panel">
+            <div class="hol-panel-header">
+                <h3>📝 Détail des étapes</h3>
             </div>
             
-            <div style="padding:15px; overflow-y:auto; flex:1;">
+            <div class="hol-panel-body">
                 <?php if (empty($steps)): ?>
-                    <p style="color:#94a3b8; font-style:italic; text-align:center; margin-top:40px;">Aucune étape planifiée.</p>
+                    <p style="color:var(--text-muted); font-style:italic; text-align:center; margin-top:40px;">Aucune étape planifiée.</p>
                 <?php else: ?>
                     <?php foreach ($steps as $step): ?>
-                        <div style="border:1px solid #e2e8f0; border-radius:8px; margin-bottom:15px; overflow:hidden;">
-                            <div style="background:#f8fafc; padding:10px 15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0;">
+                        <div class="hol-checkpoint">
+                            <div class="hol-cp-header">
                                 <div>
-                                    <strong style="color:#0f172a; font-size:1rem; cursor:pointer;" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)">📍 <?= htmlspecialchars($step['location_name']) ?></strong>
-                                    <div style="font-size:0.8rem; color:#64748b;">Total Étape : <?= number_format($step['total_amount'], 2) ?> €</div>
+                                    <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)">📍 <?= htmlspecialchars($step['location_name']) ?></div>
+                                    <div class="hol-cp-total">Total Étape : <?= number_format($step['total_amount'], 2) ?> €</div>
                                 </div>
-                                <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="Modifier cette étape" style="background:white; border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; cursor:pointer;">✏️</button>
+                                <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="Modifier cette étape" style="margin:0;">✏️</button>
                             </div>
-                            <div style="padding:10px 15px; background:white;">
+                            <div class="hol-cp-body">
 
                                 <?php 
                                     $visibleItemsCount = 0;
                                     foreach ($step['items'] as $it): 
-                                        if ($it['name'] === 'PF_TECHNICAL_POINT') continue; // On cache la ligne technique !
+                                        if ($it['name'] === 'PF_TECHNICAL_POINT') continue; 
                                         $visibleItemsCount++;
                                         $icon = match($it['category']) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
                                 ?>
-                                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:5px; border-bottom:1px dashed #f1f5f9; padding-bottom:5px;">
+                                        <div class="hol-expense-line">
                                             <span style="color:#475569;"><?= $icon ?> <?= htmlspecialchars($it['name']) ?></span>
                                             <span>
-                                                <strong style="color:#1e293b;"><?= number_format($it['amount'], 2) ?> €</strong>
+                                                <strong style="color:var(--text-main);"><?= number_format($it['amount'], 2) ?> €</strong>
                                                 <span style="margin-left:5px; color:<?= $it['is_paid'] ? '#10b981' : '#f59e0b' ?>;" title="<?= $it['is_paid'] ? 'Payé' : 'À payer' ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
                                             </span>
                                         </div>
                                 <?php endforeach; ?>
                                 
                                 <?php if ($visibleItemsCount === 0): ?>
-                                        <div style="font-size:0.8rem; color:#94a3b8; font-style:italic;">Point de passage (Aucune dépense)</div>
+                                        <div style="font-size:0.8rem; color:var(--text-muted); font-style:italic;">Point de passage (Aucune dépense)</div>
                                 <?php endif; ?>
 
                             </div>
@@ -160,7 +160,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             </div>
 
             <?php if (!empty($holiday['notes'])): ?>
-            <div style="padding:15px; border-top:1px solid #e2e8f0; background:#fffbeb;">
+            <div class="hol-notes-panel">
                 <h4 style="margin:0 0 5px 0; font-size:0.85rem; color:#d97706;">Notes du voyage :</h4>
                 <p style="margin:0; font-size:0.85rem; color:#92400e; white-space:pre-wrap;"><?= htmlspecialchars($holiday['notes']) ?></p>
             </div>
@@ -170,7 +170,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 </div>
 
 <div id="checkpointModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 600px; width:95%;">
+    <div class="pf-modal-content" style="max-width: 600px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 id="cpModalTitle" style="margin:0;">📍 Placer une étape</h3>
             <button type="button" onclick="document.getElementById('checkpointModal').style.display='none'" style="border:none; background:none; font-size:1.8rem; cursor:pointer;">&times;</button>
@@ -190,7 +190,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             <label class="pf-label">Rechercher un lieu géographique</label>
             <div style="display:flex; gap:10px;">
                 <input type="text" id="searchPlaceInput" class="pf-input" placeholder="Ex: Paris, Ibis Barcelone..." onkeypress="if(event.key === 'Enter') { searchPlace(); return false; }">
-                <button type="button" class="pf-btn btn-secondary" onclick="searchPlace()" style="width:auto;">🔍</button>
+                <button type="button" class="pf-btn btn-secondary" onclick="searchPlace()" style="width:auto; margin:0;">🔍</button>
             </div>
             <div id="searchResults" style="margin-top:10px; max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;"></div>
         </div>
@@ -203,12 +203,12 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             
             <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Nom de l'étape (Ce qui s'affichera sur la carte)</label>
-                <input type="text" name="location_name" id="cp_name" class="pf-input" style="font-weight:bold; color:#2563eb;" required>
+                <input type="text" name="location_name" id="cp_name" class="pf-input" style="font-weight:bold; color:var(--primary);" required>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <label class="pf-label" style="margin:0;">Dépenses prévues à cette étape</label>
-                <button type="button" class="pf-btn btn-secondary" onclick="addCpExpenseLine()" style="padding:4px 8px; font-size:0.8rem; height:auto; width:auto;">+ Ajouter une dépense</button>
+                <button type="button" class="pf-btn btn-secondary" onclick="addCpExpenseLine()" style="padding:4px 8px; font-size:0.8rem; height:auto; width:auto; margin:0;">+ Ajouter une dépense</button>
             </div>
 
             <div id="cpExpensesContainer" style="margin-bottom:15px; display:flex; flex-direction:column; gap:10px; max-height:300px; overflow-y:auto;">
@@ -225,7 +225,6 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 <div>
                     <button type="button" onclick="deleteCheckpoint()" id="btnDeleteCp" class="pf-btn btn-secondary" style="color:#ef4444; border-color:#fca5a5; display:none; width:auto; margin:0;">🗑️ Supprimer l'étape</button>
                 </div>
-                
                 <div style="display:flex; gap:10px;">
                     <button type="button" onclick="document.getElementById('checkpointModal').style.display='none'" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
                     <button type="submit" class="pf-btn" style="width:auto; margin:0;">Enregistrer l'étape</button>

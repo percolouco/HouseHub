@@ -1,7 +1,27 @@
 <?php
 // modules/holidays/views/list.php
 
-// 1. Récupération des voyages + Calculs (Coût Total, Montant Payé, Montant Épargné/Financé)
+// 1. Gestion du filtrage par année
+$selectedYear = $_GET['y'] ?? date('Y');
+
+// Récupérer les années disponibles dans la BDD pour le menu déroulant
+$yearStmt = $pdo->query("SELECT DISTINCT YEAR(start_date) as yr FROM pf_holidays WHERE start_date IS NOT NULL ORDER BY yr DESC");
+$availableYears = $yearStmt->fetchAll(PDO::FETCH_COLUMN);
+if (!in_array(date('Y'), $availableYears)) {
+    $availableYears[] = date('Y');
+    rsort($availableYears); // Trie par ordre décroissant
+}
+
+// Construction de la condition de filtrage SQL
+$whereSQL = "";
+$params = [];
+if ($selectedYear !== 'all') {
+    // On affiche les voyages de l'année OU les voyages sans date (pour ne pas perdre les brouillons)
+    $whereSQL = "WHERE YEAR(h.start_date) = ? OR h.start_date IS NULL";
+    $params[] = $selectedYear;
+}
+
+// 2. Récupération des voyages + Calculs
 $sql = "
     SELECT h.*, 
            (
@@ -12,32 +32,58 @@ $sql = "
            (SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) as total_paid,
            (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved
     FROM pf_holidays h
+    $whereSQL
     ORDER BY 
-        -- COALESCE permet de rejeter les voyages sans date tout à la fin de la liste (ex: l'an 2999)
         COALESCE(start_date, '2999-12-31') ASC, 
-        
         FIELD(status, 'booked', 'planned', 'draft', 'passed', 'archived')
 ";
-$holidays = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$holidays = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Tri par statut
+// 3. Tri par statut
 $active = array_filter($holidays, fn($h) => in_array($h['status'], ['draft', 'planned', 'booked']));
 $history = array_filter($holidays, fn($h) => in_array($h['status'], ['passed', 'archived']));
+
+// 4. Calcul du Reste à Payer Global (uniquement sur les voyages Actifs affichés)
+$globalLeftToPay = 0;
+foreach ($active as $h) {
+    $cost = (float)$h['total_cost'];
+    $paid = (float)$h['total_paid'];
+    $globalLeftToPay += max(0, $cost - $paid);
+}
 ?>
 
 <div class="pf-holidays">
     
-    <div class="pf-holidays__titlebar">
-        <h1>Mes Vacances ✈️</h1>
-        <div class="hol-title-actions">
-            <button class="hol-add-btn" onclick="openHolidayModal('add')">+ Créer un voyage</button>
+    <div class="pf-holidays__titlebar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin-bottom:30px;">
+        
+        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+            <h1 style="margin:0;">Mes Vacances ✈️</h1>
+            
+            <select onchange="window.location.href='?tab=list&y='+this.value" class="pf-input" style="width:auto; padding:6px 12px; font-weight:bold; cursor:pointer; border-radius:8px; border:1px solid #cbd5e1; margin:0;">
+                <option value="all" <?= $selectedYear === 'all' ? 'selected' : '' ?>>Tout afficher</option>
+                <?php foreach($availableYears as $yr): ?>
+                    <option value="<?= $yr ?>" <?= (string)$selectedYear === (string)$yr ? 'selected' : '' ?>>Année <?= $yr ?></option>
+                <?php endforeach; ?>
+            </select>
+
+            <div style="background:#fff1f2; color:#be123c; padding:6px 12px; border-radius:8px; font-weight:bold; border:1px solid #fecdd3; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+                <span>⏳ Reste à payer (<?= $selectedYear === 'all' ? 'Global' : $selectedYear ?>) :</span>
+                <span style="font-size:1rem;"><?= number_format($globalLeftToPay, 0, ',', ' ') ?> €</span>
+            </div>
         </div>
+
+        <div>
+            <button class="pf-btn" onclick="openHolidayModal('add')" style="margin:0;">+ Créer un voyage</button>
+        </div>
+
     </div>
 
     <section class="pf-section">
         <div class="hol-ideas-grid">
             <?php if (empty($active)): ?>
-                <p style="color:var(--text-muted); font-style:italic;">Aucun voyage en cours. Planifions quelque chose !</p>
+                <p style="color:var(--text-muted); font-style:italic;">Aucun voyage en cours pour cette période. Planifions quelque chose !</p>
             <?php endif; ?>
 
             <?php foreach ($active as $h): ?>
@@ -62,6 +108,7 @@ $history = array_filter($holidays, fn($h) => in_array($h['status'], ['passed', '
 <?php include __DIR__ . '/modal.php'; ?>
 
 <?php
+// FONCTION D'AFFICHAGE DE LA CARTE (Ne pas modifier, elle est déjà optimale)
 function renderHolidayCard($h, $pdo) {
     $stmt = $pdo->prepare("SELECT * FROM pf_holidays_items WHERE holiday_id = ?");
     $stmt->execute([$h['id']]);
@@ -82,14 +129,12 @@ function renderHolidayCard($h, $pdo) {
         default => 'bg-yellow-50 text-yellow-800'
     };
 
-    // --- Calcul des métriques financières ---
     $cost = (float)$h['total_cost'];
     $paid = (float)$h['total_paid'];
     $saved = (float)$h['total_saved']; 
     
     $leftToPay = max(0, $cost - $paid);
     
-    // Calculs pour la barre de progression bicolore
     $pctPaid = $cost > 0 ? min(100, ($paid / $cost) * 100) : 0;
     $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
