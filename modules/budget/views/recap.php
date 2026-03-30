@@ -5,12 +5,24 @@
 $stmt = $pdo->query("SELECT * FROM pf_budget_items ORDER BY category DESC, sort_order ASC, name ASC");
 $items = $stmt->fetchAll();
 
-// 2. Récupération des Dépenses Réelles du mois (Pour valider les états)
-$currentMonth = date('m');
-$currentYear = date('Y');
+// 2. Déterminer quel est le mois de gestion "ouvert" par défaut
+$stmtActive = $pdo->query("SELECT content FROM pf_notes WHERE note_type = 'active_gestion_month' LIMIT 1");
+$defaultActiveMonth = $stmtActive->fetchColumn();
+if (!$defaultActiveMonth) {
+    $defaultActiveMonth = date('Y-m-01');
+}
 
-$stmtExp = $pdo->prepare("SELECT amount, label, category, budget_item_id FROM pf_expenses WHERE MONTH(date_exp) = ? AND YEAR(date_exp) = ?");
-$stmtExp->execute([$currentMonth, $currentYear]);
+// 3. Assigner le mois et l'année en fonction du mois ouvert
+$currentMonth = isset($_GET['m']) ? str_pad((int)$_GET['m'], 2, '0', STR_PAD_LEFT) : date('m', strtotime($defaultActiveMonth));
+$currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y', strtotime($defaultActiveMonth));
+$viewMonthDate = "$currentYear-$currentMonth-01";
+
+$moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+$currentMonthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
+
+// 4. Récupération des Dépenses Réelles du mois (Basé sur le Mois de Gestion !)
+$stmtExp = $pdo->prepare("SELECT amount, label, category, budget_item_id FROM pf_expenses WHERE gestion_month = ?");
+$stmtExp->execute([$viewMonthDate]);
 $allExpenses = $stmtExp->fetchAll(PDO::FETCH_ASSOC);
 
 $totalDepenses = 0;
@@ -31,7 +43,7 @@ $totalRevenus = 0;
                     <th>Montant Prévu</th>
                     <th>Type</th>
                     <th>Jour</th>
-                    <th>État du mois (<?= date('M') ?>)</th>
+                    <th>État du mois (<?= $currentMonthName ?>)</th>
                     <th style="text-align:right;">Actions</th>
                 </tr>
             </thead>
