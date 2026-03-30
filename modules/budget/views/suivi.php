@@ -286,13 +286,28 @@ foreach ($allExpenses as $exp) {
     }
 }
 
-// CORRECTION BUG N°1 : On calcule et on ajoute l'école aux charges à venir AVANT la condition de clôture
-// Ainsi, le détail de l'école sera toujours affiché dans le petit 👁️
+// 1. École
 $ecole_depense = isset($totals['School']) ? $totals['School'] : 0;
 $reste_ecole = max(0, $budget_school - $ecole_depense);
 if ($reste_ecole > 0) {
     $reste_a_venir_calc += $reste_ecole;
     $pending_charges[] = ['name' => 'École (Reste estimé)', 'amount' => $reste_ecole];
+}
+
+// 2. Courses (FMCG)
+$fmcg_depense = isset($totals['FMCG']) ? $totals['FMCG'] : 0;
+$reste_fmcg = max(0, $budget_fmcg - $fmcg_depense);
+if ($reste_fmcg > 0) {
+    $reste_a_venir_calc += $reste_fmcg;
+    $pending_charges[] = ['name' => 'Courses (Reste estimé)', 'amount' => $reste_fmcg];
+}
+
+// 3. Essence
+$essence_depense = isset($totals['Essence']) ? $totals['Essence'] : 0;
+$reste_essence = max(0, $budget_essence - $essence_depense);
+if ($reste_essence > 0) {
+    $reste_a_venir_calc += $reste_essence;
+    $pending_charges[] = ['name' => 'Essence (Reste estimé)', 'amount' => $reste_essence];
 }
 
 // F. Calculs des KPIs finaux
