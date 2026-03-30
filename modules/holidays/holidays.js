@@ -1,15 +1,21 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialisation des écouteurs globaux si besoin
+  // Fermer les modales si on clique en dehors du contenu
+  window.onclick = function (event) {
+    const modal = document.getElementById("holidayModal");
+    if (event.target == modal) {
+      closeHolidayModal();
+    }
+  };
 });
 
-// --- 1. GESTION DE LA MODALE D'ÉDITION ---
+// --- 1. GESTION DE LA MODALE D'ÉDITION RAPIDE ---
 
 function openHolidayModal(mode) {
   const modal = document.getElementById("holidayModal");
   const form = document.getElementById("holidayForm");
   const btnDelete = document.getElementById("btn_delete");
 
-  // Reset complet
+  // Reset complet pour éviter les résidus d'une carte précédente
   form.reset();
   document.getElementById("inp_id").value = "";
   document.getElementById("list_transport").innerHTML = "";
@@ -17,51 +23,46 @@ function openHolidayModal(mode) {
   document.getElementById("list_activity").innerHTML = "";
 
   if (mode === "add") {
-    document.getElementById("modalTitle").innerText = "Nouveau Voyage";
+    document.getElementById("modalTitle").innerText = "Planifier le voyage";
     btnDelete.style.display = "none";
   } else {
-    document.getElementById("modalTitle").innerText = "Modifier le voyage";
+    document.getElementById("modalTitle").innerText = "Modification rapide";
     btnDelete.style.display = "block";
   }
 
-  modal.classList.add("open");
   modal.style.display = "flex";
 
-  // --- AJOUT : FORCER LE SCROLL EN HAUT ---
-  const content = modal.querySelector(".pf-modal-content");
-  if (content) {
-    content.scrollTop = 0;
-  }
-  // Optionnel : Mettre le focus sur le premier champ (Titre)
-  // setTimeout(() => document.getElementById('inp_title').focus(), 50);
+  // Focus sur le champ titre pour une saisie rapide (petit délai pour l'animation d'ouverture)
+  setTimeout(() => document.getElementById("inp_title").focus(), 100);
 }
 
 function closeHolidayModal() {
-  const modal = document.getElementById("holidayModal");
-  modal.classList.remove("open");
-  modal.style.display = "none";
+  document.getElementById("holidayModal").style.display = "none";
 }
 
-// Fonction appelée au clic sur une carte (injectée par PHP)
+// Fonction appelée au clic sur le bouton ✏️ de la carte (injectée par PHP)
 function editHoliday(data) {
-  openHolidayModal("edit");
-
   const h = data.main;
+
+  // On ouvre la modale en mode édition (ça reset les listes)
+  openHolidayModal("edit");
 
   // Remplissage des champs principaux
   document.getElementById("inp_id").value = h.id;
   document.getElementById("inp_title").value = h.title;
   document.getElementById("inp_status").value = h.status;
-  document.getElementById("inp_period").value = h.period_hint;
-  document.getElementById("inp_start").value = h.start_date;
-  document.getElementById("inp_end").value = h.end_date;
+  document.getElementById("inp_period").value = h.period_hint || "";
+  document.getElementById("inp_start").value = h.start_date || "";
+  document.getElementById("inp_end").value = h.end_date || "";
+
+  // Pour éviter d'afficher "0" dans un champ vide, on vérifie si la valeur est > 0
   document.getElementById("inp_food").value =
     h.budget_food > 0 ? h.budget_food : "";
   document.getElementById("inp_extra").value =
     h.budget_extra > 0 ? h.budget_extra : "";
-  document.getElementById("inp_notes").value = h.notes;
+  document.getElementById("inp_notes").value = h.notes || "";
 
-  // Remplissage des listes dynamiques
+  // Remplissage des listes dynamiques (Transport, Hébergement, Activité)
   if (data.items && data.items.length > 0) {
     data.items.forEach((item) => {
       addItem(item.category, item.name, item.amount, item.is_paid);
@@ -69,36 +70,40 @@ function editHoliday(data) {
   }
 }
 
-// --- 2. GESTION DES LISTES DYNAMIQUES (Transport, etc.) ---
+// --- 2. GESTION DES LISTES DYNAMIQUES DANS LA MODALE ---
 
 function addItem(category, name = "", amount = "", isPaid = 0) {
   const container = document.getElementById("list_" + category);
   const div = document.createElement("div");
 
-  // Utilisation des classes CSS définies précédemment
-  div.className = "savings-line-item";
+  // Style en ligne pour s'assurer que ça reste propre sans dépendre de classes externes complexes
+  div.style.display = "flex";
+  div.style.gap = "8px";
+  div.style.alignItems = "center";
+  div.style.marginBottom = "10px";
 
-  // Checkbox logique pour "Payé"
+  // Astuce pour lier la checkbox visuelle à l'input caché (valeur 0 ou 1 pour MySQL)
   const checkedAttr = isPaid == 1 ? "checked" : "";
 
   div.innerHTML = `
         <input type="hidden" name="items[cat][]" value="${category}">
         
         <input type="text" name="items[name][]" class="pf-input" 
-               placeholder="Nom (ex: Vol)" value="${name}" 
-               style="flex: 2; min-width: 0;">
+               placeholder="Intitulé" value="${name}" 
+               style="flex: 2; padding: 8px; font-size:0.9rem;" required>
                
         <input type="number" step="0.01" name="items[amount][]" class="pf-input" 
-               placeholder="€" value="${amount}" 
-               style="width: 80px; text-align: right;">
+               placeholder="Prix (€)" value="${amount}" 
+               style="width: 80px; text-align: right; padding: 8px; font-size:0.9rem;">
                
         <label title="Déjà payé ?" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
-            <input type="checkbox" ${checkedAttr} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
+            <input type="checkbox" ${checkedAttr} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
             <input type="hidden" name="items[paid][]" value="${isPaid}">
-            <span style="font-size:0.8rem; margin-left:4px;">Payé</span>
+            <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">Payé</span>
         </label>
         
-        <button type="button" class="btn-remove" onclick="this.parentElement.remove()" title="Supprimer">
+        <button type="button" onclick="this.parentElement.remove()" title="Retirer cette ligne" 
+                style="width: 28px; height: 28px; border: none; background: #fee2e2; color: #ef4444; border-radius: 6px; cursor: pointer; font-weight: bold; display:flex; align-items:center; justify-content:center;">
             &times;
         </button>
     `;
@@ -107,11 +112,16 @@ function addItem(category, name = "", amount = "", isPaid = 0) {
 }
 
 function deleteHoliday() {
-  if (!confirm("Supprimer définitivement ce voyage ?")) return;
+  if (
+    !confirm(
+      "Voulez-vous vraiment supprimer définitivement ce voyage ? Cette action est irréversible.",
+    )
+  )
+    return;
 
   const form = document.getElementById("holidayForm");
 
-  // On ajoute un input caché pour signaler la suppression au PHP
+  // On injecte un input caché pour signaler au PHP que c'est une demande de suppression
   const input = document.createElement("input");
   input.type = "hidden";
   input.name = "action_delete";
@@ -121,7 +131,7 @@ function deleteHoliday() {
   form.submit();
 }
 
-// --- 3. GESTION DE LA CARTE (Leaflet) ---
+// --- 3. GESTION DE LA CARTE (Leaflet - Optionnel selon si tu l'utilises ou non) ---
 
 let map = null;
 
@@ -171,4 +181,235 @@ function initMap() {
         .bindPopup(`<b>${pt.title}</b><br>${pt.status}`);
     });
   }
+}
+// ============================================================================
+// 4. GESTION DE LA CARTE DÉTAILLÉE (ROADTRIP) ET GÉOCODAGE
+// ============================================================================
+
+let detailMap = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Si on est sur la page détail et que la div "tripMap" existe, on initie la carte
+  if (document.getElementById("tripMap")) {
+    initDetailMap();
+  }
+});
+
+function initDetailMap() {
+  if (typeof L === "undefined" || typeof MAP_POINTS === "undefined") return;
+
+  detailMap = L.map("tripMap");
+
+  // Fond de carte propre (CartoDB Voyager)
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    {
+      attribution: "© OpenStreetMap",
+    },
+  ).addTo(detailMap);
+
+  if (MAP_POINTS.length === 0) {
+    detailMap.setView([46.6, 2.4], 5); // Centré sur la France par défaut si vide
+    return;
+  }
+
+  const latlngs = [];
+  const bounds = L.latLngBounds();
+
+  MAP_POINTS.forEach((pt, index) => {
+    const pos = [pt.lat, pt.lng];
+    latlngs.push(pos);
+    bounds.extend(pos);
+
+    // Couleur selon le paiement
+    const color = pt.paid == 1 ? "#10b981" : "#f59e0b";
+
+    // On place un petit cercle pour chaque point
+    const marker = L.circleMarker(pos, {
+      color: color,
+      radius: 7,
+      fillOpacity: 1,
+      fillColor: "white",
+      weight: 3,
+    }).addTo(detailMap);
+
+    // Numérotation et Popup
+    marker.bindPopup(`
+            <div style="text-align:center;">
+                <div style="font-size:0.7rem; color:#64748b; margin-bottom:2px;">Étape ${index + 1}</div>
+                <strong>${pt.title}</strong><br>
+                <span style="font-weight:bold; color:${color};">${parseFloat(pt.amount).toFixed(2)} €</span>
+            </div>
+        `);
+  });
+
+  // On dessine le trait en pointillés pour relier le roadtrip !
+  if (latlngs.length > 1) {
+    L.polyline(latlngs, {
+      color: "#3b82f6",
+      weight: 3,
+      dashArray: "8, 8",
+      opacity: 0.7,
+    }).addTo(detailMap);
+  }
+
+  // On zoome automatiquement pour voir tous les points
+  detailMap.fitBounds(bounds, { padding: [50, 50] });
+}
+
+// Fonction appelée quand on clique sur "👁️ Voir sur la carte" dans la liste
+function panMapTo(lat, lng) {
+  if (detailMap) {
+    detailMap.setView([lat, lng], 14, { animate: true });
+  }
+}
+
+// --- LOGIQUE DE LA MODALE CHECKPOINT (Lignes multiples) ---
+
+function openCheckpointModal(mode, data = null) {
+  const searchBlock = document.getElementById("cpSearchBlock");
+  const formBlock = document.getElementById("formCheckpoint");
+  const container = document.getElementById("cpExpensesContainer");
+  const btnDel = document.getElementById("btnDeleteCp");
+
+  container.innerHTML = ""; // Reset des lignes
+
+  if (mode === "add") {
+    document.getElementById("cpModalTitle").innerText =
+      "📍 Placer une nouvelle étape";
+    searchBlock.style.display = "block";
+    formBlock.style.display = "none";
+    btnDel.style.display = "none";
+
+    document.getElementById("searchPlaceInput").value = "";
+    document.getElementById("searchResults").innerHTML = "";
+
+    document.getElementById("cp_old_name").value = "";
+    document.getElementById("cp_name").value = "";
+
+    // Ajout d'une ligne vide par défaut
+    addCpExpenseLine();
+  } else if (mode === "edit" && data) {
+    document.getElementById("cpModalTitle").innerText = "✏️ Modifier l'étape";
+    searchBlock.style.display = "none"; // On cache la recherche en mode édition
+    formBlock.style.display = "block";
+    btnDel.style.display = "block";
+
+    document.getElementById("cp_lat").value = data.lat;
+    document.getElementById("cp_lng").value = data.lng;
+    document.getElementById("cp_old_name").value = data.location_name;
+    document.getElementById("cp_name").value = data.location_name;
+
+    // Remplissage des lignes existantes (en filtrant le point technique)
+    if (data.items && data.items.length > 0) {
+      let visibleCount = 0;
+      data.items.forEach((it) => {
+        if (it.name !== "PF_TECHNICAL_POINT") {
+          addCpExpenseLine(it.category, it.name, it.amount, it.is_paid);
+          visibleCount++;
+        }
+      });
+      // Si l'étape ne contenait QUE le point technique, on affiche une ligne vide pour inviter à la saisie
+      if (visibleCount === 0) {
+        addCpExpenseLine();
+      }
+    } else {
+      addCpExpenseLine(); // Sécurité
+    }
+  }
+
+  document.getElementById("checkpointModal").style.display = "flex";
+}
+
+function searchPlace() {
+  const q = document.getElementById("searchPlaceInput").value.trim();
+  if (q.length < 3) return;
+
+  const resultsDiv = document.getElementById("searchResults");
+  resultsDiv.innerHTML =
+    '<span style="color:#64748b; font-size:0.85rem;">Recherche en cours... ⏳</span>';
+
+  fetch(
+    "/modules/holidays/includes/api/geocode.php?limit=5&q=" +
+      encodeURIComponent(q),
+  )
+    .then((res) => res.json())
+    .then((data) => {
+      resultsDiv.innerHTML = "";
+      if (data.error || !data.results || data.results.length === 0) {
+        resultsDiv.innerHTML =
+          '<span style="color:#ef4444; font-size:0.85rem;">Aucun résultat trouvé.</span>';
+        return;
+      }
+
+      data.results.forEach((place) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "pf-btn btn-secondary";
+        btn.style.textAlign = "left";
+        btn.style.padding = "8px";
+        btn.style.height = "auto";
+        btn.innerText = "📍 " + place.display_name;
+        btn.onclick = () =>
+          selectPlace(place.lat, place.lng, place.display_name);
+        resultsDiv.appendChild(btn);
+      });
+    })
+    .catch((err) => {
+      resultsDiv.innerHTML =
+        '<span style="color:#ef4444; font-size:0.85rem;">Erreur réseau.</span>';
+    });
+}
+
+function selectPlace(lat, lng, fullName) {
+  document.getElementById("cp_lat").value = lat;
+  document.getElementById("cp_lng").value = lng;
+  // On nettoie le nom pour que ce soit joli (ex: "Paris, France" -> "Paris")
+  document.getElementById("cp_name").value = fullName.split(",")[0].trim();
+  document.getElementById("cpSearchBlock").style.display = "none";
+  document.getElementById("formCheckpoint").style.display = "block";
+}
+
+function addCpExpenseLine(
+  category = "accommodation",
+  name = "",
+  amount = "",
+  isPaid = 0,
+) {
+  const container = document.getElementById("cpExpensesContainer");
+  const div = document.createElement("div");
+  div.style.display = "flex";
+  div.style.gap = "8px";
+  div.style.alignItems = "center";
+
+  const isChecked = isPaid == 1 ? "checked" : "";
+
+  div.innerHTML = `
+        <select name="items[cat][]" class="pf-input" style="width:50px; padding:8px 4px; font-size:1.2rem; cursor:pointer;" title="Catégorie">
+            <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
+            <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
+            <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
+        </select>
+        <input type="text" name="items[name][]" class="pf-input" placeholder="Libellé (Optionnel)" value="${name}" style="flex:2; padding:8px; font-size:0.9rem;">
+        <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width:80px; text-align:right; padding:8px; font-size:0.9rem;">
+        <label title="Payé ?" style="display:flex; align-items:center; cursor:pointer;">
+            <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
+            <input type="hidden" name="items[paid][]" value="${isPaid}">
+            <span style="font-size:0.75rem; margin-left:2px; font-weight:bold; color:#64748b;">Payé</span>
+        </label>
+        <button type="button" onclick="this.parentElement.remove()" style="width:28px; height:28px; border:none; background:#fee2e2; color:#ef4444; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; justify-content:center; align-items:center;">&times;</button>
+    `;
+  container.appendChild(div);
+}
+
+function deleteCheckpoint() {
+  if (!confirm("Supprimer cette étape et toutes les dépenses associées ?"))
+    return;
+  const form = document.getElementById("formCheckpoint");
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "action_delete";
+  input.value = "1";
+  form.appendChild(input);
+  form.submit();
 }

@@ -1,9 +1,9 @@
 <?php
-// modules/holidays/view.php
+// modules/holidays/includes/api/get_holiday_data.php
 
-require __DIR__ . '/../../includes/auth.php';
-require_login('/login.php');
-require __DIR__ . '/../../includes/db.php';
+require dirname(__DIR__, 4) . '/includes/auth.php';
+require dirname(__DIR__, 4) . '/includes/db.php';
+require_login();
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -16,6 +16,7 @@ if ($id <= 0) {
 }
 
 try {
+    // Si tu utilises pf_holidays au lieu de pf_holidays_ideas, change le nom de la table ici !
     $st = $pdo->prepare("SELECT * FROM pf_holidays_ideas WHERE id = ?");
     $st->execute([$id]);
     $it = $st->fetch(PDO::FETCH_ASSOC);
@@ -26,17 +27,12 @@ try {
         exit;
     }
 
-    // Amélioration : Typage explicite pour le JSON
-    // Cela évite que JS reçoive "4" (string) au lieu de 4 (int) pour les calculs
     $it['id'] = (int)$it['id'];
     
     if (isset($it['lat'])) $it['lat'] = (float)$it['lat'];
     if (isset($it['lng'])) $it['lng'] = (float)$it['lng'];
     if (isset($it['ideal_days'])) $it['ideal_days'] = (int)$it['ideal_days'];
     
-    // On s'assure que les null restent null et pas des chaines vides si la DB est stricte
-    // (Optionnel mais propre)
-
     echo json_encode($it, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 } catch (Throwable $e) {
