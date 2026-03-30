@@ -161,7 +161,7 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
                             foreach ($allCategories as $cat) $sum += ($data[$month][$cat] ?? 0);
                             $extra = $total - $sum;
                         ?>
-                            <td class="text-center font-bold" id="extra_<?= $currentOwner ?>_<?= $month ?>" style="color: <?= $extra >= 0 ? '#10b981' : '#ef4444' ?>; padding:12px;">
+                            <td class="text-center font-bold sum-target" id="extra_<?= $currentOwner ?>_<?= $month ?>" style="color: <?= $extra >= 0 ? '#10b981' : '#ef4444' ?>; padding:12px;">
                                 <?= number_format($extra, 0, ',', ' ') ?> €
                             </td>
                         <?php endforeach; ?>
@@ -226,6 +226,15 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
     </div>
 </div>
 
+<button id="fabSumMode" class="pf-fab-sum" onclick="toggleSumMode()" title="Activer l'addition rapide">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="12" y1="8" x2="12" y2="16"></line></svg>
+</button>
+
+<div id="sumResultBar" class="pf-sum-bar">
+    <span class="pf-sum-label">Sélection :</span>
+    <span id="sumResultValue" class="pf-sum-value">0 €</span>
+    <button onclick="toggleSumMode()" class="pf-sum-close" title="Fermer">&times;</button>
+</div>
 <script>
 // ============================================================================
 // 1. GESTION DE L'ÉDITION INVISIBLE EN DIRECT (Input Classique)
@@ -263,6 +272,9 @@ function updateEpargneCell(month, category, owner, inputEl) {
         extraCell.innerText = Math.round(extra).toLocaleString('fr-FR') + ' €';
         extraCell.style.color = extra >= 0 ? '#10b981' : '#ef4444';
     }
+    
+    // Si la calculatrice est active, on met à jour son résultat aussi
+    if(isSumModeActive) updateSumResult();
 }
 
 // ============================================================================
@@ -435,13 +447,12 @@ function duplicateLastMonth(lastMonthDate, owner) {
 
         fetch("/modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
         .then(async r => {
-            const text = await r.text(); // On lit en texte brut d'abord
+            const text = await r.text(); 
             try {
-                const d = JSON.parse(text); // On essaie de parser en JSON
+                const d = JSON.parse(text); 
                 if (d.success) window.location.reload();
                 else alert("Erreur serveur : " + (d.error || "Inconnue"));
             } catch(e) {
-                // Si ça plante (HTML, redirection, erreur PHP masquée), on force le rechargement
                 console.log("Avertissement : La réponse serveur n'était pas du JSON. Rechargement...");
                 window.location.reload();
             }
@@ -452,4 +463,73 @@ function duplicateLastMonth(lastMonthDate, owner) {
         });
     }
 }
+
+// ============================================================================
+// 3. CALCULATRICE (SOMME RAPIDE)
+// ============================================================================
+let isSumModeActive = false;
+let selectedElementsForSum = new Set();
+
+function toggleSumMode() {
+    isSumModeActive = !isSumModeActive;
+    
+    const fab = document.getElementById('fabSumMode');
+    const resultBar = document.getElementById('sumResultBar');
+    
+    if (isSumModeActive) {
+        fab.classList.add('active');
+        document.body.classList.add('sum-mode-active');
+        resultBar.classList.add('visible');
+        updateSumResult();
+    } else {
+        fab.classList.remove('active');
+        document.body.classList.remove('sum-mode-active');
+        resultBar.classList.remove('visible');
+        
+        selectedElementsForSum.forEach(el => el.classList.remove('sum-selected'));
+        selectedElementsForSum.clear();
+    }
+}
+
+function extractNumberFromText(text) {
+    if (!text) return 0;
+    const cleanText = text.replace(',', '.').replace(/[^\d.-]/g, '');
+    return parseFloat(cleanText) || 0;
+}
+
+function updateSumResult() {
+    let total = 0;
+    selectedElementsForSum.forEach(el => {
+        let val = 0;
+        if (el.tagName === 'INPUT') {
+            val = parseFloat(el.value) || 0;
+        } else {
+            val = extractNumberFromText(el.innerText);
+        }
+        total += val;
+    });
+    
+    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+}
+
+document.addEventListener('click', function(e) {
+    if (!isSumModeActive) return;
+
+    // Cible les inputs type number OU les cellules (td/th/div) ayant la classe .sum-target
+    const targetElement = e.target.closest('input[type="number"], .sum-target');
+    
+    if (targetElement) {
+        e.preventDefault(); 
+        
+        if (selectedElementsForSum.has(targetElement)) {
+            selectedElementsForSum.delete(targetElement);
+            targetElement.classList.remove('sum-selected');
+        } else {
+            selectedElementsForSum.add(targetElement);
+            targetElement.classList.add('sum-selected');
+        }
+        
+        updateSumResult();
+    }
+}, true); // Le 'true' intercepte le clic avant le focus normal
 </script>

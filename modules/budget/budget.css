@@ -1149,3 +1149,111 @@ input[type="month"].pf-input {
   outline: none;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
+
+/* ==========================================================================
+   COMPOSANT : CALCULATRICE FLOTTANTE (SOMME RAPIDE)
+   ========================================================================== */
+
+/* Bouton flottant à DROITE */
+.pf-fab-sum {
+  position: fixed;
+  right: 30px;
+  bottom: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #2563eb; /* Bleu primaire unifié */
+  color: white;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+  cursor: pointer;
+  z-index: 9999;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pf-fab-sum:hover {
+  transform: scale(1.1);
+  background-color: #1d4ed8;
+}
+
+.pf-fab-sum.active {
+  background-color: #10b981; /* Devient vert quand activé */
+  transform: scale(1.1);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
+}
+
+/* Barre de résultat en bas au centre */
+.pf-sum-bar {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  opacity: 0;
+  background: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  z-index: 9998;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-family: inherit;
+}
+
+.pf-sum-bar.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.pf-sum-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pf-sum-value {
+  font-size: 1.2rem;
+  color: #0f172a;
+  font-weight: bold;
+}
+
+.pf-sum-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  margin-left: 10px;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.pf-sum-close:hover {
+  color: #ef4444; /* Croix rouge au survol */
+}
+
+/* Effets sur le curseur quand le mode est actif */
+body.sum-mode-active {
+  cursor: cell !important;
+}
+
+body.sum-mode-active input,
+body.sum-mode-active .sum-target {
+  cursor: cell !important;
+}
+
+/* Style des champs/cellules sélectionnés */
+.sum-selected {
+  outline: 2px dashed #10b981 !important;
+  outline-offset: -2px;
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+  transition: background-color 0.2s;
+}
