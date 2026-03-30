@@ -1,8 +1,9 @@
 <?php
-// modules/holidays/geocode.php
-require __DIR__ . '/../../includes/auth.php';
-require_login('/login.php');
-require __DIR__ . '/../../includes/db.php';
+// modules/holidays/includes/api/geocode.php
+
+require dirname(__DIR__, 4) . '/includes/auth.php';
+require dirname(__DIR__, 4) . '/includes/db.php';
+require_login();
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -17,13 +18,13 @@ if ($q === '') {
 // Borner la limite
 $limit = (int)($_GET['limit'] ?? 1);
 if ($limit < 1) $limit = 1;
-if ($limit > 10) $limit = 10; // Nominatim bloque souvent au-dessus de 10-50
+if ($limit > 10) $limit = 10; 
 
 // 2. Normalisation pour le cache
 $qNorm = mb_strtolower($q);
 $qHash = hash('sha256', $qNorm);
 
-// 3. Création automatique de la table cache si elle n'existe pas (Sécurité)
+// 3. Création automatique de la table cache
 try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS pf_geocode_cache (
@@ -35,13 +36,9 @@ try {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ");
-} catch (Throwable $e) {
-    // On continue même si ça échoue (l'admin devra créer la table manuellement)
-}
+} catch (Throwable $e) {}
 
-// 4. Vérification du cache (Même si limit > 1)
-// Stratégie : Si on a déjà cherché exactement "Paris", on renvoie le résultat stocké
-// pour économiser l'API et aller plus vite. Le JS gérera le résultat unique.
+// 4. Vérification du cache
 try {
     $st = $pdo->prepare("SELECT lat, lng, display_name FROM pf_geocode_cache WHERE q_hash = ?");
     $st->execute([$qHash]);
@@ -54,11 +51,9 @@ try {
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
-} catch (Throwable $e) {
-    // Erreur SQL silencieuse sur le cache
-}
+} catch (Throwable $e) {}
 
-// 5. Appel Nominatim (Si pas en cache)
+// 5. Appel Nominatim 
 $endpoint = 'https://nominatim.openstreetmap.org/search';
 $params = http_build_query([
     'format'         => 'jsonv2',
@@ -75,8 +70,6 @@ curl_setopt_array($ch, [
     CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_TIMEOUT        => 10,
     CURLOPT_HTTPHEADER     => [
-        // Ton User-Agent est correct. 
-        // Important : Nominatim demande une identification claire.
         'User-Agent: PachaFamily-Holidays/1.0 (+contact: ferlan.alexandre@gmail.com)'
     ],
 ]);
@@ -85,9 +78,8 @@ $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $err  = curl_error($ch);
 curl_close($ch);
 
-// Gestion erreur cURL / HTTP
 if ($body === false || $http !== 200) {
-    http_response_code(502); // Bad Gateway
+    http_response_code(502); 
     echo json_encode([
         'error' => 'geocode_failed', 
         'details' => $err ?: ('HTTP ' . $http)
@@ -97,17 +89,13 @@ if ($body === false || $http !== 200) {
 
 $data = json_decode($body, true);
 
-// Gestion erreur JSON ou vide
 if (!is_array($data) || empty($data)) {
-    // On renvoie 200 avec une liste vide ou 404, le JS gère les deux.
-    // 404 est plus sémantique "Not Found".
     http_response_code(404);
     echo json_encode(['error' => 'not_found']);
     exit;
 }
 
-// 6. Mise en cache du PREMIER résultat (Le "meilleur")
-// On ne cache que le top result pour simplifier la structure de la DB.
+// 6. Mise en cache
 if (isset($data[0])) {
     $r = $data[0];
     $lat = round((float)$r['lat'], 6);
@@ -124,9 +112,7 @@ if (isset($data[0])) {
     } catch (Throwable $e) {}
 }
 
-// 7. Retour des résultats
-// Si limit=1, on renvoie format plat (pour compatibilité stricte)
-// Si limit>1, on renvoie format liste
+// 7. Retour
 if ($limit === 1) {
     $r = $data[0];
     echo json_encode([

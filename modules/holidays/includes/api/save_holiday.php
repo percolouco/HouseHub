@@ -1,7 +1,10 @@
 <?php
-require __DIR__ . '/../../includes/auth.php';
-require __DIR__ . '/../../includes/db.php';
-require_login();
+// modules/holidays/includes/api/save_holiday.php
+
+// On remonte de 4 niveaux pour atteindre la racine (api -> includes -> holidays -> modules -> racine)
+require dirname(__DIR__, 4) . '/includes/auth.php';
+require dirname(__DIR__, 4) . '/includes/db.php';
+require_login(); // Si cette fonction nécessite une redirection, gère-la dans auth.php
 
 if (isset($_POST['action_delete']) && $_POST['action_delete'] == '1') {
     $stmt = $pdo->prepare("DELETE FROM pf_holidays WHERE id = ?");
@@ -36,18 +39,19 @@ try {
         $id = $pdo->lastInsertId();
     }
 
-    // GESTION DES ITEMS (On supprime tout et on recrée)
-    $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ?")->execute([$id]);
+    // GESTION DES ITEMS GLOBAUX (On ne supprime QUE les items qui n'ont pas de lieu défini !)
+    $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND location_name IS NULL")->execute([$id]);
 
     if (!empty($_POST['items']['name'])) {
         $stmtItem = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid) VALUES (?, ?, ?, ?, ?)");
         
         $count = count($_POST['items']['name']);
         for ($i = 0; $i < $count; $i++) {
-            $cat = $_POST['items']['cat'][$i];
-            $name = trim($_POST['items']['name'][$i]);
-            $amount = floatval($_POST['items']['amount'][$i]);
-            $paid = $_POST['items']['paid'][$i];
+            // Utilisation de "?? ''" pour sécuriser si la donnée n'est pas envoyée
+            $cat = $_POST['items']['cat'][$i] ?? '';
+            $name = trim($_POST['items']['name'][$i] ?? '');
+            $amount = floatval($_POST['items']['amount'][$i] ?? 0);
+            $paid = isset($_POST['items']['paid'][$i]) ? $_POST['items']['paid'][$i] : 0;
 
             if (!empty($name)) {
                 $stmtItem->execute([$id, $cat, $name, $amount, $paid]);
@@ -59,8 +63,9 @@ try {
 
 } catch (Exception $e) {
     $pdo->rollBack();
-    die("Erreur : " . $e->getMessage());
+    die("Erreur base de données : " . $e->getMessage());
 }
 
+// Redirection vers la page principale
 header("Location: /holidays.php");
 exit;
