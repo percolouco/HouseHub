@@ -119,11 +119,13 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                     <td style="background:#f0f9ff;">
                         <input type="number" class="prev-input bold-blue" id="eco_family_<?= $p ?>" data-field="eco_family" value="<?= round($d['eco_family']) ?>" onchange="updateSalary('<?= $p ?>', this)">
                     </td>
-                    <td id="restant_<?= $p ?>" style="font-weight:bold; color:var(--text-muted); text-align:center;">
+                    <td id="restant_<?= $p ?>" style="font-weight:bold; color:var(--text-muted); text-align:center;" class="sum-target">
                         <?= number_format($restant, 0, ',', ' ') ?> €
                     </td>
                 </tr>
                 <?php endforeach; ?>
+                    
+
             </tbody>
         </table>
     </div>
@@ -185,9 +187,9 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                     <tr class="row-total">
                         <td class="col-sticky" style="text-align:right !important;">Total</td>
                         <?php foreach ($months as $m): ?>
-                            <td class="txt-global" style="border-left:2px solid #e2e8f0;" id="total_global_<?= $m ?>">0</td>
-                            <td class="txt-alex" id="total_alex_<?= $m ?>">0</td>
-                            <td class="txt-laia" id="total_laia_<?= $m ?>">0</td>
+                            <td class="txt-global sum-target" style="border-left:2px solid #e2e8f0;" id="total_global_<?= $m ?>">0</td>
+                            <td class="txt-alex sum-target" id="total_alex_<?= $m ?>">0</td>
+                            <td class="txt-laia sum-target" id="total_laia_<?= $m ?>">0</td>
                         <?php endforeach; ?>
                     </tr>
 
@@ -195,8 +197,8 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                         <td class="col-sticky" style="text-align:right !important;">Restant (Eco Family)</td>
                         <?php foreach ($months as $m): ?>
                             <td style="border-left:2px solid #cbd5e1; background:#e2e8f0;">-</td>
-                            <td class="val-ok" id="restant_alloc_alex_<?= $m ?>">0</td>
-                            <td class="val-ok" id="restant_alloc_laia_<?= $m ?>">0</td>
+                            <td class="val-ok sum-target" id="restant_alloc_alex_<?= $m ?>">0</td>
+                            <td class="val-ok sum-target" id="restant_alloc_laia_<?= $m ?>">0</td>
                         <?php endforeach; ?>
                     </tr>
 
@@ -239,7 +241,7 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                     <?php foreach ($months as $m): 
                         $val = $allocs[$m][$cat['id']] ?? ['amount_alex'=>0, 'amount_laia'=>0];
                     ?>
-                        <td class="txt-global" style="border-left:2px solid #e2e8f0; <?= $isIndicative?'color:#94a3b8; font-weight:normal;':'' ?>" id="g_<?= $m ?>_<?= $cat['id'] ?>">0</td>
+                        <td class="txt-global sum-target" style="border-left:2px solid #e2e8f0; <?= $isIndicative?'color:#94a3b8; font-weight:normal;':'' ?>" id="g_<?= $m ?>_<?= $cat['id'] ?>">0</td>
                         
                         <td>
                             <input type="number" step="1" class="prev-input txt-alex inp-alex-<?= $m ?> <?= $inputClass ?>" 
@@ -380,18 +382,18 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                     ?>
                     <tr id="row_summary_<?= $tId ?>">
                         <td><?= htmlspecialchars($target) ?></td>
-                        <td class="col-alex" id="sum_alex_<?= $tId ?>">0 €</td>
-                        <td class="col-laia" id="sum_laia_<?= $tId ?>">0 €</td>
-                        <td class="col-global" id="sum_global_<?= $tId ?>">0 €</td>
+                        <td class="col-alex sum-target" id="sum_alex_<?= $tId ?>">0 €</td>
+                        <td class="col-laia sum-target" id="sum_laia_<?= $tId ?>">0 €</td>
+                        <td class="col-global sum-target" id="sum_global_<?= $tId ?>">0 €</td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot>
                     <tr class="row-grand-total">
                         <td>GRAND TOTAL</td>
-                        <td class="col-alex" id="grand_total_alex">0 €</td>
-                        <td class="col-laia" id="grand_total_laia">0 €</td>
-                        <td class="col-global" id="grand_total_global">0 €</td>
+                        <td class="col-alex sum-target" id="grand_total_alex">0 €</td>
+                        <td class="col-laia sum-target" id="grand_total_laia">0 €</td>
+                        <td class="col-global sum-target" id="grand_total_global">0 €</td>
                     </tr>
                 </tfoot>
             </table>
@@ -479,6 +481,98 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
     </div>
 </div>
 
+<style>
+/* Bouton flottant */
+.pf-fab-sum {
+    position: fixed;
+    right: 30px;
+    bottom: 30px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #2563eb;
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+    cursor: pointer;
+    z-index: 9999;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pf-fab-sum:hover {
+    transform: scale(1.1);
+    background-color: #1d4ed8;
+}
+
+.pf-fab-sum.active {
+    background-color: #10b981;
+    transform: scale(1.1);
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
+}
+
+/* Barre de résultat en bas */
+.pf-sum-bar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    opacity: 0;
+    background: white;
+    padding: 12px 24px;
+    border-radius: 30px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 9998;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pf-sum-bar.visible {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+#sumResultValue {
+    font-size: 1.2rem;
+    color: #0f172a;
+    font-weight: bold;
+}
+
+/* Effets sur le curseur quand le mode est actif */
+body.sum-mode-active {
+    cursor: cell !important;
+}
+
+body.sum-mode-active input, 
+body.sum-mode-active .sum-target {
+    cursor: cell !important;
+}
+
+/* Style des champs/cellules sélectionnés */
+.sum-selected {
+    outline: 2px dashed #10b981 !important;
+    outline-offset: -2px;
+    background-color: #ecfdf5 !important;
+    color: #065f46 !important;
+    transition: background-color 0.2s;
+}
+</style>
+
+<button id="fabSumMode" class="pf-fab-sum" onclick="toggleSumMode()" title="Activer l'addition rapide">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="12" y1="8" x2="12" y2="16"></line></svg>
+</button>
+
+<div id="sumResultBar" class="pf-sum-bar">
+    <span class="pf-sum-label">Sélection :</span>
+    <span id="sumResultValue" class="pf-sum-value">0 €</span>
+    <button onclick="toggleSumMode()" class="pf-sum-close" title="Fermer">&times;</button>
+</div>
 <script>
 function openEditModal(btn) {
     const id = btn.getAttribute('data-id');
@@ -493,10 +587,7 @@ function openEditModal(btn) {
     
     document.getElementById('editCatModal').style.display = 'flex';
 }
-</script>
-</div>
 
-<script>
 const currentYear = <?= $currentYear ?>;
 const months = <?= json_encode($months) ?>;
 
@@ -534,7 +625,6 @@ function duplicateMonth() {
         return;
     }
 
-    // Formatage propre (ex: "Mars 2026")
     const formatMonth = (d) => {
         let str = new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
         return str.charAt(0).toUpperCase() + str.slice(1);
@@ -609,12 +699,13 @@ function recalcAllAllocations() {
         const elRestLaia = document.getElementById('restant_alloc_laia_' + m);
 
         elRestAlex.innerText = Math.round(restAlex) + ' €';
-        elRestAlex.className = 'val-' + (restAlex >= 0 ? 'ok' : 'ko');
+        elRestAlex.className = 'val-' + (restAlex >= 0 ? 'ok' : 'ko') + ' sum-target'; // On maintient la classe sum-target !
 
         elRestLaia.innerText = Math.round(restLaia) + ' €';
-        elRestLaia.className = 'val-' + (restLaia >= 0 ? 'ok' : 'ko');
+        elRestLaia.className = 'val-' + (restLaia >= 0 ? 'ok' : 'ko') + ' sum-target';
     });
     updateSummaryTable();
+    if(isSumModeActive) updateSumResult(); // Force recalcul si la calculatrice est ouverte
 }
 
 function updateSummaryTable() {
@@ -668,32 +759,6 @@ function saveData(action, data) {
     for (const key in data) formData.append(key, data[key]);
     fetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
 }
-
-document.addEventListener('DOMContentLoaded', recalcAllAllocations);
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.innerWidth <= 768) {
-        document.addEventListener('click', function(e) {
-            const clickedCell = e.target.closest('.col-sticky');
-            if (clickedCell) {
-                const actionsDiv = clickedCell.querySelector('.row-actions');
-                if (e.target.closest('.btn-icon-action')) return;
-                if (actionsDiv) {
-                    const isOpen = actionsDiv.classList.contains('show-actions');
-                    document.querySelectorAll('.row-actions.show-actions').forEach(el => {
-                        el.classList.remove('show-actions');
-                    });
-                    if (!isOpen) actionsDiv.classList.add('show-actions');
-                }
-            } else {
-                document.querySelectorAll('.row-actions.show-actions').forEach(el => {
-                    el.classList.remove('show-actions');
-                });
-            }
-        });
-    }
-});
 
 function validateTransfers(person, month) {
     if (!confirm(`Confirmer que ${person} a bien effectué tous ses virements pour ${month} ?\n\nCela mettra à jour l'Épargne automatiquement.`)) return;
@@ -752,4 +817,74 @@ function saveGenericNote(noteType, refId, content) {
         alert(e.message);
     });
 }
+
+// LOGIQUE POUR LA CALCULATRICE RAPIDE
+let isSumModeActive = false;
+let selectedElementsForSum = new Set();
+
+function toggleSumMode() {
+    isSumModeActive = !isSumModeActive;
+    
+    const fab = document.getElementById('fabSumMode');
+    const resultBar = document.getElementById('sumResultBar');
+    
+    if (isSumModeActive) {
+        fab.classList.add('active');
+        document.body.classList.add('sum-mode-active');
+        resultBar.classList.add('visible');
+        updateSumResult();
+    } else {
+        fab.classList.remove('active');
+        document.body.classList.remove('sum-mode-active');
+        resultBar.classList.remove('visible');
+        
+        selectedElementsForSum.forEach(el => el.classList.remove('sum-selected'));
+        selectedElementsForSum.clear();
+    }
+}
+
+function extractNumberFromText(text) {
+    if (!text) return 0;
+    // Remplace les virgules par des points et supprime tout ce qui n'est pas chiffre, point ou signe moins
+    const cleanText = text.replace(',', '.').replace(/[^\d.-]/g, '');
+    return parseFloat(cleanText) || 0;
+}
+
+function updateSumResult() {
+    let total = 0;
+    selectedElementsForSum.forEach(el => {
+        let val = 0;
+        if (el.tagName === 'INPUT') {
+            val = parseFloat(el.value) || 0;
+        } else {
+            val = extractNumberFromText(el.innerText);
+        }
+        total += val;
+    });
+    
+    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+}
+
+document.addEventListener('click', function(e) {
+    if (!isSumModeActive) return;
+
+    // Cible les inputs type number OU les cellules (td/th/div) ayant la classe .sum-target
+    const targetElement = e.target.closest('input[type="number"], .sum-target');
+    
+    if (targetElement) {
+        e.preventDefault(); 
+        
+        if (selectedElementsForSum.has(targetElement)) {
+            selectedElementsForSum.delete(targetElement);
+            targetElement.classList.remove('sum-selected');
+        } else {
+            selectedElementsForSum.add(targetElement);
+            targetElement.classList.add('sum-selected');
+        }
+        
+        updateSumResult();
+    }
+}, true); // Le 'true' intercepte le clic avant le focus normal
+
+document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 </script>
