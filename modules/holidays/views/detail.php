@@ -15,7 +15,8 @@ $stmt = $pdo->prepare("
 $stmt->execute([$id]);
 $holiday = $stmt->fetch(PDO::FETCH_ASSOC);
 
-$stmtItems = $pdo->prepare("SELECT * FROM pf_holidays_items WHERE holiday_id = ? ORDER BY id ASC");
+// IMPORTANT : Le tri se fait maintenant sur "sort_order" pour que le glisser-déposer fonctionne
+$stmtItems = $pdo->prepare("SELECT * FROM pf_holidays_items WHERE holiday_id = ? ORDER BY sort_order ASC, id ASC");
 $stmtItems->execute([$id]);
 $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
@@ -123,16 +124,24 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                     <p style="color:var(--text-muted); font-style:italic; text-align:center; margin-top:40px;">Aucune étape planifiée.</p>
                 <?php else: ?>
                     <?php foreach ($steps as $step): ?>
-                        <div class="hol-checkpoint">
+                        <div class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-location="<?= htmlspecialchars($step['location_name']) ?>">
                             <div class="hol-cp-header">
-                                <div>
-                                    <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)">📍 <?= htmlspecialchars($step['location_name']) ?></div>
-                                    <div class="hol-cp-total">Total Étape : <?= number_format($step['total_amount'], 2) ?> €</div>
+                                
+                                <div class="hol-cp-info-group">
+                                    <span style="color:#94a3b8; font-size:1.1rem; cursor:grab; user-select:none;">☰</span>
+                                    <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
+                                        📍 <?= htmlspecialchars($step['location_name']) ?>
+                                    </div>
                                 </div>
-                                <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="Modifier cette étape" style="margin:0;">✏️</button>
-                            </div>
-                            <div class="hol-cp-body">
 
+                                <div class="hol-cp-actions-group">
+                                    <div class="hol-cp-total"><?= number_format($step['total_amount'], 2, ',', ' ') ?> €</div>
+                                    <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="Modifier">✏️</button>
+                                </div>
+
+                            </div>
+
+                            <div class="hol-cp-body">
                                 <?php 
                                     $visibleItemsCount = 0;
                                     foreach ($step['items'] as $it): 
@@ -143,16 +152,17 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                         <div class="hol-expense-line">
                                             <span style="color:#475569;"><?= $icon ?> <?= htmlspecialchars($it['name']) ?></span>
                                             <span>
-                                                <strong style="color:var(--text-main);"><?= number_format($it['amount'], 2) ?> €</strong>
-                                                <span style="margin-left:5px; color:<?= $it['is_paid'] ? '#10b981' : '#f59e0b' ?>;" title="<?= $it['is_paid'] ? 'Payé' : 'À payer' ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
+                                                <strong style="color:var(--text-main);"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
+                                                <span style="margin-left:5px; color:<?= $it['is_paid'] ? '#10b981' : '#f59e0b' ?>;"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
                                             </span>
                                         </div>
                                 <?php endforeach; ?>
                                 
                                 <?php if ($visibleItemsCount === 0): ?>
-                                        <div style="font-size:0.8rem; color:var(--text-muted); font-style:italic;">Point de passage (Aucune dépense)</div>
+                                    <div style="font-size:0.8rem; color:var(--text-muted); font-style:italic; padding: 5px 0;">
+                                        📍 Point de passage (Aucune dépense)
+                                    </div>
                                 <?php endif; ?>
-
                             </div>
                         </div>
                     <?php endforeach; ?>
