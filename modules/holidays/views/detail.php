@@ -24,28 +24,30 @@ $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 $stmtFav = $pdo->query("SELECT content FROM pf_notes WHERE note_type = 'holiday_favorites'");
 $favorites = json_decode($stmtFav->fetchColumn() ?: '[]', true);
 
-// GROUPEMENT PAR LIEU (Pour la carte et l'affichage)
+// GROUPEMENT PAR INDEX D'ORDRE (Pour autoriser les doublons de lieux comme "Maison")
 $steps = [];
 $generalItems = [];
 
 foreach ($items as $it) {
-    if (!empty($it['location_name'])) {
-        $loc = $it['location_name'];
-        if (!isset($steps[$loc])) {
-            $steps[$loc] = [
-                'location_name' => $loc,
+    if ($it['location_name'] !== null) {
+        $orderKey = $it['sort_order']; // On utilise l'ordre comme clé unique de l'étape
+        if (!isset($steps[$orderKey])) {
+            $steps[$orderKey] = [
+                'location_name' => $it['location_name'],
                 'lat' => (float)$it['lat'],
                 'lng' => (float)$it['lng'],
+                'sort_order' => $it['sort_order'],
                 'total_amount' => 0,
                 'items' => []
             ];
         }
-        $steps[$loc]['items'][] = $it;
-        $steps[$loc]['total_amount'] += (float)$it['amount'];
+        $steps[$orderKey]['items'][] = $it;
+        $steps[$orderKey]['total_amount'] += (float)$it['amount'];
     } else {
         $generalItems[] = $it;
     }
 }
+ksort($steps); 
 $mapPoints = array_values($steps);
 
 // Calculs d'affichage (Dates & Finances)
@@ -210,6 +212,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             <input type="hidden" name="old_location_name" id="cp_old_name">
             <input type="hidden" name="lat" id="cp_lat">
             <input type="hidden" name="lng" id="cp_lng">
+            <input type="hidden" name="old_sort_order" id="cp_old_sort_order">
             
             <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label">Nom de l'étape (Ce qui s'affichera sur la carte)</label>
