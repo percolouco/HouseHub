@@ -413,3 +413,79 @@ function deleteCheckpoint() {
   form.appendChild(input);
   form.submit();
 }
+
+// ============================================================================
+// 5. GLISSER-DÉPOSER POUR RÉORDONNER LES ÉTAPES (ROADTRIP)
+// ============================================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const checkpoints = document.querySelectorAll(".hol-checkpoint-draggable");
+  const container = checkpoints[0]?.parentElement;
+  if (!container) return;
+
+  let draggedItem = null;
+
+  checkpoints.forEach((item) => {
+    item.addEventListener("dragstart", function (e) {
+      draggedItem = this;
+      setTimeout(() => (this.style.opacity = "0.4"), 0);
+    });
+
+    item.addEventListener("dragend", function () {
+      setTimeout(() => {
+        this.style.opacity = "1";
+        draggedItem = null;
+        saveCheckpointOrder(); // On sauvegarde quand on lâche !
+      }, 0);
+    });
+
+    item.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(container, e.clientY);
+      if (afterElement == null) {
+        container.appendChild(draggedItem);
+      } else {
+        container.insertBefore(draggedItem, afterElement);
+      }
+    });
+  });
+
+  function getDragAfterElement(container, y) {
+    const draggableElements = [
+      ...container.querySelectorAll(
+        '.hol-checkpoint-draggable:not([style*="opacity: 0.4"])',
+      ),
+    ];
+    return draggableElements.reduce(
+      (closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      },
+      { offset: Number.NEGATIVE_INFINITY },
+    ).element;
+  }
+
+  function saveCheckpointOrder() {
+    // On récupère le nom des lieux dans le nouvel ordre de haut en bas
+    const locations = [
+      ...document.querySelectorAll(".hol-checkpoint-draggable"),
+    ].map((el) => el.getAttribute("data-location"));
+    const holidayId = document.querySelector('input[name="holiday_id"]').value; // Input caché dans la modale
+
+    const formData = new FormData();
+    formData.append("holiday_id", holidayId);
+    formData.append("locations", JSON.stringify(locations));
+
+    fetch("/modules/holidays/includes/api/reorder_checkpoints.php", {
+      method: "POST",
+      body: formData,
+    }).then(() => {
+      // Recharge la page pour que la carte redessine le trait bleu dans le bon ordre !
+      window.location.reload();
+    });
+  }
+});
