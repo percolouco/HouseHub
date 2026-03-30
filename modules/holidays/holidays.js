@@ -272,7 +272,7 @@ function openCheckpointModal(mode, data = null) {
   const container = document.getElementById("cpExpensesContainer");
   const btnDel = document.getElementById("btnDeleteCp");
 
-  container.innerHTML = ""; // Reset des lignes
+  container.innerHTML = "";
 
   if (mode === "add") {
     document.getElementById("cpModalTitle").innerText =
@@ -280,27 +280,20 @@ function openCheckpointModal(mode, data = null) {
     searchBlock.style.display = "block";
     formBlock.style.display = "none";
     btnDel.style.display = "none";
-
-    document.getElementById("searchPlaceInput").value = "";
-    document.getElementById("searchResults").innerHTML = "";
-
-    document.getElementById("cp_old_name").value = "";
+    document.getElementById("cp_old_sort_order").value = ""; // Important : vide pour ajout
     document.getElementById("cp_name").value = "";
-
-    // Ajout d'une ligne vide par défaut
     addCpExpenseLine();
   } else if (mode === "edit" && data) {
     document.getElementById("cpModalTitle").innerText = "✏️ Modifier l'étape";
-    searchBlock.style.display = "none"; // On cache la recherche en mode édition
+    searchBlock.style.display = "none";
     formBlock.style.display = "block";
     btnDel.style.display = "block";
 
     document.getElementById("cp_lat").value = data.lat;
     document.getElementById("cp_lng").value = data.lng;
-    document.getElementById("cp_old_name").value = data.location_name;
+    document.getElementById("cp_old_sort_order").value = data.sort_order; // On stocke l'index unique
     document.getElementById("cp_name").value = data.location_name;
 
-    // Remplissage des lignes existantes (en filtrant le point technique)
     if (data.items && data.items.length > 0) {
       let visibleCount = 0;
       data.items.forEach((it) => {
@@ -309,15 +302,11 @@ function openCheckpointModal(mode, data = null) {
           visibleCount++;
         }
       });
-      // Si l'étape ne contenait QUE le point technique, on affiche une ligne vide pour inviter à la saisie
-      if (visibleCount === 0) {
-        addCpExpenseLine();
-      }
+      if (visibleCount === 0) addCpExpenseLine();
     } else {
-      addCpExpenseLine(); // Sécurité
+      addCpExpenseLine();
     }
   }
-
   document.getElementById("checkpointModal").style.display = "flex";
 }
 
