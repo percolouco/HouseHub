@@ -8,7 +8,10 @@ if ($id === 0) { echo "<div class='pf-section'><p>Erreur.</p></div>"; exit; }
 $stmt = $pdo->prepare("
     SELECT h.*, 
            (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE((SELECT SUM(amount) FROM pf_holidays_items WHERE holiday_id = h.id), 0)) as total_cost,
-           (SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) as total_paid,
+           (
+               (SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) +
+               (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND is_paid = 1)
+           ) as total_paid,
            (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved
     FROM pf_holidays h WHERE h.id = ?
 ");
@@ -151,12 +154,23 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                         $visibleItemsCount++;
                                         $icon = match($it['category']) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
                                 ?>
-                                        <div class="hol-expense-line">
-                                            <span style="color:#475569;"><?= $icon ?> <?= htmlspecialchars($it['name']) ?></span>
-                                            <span>
-                                                <strong style="color:var(--text-main);"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
-                                                <span style="margin-left:5px; color:<?= $it['is_paid'] ? '#10b981' : '#f59e0b' ?>;"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
-                                            </span>
+                                        <div class="hol-expense-line" style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+                                            <div style="display:flex; justify-content:space-between; width:100%;">
+                                                <span style="color:#475569; font-weight:500;"><?= $icon ?> <?= htmlspecialchars($it['name']) ?></span>
+                                                <span>
+                                                    <strong style="color:var(--text-main);"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
+                                                    <span style="margin-left:5px; color:<?= $it['is_paid'] ? '#10b981' : '#f59e0b' ?>;"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
+                                                </span>
+                                            </div>
+                                            <?php if (!empty($it['notes'])): ?>
+                                                <div style="font-size:0.75rem; color:#94a3b8; padding-left: 24px; word-break: break-all;">
+                                                    <?php if (filter_var($it['notes'], FILTER_VALIDATE_URL)): ?>
+                                                        🔗 <a href="<?= htmlspecialchars($it['notes']) ?>" target="_blank" style="color:#3b82f6; text-decoration:none;">Voir le lien</a>
+                                                    <?php else: ?>
+                                                        📝 <?= htmlspecialchars($it['notes']) ?>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
                                 <?php endforeach; ?>
                                 
@@ -224,7 +238,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 <button type="button" class="pf-btn btn-secondary" onclick="addCpExpenseLine()" style="padding:4px 8px; font-size:0.8rem; height:auto; width:auto; margin:0;">+ Ajouter une dépense</button>
             </div>
 
-            <div id="cpExpensesContainer" style="margin-bottom:15px; display:flex; flex-direction:column; gap:10px; max-height:300px; overflow-y:auto;">
+            <div id="cpExpensesContainer" style="margin-bottom:15px; display:flex; flex-direction:column; gap:10px; max-height:350px; overflow-y:auto; overflow-x:hidden;">
                 </div>
 
             <div style="margin-bottom: 20px; padding-left: 5px;">
