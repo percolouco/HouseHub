@@ -35,8 +35,7 @@ if ($holiday_id > 0 && !empty($location_name)) {
         }
 
         // 3. INSERTION DES LIGNES
-        $stmt = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $validItemsCount = 0;
+        $stmt = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");        $validItemsCount = 0;
 
         if (isset($_POST['items']['name'])) {
             foreach ($_POST['items']['name'] as $i => $raw_name) {
@@ -45,15 +44,15 @@ if ($holiday_id > 0 && !empty($location_name)) {
                 if ($name !== '' || $amount_raw !== '') {
                     $cat = $_POST['items']['cat'][$i] ?? 'activity';
                     $amount = (float)$amount_raw;
-                    $paid = isset($_POST['items']['paid'][$i]) ? 1 : 0;
-                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order]);
-                    $validItemsCount++;
+                    $paid = (isset($_POST['items']['paid'][$i]) && (int)$_POST['items']['paid'][$i] === 1) ? 1 : 0;                    
+                    $note = trim($_POST['items']['notes'][$i] ?? '');
+                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note]);                    $validItemsCount++;
                 }
             }
         }
 
         if ($validItemsCount === 0) {
-            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order]);
+            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '']);
         }
 
         // 4. GESTION DES FAVORIS

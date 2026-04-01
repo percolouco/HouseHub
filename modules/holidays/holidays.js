@@ -280,7 +280,7 @@ function openCheckpointModal(mode, data = null) {
     searchBlock.style.display = "block";
     formBlock.style.display = "none";
     btnDel.style.display = "none";
-    document.getElementById("cp_old_sort_order").value = ""; // Important : vide pour ajout
+    document.getElementById("cp_old_sort_order").value = "";
     document.getElementById("cp_name").value = "";
     addCpExpenseLine();
   } else if (mode === "edit" && data) {
@@ -291,14 +291,21 @@ function openCheckpointModal(mode, data = null) {
 
     document.getElementById("cp_lat").value = data.lat;
     document.getElementById("cp_lng").value = data.lng;
-    document.getElementById("cp_old_sort_order").value = data.sort_order; // On stocke l'index unique
+    document.getElementById("cp_old_sort_order").value = data.sort_order;
     document.getElementById("cp_name").value = data.location_name;
 
     if (data.items && data.items.length > 0) {
       let visibleCount = 0;
       data.items.forEach((it) => {
         if (it.name !== "PF_TECHNICAL_POINT") {
-          addCpExpenseLine(it.category, it.name, it.amount, it.is_paid);
+          // On passe it.notes à la fonction !
+          addCpExpenseLine(
+            it.category,
+            it.name,
+            it.amount,
+            it.is_paid,
+            it.notes || "",
+          );
           visibleCount++;
         }
       });
@@ -364,29 +371,39 @@ function addCpExpenseLine(
   name = "",
   amount = "",
   isPaid = 0,
+  notes = "",
 ) {
   const container = document.getElementById("cpExpensesContainer");
   const div = document.createElement("div");
   div.style.display = "flex";
-  div.style.gap = "8px";
-  div.style.alignItems = "center";
+  div.style.flexDirection = "column";
+  div.style.gap = "6px";
+  div.style.padding = "10px";
+  div.style.background = "#f8fafc";
+  div.style.borderRadius = "8px";
+  div.style.border = "1px solid #e2e8f0";
 
   const isChecked = isPaid == 1 ? "checked" : "";
 
   div.innerHTML = `
-        <select name="items[cat][]" class="pf-input" style="width:50px; padding:8px 4px; font-size:1.2rem; cursor:pointer;" title="Catégorie">
-            <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
-            <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
-            <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
-        </select>
-        <input type="text" name="items[name][]" class="pf-input" placeholder="Libellé (Optionnel)" value="${name}" style="flex:2; padding:8px; font-size:0.9rem;">
-        <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width:80px; text-align:right; padding:8px; font-size:0.9rem;">
-        <label title="Payé ?" style="display:flex; align-items:center; cursor:pointer;">
-            <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
-            <input type="hidden" name="items[paid][]" value="${isPaid}">
-            <span style="font-size:0.75rem; margin-left:2px; font-weight:bold; color:#64748b;">Payé</span>
-        </label>
-        <button type="button" onclick="this.parentElement.remove()" style="width:28px; height:28px; border:none; background:#fee2e2; color:#ef4444; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; justify-content:center; align-items:center;">&times;</button>
+        <div style="display:flex; gap:8px; align-items:center; width:100%;">
+            <select name="items[cat][]" class="pf-input" style="width:50px; padding:8px 4px; font-size:1.2rem; cursor:pointer;" title="Catégorie">
+                <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
+                <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
+                <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
+            </select>
+            <input type="text" name="items[name][]" class="pf-input" placeholder="Libellé (Optionnel)" value="${name}" style="flex:2; padding:8px; font-size:0.9rem;">
+            <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width:80px; text-align:right; padding:8px; font-size:0.9rem;">
+            
+            <label title="Payé ?" style="display:flex; align-items:center; cursor:pointer; width:55px;">
+                <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
+                <input type="hidden" name="items[paid][]" value="${isPaid}">
+                <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">Payé</span>
+            </label>
+            
+            <button type="button" onclick="this.parentElement.parentElement.remove()" style="width:28px; height:28px; border:none; background:#fee2e2; color:#ef4444; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; justify-content:center; align-items:center;">&times;</button>
+        </div>
+        <input type="text" name="items[notes][]" class="pf-input" placeholder="🔗 Lien de réservation ou adresse exacte..." value="${notes}" style="font-size:0.8rem; padding:6px 8px; border-style:dashed; color:#475569; width:calc(100% - 58px); margin-left:58px;">
     `;
   container.appendChild(div);
 }
