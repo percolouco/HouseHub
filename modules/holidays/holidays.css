@@ -1,6 +1,11 @@
 /* modules/holidays/holidays.css */
 
 /* --- 1. VARIABLES & BASE --- */
+
+/* Bloque le défilement de la page en arrière-plan */
+body.no-scroll {
+  overflow: hidden !important;
+}
 :root {
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
@@ -938,4 +943,245 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .btn-remove-expense:hover {
   background: #fca5a5;
   color: #b91c1c;
+}
+
+/* ==========================================================================
+   16. PLANNING DRAG & DROP (CARNET DE VOYAGE)
+   ========================================================================== */
+/* Simplification de la sous-ligne du formulaire d'édition */
+.hol-form-subrow {
+  display: flex;
+  margin-top: 6px;
+  padding-left: 58px;
+}
+.hol-form-notes-full {
+  margin: 0 !important;
+  width: 100%;
+}
+
+/* Layout du Planning Interactif */
+.hol-planning-layout {
+  display: flex;
+  gap: 20px;
+  height: 65vh;
+  align-items: stretch;
+  overflow: hidden;
+}
+@media (max-width: 768px) {
+  .hol-planning-layout {
+    flex-direction: column;
+    height: 75vh;
+  }
+  .hol-unmapped-zone {
+    width: 100%;
+    height: 180px;
+    min-height: 180px;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: flex-start;
+  }
+  .hol-calendar-zone {
+    flex: 1;
+  }
+}
+
+/* Zone des activités non planifiées */
+.hol-unmapped-zone {
+  width: 250px;
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 12px;
+  border: 2px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+.hol-unmapped-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+/* Grille du calendrier */
+.hol-calendar-zone {
+  flex: 1;
+  display: flex;
+  gap: 15px;
+  overflow: auto; /* Gère à la fois gauche/droite ET haut/bas */
+  padding-bottom: 10px;
+  position: relative;
+}
+.hol-calendar-zone::-webkit-scrollbar,
+.hol-unmapped-zone::-webkit-scrollbar {
+  height: 10px;
+}
+.hol-calendar-zone::-webkit-scrollbar-track,
+.hol-unmapped-zone::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+.hol-calendar-zone::-webkit-scrollbar-thumb,
+.hol-unmapped-zone::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+.hol-calendar-zone::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.hol-calendar-zone .hol-drag-item {
+  position: absolute;
+  top: 1px;
+  left: 45px;
+  right: 5px;
+  height: calc(75px * var(--duration) - 2px);
+}
+/* Dans la boîte d'attente : Position normale */
+.hol-unmapped-zone .hol-drag-item {
+  position: relative;
+  min-width: 150px;
+  height: auto;
+}
+
+/* Mode "Tap-to-Move" pour Mobile */
+.hol-drag-item.selected-for-move {
+  border-color: #f59e0b;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+}
+
+/* Boutons Durée */
+.hol-item-duration-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 2px;
+  border: none;
+  background: rgba(255, 255, 255, 0.4); /* Léger fond pour se détacher */
+  border-radius: 4px;
+}
+
+.hol-day-column {
+  min-width: 220px;
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: max-content; /* Laisse la colonne grandir jusqu'à 22h */
+  overflow: visible;
+}
+
+.hol-calendar-day-header {
+  text-align: center;
+  padding: 12px 10px;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0; /* Garde la date toujours visible en haut ! */
+  z-index: 20;
+}
+
+/* Les créneaux horaires (Drop Zones) */
+.hol-time-slots-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.hol-time-slot {
+  height: 75px;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+  transition: background 0.2s;
+  box-sizing: border-box;
+}
+
+.hol-time-slot.drag-over {
+  background: #e0f2fe; /* Surbrillance quand on survole avec une activité */
+}
+.hol-slot-label {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+/* L'Activité (Élément draggable) */
+.hol-drag-item {
+  background: white;
+  padding: 6px 8px;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  cursor: grab;
+  font-size: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--primary);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+.hol-drag-item:active {
+  cursor: grabbing;
+}
+.hol-drag-item.cat-accommodation {
+  border-left-color: #8b5cf6;
+}
+.hol-drag-item.cat-transport {
+  border-left-color: #10b981;
+}
+
+.hol-drag-title {
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.2;
+}
+.hol-drag-note {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Élargir la modale de planning */
+#planningModal .pf-modal-content {
+  max-width: 1100px !important;
+  width: 95%;
+}
+
+.hol-dur-btn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 4px;
+  width: 18px;
+  height: 18px; /* Plus petit */
+  cursor: pointer;
+  font-weight: bold;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+.hol-dur-btn:hover {
+  background: #e2e8f0;
+}
+.hol-dur-text {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 700;
 }
