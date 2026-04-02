@@ -221,26 +221,46 @@ function initDetailMap() {
     latlngs.push(pos);
     bounds.extend(pos);
 
-    // Couleur selon le paiement
-    const color = pt.paid == 1 ? "#10b981" : "#f59e0b";
+    // Couleur de base (Bleu PachaFamily)
+    const color = "#2563eb";
 
     // On place un petit cercle pour chaque point
     const marker = L.circleMarker(pos, {
       color: color,
-      radius: 7,
+      radius: 8,
       fillOpacity: 1,
       fillColor: "white",
       weight: 3,
     }).addTo(detailMap);
 
-    // Numérotation et Popup
+    // Correction : Numérotation et Popup avec les bonnes variables
     marker.bindPopup(`
             <div style="text-align:center;">
-                <div style="font-size:0.7rem; color:#64748b; margin-bottom:2px;">Étape ${index + 1}</div>
-                <strong>${pt.title}</strong><br>
-                <span style="font-weight:bold; color:${color};">${parseFloat(pt.amount).toFixed(2)} €</span>
+                <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">Étape ${index + 1}</div>
+                <strong style="font-size:1rem; color:#0f172a;">${pt.location_name}</strong><br>
+                <span style="font-weight:bold; color:${color};">${parseFloat(pt.total_amount).toFixed(2)} €</span>
             </div>
         `);
+
+    // NOUVEAU : Focus et scroll sur la liste au clic sur la carte !
+    marker.on("click", function () {
+      const card = document.getElementById("step-card-" + pt.sort_order);
+      if (card) {
+        // Fait défiler la liste doucement jusqu'à l'élément
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        // Effet visuel "Flash" pour repérer la carte
+        card.style.transition = "box-shadow 0.3s, transform 0.3s";
+        card.style.boxShadow = "0 0 0 3px #3b82f6";
+        card.style.transform = "scale(1.02)";
+
+        // Retire l'effet après 1.5 seconde
+        setTimeout(() => {
+          card.style.boxShadow = "";
+          card.style.transform = "";
+        }, 1500);
+      }
+    });
   });
 
   // On dessine le trait en pointillés pour relier le roadtrip !
