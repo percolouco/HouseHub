@@ -56,10 +56,10 @@ if ($holiday_id > 0 && !empty($location_name)) {
         // Récupération des dates de l'étape globale
         $step_start = !empty($_POST['step_start_date']) ? $_POST['step_start_date'] : null;
         $step_end = !empty($_POST['step_end_date']) ? $_POST['step_end_date'] : null;
+        $is_return = isset($_POST['is_return']) ? 1 : 0; // NOUVEAU
 
-        // 3. INSERTION DES LIGNES
-        // Il doit y avoir EXACTEMENT 15 colonnes et 15 points d'interrogation (?)
-        $stmt = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes, item_date, item_time, step_start_date, step_end_date, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        // 3. INSERTION DES LIGNES (16 Colonnes)
+        $stmt = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes, item_date, item_time, step_start_date, step_end_date, duration, is_return) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $validItemsCount = 0;
 
         if (isset($_POST['items']['name'])) {
@@ -72,21 +72,19 @@ if ($holiday_id > 0 && !empty($location_name)) {
                     $paid = (isset($_POST['items']['paid'][$i]) && (int)$_POST['items']['paid'][$i] === 1) ? 1 : 0;
                     $note = trim($_POST['items']['notes'][$i] ?? '');
                     
-                    // Récupération des données invisibles
                     $date = !empty($_POST['items']['date'][$i]) ? $_POST['items']['date'][$i] : null;
                     $time = !empty($_POST['items']['time'][$i]) ? $_POST['items']['time'][$i] : null;
                     $dur  = !empty($_POST['items']['duration'][$i]) ? (int)$_POST['items']['duration'][$i] : 1;
 
-                    // Les 15 variables passées au tableau doivent correspondre aux 15 points d'interrogation
-                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur]);
+                    // Ajout de $is_return à la fin
+                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur, $is_return]);
                     $validItemsCount++;
                 }
             }
         }
 
-        // Si l'étape est vide, on enregistre quand même ses dates
         if ($validItemsCount === 0) {
-            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '', null, null, $step_start, $step_end, 1]);
+            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '', null, null, $step_start, $step_end, 1, $is_return]);
         }
 
         // 4. GESTION DES FAVORIS

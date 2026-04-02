@@ -331,25 +331,31 @@ function initDetailMap() {
       routePromises.push(promise);
     }
 
-    // 2. On attend que TOUTES les routes soient calculées pour les dessiner dans le bon ordre
+    // 2. On attend que TOUTES les routes soient calculées
     Promise.all(routePromises).then((results) => {
-      // On s'assure de dessiner l'Étape 1 d'abord, puis la 2, etc.
       results.sort((a, b) => a.index - b.index);
+
+      // NOUVEAU : On cherche quelle étape a été marquée "Retour"
+      let returnStartIndex = latlngs.length - 2; // Par défaut : le tout dernier segment
+      const customReturnStep = MAP_POINTS.findIndex((p) => p.is_return == 1);
+      if (customReturnStep > 0) {
+        // Si trouvé (et que ce n'est pas le point de départ)
+        returnStartIndex = customReturnStep;
+      }
 
       results.forEach((res) => {
         const i = res.index;
 
-        // Styles par défaut (Aller / Étape 1)
-        let routeColor = "#3b82f6"; // Bleu
-        let routeWeight = 6; // Épais
-        let routeDash = null; // Ligne continue
+        let routeColor = "#3b82f6"; // Bleu (Aller)
+        let routeWeight = 6;
+        let routeDash = null;
 
-        // Modification des styles selon le segment
-        if (i === latlngs.length - 2) {
-          // DERNIER SEGMENT (Retour)
-          routeColor = "#f97316"; // Orange vif (Tranche parfaitement avec le bleu)
-          routeWeight = 3; // Plus fin pour se superposer sans cacher
-          routeDash = "10, 10"; // En pointillés pour laisser voir le bleu en dessous
+        // Application de la bonne couleur
+        if (i >= returnStartIndex) {
+          // TOUS LES SEGMENTS DEPUIS L'ÉTAPE "RETOUR"
+          routeColor = "#f97316"; // Orange
+          routeWeight = 3;
+          routeDash = "10, 10";
         } else if (i > 0) {
           // SEGMENTS INTERMÉDIAIRES
           routeColor = "#8b5cf6"; // Violet
@@ -420,6 +426,7 @@ function openCheckpointModal(mode, data = null) {
     document.getElementById("cp_old_sort_order").value = "";
     document.getElementById("cp_name").value = "";
     addCpExpenseLine();
+    document.getElementById("cp_is_return").checked = false;
   } else if (mode === "edit" && data) {
     document.getElementById("cpModalTitle").innerText = "✏️ Modifier l'étape";
     searchBlock.style.display = "none";
@@ -432,6 +439,7 @@ function openCheckpointModal(mode, data = null) {
     document.getElementById("cp_name").value = data.location_name;
     document.getElementById("cp_start_date").value = data.step_start_date || "";
     document.getElementById("cp_end_date").value = data.step_end_date || "";
+    document.getElementById("cp_is_return").checked = data.is_return == 1;
 
     if (data.items && data.items.length > 0) {
       let visibleCount = 0;

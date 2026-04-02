@@ -40,6 +40,7 @@ foreach ($items as $it) {
                 'sort_order' => $it['sort_order'],
                 'step_start_date' => $it['step_start_date'],
                 'step_end_date' => $it['step_end_date'],
+                'is_return' => (int)$it['is_return'], 
                 'total_amount' => 0,
                 'items' => []
             ];
@@ -151,6 +152,9 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                     <span style="color:#94a3b8; font-size:1.1rem; cursor:grab; user-select:none;">☰</span>
                                     <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
                                         📍 <?= htmlspecialchars($step['location_name']) ?>
+                                        <?php if (!empty($step['is_return'])): ?>
+                                            <span style="background: #fff7ed; color: #ea580c; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #ffedd5; vertical-align: middle;">🏁 Retour</span>
+                                        <?php endif; ?>
                                         <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
                                             <div style="font-size:0.75rem; color:#64748b; font-weight:normal; margin-top:2px;">
                                                 Du <?= date('d/m', strtotime($step['step_start_date'])) ?> au <?= date('d/m', strtotime($step['step_end_date'])) ?>
@@ -252,6 +256,12 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                     <label class="pf-label">Départ le (Optionnel)</label>
                     <input type="date" name="step_end_date" id="cp_end_date" class="pf-input">
                 </div>
+                <div style="margin-bottom: 15px; padding-left: 5px;">
+                <label style="display:flex; align-items:center; cursor:pointer; font-size:0.9rem; color:#d97706; font-weight:600;">
+                    <input type="checkbox" name="is_return" id="cp_is_return" value="1" style="margin-right:8px; width:16px; height:16px;">
+                    🏁 Trajet retour
+                </label>
+            </div>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
