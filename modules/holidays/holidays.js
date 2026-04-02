@@ -40,33 +40,74 @@ function closeHolidayModal() {
   document.getElementById("holidayModal").style.display = "none";
 }
 
-// Fonction appelée au clic sur le bouton ✏️ de la carte (injectée par PHP)
 function editHoliday(data) {
+  console.log("1. 🛠️ editHoliday déclenchée avec :", data);
+
   const h = data.main;
+  const modal = document.getElementById("holidayModal");
 
-  // On ouvre la modale en mode édition (ça reset les listes)
-  openHolidayModal("edit");
+  if (!modal) {
+    alert(
+      "Erreur : La modale 'holidayModal' est introuvable dans le code HTML.",
+    );
+    return;
+  }
+  console.log("2. ✅ Modale trouvée dans le DOM.");
 
-  // Remplissage des champs principaux
-  document.getElementById("inp_id").value = h.id;
-  document.getElementById("inp_title").value = h.title;
-  document.getElementById("inp_status").value = h.status;
-  document.getElementById("inp_period").value = h.period_hint || "";
-  document.getElementById("inp_start").value = h.start_date || "";
-  document.getElementById("inp_end").value = h.end_date || "";
+  document.body.appendChild(modal);
 
-  // Pour éviter d'afficher "0" dans un champ vide, on vérifie si la valeur est > 0
-  document.getElementById("inp_food").value =
-    h.budget_food > 0 ? h.budget_food : "";
-  document.getElementById("inp_extra").value =
-    h.budget_extra > 0 ? h.budget_extra : "";
-  document.getElementById("inp_notes").value = h.notes || "";
+  if (typeof openHolidayModal === "function") {
+    openHolidayModal("edit");
+    console.log("3. 🔄 openHolidayModal (ancienne fonction) exécutée.");
+  }
 
-  // Remplissage des listes dynamiques (Transport, Hébergement, Activité)
-  if (data.items && data.items.length > 0) {
-    data.items.forEach((item) => {
-      addItem(item.category, item.name, item.amount, item.is_paid);
-    });
+  // On force l'affichage de manière agressive
+  modal.classList.add("open");
+  modal.style.setProperty("display", "flex", "important");
+  modal.style.setProperty("z-index", "999999", "important");
+  document.body.classList.add("no-scroll");
+
+  console.log("4. 👁️ Affichage forcé appliqué.");
+
+  // Remplissage des champs (avec un try/catch pour capter la moindre erreur silencieuse)
+  try {
+    document.getElementById("inp_id").value = h.id;
+    document.getElementById("inp_title").value = h.title;
+    document.getElementById("inp_status").value = h.status;
+    document.getElementById("inp_period").value = h.period_hint || "";
+    document.getElementById("inp_start").value = h.start_date || "";
+    document.getElementById("inp_end").value = h.end_date || "";
+
+    document.getElementById("inp_food").value =
+      h.budget_food > 0 ? h.budget_food : "";
+    document.getElementById("inp_extra").value =
+      h.budget_extra > 0 ? h.budget_extra : "";
+    document.getElementById("inp_notes").value = h.notes || "";
+    console.log("5. ✍️ Champs textes remplis avec succès.");
+  } catch (err) {
+    console.error("❌ Erreur lors du remplissage des champs textes :", err);
+  }
+
+  // Remplissage des listes d'items généraux
+  try {
+    document.getElementById("list_transport").innerHTML = "";
+    document.getElementById("list_accommodation").innerHTML = "";
+    document.getElementById("list_activity").innerHTML = "";
+
+    if (data.items && data.items.length > 0) {
+      data.items.forEach((item) => {
+        // On évite d'afficher le point technique invisible dans la liste des dépenses
+        if (
+          typeof addItem === "function" &&
+          item.name !== "PF_TECHNICAL_POINT"
+        ) {
+          addItem(item.category, item.name, item.amount, item.is_paid);
+        }
+      });
+    }
+    console.log("6. 📋 Listes dynamiques remplies. Fin de la fonction ! 🎉");
+  } catch (err) {
+    console.error("❌ Erreur lors du remplissage des listes dynamiques :", err);
   }
 }
 

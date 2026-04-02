@@ -701,6 +701,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   padding: 15px;
   border-top: 1px solid #e2e8f0;
   background: #fffbeb;
+  flex-shrink: 0;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 /* --- RESPONSIVE DETAIL PAGE --- */

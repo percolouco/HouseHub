@@ -72,15 +72,26 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
 <div class="pf-holidays-detail">
     
-    <div class="hol-detail-header">
-        <div class="hol-detail-title-group">
-            <a href="?tab=list" class="pf-btn btn-secondary">◀ Retour</a>
-            <h1><?= htmlspecialchars($holiday['title']) ?></h1>
-            <span class="hol-badge-status"><?= strtoupper($holiday['status']) ?></span>
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <a href="?tab=list" class="pf-btn btn-secondary pf-btn-small" style="width: fit-content; text-decoration: none;">◀ Retour</a>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h1 style="margin: 0; font-size: 1.8rem;"><?= htmlspecialchars($holiday['title']) ?></h1>
+                <span class="hol-badge-status"><?= strtoupper($holiday['status']) ?></span>
+            </div>
         </div>
-        <button onclick="editHoliday(<?= htmlspecialchars(json_encode(['main' => $holiday, 'items' => $generalItems]), ENT_QUOTES, 'UTF-8') ?>)" class="pf-btn btn-secondary pf-btn-small" style="width: auto; margin: 0;">⚙️ Modifier les bases</button>    </div>
 
-    <div class="hol-summary-card">
+        <div>
+            <script id="holidayDataJson" type="application/json">
+                <?= json_encode(['main' => $holiday, 'items' => $generalItems], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>
+            </script>
+            <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="editHoliday(JSON.parse(document.getElementById('holidayDataJson').textContent))">
+                ⚙️ Modifier les bases
+            </button>
+        </div>
+    </div>
+
+    <div class="hol-summary-card" style="width: 100%; display: block; clear: both;">
         <div class="hol-summary-grid">
             <div class="hol-summary-item">
                 <div class="hol-summary-label">Période</div>
@@ -170,38 +181,31 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                                     <span class="<?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>" title="<?= $it['is_paid'] ? 'Payé' : 'À payer' ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
                                                 </span>
                                             </div>
-                                            <?php if (!empty($it['notes'])): ?>
-                                                <div class="hol-expense-note">
-                                                    <?php if (filter_var($it['notes'], FILTER_VALIDATE_URL)): ?>
-                                                        🔗 <a href="<?= htmlspecialchars($it['notes']) ?>" target="_blank" class="hol-expense-link">Voir le lien</a>
-                                                    <?php else: ?>
-                                                        📝 <?= htmlspecialchars($it['notes']) ?>
-                                                    <?php endif; ?>
-                                                </div>
-                                            <?php endif; ?>
                                         </div>
                                 <?php endforeach; ?>
                                 
                                 <?php if ($visibleItemsCount === 0): ?>
-                                    <div class="hol-empty-step">
-                                        📍 Point de passage (Aucune dépense)
-                                    </div>
+                                    <div class="hol-empty-step">📍 Point de passage (Aucune dépense)</div>
                                 <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
-
-            <?php if (!empty($holiday['notes'])): ?>
-            <div class="hol-notes-panel">
-                <h4 style="margin:0 0 5px 0; font-size:0.85rem; color:#d97706;">Notes du voyage :</h4>
-                <p style="margin:0; font-size:0.85rem; color:#92400e; white-space:pre-wrap;"><?= htmlspecialchars($holiday['notes']) ?></p>
             </div>
-            <?php endif; ?>
+    </div> <?php if (!empty($holiday['notes'])): ?>
+    <div class="hol-summary-card" style="margin-top: 24px; padding: 25px; border-left: 5px solid #f59e0b;">
+        <h3 style="margin: 0 0 15px 0; font-size: 1.2rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            📝 Notes du voyage
+        </h3>
+        <div style="font-size: 0.95rem; color: #334155; white-space: pre-wrap; line-height: 1.6; font-family: 'Segoe UI', system-ui, sans-serif;">
+            <?= htmlspecialchars($holiday['notes']) ?>
         </div>
     </div>
-</div>
+    <?php endif; ?>
+
+</div> 
+
 
 <div id="checkpointModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width: 600px;">
