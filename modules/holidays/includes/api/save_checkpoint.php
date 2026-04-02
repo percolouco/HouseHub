@@ -57,7 +57,8 @@ if ($holiday_id > 0 && !empty($location_name)) {
         $step_start = !empty($_POST['step_start_date']) ? $_POST['step_start_date'] : null;
         $step_end = !empty($_POST['step_end_date']) ? $_POST['step_end_date'] : null;
 
-        // 3. INSERTION DES LIGNES (Avec Mémoire de la Durée et du Planning)
+        // 3. INSERTION DES LIGNES
+        // Il doit y avoir EXACTEMENT 15 colonnes et 15 points d'interrogation (?)
         $stmt = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes, item_date, item_time, step_start_date, step_end_date, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $validItemsCount = 0;
 
@@ -76,19 +77,16 @@ if ($holiday_id > 0 && !empty($location_name)) {
                     $time = !empty($_POST['items']['time'][$i]) ? $_POST['items']['time'][$i] : null;
                     $dur  = !empty($_POST['items']['duration'][$i]) ? (int)$_POST['items']['duration'][$i] : 1;
 
+                    // Les 15 variables passées au tableau doivent correspondre aux 15 points d'interrogation
                     $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur]);
                     $validItemsCount++;
                 }
             }
         }
 
+        // Si l'étape est vide, on enregistre quand même ses dates
         if ($validItemsCount === 0) {
             $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '', null, null, $step_start, $step_end, 1]);
-        }
-
-        // Point technique si aucune dépense n'est saisie (pour garder la trace de l'étape et de ses dates)
-        if ($validItemsCount === 0) {
-            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '', null, null, $step_start, $step_end]);
         }
 
         // 4. GESTION DES FAVORIS
