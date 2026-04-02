@@ -78,8 +78,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             <h1><?= htmlspecialchars($holiday['title']) ?></h1>
             <span class="hol-badge-status"><?= strtoupper($holiday['status']) ?></span>
         </div>
-        <button onclick='editHoliday(<?= htmlspecialchars(json_encode(['main' => $holiday, 'items' => $generalItems]), ENT_QUOTES, 'UTF-8') ?>)' class="pf-btn btn-secondary">⚙️ Modifier les bases</button>
-    </div>
+        <button onclick="editHoliday(<?= htmlspecialchars(json_encode(['main' => $holiday, 'items' => $generalItems]), ENT_QUOTES, 'UTF-8') ?>)" class="pf-btn btn-secondary pf-btn-small" style="width: auto; margin: 0;">⚙️ Modifier les bases</button>    </div>
 
     <div class="hol-summary-card">
         <div class="hol-summary-grid">
