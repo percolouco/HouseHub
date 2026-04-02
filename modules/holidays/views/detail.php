@@ -127,7 +127,6 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                     <h3 style="margin:0;">🗺️ Itinéraire</h3>
                     <div class="hol-map-legend">
                         <span class="hol-legend-item" title="Trajet aller"><span class="hol-legend-color aller"></span> Aller</span>
-                        <span class="hol-legend-item" title="Étapes intermédiaires"><span class="hol-legend-color interm"></span> Interm.</span>
                         <span class="hol-legend-item" title="Trajet retour"><span class="hol-legend-color retour"></span> Retour</span>
                     </div>
                 </div>
