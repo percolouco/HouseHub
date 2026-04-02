@@ -359,6 +359,8 @@ function panMapTo(lat, lng) {
 }
 
 // --- LOGIQUE DE LA MODALE CHECKPOINT (Lignes multiples) ---
+document.getElementById("cp_start_date").value = "";
+document.getElementById("cp_end_date").value = "";
 
 function openCheckpointModal(mode, data = null) {
   const searchBlock = document.getElementById("cpSearchBlock");
@@ -387,18 +389,24 @@ function openCheckpointModal(mode, data = null) {
     document.getElementById("cp_lng").value = data.lng;
     document.getElementById("cp_old_sort_order").value = data.sort_order;
     document.getElementById("cp_name").value = data.location_name;
+    document.getElementById("cp_start_date").value = data.step_start_date || "";
+    document.getElementById("cp_end_date").value = data.step_end_date || "";
 
     if (data.items && data.items.length > 0) {
       let visibleCount = 0;
       data.items.forEach((it) => {
         if (it.name !== "PF_TECHNICAL_POINT") {
-          // On passe it.notes à la fonction !
+          // On transmet l'ID, la date, l'heure et la durée !
           addCpExpenseLine(
             it.category,
             it.name,
             it.amount,
             it.is_paid,
             it.notes || "",
+            it.id || "",
+            it.item_date || "",
+            it.item_time || "",
+            it.duration || 1,
           );
           visibleCount++;
         }
@@ -409,6 +417,7 @@ function openCheckpointModal(mode, data = null) {
     }
   }
   document.getElementById("checkpointModal").style.display = "flex";
+  document.body.classList.add("no-scroll");
 }
 
 function searchPlace() {
@@ -466,10 +475,14 @@ function addCpExpenseLine(
   amount = "",
   isPaid = 0,
   notes = "",
+  itemId = "",
+  itemDate = "",
+  itemTime = "",
+  itemDur = 1,
 ) {
   const container = document.getElementById("cpExpensesContainer");
   const div = document.createElement("div");
-  div.className = "hol-form-row"; // Classe globale de la ligne
+  div.className = "hol-form-row";
 
   const isChecked = isPaid == 1 ? "checked" : "";
 
@@ -480,7 +493,7 @@ function addCpExpenseLine(
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
-            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="Libellé (Optionnel)" value="${name}">
+            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="Libellé" value="${name}">
             <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
             <label class="hol-form-paid-label" title="Payé ?">
@@ -488,10 +501,16 @@ function addCpExpenseLine(
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
                 <span class="hol-form-paid-text">Payé</span>
             </label>
-            
             <button type="button" class="btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="Supprimer">&times;</button>
         </div>
-        <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input" placeholder="🔗 Lien de réservation ou notes..." value="${notes}">
+        <div class="hol-form-subrow">
+            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="🔗 Lien de réservation ou notes (Optionnel)..." value="${notes}">
+        </div>
+        
+        <input type="hidden" name="items[id][]" value="${itemId}">
+        <input type="hidden" name="items[date][]" value="${itemDate}">
+        <input type="hidden" name="items[time][]" value="${itemTime}">
+        <input type="hidden" name="items[duration][]" value="${itemDur}">
     `;
   container.appendChild(div);
 }
@@ -581,5 +600,271 @@ document.addEventListener("DOMContentLoaded", () => {
       // Recharge la page pour que la carte redessine le trait bleu dans le bon ordre !
       window.location.reload();
     });
+  }
+});
+
+// ============================================================================
+// MOTEUR DRAG & DROP DU PLANNING
+// ============================================================================
+let selectedItemIdForMove = null; // Mémoire pour le mode Mobile
+
+function openPlanningModal(step) {
+  document.getElementById("planningModalTitle").innerText =
+    "📅 Planning : " + step.location_name;
+  const container = document.getElementById("planningContainer");
+  selectedItemIdForMove = null; // Reset à l'ouverture
+
+  let validItems = step.items.filter((it) => it.name !== "PF_TECHNICAL_POINT");
+
+  if (!step.step_start_date || !step.step_end_date) {
+    container.innerHTML = `<div style="text-align:center; padding:40px;"><h3>⚠️ Dates manquantes</h3><p style="color:#64748b;">Veuillez modifier cette étape (✏️) et renseigner sa <strong>Date d'arrivée et de départ</strong>.</p></div>`;
+    document.getElementById("planningModal").style.display = "flex";
+    return;
+  }
+
+  let datesToDisplay = [];
+  let curr = new Date(step.step_start_date);
+  let end = new Date(step.step_end_date);
+  while (curr <= end) {
+    datesToDisplay.push(curr.toISOString().split("T")[0]);
+    curr.setDate(curr.getDate() + 1);
+  }
+
+  // Zone À PLACER : Ajout du onclick pour le mobile
+  let html = `
+        <div class="hol-planning-layout">
+            <div class="hol-unmapped-zone" id="unmapped-pool" 
+                 ondragover="allowDrop(event)" ondrop="handleDropEvent(event, '', '')"
+                 onclick="handleZoneTap(event, '', '')">
+                <div class="hol-unmapped-title" style="width:100%;">📥 À Placer</div>
+            </div>
+            <div class="hol-calendar-zone">
+    `;
+
+  datesToDisplay.forEach((dateStr) => {
+    const dObj = new Date(dateStr);
+    const dayName = dObj.toLocaleDateString("fr-FR", { weekday: "short" });
+    const dayNum = dObj.toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+    });
+
+    html += `
+            <div class="hol-day-column">
+                <div class="hol-calendar-day-header"><div class="hol-cal-weekday">${dayName}</div><div class="hol-cal-date">${dayNum}</div></div>
+                <div class="hol-time-slots-container">
+        `;
+
+    for (let h = 8; h <= 22; h++) {
+      let hourStr = h.toString().padStart(2, "0") + ":00";
+      // Créneaux : Ajout du onclick pour le mobile
+      html += `
+                <div class="hol-time-slot" data-date="${dateStr}" data-time="${hourStr}" 
+                     ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" 
+                     ondrop="handleDropEvent(event, '${dateStr}', '${hourStr}')"
+                     onclick="handleZoneTap(event, '${dateStr}', '${hourStr}')">
+                    <span class="hol-slot-label">${hourStr}</span>
+                </div>
+            `;
+    }
+    html += `</div></div>`;
+  });
+  html += `</div></div>`;
+  container.innerHTML = html;
+
+  // Rendu des activités
+  validItems.forEach((it) => {
+    let icon = "🏷️";
+    let catClass = "cat-activity";
+    if (it.category === "accommodation") {
+      icon = "🏨";
+      catClass = "cat-accommodation";
+    }
+    if (it.category === "transport") {
+      icon = "🚗";
+      catClass = "cat-transport";
+    }
+
+    const dur = it.duration || 1;
+    const noteHtml = it.notes
+      ? `<div class="hol-drag-note">${it.notes}</div>`
+      : "";
+
+    // Ajout du style inline --duration, et des événements drag + click(mobile)
+    const elHtml = `
+            <div class="hol-drag-item ${catClass}" draggable="true" 
+                 id="drag-item-${it.id}" data-id="${it.id}" 
+                 style="--duration: ${dur};"
+                 ondragstart="dragStart(event)" onclick="handleItemTap(event, ${it.id})">
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 5px;">
+                    <div class="hol-drag-title" style="flex:1;">${icon} ${it.name}</div>
+                    <div class="hol-item-duration-controls">
+                        <button class="hol-dur-btn" onclick="changeDuration(event, ${it.id}, -1)">-</button>
+                        <span class="hol-dur-text" id="dur-text-${it.id}">${dur}h</span>
+                        <button class="hol-dur-btn" onclick="changeDuration(event, ${it.id}, 1)">+</button>
+                    </div>
+                </div>
+                
+                ${noteHtml}
+            </div>
+        `;
+
+    if (it.item_date && it.item_time && datesToDisplay.includes(it.item_date)) {
+      const hourPrefix = it.item_time.substring(0, 2) + ":00";
+      const targetSlot = container.querySelector(
+        `.hol-time-slot[data-date="${it.item_date}"][data-time="${hourPrefix}"]`,
+      );
+      if (targetSlot) {
+        targetSlot.insertAdjacentHTML("beforeend", elHtml);
+        return;
+      }
+    }
+    document
+      .getElementById("unmapped-pool")
+      .insertAdjacentHTML("beforeend", elHtml);
+  });
+
+  // Affiche la modale et bloque le scroll de l'arrière-plan
+  document.getElementById("planningModal").style.display = "flex";
+  document.body.classList.add("no-scroll");
+}
+
+// -- GESTION DES DURÉES --
+function changeDuration(e, itemId, delta) {
+  e.stopPropagation(); // Empêche de déclencher le Tap-to-Move
+  const itemEl = document.getElementById("drag-item-" + itemId);
+  let currentDur = parseInt(itemEl.style.getPropertyValue("--duration")) || 1;
+  let newDur = currentDur + delta;
+
+  if (newDur < 1) newDur = 1;
+  if (newDur > 12) newDur = 12; // Max 12h pour pas casser l'affichage
+
+  itemEl.style.setProperty("--duration", newDur);
+  document.getElementById(`dur-text-${itemId}`).innerText = newDur + "h";
+
+  // Mise à jour de la mémoire JS (Évite le bug au refresh)
+  updateItemMemory(itemId, { duration: newDur });
+
+  // Sauvegarde BDD
+  const formData = new FormData();
+  formData.append("action", "update_item_duration");
+  formData.append("item_id", itemId);
+  formData.append("duration", newDur);
+  fetch("/modules/holidays/includes/api/save_checkpoint.php", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+// -- MODE MOBILE (TAP TO MOVE) --
+function handleItemTap(e, itemId) {
+  e.stopPropagation();
+  document
+    .querySelectorAll(".hol-drag-item")
+    .forEach((el) => el.classList.remove("selected-for-move"));
+
+  if (selectedItemIdForMove === itemId) {
+    selectedItemIdForMove = null; // Désélectionner
+  } else {
+    selectedItemIdForMove = itemId;
+    document
+      .getElementById("drag-item-" + itemId)
+      .classList.add("selected-for-move");
+  }
+}
+
+function handleZoneTap(e, dateStr, timeStr) {
+  if (selectedItemIdForMove) {
+    handleDropLogic(selectedItemIdForMove, dateStr, timeStr, e.currentTarget);
+    selectedItemIdForMove = null;
+    document
+      .querySelectorAll(".hol-drag-item")
+      .forEach((el) => el.classList.remove("selected-for-move"));
+  }
+}
+
+// -- MODE DESKTOP (DRAG & DROP) --
+function dragStart(e) {
+  e.dataTransfer.setData("text/plain", e.target.id);
+  e.dataTransfer.effectAllowed = "move";
+}
+function allowDrop(e) {
+  e.preventDefault();
+}
+function dragEnter(e) {
+  e.preventDefault();
+  let s = e.target.closest(".hol-time-slot");
+  if (s) s.classList.add("drag-over");
+}
+function dragLeave(e) {
+  let s = e.target.closest(".hol-time-slot");
+  if (s) s.classList.remove("drag-over");
+}
+
+function handleDropEvent(e, dateStr, timeStr) {
+  e.preventDefault();
+  let slot = e.target.closest(".hol-time-slot");
+  if (slot) slot.classList.remove("drag-over");
+
+  const idStr = e.dataTransfer.getData("text/plain");
+  const itemId = idStr.replace("drag-item-", "");
+  const dropZone = slot || document.getElementById("unmapped-pool");
+
+  handleDropLogic(itemId, dateStr, timeStr, dropZone);
+}
+
+// -- LOGIQUE COMMUNE (Déplacement, Mémoire et BDD) --
+function handleDropLogic(itemId, dateStr, timeStr, dropZone) {
+  const draggedEl = document.getElementById("drag-item-" + itemId);
+  if (dropZone && draggedEl) {
+    dropZone.appendChild(draggedEl); // Déplacement visuel
+
+    // 1. Mise à jour de la mémoire JS Globale (Corrige le bug de la zone "À PLACER" au retour)
+    updateItemMemory(itemId, { item_date: dateStr, item_time: timeStr });
+
+    // 2. Sauvegarde BDD
+    const formData = new FormData();
+    formData.append("action", "update_item_datetime");
+    formData.append("item_id", itemId);
+    formData.append("item_date", dateStr);
+    formData.append("item_time", timeStr);
+    fetch("/modules/holidays/includes/api/save_checkpoint.php", {
+      method: "POST",
+      body: formData,
+    });
+  }
+}
+
+// Met à jour l'objet JS global MAP_POINTS pour que la modale s'ouvre avec les bonnes données sans F5
+function updateItemMemory(itemId, changes) {
+  MAP_POINTS.forEach((step) => {
+    let item = step.items.find((i) => i.id == itemId);
+    if (item) {
+      Object.assign(item, changes);
+    }
+  });
+}
+
+function saveItemDateTime(itemId, dateStr, timeStr) {
+  const formData = new FormData();
+  formData.append("action", "update_item_datetime");
+  formData.append("item_id", itemId);
+  formData.append("item_date", dateStr);
+  formData.append("item_time", timeStr);
+
+  fetch("/modules/holidays/includes/api/save_checkpoint.php", {
+    method: "POST",
+    body: formData,
+  }).catch((err) =>
+    console.error("Erreur lors de la sauvegarde du planning :", err),
+  );
+}
+
+// Fermeture des modales en cliquant sur l'arrière-plan flouté
+window.addEventListener("click", function (event) {
+  if (event.target.classList.contains("pf-modal")) {
+    event.target.style.display = "none";
+    document.body.classList.remove("no-scroll");
   }
 });

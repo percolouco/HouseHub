@@ -28,6 +28,7 @@ $favorites = json_decode($stmtFav->fetchColumn() ?: '[]', true);
 $steps = [];
 $generalItems = [];
 
+// C'est ici qu'il manquait sûrement une accolade !
 foreach ($items as $it) {
     if ($it['location_name'] !== null) {
         $orderKey = $it['sort_order']; 
@@ -37,6 +38,8 @@ foreach ($items as $it) {
                 'lat' => (float)$it['lat'],
                 'lng' => (float)$it['lng'],
                 'sort_order' => $it['sort_order'],
+                'step_start_date' => $it['step_start_date'],
+                'step_end_date' => $it['step_end_date'],
                 'total_amount' => 0,
                 'items' => []
             ];
@@ -138,10 +141,16 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                     <span style="color:#94a3b8; font-size:1.1rem; cursor:grab; user-select:none;">☰</span>
                                     <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
                                         📍 <?= htmlspecialchars($step['location_name']) ?>
+                                        <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
+                                            <div style="font-size:0.75rem; color:#64748b; font-weight:normal; margin-top:2px;">
+                                                Du <?= date('d/m', strtotime($step['step_start_date'])) ?> au <?= date('d/m', strtotime($step['step_end_date'])) ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="hol-cp-actions-group">
                                     <div class="hol-cp-total"><?= number_format($step['total_amount'], 2, ',', ' ') ?> €</div>
+                                    <button onclick='openPlanningModal(<?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="Voir le planning">📅</button>
                                     <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="Modifier">✏️</button>
                                 </div>
                             </div>
@@ -199,8 +208,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
     <div class="pf-modal-content" style="max-width: 600px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 id="cpModalTitle" style="margin:0;">📍 Placer une étape</h3>
-            <button type="button" onclick="document.getElementById('checkpointModal').style.display='none'" style="border:none; background:none; font-size:1.8rem; cursor:pointer;">&times;</button>
-        </div>
+<button type="button" onclick="document.getElementById('checkpointModal').style.display='none'; document.body.classList.remove('no-scroll');" style="border:none; background:none; font-size:1.8rem; cursor:pointer;">&times;</button>        </div>
         
         <div id="cpSearchBlock" style="margin-bottom:20px;">
             <?php if (!empty($favorites)): ?>
@@ -232,6 +240,16 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 <label class="pf-label">Nom de l'étape</label>
                 <input type="text" name="location_name" id="cp_name" class="pf-input" style="font-weight:bold; color:var(--primary);" required>
             </div>
+            <div style="display:flex; gap:15px; margin-bottom:15px; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+                <div class="form-group" style="flex:1; margin:0;">
+                    <label class="pf-label">Arrivée le (Optionnel)</label>
+                    <input type="date" name="step_start_date" id="cp_start_date" class="pf-input">
+                </div>
+                <div class="form-group" style="flex:1; margin:0;">
+                    <label class="pf-label">Départ le (Optionnel)</label>
+                    <input type="date" name="step_end_date" id="cp_end_date" class="pf-input">
+                </div>
+            </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <label class="pf-label" style="margin:0;">Dépenses prévues</label>
@@ -253,11 +271,23 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                     <button type="button" onclick="deleteCheckpoint()" id="btnDeleteCp" class="pf-btn btn-secondary" style="color:#ef4444; border-color:#fca5a5; display:none; width:auto; margin:0;">🗑️ Supprimer</button>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button type="button" onclick="document.getElementById('checkpointModal').style.display='none'" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
-                    <button type="submit" class="pf-btn" style="width:auto; margin:0;">Enregistrer</button>
+                <button type="button" onclick="document.getElementById('checkpointModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>                    <button type="submit" class="pf-btn" style="width:auto; margin:0;">Enregistrer</button>
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="planningModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width: 550px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 id="planningModalTitle" style="margin:0; color:var(--primary);">📅 Planning</h3>
+<button type="button" onclick="document.getElementById('planningModal').style.display='none'; document.body.classList.remove('no-scroll');" style="border:none; background:none; font-size:1.8rem; cursor:pointer;">&times;</button>        </div>
+        
+        <div id="planningContainer" style="width: 100%;">
+        
+        <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+<button type="button" onclick="document.getElementById('planningModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary">Fermer</button>        </div>
     </div>
 </div>
 

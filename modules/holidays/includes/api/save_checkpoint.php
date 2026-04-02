@@ -4,6 +4,25 @@ require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
 require_login();
 
+// INTERCEPTION AJAX : Sauvegarde du planning (Drag & Drop / Durée)
+if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime', 'update_item_duration'])) {
+    $itemId = (int)$_POST['item_id'];
+    
+    if ($_POST['action'] === 'update_item_datetime') {
+        $itemDate = !empty($_POST['item_date']) ? $_POST['item_date'] : null;
+        $itemTime = !empty($_POST['item_time']) ? $_POST['item_time'] : null;
+        $stmt = $pdo->prepare("UPDATE pf_holidays_items SET item_date = ?, item_time = ? WHERE id = ?");
+        $stmt->execute([$itemDate, $itemTime, $itemId]);
+    } else {
+        $duration = (int)$_POST['duration'];
+        $stmt = $pdo->prepare("UPDATE pf_holidays_items SET duration = ? WHERE id = ?");
+        $stmt->execute([$duration, $itemId]);
+    }
+    
+    echo json_encode(['success' => true]);
+    exit; // Crucial : on arrête le script ici !
+}
+
 $holiday_id = (int)$_POST['holiday_id'];
 $location_name = trim($_POST['location_name']);
 $lat = (float)$_POST['lat'];
@@ -34,8 +53,13 @@ if ($holiday_id > 0 && !empty($location_name)) {
             $target_order = ($max !== null) ? (int)$max + 1 : 0;
         }
 
-        // 3. INSERTION DES LIGNES
-        $stmt = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");        $validItemsCount = 0;
+        // Récupération des dates de l'étape globale
+        $step_start = !empty($_POST['step_start_date']) ? $_POST['step_start_date'] : null;
+        $step_end = !empty($_POST['step_end_date']) ? $_POST['step_end_date'] : null;
+
+        // 3. INSERTION DES LIGNES (Avec Mémoire de la Durée et du Planning)
+        $stmt = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes, item_date, item_time, step_start_date, step_end_date, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $validItemsCount = 0;
 
         if (isset($_POST['items']['name'])) {
             foreach ($_POST['items']['name'] as $i => $raw_name) {
@@ -44,15 +68,27 @@ if ($holiday_id > 0 && !empty($location_name)) {
                 if ($name !== '' || $amount_raw !== '') {
                     $cat = $_POST['items']['cat'][$i] ?? 'activity';
                     $amount = (float)$amount_raw;
-                    $paid = (isset($_POST['items']['paid'][$i]) && (int)$_POST['items']['paid'][$i] === 1) ? 1 : 0;                    
+                    $paid = (isset($_POST['items']['paid'][$i]) && (int)$_POST['items']['paid'][$i] === 1) ? 1 : 0;
                     $note = trim($_POST['items']['notes'][$i] ?? '');
-                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note]);                    $validItemsCount++;
+                    
+                    // Récupération des données invisibles
+                    $date = !empty($_POST['items']['date'][$i]) ? $_POST['items']['date'][$i] : null;
+                    $time = !empty($_POST['items']['time'][$i]) ? $_POST['items']['time'][$i] : null;
+                    $dur  = !empty($_POST['items']['duration'][$i]) ? (int)$_POST['items']['duration'][$i] : 1;
+
+                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur]);
+                    $validItemsCount++;
                 }
             }
         }
 
         if ($validItemsCount === 0) {
-            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '']);
+            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '', null, null, $step_start, $step_end, 1]);
+        }
+
+        // Point technique si aucune dépense n'est saisie (pour garder la trace de l'étape et de ses dates)
+        if ($validItemsCount === 0) {
+            $stmt->execute([$holiday_id, 'activity', 'PF_TECHNICAL_POINT', 0, 1, $location_name, $lat, $lng, $target_order, '', null, null, $step_start, $step_end]);
         }
 
         // 4. GESTION DES FAVORIS
