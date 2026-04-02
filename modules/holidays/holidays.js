@@ -200,13 +200,12 @@ function initDetailMap() {
 
   detailMap = L.map("tripMap");
 
-  // Fond de carte propre (CartoDB Voyager)
-  L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    {
-      attribution: "© OpenStreetMap",
-    },
-  ).addTo(detailMap);
+  // Carte standard : Affiche toujours la langue locale exacte (Français en France, Catalan en Catalogne)
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  }).addTo(detailMap);
 
   if (MAP_POINTS.length === 0) {
     detailMap.setView([46.6, 2.4], 5); // Centré sur la France par défaut si vide
@@ -263,12 +262,87 @@ function initDetailMap() {
     });
   });
 
-  // On dessine le trait en pointillés pour relier le roadtrip !
+  // On dessine le vrai trajet par la route avec gestion des superpositions
   if (latlngs.length > 1) {
-    L.polyline(latlngs, {
-      color: "#3b82f6",
-      weight: 3,
-      dashArray: "8, 8",
+    const routePromises = [];
+
+    // 1. On lance toutes les requêtes de calcul de route en même temps
+    for (let i = 0; i < latlngs.length - 1; i++) {
+      const startPt = MAP_POINTS[i];
+      const endPt = MAP_POINTS[i + 1];
+      const coordsString = `${startPt.lng},${startPt.lat};${endPt.lng},${endPt.lat}`;
+
+      const promise = fetch(
+        `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`,
+      )
+        .then((response) => response.json())
+        .then((data) => ({
+          index: i,
+          data: data,
+          coords: [latlngs[i], latlngs[i + 1]],
+        }))
+        .catch((err) => ({
+          index: i,
+          error: true,
+          coords: [latlngs[i], latlngs[i + 1]],
+        }));
+
+      routePromises.push(promise);
+    }
+
+    // 2. On attend que TOUTES les routes soient calculées pour les dessiner dans le bon ordre
+    Promise.all(routePromises).then((results) => {
+      // On s'assure de dessiner l'Étape 1 d'abord, puis la 2, etc.
+      results.sort((a, b) => a.index - b.index);
+
+      results.forEach((res) => {
+        const i = res.index;
+
+        // Styles par défaut (Aller / Étape 1)
+        let routeColor = "#3b82f6"; // Bleu
+        let routeWeight = 6; // Épais
+        let routeDash = null; // Ligne continue
+
+        // Modification des styles selon le segment
+        if (i === latlngs.length - 2) {
+          // DERNIER SEGMENT (Retour)
+          routeColor = "#f97316"; // Orange vif (Tranche parfaitement avec le bleu)
+          routeWeight = 3; // Plus fin pour se superposer sans cacher
+          routeDash = "10, 10"; // En pointillés pour laisser voir le bleu en dessous
+        } else if (i > 0) {
+          // SEGMENTS INTERMÉDIAIRES
+          routeColor = "#8b5cf6"; // Violet
+          routeWeight = 5;
+        }
+
+        // Dessin du trait
+        if (res.data && res.data.code === "Ok" && res.data.routes.length > 0) {
+          const routeCoords = res.data.routes[0].geometry.coordinates.map(
+            (c) => [c[1], c[0]],
+          );
+
+          L.polyline(routeCoords, {
+            color: routeColor,
+            weight: routeWeight,
+            dashArray: routeDash,
+            opacity: 0.9,
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(detailMap);
+        } else {
+          // Plan B si pas de route carrossable (ex: avion/bateau)
+          drawFallbackLine(res.coords, routeColor, routeWeight);
+        }
+      });
+    });
+  }
+
+  // Plan B : La ligne droite
+  function drawFallbackLine(coords, color, weight) {
+    L.polyline(coords, {
+      color: color,
+      weight: weight || 3,
+      dashArray: "8, 8", // Toujours en pointillés pour le plan B
       opacity: 0.7,
     }).addTo(detailMap);
   }
@@ -395,35 +469,29 @@ function addCpExpenseLine(
 ) {
   const container = document.getElementById("cpExpensesContainer");
   const div = document.createElement("div");
-  div.style.display = "flex";
-  div.style.flexDirection = "column";
-  div.style.gap = "6px";
-  div.style.padding = "10px";
-  div.style.background = "#f8fafc";
-  div.style.borderRadius = "8px";
-  div.style.border = "1px solid #e2e8f0";
+  div.className = "hol-form-row"; // Classe globale de la ligne
 
   const isChecked = isPaid == 1 ? "checked" : "";
 
   div.innerHTML = `
-        <div style="display:flex; gap:8px; align-items:center; width:100%;">
-            <select name="items[cat][]" class="pf-input" style="width:50px; padding:8px 4px; font-size:1.2rem; cursor:pointer;" title="Catégorie">
+        <div class="hol-form-inner">
+            <select name="items[cat][]" class="pf-input hol-form-select" title="Catégorie">
                 <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
-            <input type="text" name="items[name][]" class="pf-input" placeholder="Libellé (Optionnel)" value="${name}" style="flex:2; padding:8px; font-size:0.9rem;">
-            <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width:80px; text-align:right; padding:8px; font-size:0.9rem;">
+            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="Libellé (Optionnel)" value="${name}">
+            <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
-            <label title="Payé ?" style="display:flex; align-items:center; cursor:pointer; width:55px;">
-                <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
+            <label class="hol-form-paid-label" title="Payé ?">
+                <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
-                <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">Payé</span>
+                <span class="hol-form-paid-text">Payé</span>
             </label>
             
-            <button type="button" onclick="this.parentElement.parentElement.remove()" style="width:28px; height:28px; border:none; background:#fee2e2; color:#ef4444; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; justify-content:center; align-items:center;">&times;</button>
+            <button type="button" class="btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="Supprimer">&times;</button>
         </div>
-        <input type="text" name="items[notes][]" class="pf-input" placeholder="🔗 Lien de réservation ou adresse exacte..." value="${notes}" style="font-size:0.8rem; padding:6px 8px; border-style:dashed; color:#475569; width:calc(100% - 58px); margin-left:58px;">
+        <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input" placeholder="🔗 Lien de réservation ou notes..." value="${notes}">
     `;
   container.appendChild(div);
 }
