@@ -356,12 +356,7 @@ function initDetailMap() {
           routeColor = "#f97316"; // Orange
           routeWeight = 3;
           routeDash = "10, 10";
-        } else if (i > 0) {
-          // SEGMENTS INTERMÉDIAIRES
-          routeColor = "#8b5cf6"; // Violet
-          routeWeight = 5;
         }
-
         // Dessin du trait
         if (res.data && res.data.code === "Ok" && res.data.routes.length > 0) {
           const routeCoords = res.data.routes[0].geometry.coordinates.map(
