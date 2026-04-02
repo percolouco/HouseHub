@@ -129,9 +129,8 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                     <p style="color:var(--text-muted); font-style:italic; text-align:center; margin-top:40px;">Aucune étape planifiée.</p>
                 <?php else: ?>
                     <?php foreach ($steps as $step): ?>
-                        <div class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-location="<?= htmlspecialchars($step['location_name']) ?>">
+                        <div id="step-card-<?= $step['sort_order'] ?>" class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-location="<?= htmlspecialchars($step['location_name']) ?>">                            
                             <div class="hol-cp-header">
-                                
                                 <div class="hol-cp-info-group">
                                     <span style="color:#94a3b8; font-size:1.1rem; cursor:grab; user-select:none;">☰</span>
                                     <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
