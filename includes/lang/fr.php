@@ -51,4 +51,27 @@ return [
     'btn_close' => 'Fermer',
     'planning_title' => 'Planning',
 
+    // --- Javascript (holidays.js) ---
+    'modal_plan_trip' => 'Planifier le voyage',
+    'modal_quick_edit' => 'Modification rapide',
+    'err_modal_missing' => 'Erreur : La modale holidayModal est introuvable.',
+    'placeholder_title' => 'Intitulé',
+    'placeholder_price' => 'Prix (€)',
+    'already_paid' => 'Déjà payé ?',
+    'remove_line' => 'Retirer cette ligne',
+    'confirm_delete_trip' => 'Voulez-vous vraiment supprimer définitivement ce voyage ? Cette action est irréversible.',
+    'step_number' => 'Étape',
+    'place_new_step' => '📍 Placer une nouvelle étape',
+    'edit_step' => '✏️ Modifier l\'étape',
+    'search_in_progress' => 'Recherche en cours... ⏳',
+    'no_result_found' => 'Aucun résultat trouvé.',
+    'network_error' => 'Erreur réseau.',
+    'placeholder_label' => 'Libellé',
+    'placeholder_notes_link' => '🔗 Lien de réservation ou notes (Optionnel)...',
+    'confirm_delete_step' => 'Supprimer cette étape et toutes les dépenses associées ?',
+    'planning_of' => '📅 Planning : ',
+    'missing_dates_title' => '⚠️ Dates manquantes',
+    'missing_dates_msg' => 'Veuillez modifier cette étape (✏️) et renseigner sa <strong>Date d\'arrivée et de départ</strong>.',
+    'to_place' => '📥 À Placer',
+
 ];

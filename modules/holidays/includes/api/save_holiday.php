@@ -40,8 +40,8 @@ try {
     }
 
     // GESTION DES ITEMS GLOBAUX (On ne supprime QUE les items qui n'ont pas de lieu défini !)
-    $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND location_name IS NULL")->execute([$id]);
-
+    $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND (location_name IS NULL OR location_name = '')")->execute([$id]);
+    
     if (!empty($_POST['items']['name'])) {
         $stmtItem = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid) VALUES (?, ?, ?, ?, ?)");
         

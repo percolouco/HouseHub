@@ -1,11 +1,21 @@
-document.addEventListener("DOMContentLoaded", () => {
-  // Fermer les modales si on clique en dehors du contenu
-  window.onclick = function (event) {
-    const modal = document.getElementById("holidayModal");
-    if (event.target == modal) {
-      closeHolidayModal();
-    }
-  };
+// ============================================================================
+// FONCTION DE TRADUCTION JS & LANGUE COURANTE
+// ============================================================================
+function tr(key) {
+  return window.I18N && window.I18N[key] ? window.I18N[key] : key;
+}
+
+// On détecte la langue de la page (définie dans la balise <html lang="..."> du header)
+const currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+
+// ============================================================================
+// FERMETURE UNIVERSELLE DES MODALES
+// ============================================================================
+window.addEventListener("click", function (event) {
+  if (event.target.classList.contains("pf-modal")) {
+    event.target.style.display = "none";
+    document.body.classList.remove("no-scroll");
+  }
 });
 
 // --- 1. GESTION DE LA MODALE D'ÉDITION RAPIDE ---
@@ -15,7 +25,6 @@ function openHolidayModal(mode) {
   const form = document.getElementById("holidayForm");
   const btnDelete = document.getElementById("btn_delete");
 
-  // Reset complet pour éviter les résidus d'une carte précédente
   form.reset();
   document.getElementById("inp_id").value = "";
   document.getElementById("list_transport").innerHTML = "";
@@ -23,53 +32,42 @@ function openHolidayModal(mode) {
   document.getElementById("list_activity").innerHTML = "";
 
   if (mode === "add") {
-    document.getElementById("modalTitle").innerText = "Planifier le voyage";
+    document.getElementById("modalTitle").innerText = tr("modal_plan_trip");
     btnDelete.style.display = "none";
   } else {
-    document.getElementById("modalTitle").innerText = "Modification rapide";
+    document.getElementById("modalTitle").innerText = tr("modal_quick_edit");
     btnDelete.style.display = "block";
   }
 
   modal.style.display = "flex";
-
-  // Focus sur le champ titre pour une saisie rapide (petit délai pour l'animation d'ouverture)
   setTimeout(() => document.getElementById("inp_title").focus(), 100);
 }
 
 function closeHolidayModal() {
   document.getElementById("holidayModal").style.display = "none";
+  document.body.classList.remove("no-scroll");
 }
 
 function editHoliday(data) {
-  console.log("1. 🛠️ editHoliday déclenchée avec :", data);
-
   const h = data.main;
   const modal = document.getElementById("holidayModal");
 
   if (!modal) {
-    alert(
-      "Erreur : La modale 'holidayModal' est introuvable dans le code HTML.",
-    );
+    alert(tr("err_modal_missing"));
     return;
   }
-  console.log("2. ✅ Modale trouvée dans le DOM.");
 
   document.body.appendChild(modal);
 
   if (typeof openHolidayModal === "function") {
     openHolidayModal("edit");
-    console.log("3. 🔄 openHolidayModal (ancienne fonction) exécutée.");
   }
 
-  // On force l'affichage de manière agressive
   modal.classList.add("open");
   modal.style.setProperty("display", "flex", "important");
   modal.style.setProperty("z-index", "999999", "important");
   document.body.classList.add("no-scroll");
 
-  console.log("4. 👁️ Affichage forcé appliqué.");
-
-  // Remplissage des champs (avec un try/catch pour capter la moindre erreur silencieuse)
   try {
     document.getElementById("inp_id").value = h.id;
     document.getElementById("inp_title").value = h.title;
@@ -83,12 +81,10 @@ function editHoliday(data) {
     document.getElementById("inp_extra").value =
       h.budget_extra > 0 ? h.budget_extra : "";
     document.getElementById("inp_notes").value = h.notes || "";
-    console.log("5. ✍️ Champs textes remplis avec succès.");
   } catch (err) {
-    console.error("❌ Erreur lors du remplissage des champs textes :", err);
+    console.error("Erreur champs textes :", err);
   }
 
-  // Remplissage des listes d'items généraux
   try {
     document.getElementById("list_transport").innerHTML = "";
     document.getElementById("list_accommodation").innerHTML = "";
@@ -96,7 +92,6 @@ function editHoliday(data) {
 
     if (data.items && data.items.length > 0) {
       data.items.forEach((item) => {
-        // On évite d'afficher le point technique invisible dans la liste des dépenses
         if (
           typeof addItem === "function" &&
           item.name !== "PF_TECHNICAL_POINT"
@@ -105,9 +100,8 @@ function editHoliday(data) {
         }
       });
     }
-    console.log("6. 📋 Listes dynamiques remplies. Fin de la fonction ! 🎉");
   } catch (err) {
-    console.error("❌ Erreur lors du remplissage des listes dynamiques :", err);
+    console.error("Erreur listes :", err);
   }
 }
 
@@ -117,33 +111,31 @@ function addItem(category, name = "", amount = "", isPaid = 0) {
   const container = document.getElementById("list_" + category);
   const div = document.createElement("div");
 
-  // Style en ligne pour s'assurer que ça reste propre sans dépendre de classes externes complexes
   div.style.display = "flex";
   div.style.gap = "8px";
   div.style.alignItems = "center";
   div.style.marginBottom = "10px";
 
-  // Astuce pour lier la checkbox visuelle à l'input caché (valeur 0 ou 1 pour MySQL)
   const checkedAttr = isPaid == 1 ? "checked" : "";
 
   div.innerHTML = `
         <input type="hidden" name="items[cat][]" value="${category}">
         
         <input type="text" name="items[name][]" class="pf-input" 
-               placeholder="Intitulé" value="${name}" 
+               placeholder="${tr("placeholder_title")}" value="${name}" 
                style="flex: 2; padding: 8px; font-size:0.9rem;" required>
                
         <input type="number" step="0.01" name="items[amount][]" class="pf-input" 
-               placeholder="Prix (€)" value="${amount}" 
+               placeholder="${tr("placeholder_price")}" value="${amount}" 
                style="width: 80px; text-align: right; padding: 8px; font-size:0.9rem;">
                
-        <label title="Déjà payé ?" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
+        <label title="${tr("already_paid")}" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
             <input type="checkbox" ${checkedAttr} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
             <input type="hidden" name="items[paid][]" value="${isPaid}">
-            <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">Payé</span>
+            <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">${tr("paid")}</span>
         </label>
         
-        <button type="button" onclick="this.parentElement.remove()" title="Retirer cette ligne" 
+        <button type="button" onclick="this.parentElement.remove()" title="${tr("remove_line")}" 
                 style="width: 28px; height: 28px; border: none; background: #fee2e2; color: #ef4444; border-radius: 6px; cursor: pointer; font-weight: bold; display:flex; align-items:center; justify-content:center;">
             &times;
         </button>
@@ -153,52 +145,38 @@ function addItem(category, name = "", amount = "", isPaid = 0) {
 }
 
 function deleteHoliday() {
-  if (
-    !confirm(
-      "Voulez-vous vraiment supprimer définitivement ce voyage ? Cette action est irréversible.",
-    )
-  )
-    return;
-
+  if (!confirm(tr("confirm_delete_trip"))) return;
   const form = document.getElementById("holidayForm");
-
-  // On injecte un input caché pour signaler au PHP que c'est une demande de suppression
   const input = document.createElement("input");
   input.type = "hidden";
   input.name = "action_delete";
   input.value = "1";
-
   form.appendChild(input);
   form.submit();
 }
 
-// --- 3. GESTION DE LA CARTE (Leaflet - Optionnel selon si tu l'utilises ou non) ---
+// --- 3. GESTION DE LA CARTE ---
 
 let map = null;
 
 function toggleMap() {
   const modal = document.getElementById("hol-map-modal");
-
   if (modal.style.display === "flex") {
     modal.style.display = "none";
   } else {
     modal.style.display = "flex";
-    // Petit délai pour laisser le temps au DOM de s'afficher avant d'init Leaflet
     setTimeout(initMap, 100);
   }
 }
 
 function initMap() {
   if (map) {
-    map.invalidateSize(); // Recalcule la taille si la fenêtre a changé
+    map.invalidateSize();
     return;
   }
-
   if (typeof L === "undefined") return;
 
-  // Centré sur l'Europe par défaut
   map = L.map("hol-map").setView([46.6, 2.4], 4);
-
   L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     {
@@ -206,13 +184,10 @@ function initMap() {
     },
   ).addTo(map);
 
-  // On récupère les points définis en global dans le PHP
   if (typeof HOL_MAP_POINTS !== "undefined") {
     HOL_MAP_POINTS.forEach((pt) => {
       const color =
         pt.status === "planned" || pt.status === "booked" ? "green" : "blue";
-
-      // Cercle simple
       L.circleMarker([pt.lat, pt.lng], {
         color: color,
         radius: 8,
@@ -223,6 +198,7 @@ function initMap() {
     });
   }
 }
+
 // ============================================================================
 // 4. GESTION DE LA CARTE DÉTAILLÉE (ROADTRIP) ET GÉOCODAGE
 // ============================================================================
@@ -230,7 +206,6 @@ function initMap() {
 let detailMap = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Si on est sur la page détail et que la div "tripMap" existe, on initie la carte
   if (document.getElementById("tripMap")) {
     initDetailMap();
   }
@@ -240,8 +215,6 @@ function initDetailMap() {
   if (typeof L === "undefined" || typeof MAP_POINTS === "undefined") return;
 
   detailMap = L.map("tripMap");
-
-  // Carte standard : Affiche toujours la langue locale exacte (Français en France, Catalan en Catalogne)
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution:
@@ -249,7 +222,7 @@ function initDetailMap() {
   }).addTo(detailMap);
 
   if (MAP_POINTS.length === 0) {
-    detailMap.setView([46.6, 2.4], 5); // Centré sur la France par défaut si vide
+    detailMap.setView([46.6, 2.4], 5);
     return;
   }
 
@@ -261,10 +234,8 @@ function initDetailMap() {
     latlngs.push(pos);
     bounds.extend(pos);
 
-    // Couleur de base (Bleu PachaFamily)
     const color = "#2563eb";
 
-    // On place un petit cercle pour chaque point
     const marker = L.circleMarker(pos, {
       color: color,
       radius: 8,
@@ -273,28 +244,21 @@ function initDetailMap() {
       weight: 3,
     }).addTo(detailMap);
 
-    // Correction : Numérotation et Popup avec les bonnes variables
     marker.bindPopup(`
             <div style="text-align:center;">
-                <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">Étape ${index + 1}</div>
+                <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">${tr("step_number")} ${index + 1}</div>
                 <strong style="font-size:1rem; color:#0f172a;">${pt.location_name}</strong><br>
                 <span style="font-weight:bold; color:${color};">${parseFloat(pt.total_amount).toFixed(2)} €</span>
             </div>
         `);
 
-    // NOUVEAU : Focus et scroll sur la liste au clic sur la carte !
     marker.on("click", function () {
       const card = document.getElementById("step-card-" + pt.sort_order);
       if (card) {
-        // Fait défiler la liste doucement jusqu'à l'élément
         card.scrollIntoView({ behavior: "smooth", block: "center" });
-
-        // Effet visuel "Flash" pour repérer la carte
         card.style.transition = "box-shadow 0.3s, transform 0.3s";
         card.style.boxShadow = "0 0 0 3px #3b82f6";
         card.style.transform = "scale(1.02)";
-
-        // Retire l'effet après 1.5 seconde
         setTimeout(() => {
           card.style.boxShadow = "";
           card.style.transform = "";
@@ -303,11 +267,9 @@ function initDetailMap() {
     });
   });
 
-  // On dessine le vrai trajet par la route avec gestion des superpositions
   if (latlngs.length > 1) {
     const routePromises = [];
 
-    // 1. On lance toutes les requêtes de calcul de route en même temps
     for (let i = 0; i < latlngs.length - 1; i++) {
       const startPt = MAP_POINTS[i];
       const endPt = MAP_POINTS[i + 1];
@@ -327,42 +289,33 @@ function initDetailMap() {
           error: true,
           coords: [latlngs[i], latlngs[i + 1]],
         }));
-
       routePromises.push(promise);
     }
 
-    // 2. On attend que TOUTES les routes soient calculées
     Promise.all(routePromises).then((results) => {
       results.sort((a, b) => a.index - b.index);
 
-      // NOUVEAU : On cherche quelle étape a été marquée "Retour"
-      let returnStartIndex = latlngs.length - 2; // Par défaut : le tout dernier segment
+      let returnStartIndex = latlngs.length - 2;
       const customReturnStep = MAP_POINTS.findIndex((p) => p.is_return == 1);
       if (customReturnStep > 0) {
-        // Si trouvé (et que ce n'est pas le point de départ)
         returnStartIndex = customReturnStep;
       }
 
       results.forEach((res) => {
         const i = res.index;
-
-        let routeColor = "#3b82f6"; // Bleu (Aller)
+        let routeColor = "#3b82f6";
         let routeWeight = 6;
         let routeDash = null;
 
-        // Application de la bonne couleur
         if (i >= returnStartIndex) {
-          // TOUS LES SEGMENTS DEPUIS L'ÉTAPE "RETOUR"
-          routeColor = "#f97316"; // Orange
+          routeColor = "#f97316";
           routeWeight = 3;
           routeDash = "10, 10";
         }
-        // Dessin du trait
         if (res.data && res.data.code === "Ok" && res.data.routes.length > 0) {
           const routeCoords = res.data.routes[0].geometry.coordinates.map(
             (c) => [c[1], c[0]],
           );
-
           L.polyline(routeCoords, {
             color: routeColor,
             weight: routeWeight,
@@ -372,37 +325,30 @@ function initDetailMap() {
             lineJoin: "round",
           }).addTo(detailMap);
         } else {
-          // Plan B si pas de route carrossable (ex: avion/bateau)
           drawFallbackLine(res.coords, routeColor, routeWeight);
         }
       });
     });
   }
 
-  // Plan B : La ligne droite
   function drawFallbackLine(coords, color, weight) {
     L.polyline(coords, {
       color: color,
       weight: weight || 3,
-      dashArray: "8, 8", // Toujours en pointillés pour le plan B
+      dashArray: "8, 8",
       opacity: 0.7,
     }).addTo(detailMap);
   }
-
-  // On zoome automatiquement pour voir tous les points
   detailMap.fitBounds(bounds, { padding: [50, 50] });
 }
 
-// Fonction appelée quand on clique sur "👁️ Voir sur la carte" dans la liste
 function panMapTo(lat, lng) {
   if (detailMap) {
     detailMap.setView([lat, lng], 14, { animate: true });
   }
 }
 
-// --- LOGIQUE DE LA MODALE CHECKPOINT (Lignes multiples) ---
-document.getElementById("cp_start_date").value = "";
-document.getElementById("cp_end_date").value = "";
+// --- LOGIQUE DE LA MODALE CHECKPOINT ---
 
 function openCheckpointModal(mode, data = null) {
   const searchBlock = document.getElementById("cpSearchBlock");
@@ -412,9 +358,14 @@ function openCheckpointModal(mode, data = null) {
 
   container.innerHTML = "";
 
+  // Sécurisation : On vide les dates ici pour ne pas planter sur la page d'accueil !
+  if (document.getElementById("cp_start_date"))
+    document.getElementById("cp_start_date").value = "";
+  if (document.getElementById("cp_end_date"))
+    document.getElementById("cp_end_date").value = "";
+
   if (mode === "add") {
-    document.getElementById("cpModalTitle").innerText =
-      "📍 Placer une nouvelle étape";
+    document.getElementById("cpModalTitle").innerText = tr("place_new_step");
     searchBlock.style.display = "block";
     formBlock.style.display = "none";
     btnDel.style.display = "none";
@@ -423,7 +374,7 @@ function openCheckpointModal(mode, data = null) {
     addCpExpenseLine();
     document.getElementById("cp_is_return").checked = false;
   } else if (mode === "edit" && data) {
-    document.getElementById("cpModalTitle").innerText = "✏️ Modifier l'étape";
+    document.getElementById("cpModalTitle").innerText = tr("edit_step");
     searchBlock.style.display = "none";
     formBlock.style.display = "block";
     btnDel.style.display = "block";
@@ -440,7 +391,6 @@ function openCheckpointModal(mode, data = null) {
       let visibleCount = 0;
       data.items.forEach((it) => {
         if (it.name !== "PF_TECHNICAL_POINT") {
-          // On transmet l'ID, la date, l'heure et la durée !
           addCpExpenseLine(
             it.category,
             it.name,
@@ -469,8 +419,7 @@ function searchPlace() {
   if (q.length < 3) return;
 
   const resultsDiv = document.getElementById("searchResults");
-  resultsDiv.innerHTML =
-    '<span style="color:#64748b; font-size:0.85rem;">Recherche en cours... ⏳</span>';
+  resultsDiv.innerHTML = `<span style="color:#64748b; font-size:0.85rem;">${tr("search_in_progress")}</span>`;
 
   fetch(
     "/modules/holidays/includes/api/geocode.php?limit=5&q=" +
@@ -480,11 +429,9 @@ function searchPlace() {
     .then((data) => {
       resultsDiv.innerHTML = "";
       if (data.error || !data.results || data.results.length === 0) {
-        resultsDiv.innerHTML =
-          '<span style="color:#ef4444; font-size:0.85rem;">Aucun résultat trouvé.</span>';
+        resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">${tr("no_result_found")}</span>`;
         return;
       }
-
       data.results.forEach((place) => {
         const btn = document.createElement("button");
         btn.type = "button";
@@ -499,15 +446,13 @@ function searchPlace() {
       });
     })
     .catch((err) => {
-      resultsDiv.innerHTML =
-        '<span style="color:#ef4444; font-size:0.85rem;">Erreur réseau.</span>';
+      resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">${tr("network_error")}</span>`;
     });
 }
 
 function selectPlace(lat, lng, fullName) {
   document.getElementById("cp_lat").value = lat;
   document.getElementById("cp_lng").value = lng;
-  // On nettoie le nom pour que ce soit joli (ex: "Paris, France" -> "Paris")
   document.getElementById("cp_name").value = fullName.split(",")[0].trim();
   document.getElementById("cpSearchBlock").style.display = "none";
   document.getElementById("formCheckpoint").style.display = "block";
@@ -527,30 +472,28 @@ function addCpExpenseLine(
   const container = document.getElementById("cpExpensesContainer");
   const div = document.createElement("div");
   div.className = "hol-form-row";
-
   const isChecked = isPaid == 1 ? "checked" : "";
 
   div.innerHTML = `
         <div class="hol-form-inner">
-            <select name="items[cat][]" class="pf-input hol-form-select" title="Catégorie">
+            <select name="items[cat][]" class="pf-input hol-form-select" title="${tr("category")}">
                 <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
-            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="Libellé" value="${name}">
+            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("placeholder_label")}" value="${name}">
             <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
-            <label class="hol-form-paid-label" title="Payé ?">
+            <label class="hol-form-paid-label" title="${tr("already_paid")}">
                 <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
-                <span class="hol-form-paid-text">Payé</span>
+                <span class="hol-form-paid-text">${tr("paid")}</span>
             </label>
-            <button type="button" class="btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="Supprimer">&times;</button>
+            <button type="button" class="btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">&times;</button>
         </div>
         <div class="hol-form-subrow">
-            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="🔗 Lien de réservation ou notes (Optionnel)..." value="${notes}">
+            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("placeholder_notes_link")}" value="${notes}">
         </div>
-        
         <input type="hidden" name="items[id][]" value="${itemId}">
         <input type="hidden" name="items[date][]" value="${itemDate}">
         <input type="hidden" name="items[time][]" value="${itemTime}">
@@ -560,8 +503,7 @@ function addCpExpenseLine(
 }
 
 function deleteCheckpoint() {
-  if (!confirm("Supprimer cette étape et toutes les dépenses associées ?"))
-    return;
+  if (!confirm(tr("confirm_delete_step"))) return;
   const form = document.getElementById("formCheckpoint");
   const input = document.createElement("input");
   input.type = "hidden";
@@ -572,7 +514,7 @@ function deleteCheckpoint() {
 }
 
 // ============================================================================
-// 5. GLISSER-DÉPOSER POUR RÉORDONNER LES ÉTAPES (ROADTRIP)
+// 5. GLISSER-DÉPOSER POUR RÉORDONNER LES ÉTAPES
 // ============================================================================
 document.addEventListener("DOMContentLoaded", () => {
   const checkpoints = document.querySelectorAll(".hol-checkpoint-draggable");
@@ -591,7 +533,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         this.style.opacity = "1";
         draggedItem = null;
-        saveCheckpointOrder(); // On sauvegarde quand on lâche !
+        saveCheckpointOrder();
       }, 0);
     });
 
@@ -627,11 +569,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function saveCheckpointOrder() {
-    // On récupère le nom des lieux dans le nouvel ordre de haut en bas
     const locations = [
       ...document.querySelectorAll(".hol-checkpoint-draggable"),
     ].map((el) => el.getAttribute("data-location"));
-    const holidayId = document.querySelector('input[name="holiday_id"]').value; // Input caché dans la modale
+    const holidayId = document.querySelector('input[name="holiday_id"]').value;
 
     const formData = new FormData();
     formData.append("holiday_id", holidayId);
@@ -640,28 +581,25 @@ document.addEventListener("DOMContentLoaded", () => {
     fetch("/modules/holidays/includes/api/reorder_checkpoints.php", {
       method: "POST",
       body: formData,
-    }).then(() => {
-      // Recharge la page pour que la carte redessine le trait bleu dans le bon ordre !
-      window.location.reload();
-    });
+    }).then(() => window.location.reload());
   }
 });
 
 // ============================================================================
 // MOTEUR DRAG & DROP DU PLANNING
 // ============================================================================
-let selectedItemIdForMove = null; // Mémoire pour le mode Mobile
+let selectedItemIdForMove = null;
 
 function openPlanningModal(step) {
   document.getElementById("planningModalTitle").innerText =
-    "📅 Planning : " + step.location_name;
+    tr("planning_of") + step.location_name;
   const container = document.getElementById("planningContainer");
-  selectedItemIdForMove = null; // Reset à l'ouverture
+  selectedItemIdForMove = null;
 
   let validItems = step.items.filter((it) => it.name !== "PF_TECHNICAL_POINT");
 
   if (!step.step_start_date || !step.step_end_date) {
-    container.innerHTML = `<div style="text-align:center; padding:40px;"><h3>⚠️ Dates manquantes</h3><p style="color:#64748b;">Veuillez modifier cette étape (✏️) et renseigner sa <strong>Date d'arrivée et de départ</strong>.</p></div>`;
+    container.innerHTML = `<div style="text-align:center; padding:40px;"><h3>${tr("missing_dates_title")}</h3><p style="color:#64748b;">${tr("missing_dates_msg")}</p></div>`;
     document.getElementById("planningModal").style.display = "flex";
     return;
   }
@@ -674,21 +612,22 @@ function openPlanningModal(step) {
     curr.setDate(curr.getDate() + 1);
   }
 
-  // Zone À PLACER : Ajout du onclick pour le mobile
   let html = `
         <div class="hol-planning-layout">
             <div class="hol-unmapped-zone" id="unmapped-pool" 
                  ondragover="allowDrop(event)" ondrop="handleDropEvent(event, '', '')"
                  onclick="handleZoneTap(event, '', '')">
-                <div class="hol-unmapped-title" style="width:100%;">📥 À Placer</div>
+                <div class="hol-unmapped-title" style="width:100%;">📥 ${tr("to_place")}</div>
             </div>
             <div class="hol-calendar-zone">
     `;
 
   datesToDisplay.forEach((dateStr) => {
     const dObj = new Date(dateStr);
-    const dayName = dObj.toLocaleDateString("fr-FR", { weekday: "short" });
-    const dayNum = dObj.toLocaleDateString("fr-FR", {
+
+    // NOUVEAU : On utilise la langue actuelle du navigateur pour traduire les jours !
+    const dayName = dObj.toLocaleDateString(currentLang, { weekday: "short" });
+    const dayNum = dObj.toLocaleDateString(currentLang, {
       day: "numeric",
       month: "short",
     });
@@ -701,7 +640,6 @@ function openPlanningModal(step) {
 
     for (let h = 8; h <= 22; h++) {
       let hourStr = h.toString().padStart(2, "0") + ":00";
-      // Créneaux : Ajout du onclick pour le mobile
       html += `
                 <div class="hol-time-slot" data-date="${dateStr}" data-time="${hourStr}" 
                      ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" 
@@ -716,7 +654,6 @@ function openPlanningModal(step) {
   html += `</div></div>`;
   container.innerHTML = html;
 
-  // Rendu des activités
   validItems.forEach((it) => {
     let icon = "🏷️";
     let catClass = "cat-activity";
@@ -734,7 +671,6 @@ function openPlanningModal(step) {
       ? `<div class="hol-drag-note">${it.notes}</div>`
       : "";
 
-    // Ajout du style inline --duration, et des événements drag + click(mobile)
     const elHtml = `
             <div class="hol-drag-item ${catClass}" draggable="true" 
                  id="drag-item-${it.id}" data-id="${it.id}" 
@@ -749,7 +685,6 @@ function openPlanningModal(step) {
                         <button class="hol-dur-btn" onclick="changeDuration(event, ${it.id}, 1)">+</button>
                     </div>
                 </div>
-                
                 ${noteHtml}
             </div>
         `;
@@ -769,28 +704,20 @@ function openPlanningModal(step) {
       .insertAdjacentHTML("beforeend", elHtml);
   });
 
-  // Affiche la modale et bloque le scroll de l'arrière-plan
   document.getElementById("planningModal").style.display = "flex";
   document.body.classList.add("no-scroll");
 }
 
-// -- GESTION DES DURÉES --
 function changeDuration(e, itemId, delta) {
-  e.stopPropagation(); // Empêche de déclencher le Tap-to-Move
+  e.stopPropagation();
   const itemEl = document.getElementById("drag-item-" + itemId);
   let currentDur = parseInt(itemEl.style.getPropertyValue("--duration")) || 1;
   let newDur = currentDur + delta;
-
   if (newDur < 1) newDur = 1;
-  if (newDur > 12) newDur = 12; // Max 12h pour pas casser l'affichage
-
+  if (newDur > 12) newDur = 12;
   itemEl.style.setProperty("--duration", newDur);
   document.getElementById(`dur-text-${itemId}`).innerText = newDur + "h";
-
-  // Mise à jour de la mémoire JS (Évite le bug au refresh)
   updateItemMemory(itemId, { duration: newDur });
-
-  // Sauvegarde BDD
   const formData = new FormData();
   formData.append("action", "update_item_duration");
   formData.append("item_id", itemId);
@@ -801,15 +728,13 @@ function changeDuration(e, itemId, delta) {
   });
 }
 
-// -- MODE MOBILE (TAP TO MOVE) --
 function handleItemTap(e, itemId) {
   e.stopPropagation();
   document
     .querySelectorAll(".hol-drag-item")
     .forEach((el) => el.classList.remove("selected-for-move"));
-
   if (selectedItemIdForMove === itemId) {
-    selectedItemIdForMove = null; // Désélectionner
+    selectedItemIdForMove = null;
   } else {
     selectedItemIdForMove = itemId;
     document
@@ -828,7 +753,6 @@ function handleZoneTap(e, dateStr, timeStr) {
   }
 }
 
-// -- MODE DESKTOP (DRAG & DROP) --
 function dragStart(e) {
   e.dataTransfer.setData("text/plain", e.target.id);
   e.dataTransfer.effectAllowed = "move";
@@ -850,24 +774,17 @@ function handleDropEvent(e, dateStr, timeStr) {
   e.preventDefault();
   let slot = e.target.closest(".hol-time-slot");
   if (slot) slot.classList.remove("drag-over");
-
   const idStr = e.dataTransfer.getData("text/plain");
   const itemId = idStr.replace("drag-item-", "");
   const dropZone = slot || document.getElementById("unmapped-pool");
-
   handleDropLogic(itemId, dateStr, timeStr, dropZone);
 }
 
-// -- LOGIQUE COMMUNE (Déplacement, Mémoire et BDD) --
 function handleDropLogic(itemId, dateStr, timeStr, dropZone) {
   const draggedEl = document.getElementById("drag-item-" + itemId);
   if (dropZone && draggedEl) {
-    dropZone.appendChild(draggedEl); // Déplacement visuel
-
-    // 1. Mise à jour de la mémoire JS Globale (Corrige le bug de la zone "À PLACER" au retour)
+    dropZone.appendChild(draggedEl);
     updateItemMemory(itemId, { item_date: dateStr, item_time: timeStr });
-
-    // 2. Sauvegarde BDD
     const formData = new FormData();
     formData.append("action", "update_item_datetime");
     formData.append("item_id", itemId);
@@ -880,13 +797,10 @@ function handleDropLogic(itemId, dateStr, timeStr, dropZone) {
   }
 }
 
-// Met à jour l'objet JS global MAP_POINTS pour que la modale s'ouvre avec les bonnes données sans F5
 function updateItemMemory(itemId, changes) {
   MAP_POINTS.forEach((step) => {
     let item = step.items.find((i) => i.id == itemId);
-    if (item) {
-      Object.assign(item, changes);
-    }
+    if (item) Object.assign(item, changes);
   });
 }
 
@@ -896,19 +810,8 @@ function saveItemDateTime(itemId, dateStr, timeStr) {
   formData.append("item_id", itemId);
   formData.append("item_date", dateStr);
   formData.append("item_time", timeStr);
-
   fetch("/modules/holidays/includes/api/save_checkpoint.php", {
     method: "POST",
     body: formData,
-  }).catch((err) =>
-    console.error("Erreur lors de la sauvegarde du planning :", err),
-  );
+  }).catch((err) => console.error("Erreur:", err));
 }
-
-// Fermeture des modales en cliquant sur l'arrière-plan flouté
-window.addEventListener("click", function (event) {
-  if (event.target.classList.contains("pf-modal")) {
-    event.target.style.display = "none";
-    document.body.classList.remove("no-scroll");
-  }
-});
