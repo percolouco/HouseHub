@@ -52,4 +52,27 @@ return [
     'btn_close' => 'Tancar',
     'planning_title' => 'Planning',
 
+    // --- Javascript (holidays.js) ---
+    'modal_plan_trip' => 'Planificar el viatge',
+    'modal_quick_edit' => 'Edició ràpida',
+    'err_modal_missing' => 'Error: La modal holidayModal no es troba.',
+    'placeholder_title' => 'Títol',
+    'placeholder_price' => 'Preu (€)',
+    'already_paid' => 'Ja pagat?',
+    'remove_line' => 'Treure aquesta línia',
+    'confirm_delete_trip' => 'Vols eliminar definitivament aquest viatge? Aquesta acció és irreversible.',
+    'step_number' => 'Etapa',
+    'place_new_step' => '📍 Afegir una nova etapa',
+    'edit_step' => '✏️ Modificar l\'etapa',
+    'search_in_progress' => 'Cerca en curs... ⏳',
+    'no_result_found' => 'Cap resultat trobat.',
+    'network_error' => 'Error de xarxa.',
+    'placeholder_label' => 'Etiqueta',
+    'placeholder_notes_link' => '🔗 Enllaç de reserva o notes (Opcional)...',
+    'confirm_delete_step' => 'Eliminar aquesta etapa i totes les despeses associades?',
+    'planning_of' => '📅 Planning : ',
+    'missing_dates_title' => '⚠️ Dates que falten',
+    'missing_dates_msg' => 'Si us plau, modifica aquesta etapa (✏️) i omple la seva <strong>Data d\'arribada i de sortida</strong>.',
+    'to_place' => '📥 A col·locar',
+
 ];

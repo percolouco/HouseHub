@@ -144,6 +144,52 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 <?php if (empty($steps)): ?>
                     <p style="color:var(--text-muted); font-style:italic; text-align:center; margin-top:40px;"><?= tr('no_steps') ?></p>
                 <?php else: ?>
+
+                    <?php if (!empty($generalItems) || $holiday['budget_food'] > 0 || $holiday['budget_extra'] > 0): ?>
+                        <div class="hol-checkpoint" style="border-left-color: #64748b; background: #f8fafc; margin-bottom: 20px;">
+                            <div class="hol-cp-header" style="background: transparent;">
+                                <div class="hol-cp-info-group">
+                                    <span style="font-size:1.4rem;">🌍</span>
+                                    <div class="hol-cp-title">Frais généraux & Budgets</div>
+                                </div>
+                                <?php 
+                                    $generalTotal = $holiday['budget_food'] + $holiday['budget_extra'];
+                                    foreach ($generalItems as $gi) { $generalTotal += $gi['amount']; }
+                                ?>
+                                <div class="hol-cp-actions-group">
+                                    <div class="hol-cp-total"><?= number_format($generalTotal, 2, ',', ' ') ?> €</div>
+                                    <button onclick='editHoliday(JSON.parse(document.getElementById("holidayDataJson").textContent))' class="btn-icon-small" title="<?= tr('edit') ?>">⚙️</button>
+                                </div>
+                            </div>
+
+                            <div class="hol-cp-body">
+                                <?php if ($holiday['budget_food'] > 0): ?>
+                                    <div class="hol-expense-wrapper"><div class="hol-expense-main">
+                                        <span class="hol-expense-name" style="color:#64748b;">🍔 Food & Bev</span>
+                                        <span><strong class="hol-expense-amount"><?= number_format($holiday['budget_food'], 2, ',', ' ') ?> €</strong><span class="status-pending">⏳</span></span>
+                                    </div></div>
+                                <?php endif; ?>
+                                <?php if ($holiday['budget_extra'] > 0): ?>
+                                    <div class="hol-expense-wrapper"><div class="hol-expense-main">
+                                        <span class="hol-expense-name" style="color:#64748b;">🎁 Extras</span>
+                                        <span><strong class="hol-expense-amount"><?= number_format($holiday['budget_extra'], 2, ',', ' ') ?> €</strong><span class="status-pending">⏳</span></span>
+                                    </div></div>
+                                <?php endif; ?>
+
+                                <?php foreach ($generalItems as $it): 
+                                    $icon = match($it['category']) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
+                                ?>
+                                    <div class="hol-expense-wrapper"><div class="hol-expense-main">
+                                        <span class="hol-expense-name"><?= $icon ?> <?= htmlspecialchars($it['name']) ?></span>
+                                        <span>
+                                            <strong class="hol-expense-amount"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
+                                            <span class="<?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
+                                        </span>
+                                    </div></div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                     <?php foreach ($steps as $step): ?>
                         <div id="step-card-<?= $step['sort_order'] ?>" class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-location="<?= htmlspecialchars($step['location_name']) ?>">
                             <div class="hol-cp-header">
@@ -309,4 +355,31 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
 <script>
     const MAP_POINTS = <?= json_encode($mapPoints) ?>;
+    
+    // Le pont i18n pour Javascript
+    window.I18N = <?= json_encode([
+        'modal_plan_trip' => tr('modal_plan_trip'),
+        'modal_quick_edit' => tr('modal_quick_edit'),
+        'err_modal_missing' => tr('err_modal_missing'),
+        'placeholder_title' => tr('placeholder_title'),
+        'placeholder_price' => tr('placeholder_price'),
+        'already_paid' => tr('already_paid'),
+        'paid' => tr('paid'), // Clé déjà existante
+        'remove_line' => tr('remove_line'),
+        'confirm_delete_trip' => tr('confirm_delete_trip'),
+        'step_number' => tr('step_number'),
+        'place_new_step' => tr('place_new_step'),
+        'edit_step' => tr('edit_step'),
+        'search_in_progress' => tr('search_in_progress'),
+        'no_result_found' => tr('no_result_found'),
+        'network_error' => tr('network_error'),
+        'placeholder_label' => tr('placeholder_label'),
+        'btn_delete' => tr('btn_delete'), // Clé déjà existante
+        'placeholder_notes_link' => tr('placeholder_notes_link'),
+        'confirm_delete_step' => tr('confirm_delete_step'),
+        'planning_of' => tr('planning_of'),
+        'missing_dates_title' => tr('missing_dates_title'),
+        'missing_dates_msg' => tr('missing_dates_msg'),
+        'to_place' => tr('to_place')
+    ]) ?>;
 </script>
