@@ -5,6 +5,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const CONGE_TYPES = ["OFF_CAROLE", "EXTRA_OFF_CAROLE"];
   const GUARDE_TYPES = ["CENTRE", "AVIS"];
   const PEP_TYPES = ["PEP_SICK"];
+  const FAMILY = {
+    ALEX: { id: 2, prefix: "alex" },
+    LAIA: { id: 3, prefix: "laia" },
+  };
+  const LEAVES_CONFIG = {
+    CP: {
+      startMonth: 8, // Le cycle commence en août (après la tolérance de juillet)
+      defaultBalance: 25,
+    },
+    JRA: {
+      // Tu pourras ajouter les années suivantes ici
+      yearlyTotals: {
+        2024: 10, // ex: 0.83 * 12 arrondi
+        2025: 10,
+        2026: 11, // ex: 0.9 * 12 arrondi
+      },
+      defaultBalance: 10,
+      toleranceMonths: 2, // Janvier et Février
+      maxReport: 2,
+    },
+    JA: {
+      [FAMILY.ALEX.id]: { startMonth: 4, startDay: 29, defaultBalance: 4 },
+      [FAMILY.LAIA.id]: { startMonth: 10, startDay: 1, defaultBalance: 4 }, // Date de Laia à adapter
+    },
+  };
 
   class FamilyCalendar {
     constructor() {
@@ -112,7 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
           duration: parseFloat(e.duration),
         }));
 
-        this.fixedEvents = this.getPublicHolidays(); // Uniquement les jours fériés maintenant
+        this.fixedEvents = await this.fetchPublicHolidays();
 
         const leavesData = await this.fetchApi(
           "/modules/family-calendar/includes/api/get-leaves.php",
@@ -124,7 +149,12 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         this.leaveBalances = balancesData.balances || [];
 
-        // Les vacances scolaires sont maintenant dans dbEvents !
+        // --- NOUVEAU : Chargement des correctifs de congés ---
+        const snapshotsData = await this.fetchApi(
+          "/modules/family-calendar/includes/api/get-leave-snapshots.php",
+        );
+        this.leaveSnapshots = snapshotsData.snapshots || [];
+
         this.events = [...this.dbEvents, ...this.fixedEvents];
         this.publicHolidayDates = new Set(
           this.fixedEvents
@@ -133,43 +163,37 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         this.reprocessAndRender();
-        this.renderModalHolidays(); // Met à jour la modale
+        this.renderModalHolidays();
       } catch (e) {
         console.error("Erreur chargement données:", e);
       }
     }
 
     // Les jours fériés restent hardcodés car ils sont fixes.
-    getPublicHolidays() {
-      return [
-        "2025-01-01",
-        "2025-04-21",
-        "2025-05-01",
-        "2025-05-08",
-        "2025-05-29",
-        "2025-06-09",
-        "2025-07-14",
-        "2025-08-15",
-        "2025-11-01",
-        "2025-11-11",
-        "2025-12-25",
-        "2026-01-01",
-        "2026-04-06",
-        "2026-05-01",
-        "2026-05-08",
-        "2026-05-14",
-        "2026-05-25",
-        "2026-07-14",
-        "2026-08-15",
-        "2026-11-01",
-        "2026-11-11",
-        "2026-12-25",
-      ].map((date, idx) => ({
-        id: `ph-${idx}`,
-        date,
-        type: "PUBLIC_HOLIDAY",
-        duration: 1,
-      }));
+    async fetchPublicHolidays() {
+      try {
+        // Appel à l'API officielle des jours fériés en métropole
+        const res = await fetch(
+          "https://calendrier.api.gouv.fr/jours-feries/metropole.json",
+        );
+        const holidays = await res.json();
+
+        // L'API renvoie un objet : { "2024-01-01": "Jour de l'an", ... }
+        // On le transforme en tableau compatible avec ton système d'événements
+        return Object.keys(holidays).map((date, idx) => ({
+          id: `ph-${idx}`,
+          date: date,
+          name: holidays[date], // On garde le nom au cas où tu veuilles l'afficher plus tard
+          type: "PUBLIC_HOLIDAY",
+          duration: 1,
+        }));
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération des jours fériés :",
+          error,
+        );
+        return []; // Évite de casser le calendrier si l'API de l'État est indisponible
+      }
     }
 
     // --- RECONSTRUCTION DE LA MODALE VIA LA BDD (Par blocs consécutifs) ---
@@ -383,7 +407,11 @@ document.addEventListener("DOMContentLoaded", () => {
           if (d >= w.dayDates.mon && d <= w.dayDates.fri) {
             const dur = parseFloat(l.duration) || 1;
             const prefix =
-              l.person_id === 2 ? "alex" : l.person_id === 3 ? "laia" : null;
+              l.person_id === FAMILY.ALEX.id
+                ? FAMILY.ALEX.prefix
+                : l.person_id === FAMILY.LAIA.id
+                  ? FAMILY.LAIA.prefix
+                  : null;
             if (prefix) w.totals[`${prefix}${l.leave_type}`] += dur;
           }
         });
@@ -403,57 +431,135 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calculateMonthlyBalances() {
       const balances = {
-        2: { CP: {}, JRA: {}, JA: {} },
-        3: { CP: {}, JRA: {}, JA: {} },
+        [FAMILY.ALEX.id]: { CP: {}, JRA: {}, JA: {} },
+        [FAMILY.LAIA.id]: { CP: {}, JRA: {}, JA: {} },
       };
+
+      // Liste des mois actuellement affichés dans le planning
       const ymSet = new Set();
       this.weeks.forEach((w) => ymSet.add(w.monthKey));
       const ymList = Array.from(ymSet).sort();
 
+      // Pré-calcul de l'utilisation par mois
       const usageByMonth = {};
       this.leaves.forEach((l) => {
         const pid = l.person_id;
         const type = l.leave_type;
         const ym = l.leave_date.substring(0, 7);
+
         if (!usageByMonth[pid]) usageByMonth[pid] = {};
         if (!usageByMonth[pid][type]) usageByMonth[pid][type] = {};
         usageByMonth[pid][type][ym] =
           (usageByMonth[pid][type][ym] || 0) + parseFloat(l.duration);
       });
 
-      [2, 3].forEach((pid) => {
+      [FAMILY.ALEX.id, FAMILY.LAIA.id].forEach((pid) => {
         ["CP", "JRA", "JA"].forEach((type) => {
           ymList.forEach((ym) => {
             const [currYear, currMonth] = ym.split("-").map(Number);
-            let refYear = currYear;
-            if (type === "CP")
-              refYear = currMonth >= 6 ? currYear : currYear - 1;
 
-            const initialObj = this.leaveBalances.find(
-              (b) =>
-                b.person_id == pid &&
-                b.leave_type == type &&
-                b.balance_year == refYear,
-            );
-            const initial = initialObj
-              ? parseFloat(initialObj.initial_balance)
-              : type === "CP"
-                ? 25
-                : type === "JRA"
-                  ? 10
-                  : 0;
+            let cycleStartStr = "";
+            let initialBalance = 0;
 
-            let usedBefore = 0;
-            let periodStartMonth = type === "CP" ? "06" : "01";
-            const periodStart = `${refYear}-${periodStartMonth}`;
+            // --- 1. RECHERCHE D'UN CORRECTIF MANUEL (SNAPSHOT) ---
+            // On cherche le snapshot le plus récent qui est inférieur ou égal au mois en cours de calcul
+            const latestSnapshot = (this.leaveSnapshots || [])
+              .filter(
+                (s) =>
+                  s.person_id == pid &&
+                  s.leave_type == type &&
+                  s.snapshot_date.substring(0, 7) <= ym,
+              )
+              // On trie du plus récent au plus ancien pour prendre le premier
+              .sort((a, b) =>
+                b.snapshot_date.localeCompare(a.snapshot_date),
+              )[0];
+
+            if (latestSnapshot) {
+              // Si on trouve un correctif, il devient notre nouveau "point zéro"
+              cycleStartStr = latestSnapshot.snapshot_date.substring(0, 7);
+              initialBalance = parseFloat(latestSnapshot.remaining_balance); // Utilisation de VOTRE nom de colonne
+            }
+            // --- 2. SINON, CALCUL CLASSIQUE PAR DÉFAUT ---
+            else {
+              if (type === "CP") {
+                const refYear =
+                  currMonth >= LEAVES_CONFIG.CP.startMonth
+                    ? currYear
+                    : currYear - 1;
+                cycleStartStr = `${refYear}-${String(LEAVES_CONFIG.CP.startMonth).padStart(2, "0")}`;
+                const dbBal = this.leaveBalances.find(
+                  (b) =>
+                    b.person_id == pid &&
+                    b.leave_type == "CP" &&
+                    b.balance_year == refYear,
+                );
+                initialBalance = dbBal
+                  ? parseFloat(dbBal.initial_balance)
+                  : LEAVES_CONFIG.CP.defaultBalance;
+              } else if (type === "JRA") {
+                cycleStartStr = `${currYear}-01`;
+                initialBalance =
+                  LEAVES_CONFIG.JRA.yearlyTotals[currYear] ||
+                  LEAVES_CONFIG.JRA.defaultBalance;
+
+                if (currMonth <= LEAVES_CONFIG.JRA.toleranceMonths) {
+                  const prevYear = currYear - 1;
+                  const prevInitial =
+                    LEAVES_CONFIG.JRA.yearlyTotals[prevYear] ||
+                    LEAVES_CONFIG.JRA.defaultBalance;
+
+                  let usedPrevYear = 0;
+                  for (let m = 1; m <= 12; m++) {
+                    const mStr = `${prevYear}-${String(m).padStart(2, "0")}`;
+                    usedPrevYear += usageByMonth[pid]?.[type]?.[mStr] || 0;
+                  }
+
+                  const remainingPrevYear = Math.max(
+                    0,
+                    prevInitial - usedPrevYear,
+                  );
+                  initialBalance += Math.min(
+                    remainingPrevYear,
+                    LEAVES_CONFIG.JRA.maxReport,
+                  );
+                }
+              } else if (type === "JA") {
+                const configJA = LEAVES_CONFIG.JA[pid];
+                const isPastAnniversary =
+                  currMonth > configJA.startMonth ||
+                  (currMonth === configJA.startMonth &&
+                    configJA.startDay === 1);
+                const refYear = isPastAnniversary ? currYear : currYear - 1;
+                cycleStartStr = `${refYear}-${String(configJA.startMonth).padStart(2, "0")}`;
+                const dbBal = this.leaveBalances.find(
+                  (b) =>
+                    b.person_id == pid &&
+                    b.leave_type == "JA" &&
+                    b.balance_year == refYear,
+                );
+                initialBalance = dbBal
+                  ? parseFloat(dbBal.initial_balance)
+                  : configJA.defaultBalance;
+              }
+            }
+
+            // --- 3. DÉDUCTION DES CONGÉS PRIS DEPUIS LE POINT ZÉRO ---
+            let usedBeforeCurrentMonth = 0;
 
             Object.keys(usageByMonth[pid]?.[type] || {}).forEach((usedYm) => {
-              if (usedYm >= periodStart && usedYm < ym)
-                usedBefore += usageByMonth[pid][type][usedYm];
+              // On ne déduit que ce qui a été posé entre le début du cycle (ou la date du snapshot) et le mois en cours
+              if (usedYm >= cycleStartStr && usedYm < ym) {
+                usedBeforeCurrentMonth += usageByMonth[pid][type][usedYm];
+              }
             });
 
-            const available = Math.max(0, initial - usedBefore);
+            const available = Math.max(
+              0,
+              initialBalance - usedBeforeCurrentMonth,
+            );
             const usedInMonth = usageByMonth[pid]?.[type]?.[ym] || 0;
+
             balances[pid][type][ym] = {
               availableAtMonthStart: available,
               usedInMonth: usedInMonth,
@@ -461,6 +567,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         });
       });
+
       this.monthlyLeaveBalances = balances;
     }
 
@@ -569,8 +676,8 @@ document.addEventListener("DOMContentLoaded", () => {
               tr.appendChild(tdUse);
             });
           };
-          renderPersonCols(2, "col-alex");
-          renderPersonCols(3, "col-laia");
+          renderPersonCols(FAMILY.ALEX.id, `col-${FAMILY.ALEX.prefix}`);
+          renderPersonCols(FAMILY.LAIA.id, `col-${FAMILY.LAIA.prefix}`);
         }
         this.planningBody.appendChild(tr);
       });
@@ -915,7 +1022,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener("mousemove", (e) => this.handleMouseMove(e));
         document.addEventListener("mouseup", (e) => this.handleMouseUp(e));
 
-        // Tactile (Mobile/Tablette) - NOUVEAU
+        // Tactile (Mobile/Tablette)
         this.planningBody.addEventListener(
           "touchstart",
           (e) => this.handleTouchStart(e),
@@ -927,6 +1034,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener("touchend", (e) => this.handleTouchEnd(e));
       }
 
+      // --- GESTION MODALE VACANCES SCOLAIRES ---
       const btnOpen = document.getElementById("btnOpenHolidays");
       const btnClose = document.getElementById("btnCloseHolidays");
       const modal = document.getElementById("modalHolidays");
@@ -951,6 +1059,67 @@ document.addEventListener("DOMContentLoaded", () => {
           if (e.target === modal) modal.style.display = "none";
         });
 
+      // --- GESTION MODALE CORRECTIF DES SOLDES (SNAPSHOTS) ---
+      const btnSnap = document.getElementById("btnOpenSnapshotModal");
+      const modalSnap = document.getElementById("modalSnapshot");
+      const btnCloseSnap = document.getElementById("btnCloseSnapshot");
+      const formSnap = document.getElementById("formSnapshot");
+
+      if (btnSnap && modalSnap) {
+        btnSnap.addEventListener("click", () => {
+          modalSnap.style.display = "flex";
+          // Pré-remplir la date avec le 1er jour du mois en cours
+          const today = new Date();
+          const y = today.getFullYear();
+          const m = String(today.getMonth() + 1).padStart(2, "0");
+          const snapDateInput = document.getElementById("snapDate");
+          if (snapDateInput) snapDateInput.value = `${y}-${m}-01`;
+        });
+      }
+
+      if (btnCloseSnap && modalSnap) {
+        btnCloseSnap.addEventListener(
+          "click",
+          () => (modalSnap.style.display = "none"),
+        );
+      }
+
+      if (modalSnap) {
+        modalSnap.addEventListener("click", (e) => {
+          if (e.target === modalSnap) modalSnap.style.display = "none";
+        });
+      }
+
+      if (formSnap) {
+        formSnap.addEventListener("submit", async (e) => {
+          e.preventDefault(); // Empêche le rechargement de la page
+
+          const payload = {
+            person_id: document.getElementById("snapPerson").value,
+            leave_type: document.getElementById("snapType").value,
+            snapshot_date: document.getElementById("snapDate").value,
+            remaining_balance: document.getElementById("snapBalance").value,
+          };
+
+          try {
+            // On envoie à la nouvelle API
+            await this.postApi(
+              "/modules/family-calendar/includes/api/save-leave-snapshot.php",
+              payload,
+            );
+
+            modalSnap.style.display = "none";
+            formSnap.reset(); // On vide le formulaire
+
+            // On rafraîchit tout le calendrier pour appliquer le nouveau solde immédiatement
+            await this.refreshAllData();
+          } catch (error) {
+            alert("Erreur lors de la sauvegarde du correctif.");
+          }
+        });
+      }
+
+      // --- GESTION DU RESTE DE L'INTERFACE ---
       if (this.monthCalendar) {
         this.monthCalendar.addEventListener("click", (e) => {
           const td = e.target.closest("td[data-date]");
@@ -966,6 +1135,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const btn = e.target.closest("button");
         if (btn && btn.dataset.action) this.handleMenuAction(btn.dataset);
       };
+
       if (this.selectionMenu)
         this.selectionMenu.addEventListener("click", handleMenu);
       if (this.monthSelectionMenu)
@@ -1095,23 +1265,92 @@ document.addEventListener("DOMContentLoaded", () => {
         dates.length > 1
           ? `${dates.length} jours`
           : new Date(dates[0]).toLocaleDateString("fr-FR");
-      let html = `<div class="fc-menu-section"><strong>${dateLabel}</strong></div>`;
-      html += `<div class="fc-menu-section"><strong>Congés Carole</strong><div class="fc-menu-grid"><button class="fc-menu-btn" data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off Carole</button><button class="fc-menu-btn" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra Off</button></div><button class="fc-menu-danger" data-action="clear-type" data-cat="CONGE">Effacer congés Carole</button></div>`;
-      html += `<div class="fc-menu-section"><strong>Garde</strong><div class="fc-menu-grid"><button class="fc-menu-btn" data-action="add" data-type="CENTRE">Centre</button><button class="fc-menu-btn" data-action="add" data-type="AVIS">Avis</button></div><button class="fc-menu-danger" data-action="clear-type" data-cat="GARDE">Effacer Garde</button></div>`;
-      html += `<div class="fc-menu-section"><strong>Pep</strong><button class="fc-menu-btn" data-action="add" data-type="PEP_SICK" style="width:100%">Pep Malade</button><button class="fc-menu-danger" data-action="clear-type" data-cat="PEP">Effacer Pep</button></div>`;
-      html += `<div class="fc-menu-section"><strong>Congés Alex / Laia</strong><div class="fc-menu-leaves-table"><table><thead><tr><th>Alex</th><th>Laia</th></tr></thead><tbody>`;
+
+      // Uniformisation : On définit l'icône SVG une seule fois
+      const trashSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
+
+      // En-tête principal avec la date
+      let html = `<div class="fc-menu-section" style="border-bottom: none; padding-bottom: 0;">
+                  <strong style="font-size:0.85rem; color:var(--text-main); margin-bottom: 4px;">${dateLabel}</strong>
+                </div>`;
+
+      // Fonction utilitaire pour créer une ligne de titre avec l'icône SVG
+      const buildHeader = (title, action, cat) => `
+      <div class="fc-menu-header">
+        <strong>${title}</strong>
+        ${action ? `<button class="fc-menu-clear-icon" title="Effacer" data-action="${action}" ${cat ? `data-cat="${cat}"` : ""}>${trashSvg}</button>` : ""}
+      </div>
+    `;
+
+      // Section Carole
+      html += `<div class="fc-menu-section">
+               ${buildHeader("Congés Carole", "clear-type", "CONGE")}
+               <div class="fc-menu-grid">
+                 <button class="fc-menu-btn" data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off</button>
+                 <button class="fc-menu-btn" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra</button>
+               </div>
+             </div>`;
+
+      // Section Garde
+      html += `<div class="fc-menu-section">
+               ${buildHeader("Garde", "clear-type", "GARDE")}
+               <div class="fc-menu-grid">
+                 <button class="fc-menu-btn" data-action="add" data-type="CENTRE">Centre</button>
+                 <button class="fc-menu-btn" data-action="add" data-type="AVIS">Avis</button>
+               </div>
+             </div>`;
+
+      // Section Pep
+      html += `<div class="fc-menu-section">
+               ${buildHeader("Pep", "clear-type", "PEP")}
+               <button class="fc-menu-btn" data-action="add" data-type="PEP_SICK" style="width:100%">Pep Malade 🤒</button>
+             </div>`;
+
+      // --- SECTION ALEX & LAIA AVEC SUPPRESSION INDÉPENDANTE, UNIFORMISÉE ET ALIGNÉE À CÔTÉ (INLINE) ---
+      html += `<div class="fc-menu-section">
+               ${buildHeader("Congés Enfants", null, null)}
+               <div class="fc-menu-leaves-table">
+                 <table>
+                   <thead>
+                     <tr>
+                       <th>
+                          <div class="fc-th-inline">
+                            Alex
+                            <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="2" title="Effacer Alex">${trashSvg}</button>
+                          </div>
+                       </th>
+                       <th>
+                          <div class="fc-th-inline">
+                            Laia
+                            <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="3" title="Effacer Laia">${trashSvg}</button>
+                          </div>
+                       </th>
+                     </tr>
+                   </thead>
+                   <tbody>`;
+
       ["CP", "JRA", "JA"].forEach((t) => {
-        html += `<tr><td><button class="fc-menu-btn" data-action="add-leave" data-pid="2" data-type="${t}">${t}</button></td><td><button class="fc-menu-btn" data-action="add-leave" data-pid="3" data-type="${t}">${t}</button></td></tr>`;
+        html += `<tr>
+                 <td><button class="fc-menu-btn" data-action="add-leave" data-pid="2" data-type="${t}">${t}</button></td>
+                 <td><button class="fc-menu-btn" data-action="add-leave" data-pid="3" data-type="${t}">${t}</button></td>
+               </tr>`;
       });
-      html += `</tbody></table></div><button class="fc-menu-danger" data-action="clear-leaves">Effacer Alex/Laia</button></div>`;
+      html += `      </tbody>
+                 </table>
+               </div>
+             </div>`;
 
       menu.innerHTML = html;
+
+      // Positionnement intelligent du menu
       const menuWidth = 240;
       let left = x + 10;
       if (left + menuWidth > window.innerWidth) left = x - menuWidth - 10;
+
       menu.style.left = `${left}px`;
       menu.style.top = `${y + 10}px`;
       menu.style.display = "block";
+
       this.menuJustOpened = true;
       setTimeout(() => (this.menuJustOpened = false), 100);
     }
@@ -1161,11 +1400,16 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (action === "add-leave") {
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
-            { action: "bulk_delete_day_person", dates, person_id: pid },
+            {
+              action: "bulk_delete_day_person",
+              dates,
+              person_id: parseInt(pid),
+            },
           );
+
           const payload = dates.map((d) => ({
             date: d,
-            person_id: pid,
+            person_id: parseInt(pid), // On s'assure que c'est bien un format numérique
             leave_type: type,
             duration: 1,
           }));
@@ -1173,7 +1417,18 @@ document.addEventListener("DOMContentLoaded", () => {
             "/modules/family-calendar/includes/api/save-leaves.php",
             payload,
           );
+        } else if (action === "clear-leaves-person") {
+          // --- NOUVELLE ACTION : Suppression ciblée (Alex OU Laia selon le pid) ---
+          await this.postApi(
+            "/modules/family-calendar/includes/api/manage-leaf.php",
+            {
+              action: "bulk_delete_day_person",
+              dates,
+              person_id: parseInt(pid),
+            },
+          );
         } else if (action === "clear-leaves") {
+          // --- ACTION GLOBALE : Gardée au cas où vous en auriez besoin ailleurs ---
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
             { action: "bulk_delete_day_person", dates, person_id: 2 },

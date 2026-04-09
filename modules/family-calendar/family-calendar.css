@@ -24,6 +24,12 @@
   --text-laia: #b45309; /* Ambre foncé */
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* Base */
 .pf-family-calendar {
   background-color: var(--bg-page);
@@ -707,93 +713,189 @@
   }
 }
 
-/* --- 7. MENU CONTEXTUEL --- */
+/* --- MENU CONTEXTUEL COMPACT ET UNIFORMISÉ (DNA Holidays) --- */
 .fc-selection-menu {
   position: absolute;
   z-index: 9999;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  padding: 8px;
-  min-width: 240px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 10px 12px; /* Base compact */
+  min-width: 220px; /* Base compact */
   display: none;
+  animation: menuPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
 }
+
+@keyframes menuPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .fc-menu-section {
-  padding: 8px 0;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 6px 0; /* Compact */
+  border-bottom: 1px dashed #cbd5e1;
+}
+.fc-menu-section:first-child {
+  padding-top: 0;
 }
 .fc-menu-section:last-child {
   border: none;
+  padding-bottom: 0;
 }
+
+.fc-menu-header {
+  /* Compact header */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
 .fc-menu-section strong {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.7rem; /* Base compact */
   text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0 !important; /* Retire l'ancienne marge */
 }
+
 .fc-menu-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.fc-menu-btn {
-  background: white;
-  border: 1px solid var(--border-color);
-  padding: 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
-}
-.fc-menu-btn:hover {
-  background: #eff6ff;
-  border-color: var(--primary);
-  color: var(--primary);
-}
-.fc-menu-danger {
-  width: 100%;
-  margin-top: 4px;
-  background: #fff1f2;
-  border: 1px solid #fda4af;
-  color: #be123c;
-  padding: 6px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.fc-menu-danger:hover {
-  background: #be123c;
-  color: white;
-  border-color: #be123c;
-}
-.fc-menu-leaves-table table {
-  width: 100%;
-}
-.fc-menu-leaves-table th {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  padding-bottom: 4px;
-}
-.fc-menu-leaves-table td {
-  padding: 2px;
+  gap: 4px; /* Base compact */
 }
 
-/* RESPONSIVE */
+.fc-menu-btn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  padding: 6px 8px; /* Base compact */
+  border-radius: 8px;
+  font-size: 0.8rem; /* Base compact */
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.fc-menu-btn:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.15);
+}
+
+/* Style des icônes de suppression unifiées */
+.fc-menu-clear-icon {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.fc-menu-clear-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.fc-menu-clear-icon:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* --- TABLEAU DES CONGÉS ENFANTS --- */
+.fc-menu-leaves-table table {
+  width: 100%;
+  border-spacing: 2px; /* Base compact */
+  border-collapse: separate;
+}
+.fc-menu-leaves-table th {
+  font-size: 0.7rem; /* Base compact */
+  font-weight: 700;
+  color: #64748b;
+  padding-bottom: 2px; /* Base compact */
+  text-align: center;
+}
+.fc-menu-leaves-table td {
+  padding: 0;
+}
+
+/* Aligner le nom et l'icône sur une ligne (Inline) */
+.fc-th-inline {
+  display: flex;
+  flex-direction: row; /* Alignement horizontal */
+  align-items: center;
+  justify-content: center;
+  gap: 4px; /* Petit espace entre le nom et la poubelle */
+}
+
+/* --- VERSION MOBILE COMPACTE --- */
 @media (max-width: 768px) {
-  .fc-bottom-grid {
-    grid-template-columns: 1fr;
+  .fc-selection-menu {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    border-radius: 24px 24px 0 0;
+    border: none;
+    border-top: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+    padding: 12px 16px; /* Compact mobile */
+    padding-bottom: calc(
+      12px + env(safe-area-inset-bottom)
+    ); /* Compact mobile */
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: bottom center;
   }
-  .fc-month-header {
-    flex-direction: column;
-    align-items: stretch;
+
+  .fc-selection-menu::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    margin: 0 auto 10px auto; /* Compact mobile */
   }
-  .fc-nav-controls,
-  .fc-view-controls {
-    justify-content: center;
+
+  @keyframes slideUpSheet {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  .pf-btn-icon-text {
-    width: 100%;
-    justify-content: center;
+
+  .fc-menu-btn {
+    padding: 8px; /* Compact mobile */
+    font-size: 0.85rem; /* Compact mobile */
   }
 }
 
@@ -821,14 +923,8 @@
 }
 
 /* =========================================================
-   8. OPTIMISATIONS MOBILES ET ERGONOMIE (AJOUTS)
+   8. OPTIMISATIONS MOBILES ET ERGONOMIE 
    ========================================================= */
-
-/* =========================================================
-   8. OPTIMISATIONS MOBILES ET ERGONOMIE
-   ========================================================= */
-
-/* --- A. COLONNES MOIS ET SEMAINE FIGÉES (Double Axe Blindé) --- */
 
 /* 1. On force une largeur stricte pour éviter le décalage de la 2ème colonne */
 .col-month {
@@ -900,8 +996,7 @@
     }
   }
 
-  .fc-menu-btn,
-  .fc-menu-danger {
+  .fc-menu-btn {
     padding: 10px;
     font-size: 0.95rem;
     font-weight: 600;
@@ -931,4 +1026,65 @@
     bottom: 1px !important;
     right: 1px !important;
   }
+}
+
+/* --- ALIGNEMENT DES EN-TÊTES DU MENU --- */
+.fc-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.fc-menu-header strong {
+  margin-bottom: 0 !important; /* Retire l'ancienne marge du bas */
+}
+
+/* Style de l'icône Poubelle */
+.fc-menu-clear-icon {
+  background: transparent;
+  border: none;
+  color: #94a3b8; /* Gris discret par défaut */
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.fc-menu-clear-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Survol de la poubelle : devient rouge clair */
+.fc-menu-clear-icon:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.fc-th-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+
+.fc-menu-btn-mini-clear {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 10px;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fc-menu-btn-mini-clear:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  transform: scale(1.1);
 }
