@@ -7,9 +7,6 @@ require __DIR__ . '/includes/auth.php';
 require_login();
 require __DIR__ . '/includes/db.php';
 
-// Récupération des événements
-$stmt_events = $pdo->query("SELECT * FROM pf_events");
-$dbEvents = $stmt_events->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle  = "PachaFamily - Family Calendar";
 $activePage = "family-calendar";
@@ -19,18 +16,22 @@ $pageCss    = "/modules/family-calendar/family-calendar.css";
 require __DIR__ . '/header.php';
 ?>
 
-<script>
-  const serverData = <?php echo json_encode($dbEvents, JSON_NUMERIC_CHECK); ?>;
-</script>
+
 
 <div class="pf-container" style="max-width:100%; padding:0;">
     <div class="fc-header-row">
         <h1>Family Calendar</h1>
         
-        <button id="btnOpenHolidays" class="pf-btn-icon-text">
-            <span class="icon">🏖️</span>
-            <span class="text">Voir les vacances scolaires</span>
-        </button>
+        <div style="display: flex; gap: 10px;">
+            <button id="btnOpenSnapshotModal" class="pf-btn-icon-text">
+                <span class="icon">⚖️</span>
+                <span class="text">Corriger les soldes</span>
+            </button>
+            <button id="btnOpenHolidays" class="pf-btn-icon-text">
+                <span class="icon">🏖️</span>
+                <span class="text">Voir les vacances scolaires</span>
+            </button>
+        </div>
     </div>
 
     <div id="modalHolidays" class="fc-modal-overlay" style="display: none;">
@@ -51,6 +52,43 @@ require __DIR__ . '/header.php';
                     <tbody>
                         </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalSnapshot" class="fc-modal-overlay" style="display: none;">
+        <div class="fc-modal-content" style="max-width: 400px;">
+            <div class="fc-modal-header">
+                <h2>Ajuster un solde</h2>
+                <button id="btnCloseSnapshot" class="fc-modal-close">×</button>
+            </div>
+            <div class="fc-modal-body" style="padding: 24px;">
+                <form id="formSnapshot">
+                    <div style="margin-bottom: 16px;">
+                        <label class="pf-label">Personne</label>
+                        <select id="snapPerson" class="pf-input" required>
+                            <option value="2">Alex</option>
+                            <option value="3">Laia</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="pf-label">Type de congé</label>
+                        <select id="snapType" class="pf-input" required>
+                            <option value="CP">CP</option>
+                            <option value="JRA">JRA</option>
+                            <option value="JA">JA</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="pf-label">Date d'application</label>
+                        <input type="date" id="snapDate" class="pf-input" required title="Choisissez de préférence le 1er jour d'un mois">
+                    </div>
+                    <div style="margin-bottom: 24px;">
+                        <label class="pf-label">Solde restant à cette date</label>
+                        <input type="number" step="0.5" id="snapBalance" class="pf-input" placeholder="ex: 12.5" required>
+                    </div>
+                    <button type="submit" class="pf-btn" style="width: 100%;">Enregistrer le correctif</button>
+                </form>
             </div>
         </div>
     </div>
@@ -76,6 +114,8 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </section>
+
+
 
     <section class="pf-section">
       <div class="fc-week-header">

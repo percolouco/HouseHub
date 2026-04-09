@@ -1,17 +1,17 @@
 <?php
+// includes/api/save-events.php
 header('Content-Type: application/json');
 require __DIR__ . '/../../../../includes/db.php';
 
-$eventsToSave = json_decode(file_get_contents('php://input'), true);
 $rawInput = file_get_contents('php://input');
+$eventsToSave = json_decode($rawInput, true);
+
+// Optionnel : tu peux commenter/supprimer ces logs en production pour économiser du disque
 file_put_contents(
     __DIR__ . '/events-debug.log',
     "[" . date('c') . "] RAW INPUT: " . $rawInput . PHP_EOL,
     FILE_APPEND
 );
-
-$eventsToSave = json_decode($rawInput, true);
-
 
 if (empty($eventsToSave) || !is_array($eventsToSave)) {
     http_response_code(400);
@@ -22,6 +22,14 @@ if (empty($eventsToSave) || !is_array($eventsToSave)) {
 $inserted = [];
 
 try {
+    // 1. OPTIMISATION : On récupère toutes les personnes d'un coup (Mapping)
+    $stmtPeople = $pdo->query("SELECT id, name FROM pf_people");
+    $peopleMap = [];
+    while ($row = $stmtPeople->fetch(PDO::FETCH_ASSOC)) {
+        // On crée un tableau associatif : ['Carole' => 1, 'Alex' => 2, etc.]
+        $peopleMap[$row['name']] = $row['id'];
+    }
+
     $pdo->beginTransaction();
 
     $sql = "INSERT INTO pf_events (event_date, event_type, person_id, duration)
@@ -31,14 +39,9 @@ try {
     foreach ($eventsToSave as $event) {
         $person_id = null;
 
-        // Si un nom de personne est fourni
-        if (!empty($event['person'])) {
-            $personStmt = $pdo->prepare("SELECT id FROM pf_people WHERE name = ?");
-            $personStmt->execute([$event['person']]);
-            $personRow = $personStmt->fetch();
-            if ($personRow) {
-                $person_id = $personRow['id'];
-            }
+        // 2. On vérifie simplement dans notre tableau (plus de requête SQL ici !)
+        if (!empty($event['person']) && isset($peopleMap[$event['person']])) {
+            $person_id = $peopleMap[$event['person']];
         }
 
         $stmt->execute([

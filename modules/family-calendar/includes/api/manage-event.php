@@ -47,9 +47,12 @@ try {
     if ($action === 'bulk_delete_day_types') {
         $dates = $input['dates'] ?? [];
         $types = $input['types'] ?? [];
+        $dates = array_filter($dates, function($d) {
+            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
+        });
 
         if (empty($dates) || empty($types)) {
-            echo json_encode(['status' => 'success']); // Rien à faire
+            echo json_encode(['status' => 'success']);
             exit;
         }
 
@@ -70,7 +73,11 @@ try {
     // --- SUPPRESSION TOTALE SUR DES DATES ---
     if ($action === 'bulk_delete_all') {
         $dates = $input['dates'] ?? [];
-        if (empty($dates)) {
+        $dates = array_filter($dates, function($d) {
+            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
+        });
+
+        if (empty($dates) || empty($types)) {
             echo json_encode(['status' => 'success']);
             exit;
         }
