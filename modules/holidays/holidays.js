@@ -358,15 +358,19 @@ function openCheckpointModal(mode, data = null) {
 
   container.innerHTML = "";
 
-  // Sécurisation : On vide les dates ici pour ne pas planter sur la page d'accueil !
+  // Nettoyage des champs de date et de la barre de recherche
   if (document.getElementById("cp_start_date"))
     document.getElementById("cp_start_date").value = "";
   if (document.getElementById("cp_end_date"))
     document.getElementById("cp_end_date").value = "";
+  document.getElementById("searchPlaceInput").value = "";
+  document.getElementById("searchResults").innerHTML = "";
+
+  // MODIFICATION : La barre de recherche (et les favoris) est TOUJOURS visible !
+  searchBlock.style.display = "block";
 
   if (mode === "add") {
     document.getElementById("cpModalTitle").innerText = tr("place_new_step");
-    searchBlock.style.display = "block";
     formBlock.style.display = "none";
     btnDel.style.display = "none";
     document.getElementById("cp_old_sort_order").value = "";
@@ -375,7 +379,6 @@ function openCheckpointModal(mode, data = null) {
     document.getElementById("cp_is_return").checked = false;
   } else if (mode === "edit" && data) {
     document.getElementById("cpModalTitle").innerText = tr("edit_step");
-    searchBlock.style.display = "none";
     formBlock.style.display = "block";
     btnDel.style.display = "block";
 
@@ -454,7 +457,6 @@ function selectPlace(lat, lng, fullName) {
   document.getElementById("cp_lat").value = lat;
   document.getElementById("cp_lng").value = lng;
   document.getElementById("cp_name").value = fullName.split(",")[0].trim();
-  document.getElementById("cpSearchBlock").style.display = "none";
   document.getElementById("formCheckpoint").style.display = "block";
 }
 
