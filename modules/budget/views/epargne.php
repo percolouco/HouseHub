@@ -13,6 +13,13 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
         $cycleConfigs[$mKey] = json_decode($row['content'], true);
     }
 }
+
+// Récupération sécurisée du nom des mois (utilise les clés globales existantes)
+function getMonthName($dateString) {
+    $m = date('m', strtotime($dateString));
+    $y = date('Y', strtotime($dateString));
+    return tr('month_' . $m) . ' ' . $y;
+}
 ?>
 
 <div class="budget-view">
@@ -48,7 +55,7 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
         $ownerTextClass = '';
         if ($currentOwner === 'Alex') $ownerTextClass = 'txt-alex';
         elseif ($currentOwner === 'Laia') $ownerTextClass = 'txt-laia';
-        else $ownerTextClass = 'txt-global'; // Pour Pol et Pep (ou autre)
+        else $ownerTextClass = 'txt-global'; // Pour Pol et Pep
     ?>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: <?= ($requestedOwner === 'Nens' && $currentOwner !== 'Pol') ? '40px' : '0' ?>;">        
@@ -65,11 +72,11 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
         <div style="display: flex; gap: 10px; align-items: center;">
             <?php if (!empty($months)): ?>
                 <button onclick="duplicateLastMonth('<?= $months[0] ?>', '<?= $currentOwner ?>')" class="pf-btn btn-secondary">
-                    🔁 +1 Mois
+                    🔁 <?= tr('bud_sav_add_one_month') ?>
                 </button>
             <?php endif; ?>
             <button onclick="openCustomSavingsModal('<?= $currentOwner ?>')" class="pf-btn">
-                ＋ Saisir un mois
+                ＋ <?= tr('bud_sav_add_month') ?>
             </button>
         </div>
     </div>
@@ -77,32 +84,32 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
     <div class="table-responsive" style="background:white; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0;">
         <?php if (empty($months)): ?>
             <div style="padding: 30px; text-align: center; color: #64748b;">
-                <p>Aucune donnée pour <?= htmlspecialchars($currentOwner) ?>.</p>
+                <p><?= sprintf(tr('bud_sav_no_data'), htmlspecialchars($currentOwner)) ?></p>
             </div>
         <?php else: ?>
             <table class="pf-table savings-table nens-table theme-<?= strtolower($currentOwner) ?>" style="margin-top:0; box-shadow:none; border-radius:16px;">            
                 <thead>
                     <tr>
-                        <th class="sticky-col" style="background:#f8fafc;">Poste / Mois</th>
+                        <th class="sticky-col" style="background:#f8fafc;"><?= tr('bud_sav_post_month') ?></th>
                         <?php foreach ($months as $month): ?>
                             <th>
                                 <div class="month-header-container" style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
                                     <div style="display:flex; flex-direction:column; text-align:center;">
-                                        <span class="month-name"><?= date('M Y', strtotime($month)) ?></span>
+                                        <span class="month-name" style="text-transform:capitalize;"><?= getMonthName($month) ?></span>
                                         <?php 
                                         if (isset($cycleConfigs[$month]) && !empty($cycleConfigs[$month]['start_date'])) {
                                             $cStart = date('d/m', strtotime($cycleConfigs[$month]['start_date']));
-                                            echo "<span style='font-size:0.75rem; font-weight:normal; color:#64748b;'>Dès le $cStart</span>";
+                                            echo "<span style='font-size:0.75rem; font-weight:normal; color:#64748b;'>" . sprintf(tr('bud_sav_from_date'), $cStart) . "</span>";
                                         }
                                         ?>
                                     </div>
                                     <div class="month-actions" style="justify-content: center; width: 100%;">
-                                        <button class="btn-icon-small" title="Modifier avec Modale"
+                                        <button class="btn-icon-small" title="<?= tr('bud_sav_edit_modal') ?>"
                                                 data-json="<?= htmlspecialchars(json_encode($data[$month] ?? []), ENT_QUOTES, 'UTF-8') ?>"
                                                 onclick='editCustomSavingsMonth("<?= $month ?>", "<?= $currentOwner ?>", JSON.parse(this.getAttribute("data-json")))'>
                                             ✏️
                                         </button>
-                                        <button class="btn-icon-small" title="Supprimer tout le mois"
+                                        <button class="btn-icon-small" title="<?= tr('bud_sav_delete_month') ?>"
                                                 onclick="deleteEntireMonth('<?= $month ?>', '<?= $currentOwner ?>')"
                                                 style="color: #ef4444; border-color: #fca5a5; background: #fef2f2;">
                                             🗑️
@@ -115,7 +122,7 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
                 </thead>
                 <tbody>
                     <tr class="row-total">
-                        <td class="sticky-col"><strong>Total Banque</strong></td>
+                        <td class="sticky-col"><strong><?= tr('bud_sav_total_bank') ?></strong></td>
                         <?php foreach ($months as $month): 
                             $val = $data[$month]['TOTAL_BANQUE'] ?? 0;
                         ?>
@@ -154,7 +161,7 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
                     <?php endforeach; ?>
 
                     <tr class="row-extres">
-                        <td class="sticky-col"><strong>Extra</strong></td>
+                        <td class="sticky-col"><strong><?= tr('bud_sav_extra') ?></strong></td>
                         <?php foreach ($months as $month): 
                             $total = $data[$month]['TOTAL_BANQUE'] ?? 0;
                             $sum = 0;
@@ -176,8 +183,8 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
 <div id="savingsModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width: 600px; width: 95%;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="savingsModalTitle" class="pf-modal-title" style="margin:0;">Saisir un mois</h3>
-            <button type="button" onclick="document.getElementById('savingsModal').style.display='none'" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+            <h3 id="savingsModalTitle" class="pf-modal-title" style="margin:0;"><?= tr('bud_sav_modal_title_add') ?></h3>
+            <button type="button" onclick="document.getElementById('savingsModal').style.display='none'; document.body.classList.remove('no-scroll');" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
         </div>
         
         <form action="/modules/budget/includes/api/save-savings.php" method="POST" id="savingsForm">
@@ -187,12 +194,12 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
 
             <div style="display:flex; gap:15px; margin-bottom:20px;">
                 <div class="form-group" style="flex:1; margin:0;">
-                    <label class="pf-label">Mois concerné</label>
+                    <label class="pf-label"><?= tr('bud_sav_month_concerned') ?></label>
                     <input type="month" id="sav_month" required class="pf-input">
                 </div>
 
                 <div class="form-group" style="flex:1; margin:0;">
-                    <label class="pf-label">Total en Banque (€)</label>
+                    <label class="pf-label"><?= tr('bud_sav_total_bank_eur') ?></label>
                     <input type="number" step="0.01" name="values[TOTAL_BANQUE]" id="sav_total" required class="pf-input no-spinners" style="font-weight:bold; color:#2563eb;">
                 </div>
             </div>
@@ -201,17 +208,17 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
             
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <div>
-                    <h4 style="margin:0; font-size:1rem; color:#1e293b;">Ventilation</h4>
-                    <span style="font-size:0.8rem; color:#64748b;">Utilisez l'ajustement (+/-) pour recalculer automatiquement.</span>
+                    <h4 style="margin:0; font-size:1rem; color:#1e293b;"><?= tr('bud_sav_ventilation') ?></h4>
+                    <span style="font-size:0.8rem; color:#64748b;"><?= tr('bud_sav_adj_help') ?></span>
                 </div>
-                <button type="button" class="pf-btn btn-secondary" onclick="addCustomEpargneLine()" style="padding:4px 10px; height:auto; width:auto; font-size:0.9rem;">＋ Ligne</button>
+                <button type="button" class="pf-btn btn-secondary" onclick="addCustomEpargneLine()" style="padding:4px 10px; height:auto; width:auto; font-size:0.9rem;">＋ <?= tr('bud_sav_add_line') ?></button>
             </div>
 
             <div style="display:flex; gap:10px; padding:0 5px 5px 5px; font-size:0.8rem; color:#64748b; font-weight:600;">
-                <div style="flex:2;">Catégorie</div>
-                <div style="width:100px;">Actuel</div>
-                <div style="width:90px;">Ajust (+/-)</div>
-                <div style="width:100px;">Nouveau</div>
+                <div style="flex:2;"><?= tr('bud_category') ?></div>
+                <div style="width:100px;"><?= tr('bud_sav_current') ?></div>
+                <div style="width:90px;"><?= tr('bud_sav_adjust') ?></div>
+                <div style="width:100px;"><?= tr('bud_sav_new') ?></div>
                 <div style="width:28px;"></div>
             </div>
 
@@ -219,22 +226,41 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
                 </div>
 
             <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" onclick="document.getElementById('savingsModal').style.display='none'" class="pf-btn btn-secondary" style="width:auto; margin:0;">Annuler</button>
-                <button type="submit" class="pf-btn" style="width:auto; margin:0;">Enregistrer</button>
+                <button type="button" onclick="document.getElementById('savingsModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary" style="width:auto; margin:0;"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn" style="width:auto; margin:0;"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
 </div>
 
-<button id="fabSumMode" class="pf-fab-sum" onclick="toggleSumMode()" title="Activer l'addition rapide">
+<button id="fabSumMode" class="pf-fab-sum" onclick="toggleSumMode()" title="<?= tr('bud_sav_sum_mode_title') ?>">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="12" y1="8" x2="12" y2="16"></line></svg>
 </button>
 
 <div id="sumResultBar" class="pf-sum-bar">
-    <span class="pf-sum-label">Sélection :</span>
+    <span class="pf-sum-label"><?= tr('bud_sav_selection') ?></span>
     <span id="sumResultValue" class="pf-sum-value">0 €</span>
-    <button onclick="toggleSumMode()" class="pf-sum-close" title="Fermer">&times;</button>
+    <button onclick="toggleSumMode()" class="pf-sum-close" title="<?= tr('btn_close') ?>">&times;</button>
 </div>
+
+<script>
+    window.I18N = {
+        ...window.I18N,
+        'bud_sav_ph_name' : "<?= tr('bud_sav_ph_name') ?>",
+        'bud_sav_modal_title_edit' : "<?= tr('bud_sav_modal_title_edit') ?>",
+        'bud_sav_modal_title_add' : "<?= tr('bud_sav_modal_title_add') ?>",
+        'bud_sav_saving' : "<?= tr('bud_sav_saving') ?>",
+        'bud_err_tech' : "<?= tr('bud_err_tech') ?>",
+        'bud_sav_confirm_delete_month' : "<?= tr('bud_sav_confirm_delete_month') ?>",
+        'bud_sav_prompt_duplicate' : "<?= tr('bud_sav_prompt_duplicate') ?>",
+        'bud_err_server' : "<?= tr('bud_err_server') ?>",
+        'bud_err_network_dup' : "<?= tr('bud_err_network_dup') ?>"
+    };
+    
+    // Détection de la langue pour le JS
+    const currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+</script>
+
 <script>
 // ============================================================================
 // 1. GESTION DE L'ÉDITION INVISIBLE EN DIRECT (Input Classique)
@@ -243,7 +269,6 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
 function updateEpargneCell(month, category, owner, inputEl) {
     const val = parseFloat(inputEl.value) || 0;
 
-    // 1. Sauvegarde silencieuse en Ajax
     const formData = new FormData();
     formData.append('action', 'update_single_entry');
     formData.append('month_date', month);
@@ -254,9 +279,8 @@ function updateEpargneCell(month, category, owner, inputEl) {
     fetch('/modules/budget/includes/api/save-savings.php', {
         method: 'POST',
         body: formData
-    }).catch(err => alert("Erreur lors de la sauvegarde"));
+    }).catch(err => alert(tr("bud_err_tech")));
 
-    // 2. Recalcul visuel de l'Extra instantané
     const totalInput = document.querySelector(`.total-input-${owner}-${month}`);
     const totalVal = parseFloat(totalInput.value) || 0;
 
@@ -269,11 +293,10 @@ function updateEpargneCell(month, category, owner, inputEl) {
     const extraCell = document.getElementById(`extra_${owner}_${month}`);
 
     if (extraCell) {
-        extraCell.innerText = Math.round(extra).toLocaleString('fr-FR') + ' €';
+        extraCell.innerText = Math.round(extra).toLocaleString(currentLang) + ' €';
         extraCell.style.color = extra >= 0 ? '#10b981' : '#ef4444';
     }
     
-    // Si la calculatrice est active, on met à jour son résultat aussi
     if(isSumModeActive) updateSumResult();
 }
 
@@ -290,7 +313,7 @@ function addCustomEpargneLine(catName = '', amount = '') {
     const html = `
         <div class="ventilation-line" style="display:flex; gap:10px; align-items:center; background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
             <div style="flex:2;">
-                <input type="text" class="pf-input cat-name-input" value="${catName}" placeholder="Nom (ex: Vacances)" oninput="updateCustomFieldName(this)" style="padding:6px; font-size:0.9rem;" required>
+                <input type="text" class="pf-input cat-name-input" value="${catName}" placeholder="${tr("bud_sav_ph_name")}" oninput="updateCustomFieldName(this)" style="padding:6px; font-size:0.9rem;" required>
             </div>
             
             <div style="width:100px;">
@@ -337,8 +360,8 @@ function editCustomSavingsMonth(monthDate, owner, rowData) {
     document.getElementById('sav_month').value = ym;
     
     const dateObj = new Date(monthDate);
-    const monthName = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    document.getElementById('savingsModalTitle').innerText = "Modifier : " + monthName + " (" + owner + ")";
+    const monthName = dateObj.toLocaleDateString(currentLang, { month: 'long', year: 'numeric' });
+    document.getElementById('savingsModalTitle').innerText = tr("bud_sav_modal_title_edit") + " " + monthName + " (" + owner + ")";
     
     document.getElementById('sav_total').value = rowData['TOTAL_BANQUE'] || '';
 
@@ -352,6 +375,7 @@ function editCustomSavingsMonth(monthDate, owner, rowData) {
     if (container.children.length === 0) addCustomEpargneLine();
 
     document.getElementById('savingsModal').style.display = 'flex';
+    document.body.classList.add('no-scroll');
 }
 
 function openCustomSavingsModal(owner) {
@@ -359,18 +383,22 @@ function openCustomSavingsModal(owner) {
     document.getElementById('sav_month').value = '';
     document.getElementById('sav_total').value = '';
     
-    document.getElementById('savingsModalTitle').innerText = "Saisir un mois (" + owner + ")";
+    document.getElementById('savingsModalTitle').innerText = tr("bud_sav_modal_title_add") + " (" + owner + ")";
     
     const container = document.getElementById('linesContainer');
     container.innerHTML = '';
     addCustomEpargneLine(); 
     
     document.getElementById('savingsModal').style.display = 'flex';
+    document.body.classList.add('no-scroll');
 }
 
 window.onclick = function(event) {
     const modal = document.getElementById('savingsModal');
-    if (event.target == modal) modal.style.display = 'none';
+    if (event.target == modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+    }
 }
 
 const savingsForm = document.getElementById('savingsForm');
@@ -385,7 +413,7 @@ if (savingsForm) {
 
         const submitBtn = this.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerText;
-        submitBtn.innerText = "Enregistrement...";
+        submitBtn.innerText = tr('bud_sav_saving');
         submitBtn.disabled = true;
 
         const formData = new FormData(this);
@@ -395,7 +423,7 @@ if (savingsForm) {
         .then(text => { window.location.reload(); })
         .catch(error => {
             console.error("Erreur:", error);
-            alert("Une erreur technique est survenue.");
+            alert(tr("bud_err_tech"));
             submitBtn.innerText = originalText;
             submitBtn.disabled = false;
         });
@@ -403,14 +431,16 @@ if (savingsForm) {
 }
 
 function deleteEntireMonth(monthDate, owner) {
-    if (!confirm(`Supprimer TOUT le mois de ${monthDate} pour ${owner} ?`)) return;
+    const msg = tr('bud_sav_confirm_delete_month').replace('%m', monthDate).replace('%o', owner);
+    if (!confirm(msg)) return;
+    
     const formData = new FormData();
     formData.append("action", "delete_month_global"); 
     formData.append("month_date", monthDate);
     formData.append("owner", owner);
     fetch("/modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
     .then(() => window.location.reload())
-    .catch(err => alert("Erreur lors de la suppression."));
+    .catch(err => alert("<?= tr('bud_err_delete') ?>"));
 }
 
 function duplicateLastMonth(lastMonthDate, owner) {
@@ -421,7 +451,7 @@ function duplicateLastMonth(lastMonthDate, owner) {
     let nextMonthStr = `${year}-${month}-01`;
 
     const formatMonth = (d) => {
-        let str = new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        let str = new Date(d).toLocaleDateString(currentLang, { month: 'long', year: 'numeric' });
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
@@ -433,7 +463,10 @@ function duplicateLastMonth(lastMonthDate, owner) {
         defaultTotal = cycleConfigs[nextMonthStr].start_balance;
     }
 
-    const message = `Voulez-vous copier les données de ${sourceName} vers ${targetName} ?\n\nSaisissez le nouveau TOTAL en banque (€) pour ${targetName} :`;
+    const message = tr('bud_sav_prompt_duplicate')
+        .replace('%s', sourceName)
+        .replace('%t1', targetName)
+        .replace('%t2', targetName);
 
     let newTotal = prompt(message, defaultTotal);
 
@@ -451,15 +484,14 @@ function duplicateLastMonth(lastMonthDate, owner) {
             try {
                 const d = JSON.parse(text); 
                 if (d.success) window.location.reload();
-                else alert("Erreur serveur : " + (d.error || "Inconnue"));
+                else alert(tr('bud_err_server') + (d.error || "Inconnue"));
             } catch(e) {
-                console.log("Avertissement : La réponse serveur n'était pas du JSON. Rechargement...");
                 window.location.reload();
             }
         })
         .catch(err => {
             console.error(err);
-            alert("Erreur réseau lors de la duplication.");
+            alert(tr("bud_err_network_dup"));
         });
     }
 }
@@ -509,7 +541,7 @@ function updateSumResult() {
         total += val;
     });
     
-    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(currentLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
 }
 
 document.addEventListener('click', function(e) {
