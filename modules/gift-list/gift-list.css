@@ -94,8 +94,7 @@
   object-fit: contain;
 }
 
-/* --- GRILLE INTELLIGENTE (Le cœur de la mise en page) --- */
-
+/* --- GRILLE INTELLIGENTE --- */
 .cl-occasion-children-tables {
   display: grid;
   gap: 20px;
@@ -125,33 +124,13 @@
   grid-column: span 2;
 }
 
-/* Responsive Mobile (tous sur 1 colonne) */
-@media (max-width: 1000px) {
-  .cl-view-nadal .cl-occasion-children-tables,
-  .cl-view-anniversary .cl-occasion-children-tables {
-    grid-template-columns: 1fr;
-  }
-  .cl-view-anniversary .cl-child-table {
-    grid-column: span 1;
-  }
-}
-
 /* --- 4. TABLEAU PAR ENFANT (Card Unifiée) --- */
-
 .cl-child-table {
   background: white;
-
-  /* L'ombre est sur le tableau global */
   box-shadow: var(--shadow-card);
-
-  /* Arrondi uniquement en BAS (le caption gère le haut) */
   border-radius: 0 0 var(--radius-card) var(--radius-card);
-
-  /* La bordure du tableau ne fait que gauche/droite/bas */
   border: 1px solid var(--border-light);
   border-top: none;
-
-  /* Structure tableau stricte pour garder le caption en haut */
   display: table;
   width: 100%;
   table-layout: fixed;
@@ -161,36 +140,25 @@
 
 /* CAPTION (Nom de l'enfant - Haut de la carte) */
 .cl-child-table caption {
-  /* Force l'affichage en haut */
   caption-side: top;
   display: table-caption;
-
   padding: 10px 16px;
   text-align: left;
   font-weight: 700;
   font-size: 1.1rem;
-
-  /* Arrondi uniquement en HAUT */
   border-radius: var(--radius-card) var(--radius-card) 0 0;
-
-  /* Bordure complète pour le caption */
   border: 1px solid var(--border-light);
-  border-bottom: 2px solid; /* Le trait de séparation coloré */
-
-  /* Colle le caption au tableau */
+  border-bottom: 2px solid;
   margin-bottom: 0;
-
   position: relative;
 }
 
 /* Bouton Ajout (+) Rotatif */
 .cl-child-add-btn {
-  /* Position absolue par rapport au caption */
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-
   background: rgba(255, 255, 255, 0.6);
   color: inherit;
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -209,23 +177,21 @@
 
 .cl-child-add-btn:hover {
   background: white;
-  /* La rotation que tu aimais */
   transform: translateY(-50%) rotate(90deg) scale(1.1);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
   border-color: currentColor;
 }
 
-/* --- 5. COULEURS PAR ENFANT (Appliquées au Caption ET au Tableau) --- */
-
+/* --- 5. COULEURS PAR ENFANT --- */
 /* POL (Bleu) */
 .child-pol {
   border-color: #bcd3ff;
-} /* Bordure du tableau (bas/cotés) */
+}
 .child-pol caption {
   background: #eaf2ff;
   color: #1e3a8a;
-  border-color: #bcd3ff; /* Bordure du caption (haut/cotés) */
-  border-bottom-color: #93c5fd; /* Trait de séparation un peu plus foncé */
+  border-color: #bcd3ff;
+  border-bottom-color: #93c5fd;
 }
 .child-pol thead th {
   background: #f5f9ff;
@@ -288,8 +254,6 @@
 }
 
 /* --- 6. CONTENU DU TABLEAU --- */
-
-/* En-têtes Adultes */
 .cl-child-table thead th {
   padding: 8px;
   font-size: 0.75rem;
@@ -298,8 +262,6 @@
   text-transform: uppercase;
   border-bottom: 1px solid var(--border-light);
   border-right: 1px solid var(--border-light);
-
-  /* Pas de largeur fixe, table-layout: fixed gère le partage équitable */
   white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -322,7 +284,6 @@
   border-radius: 4px;
 }
 
-/* Corps du tableau */
 .cl-child-table tbody td {
   padding: 8px;
   vertical-align: top;
@@ -337,7 +298,6 @@
   border-bottom: none;
 }
 
-/* Cellule vide */
 .cl-empty {
   color: #e2e8f0;
   text-align: center;
@@ -358,24 +318,20 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 4px;
-  position: relative; /* Pour l'overlay */
-  min-height: 20px; /* Hauteur min pour éviter le saut si vide */
+  position: relative;
+  min-height: 20px;
 }
 
-/* Texte du cadeau */
 .cl-gift-desc,
 .cl-gift-link {
   font-weight: 500;
   color: #0f172a;
   line-height: 1.2;
   font-size: 0.85rem;
-
-  /* Césure forcée pour éviter le scroll */
   word-wrap: break-word;
   word-break: break-word;
   hyphens: auto;
-
-  flex: 1; /* Prend toute la place dispo à gauche */
+  flex: 1;
 }
 
 .cl-gift-link {
@@ -386,17 +342,15 @@
   text-decoration: underline;
 }
 
-/* Zone Droite (Prix OU Actions) */
 .cl-gift-right {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  /* Largeur fixe pour que le switch ne décale pas le texte de gauche */
-  width: 50px;
+  width: 55px; /* Ajusté légèrement */
   flex-shrink: 0;
 }
 
-/* Le Prix (Visible par défaut) */
+/* Le Prix (Visible par défaut sur desktop) */
 .cl-gift-amount {
   font-size: 0.75rem;
   font-weight: 700;
@@ -405,7 +359,6 @@
   padding: 1px 4px;
   border-radius: 4px;
   white-space: nowrap;
-
   transition:
     opacity 0.2s,
     transform 0.2s;
@@ -413,24 +366,22 @@
   transform: scale(1);
 }
 
-/* Les Actions (Masquées par défaut, Absolute pour superposition) */
+/* Les Actions (Masquées par défaut sur desktop) */
 .cl-gift-actions {
   display: flex;
   gap: 4px;
   position: absolute;
   right: 0;
   top: 0;
-
   opacity: 0;
   transform: scale(0.8);
-  pointer-events: none; /* Empêche le clic quand invisible */
+  pointer-events: none;
   transition:
     opacity 0.2s,
     transform 0.2s;
 }
 
-/* === L'EFFET SWAP === */
-/* Au survol de la ligne cadeau... */
+/* === L'EFFET SWAP (Optimisé) === */
 .cl-gift-line:hover .cl-gift-amount {
   opacity: 0;
   transform: scale(0.8);
@@ -445,9 +396,9 @@
 .cl-gift-action-btn {
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
+  width: 26px; /* Légèrement agrandi pour le tactile */
+  height: 26px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -455,6 +406,7 @@
   color: #475569;
   font-size: 14px;
   padding: 0;
+  transition: all 0.2s;
 }
 .cl-gift-action-btn:hover {
   background: white;
@@ -464,29 +416,6 @@
   color: #dc2626;
   border-color: #dc2626;
   background: #fef2f2;
-}
-
-@media (hover: none) {
-  /* Sur écran tactile, on désactive l'effet de masquage */
-  .cl-gift-amount {
-    /* Option A: On garde le prix visible */
-    opacity: 1 !important;
-    transform: scale(1) !important;
-    margin-right: 30px; /* Faire de la place pour le bouton supprimer */
-  }
-
-  .cl-gift-actions {
-    /* On rend les actions toujours visibles et clicables */
-    opacity: 1 !important;
-    transform: scale(1) !important;
-    pointer-events: auto !important;
-    background: rgba(
-      255,
-      255,
-      255,
-      0.8
-    ); /* Fond pour lisibilité si superposition */
-  }
 }
 
 /* --- 8. BUDGET & TRICOUNT --- */
@@ -510,6 +439,7 @@
   box-shadow: var(--shadow-card);
   border: 1px solid var(--border-light);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Scroll fluide sur iOS */
 }
 
 .pf-table {
@@ -539,6 +469,16 @@
   font-weight: 700;
 }
 
+/* Matrice Tricount - Colonne Sticky */
+.cl-debt-matrix th:first-child,
+.cl-debt-matrix td:first-child {
+  position: sticky;
+  left: 0;
+  background: #f8fafc;
+  z-index: 2;
+  border-right: 2px solid var(--border-light);
+}
+
 /* --- 9. MODALES --- */
 .cl-modal {
   display: none;
@@ -551,14 +491,12 @@
   inset: 0;
   z-index: 9999;
 }
-
 .cl-modal-backdrop {
   position: absolute;
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(2px);
 }
-
 .cl-modal-dialog {
   position: relative;
   background: white;
@@ -569,7 +507,6 @@
   padding: 0;
   animation: modalPop 0.2s ease-out;
 }
-
 @keyframes modalPop {
   from {
     transform: scale(0.95);
@@ -580,20 +517,17 @@
     opacity: 1;
   }
 }
-
 .cl-modal-form {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-
 .cl-modal-form h3 {
   margin: 0 0 12px;
   font-size: 1.2rem;
   color: var(--text-main);
 }
-
 .clm-label {
   display: flex;
   flex-direction: column;
@@ -602,7 +536,6 @@
   font-size: 0.85rem;
   color: #475569;
 }
-
 .clm-label input,
 .clm-label select {
   padding: 8px;
@@ -617,14 +550,12 @@
   border-color: var(--primary);
   outline: 2px solid rgba(37, 99, 235, 0.2);
 }
-
 .cl-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 10px;
 }
-
 .clm-cancel {
   background: white;
   border: 1px solid #cbd5e1;
@@ -643,8 +574,38 @@
   font-weight: 600;
 }
 
-/* --- 10. MOBILE --- */
-@media (max-width: 768px) {
+/* --- 10. OPTIMISATIONS MOBILES ET TACTILES --- */
+
+@media (hover: none) {
+  /* Sur écran tactile, on annule l'effet de swap */
+  .cl-gift-line {
+    flex-direction: column; /* On empile texte et prix/boutons */
+    align-items: flex-start;
+  }
+
+  .cl-gift-amount {
+    opacity: 1 !important;
+    transform: none !important;
+    margin-bottom: 6px;
+  }
+
+  .cl-gift-right {
+    width: 100%;
+    justify-content: space-between; /* Prix à gauche, boutons à droite */
+    margin-top: 4px;
+    border-top: 1px dashed var(--border-light);
+    padding-top: 4px;
+  }
+
+  .cl-gift-actions {
+    position: relative;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (max-width: 1000px) {
   .cl-view-nadal .cl-occasion-children-tables,
   .cl-view-anniversary .cl-occasion-children-tables {
     grid-template-columns: 1fr;
@@ -657,14 +618,25 @@
     grid-column: span 1;
   }
 
-  /* Force le scroll horizontal sur mobile uniquement */
+  /* Transformation des tableaux en mode "Carrousel" horizontal */
   .cl-child-table {
     display: block;
     overflow-x: auto;
+    scroll-snap-type: x mandatory; /* Effet de magnétisme */
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 10px; /* Espace pour la barre de scroll */
   }
-  /* On redonne de la largeur aux colonnes sur mobile */
+
+  .cl-child-table caption {
+    /* Garde le nom de l'enfant visible même en scrollant à droite */
+    position: sticky;
+    left: 0;
+    z-index: 5;
+  }
+
   .cl-child-table th,
   .cl-child-table td {
-    min-width: 120px;
+    min-width: 180px; /* Plus large pour la lisibilité tactile */
+    scroll-snap-align: start; /* S'arrête pile sur la colonne */
   }
 }
