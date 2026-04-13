@@ -65,6 +65,13 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr'; // Récupération de la langue act
   </header>
 
   <div class="pf-mobile-menu">
+    
+    <div style="display: flex; justify-content: center; align-items: center; gap: 20px; padding: 15px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px;">
+        <a href="<?= getLangUrl('fr') ?>" style="text-decoration:none; font-size:1.2rem; font-weight:bold; color: <?= $currentLang === 'fr' ? '#2563eb' : '#94a3b8' ?>;">FR</a>
+        <span style="color: #cbd5e1; font-size:1.2rem;">|</span>
+        <a href="<?= getLangUrl('ca') ?>" style="text-decoration:none; font-size:1.2rem; font-weight:bold; color: <?= $currentLang === 'ca' ? '#f59e0b' : '#94a3b8' ?>;">CA</a>
+    </div>
+
     <a href="/index.php" class="pf-mobile-nav-link"><?= tr('menu_home') ?></a>
     <a href="/family-calendar.php" class="pf-mobile-nav-link"><?= tr('menu_calendar') ?></a>
     <a href="/budget.php" class="pf-mobile-nav-link"><?= tr('menu_budget') ?></a>
