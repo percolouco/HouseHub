@@ -17,11 +17,11 @@
   --c-selected: #bfdbfe;
 
   /* NOUVELLES COULEURS (Neutres) */
-  --bg-alex: #f0fdfa; /* Teal très pâle */
-  --text-alex: #0f766e; /* Teal foncé */
+  --bg-alex: #f0fdfa;
+  --text-alex: #0f766e;
 
-  --bg-laia: #fffbeb; /* Jaune/Ambre très pâle */
-  --text-laia: #b45309; /* Ambre foncé */
+  --bg-laia: #fffbeb;
+  --text-laia: #b45309;
 }
 
 *,
@@ -77,7 +77,7 @@
 .pf-btn-icon-text {
   background: white;
   border: 1px solid var(--border-color);
-  border-radius: 20px; /* Pill */
+  border-radius: 20px;
   padding: 8px 16px;
   display: inline-flex;
   align-items: center;
@@ -100,7 +100,6 @@
 }
 
 /* --- 3. PLANNING HEBDO --- */
-
 .fc-week-header {
   display: flex;
   align-items: center;
@@ -134,9 +133,12 @@
   letter-spacing: -0.02em;
 }
 
+/* WRAPPER OPTIMISÉ POUR LE SCROLL */
 #planningTable-wrapper {
   max-height: 80vh;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* Scroll fluide sur iOS */
   border: 1px solid var(--border-color);
   border-radius: 12px;
   background: white;
@@ -144,8 +146,26 @@
   position: relative;
 }
 
+/* Scrollbar personnalisée pour qu'elle soit toujours visible */
+#planningTable-wrapper::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+#planningTable-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+#planningTable-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+#planningTable-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 #planningTable {
   width: 100%;
+  min-width: 1000px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -241,7 +261,6 @@
   font-size: 12px;
   line-height: 1;
 }
-
 .fc-day--avis::after {
   content: "";
   position: absolute;
@@ -281,15 +300,15 @@
   border-right: 2px solid var(--border-color) !important;
 }
 .col-day {
-  width: 40px;
+  width: auto !important;
   border-right: 2px solid var(--border-color) !important;
 }
-.col-total {
-  width: 30px;
-}
+.col-total,
 .col-alex-sub,
 .col-laia-sub {
-  width: 35px;
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
 }
 
 .rotated-text span {
@@ -300,7 +319,7 @@
   color: var(--text-muted);
 }
 
-/* --- 4. CALENDRIER MENSUEL (MODERNISÉ) --- */
+/* --- 4. CALENDRIER MENSUEL --- */
 .fc-month-calendar-wrapper {
   background: white;
   border: 1px solid var(--border-color);
@@ -319,7 +338,6 @@
   gap: 16px;
 }
 
-/* Navigation Flèches */
 .fc-nav-controls {
   display: flex;
   align-items: center;
@@ -347,7 +365,6 @@
   transform: translateY(-1px);
 }
 
-/* Titre Mois */
 #fc-current-month-year {
   margin: 0;
   font-size: 1.25rem;
@@ -359,7 +376,6 @@
   letter-spacing: -0.02em;
 }
 
-/* Boutons Vue (Segmented) */
 .fc-view-controls {
   display: inline-flex;
   background: #e2e8f0;
@@ -389,13 +405,14 @@
   font-weight: 700;
 }
 
-/* Table Mensuelle */
 .fc-month-calendar {
   width: 100%;
   display: block;
+  overflow-x: auto;
 }
 .fc-month-table {
   width: 100%;
+  min-width: 500px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -419,12 +436,12 @@
   background: #fcfcfc;
 }
 
-/* Grilles Vues */
 .fc-two-months-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
   width: 100%;
+  overflow-x: auto;
 }
 .fc-year-container {
   display: grid;
@@ -457,7 +474,6 @@
   gap: 24px;
   align-items: start;
 }
-
 .pf-card {
   background: white;
   border: 1px solid var(--border-color);
@@ -466,15 +482,12 @@
   overflow: hidden;
 }
 
-/* Légende Badge Style */
-
 .pf-legend-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-start;
 }
-
 .pf-legend-item {
   display: inline-flex;
   align-items: center;
@@ -497,7 +510,6 @@
   line-height: 1;
 }
 
-/* Couleurs & Contenus Légende */
 .fc-legend-school-holiday {
   background: var(--c-school-holiday);
 }
@@ -510,31 +522,25 @@
 .fc-legend-extra-off-carole {
   background: var(--c-extra-off);
 }
-
-/* Légende : Emojis */
 .fc-legend-centre {
   background: white;
 }
 .fc-legend-centre::after {
   content: "🏫";
 }
-
 .fc-legend-pep-sick {
   background: white;
 }
 .fc-legend-pep-sick::after {
   content: "🤒";
 }
-
-/* Légende : Icone SVG Avis */
 .fc-legend-avis {
   background: white url("/modules/family-calendar/assets/img/avis.svg")
     no-repeat center center;
   background-size: contain;
-  border: none; /* Pas de bordure pour le SVG propre */
+  border: none;
 }
 
-/* Récapitulatif Vertical */
 .fc-summary-vertical {
   display: flex;
   flex-direction: column;
@@ -560,51 +566,30 @@
   font-weight: 700;
   color: var(--text-main);
 }
-.fc-summary-sub {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-left: 8px;
-  font-style: italic;
-}
 
-/* --- CONTROLES RÉCAPITULATIF --- */
-
-/* On transforme le titre de la card en Flexbox pour y mettre les boutons */
 .fc-summary-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px; /* Un peu plus compact verticalement */
+  padding: 8px 16px;
 }
-
 .fc-summary-controls {
   display: flex;
   gap: 8px;
 }
-
 .fc-summ-select {
   background: white;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 2px 8px;
-  font-size: 0.75rem; /* Petit texte */
+  font-size: 0.75rem;
   color: var(--text-main);
   cursor: pointer;
   outline: none;
   height: 24px;
 }
-
 .fc-summ-select:hover {
   border-color: var(--primary);
-}
-
-/* Ajustement mobile pour les sélecteurs */
-@media (max-width: 768px) {
-  .fc-summary-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
 }
 
 /* --- 6. MODALE VACANCES --- */
@@ -669,7 +654,6 @@
   overflow-y: auto;
 }
 
-/* Table Modale */
 .fc-holidays-table {
   width: 100%;
   border-collapse: collapse;
@@ -713,7 +697,7 @@
   }
 }
 
-/* --- MENU CONTEXTUEL COMPACT ET UNIFORMISÉ (DNA Holidays) --- */
+/* --- MENU CONTEXTUEL COMPACT --- */
 .fc-selection-menu {
   position: absolute;
   z-index: 9999;
@@ -724,8 +708,8 @@
     0 10px 25px -5px rgba(0, 0, 0, 0.1),
     0 8px 10px -6px rgba(0, 0, 0, 0.1);
   border-radius: 16px;
-  padding: 10px 12px; /* Base compact */
-  min-width: 220px; /* Base compact */
+  padding: 10px 12px;
+  min-width: 220px;
   display: none;
   animation: menuPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top center;
@@ -743,7 +727,7 @@
 }
 
 .fc-menu-section {
-  padding: 6px 0; /* Compact */
+  padding: 6px 0;
   border-bottom: 1px dashed #cbd5e1;
 }
 .fc-menu-section:first-child {
@@ -753,45 +737,39 @@
   border: none;
   padding-bottom: 0;
 }
-
 .fc-menu-header {
-  /* Compact header */
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
-
 .fc-menu-section strong {
   display: block;
-  font-size: 0.7rem; /* Base compact */
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 700;
   color: #64748b;
-  margin-bottom: 0 !important; /* Retire l'ancienne marge */
+  margin-bottom: 0 !important;
 }
-
 .fc-menu-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px; /* Base compact */
+  gap: 4px;
 }
-
 .fc-menu-btn {
   background: white;
   border: 1px solid #e2e8f0;
   color: #1e293b;
-  padding: 6px 8px; /* Base compact */
+  padding: 6px 8px;
   border-radius: 8px;
-  font-size: 0.8rem; /* Base compact */
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
   transition: all 0.2s ease;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
-
 .fc-menu-btn:hover {
   background: #f8fafc;
   border-color: #3b82f6;
@@ -799,8 +777,6 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.15);
 }
-
-/* Style des icônes de suppression unifiées */
 .fc-menu-clear-icon {
   background: transparent;
   border: none;
@@ -813,120 +789,56 @@
   border-radius: 6px;
   transition: all 0.2s ease;
 }
-
 .fc-menu-clear-icon svg {
   width: 14px;
   height: 14px;
 }
-
 .fc-menu-clear-icon:hover {
   background: #fef2f2;
   color: #dc2626;
 }
 
-/* --- TABLEAU DES CONGÉS ENFANTS --- */
 .fc-menu-leaves-table table {
   width: 100%;
-  border-spacing: 2px; /* Base compact */
+  border-spacing: 2px;
   border-collapse: separate;
 }
 .fc-menu-leaves-table th {
-  font-size: 0.7rem; /* Base compact */
+  font-size: 0.7rem;
   font-weight: 700;
   color: #64748b;
-  padding-bottom: 2px; /* Base compact */
+  padding-bottom: 2px;
   text-align: center;
 }
 .fc-menu-leaves-table td {
   padding: 0;
 }
-
-/* Aligner le nom et l'icône sur une ligne (Inline) */
 .fc-th-inline {
   display: flex;
-  flex-direction: row; /* Alignement horizontal */
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 4px; /* Petit espace entre le nom et la poubelle */
-}
-
-/* --- VERSION MOBILE COMPACTE --- */
-@media (max-width: 768px) {
-  .fc-selection-menu {
-    position: fixed !important;
-    top: auto !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    border-radius: 24px 24px 0 0;
-    border: none;
-    border-top: 1px solid rgba(226, 232, 240, 0.8);
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
-    padding: 12px 16px; /* Compact mobile */
-    padding-bottom: calc(
-      12px + env(safe-area-inset-bottom)
-    ); /* Compact mobile */
-    max-height: 85vh;
-    overflow-y: auto;
-    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    transform-origin: bottom center;
-  }
-
-  .fc-selection-menu::before {
-    content: "";
-    display: block;
-    width: 40px;
-    height: 5px;
-    background: #cbd5e1;
-    border-radius: 10px;
-    margin: 0 auto 10px auto; /* Compact mobile */
-  }
-
-  @keyframes slideUpSheet {
-    from {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .fc-menu-btn {
-    padding: 8px; /* Compact mobile */
-    font-size: 0.85rem; /* Compact mobile */
-  }
+  gap: 4px;
 }
 
 /* --- SUPERPOSITION : GARDE/CONGÉS + VACANCES SCOLAIRES --- */
-
-/* 1. OFF CAROLE + VACANCES
-   On force le fond orange/pêche, et on met la barre violette en bas */
 .fc-day--off-carole.fc-day--school-holiday {
   background: var(--c-off-carole) !important;
   box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
 }
-
-/* 2. EXTRA OFF CAROLE + VACANCES
-   On force le fond rouge clair, et on met la barre violette en bas */
 .fc-day--extra-off-carole.fc-day--school-holiday {
   background: var(--c-extra-off) !important;
   box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
 }
-
-/* 3. CENTRE / AVIS + VACANCES
-   Comme ce sont juste des icônes sur fond normal, on se contente d'ajouter la barre violette */
 .fc-day--centre.fc-day--school-holiday,
 .fc-day--avis.fc-day--school-holiday {
   box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
 }
 
 /* =========================================================
-   8. OPTIMISATIONS MOBILES ET ERGONOMIE 
+   8. FIXATION DES COLONNES (STICKY) POUR SCROLL FLUIDE
    ========================================================= */
 
-/* 1. On force une largeur stricte pour éviter le décalage de la 2ème colonne */
 .col-month {
   box-sizing: border-box !important;
   width: 54px !important;
@@ -934,7 +846,6 @@
   max-width: 54px !important;
 }
 
-/* 2. Fixation horizontale pour les cellules (Valeurs) */
 #planningTable tbody td.col-sticky-mois {
   position: -webkit-sticky !important;
   position: sticky !important;
@@ -946,19 +857,18 @@
 #planningTable tbody td.col-sticky-sem {
   position: -webkit-sticky !important;
   position: sticky !important;
-  left: 54px !important; /* Exactement la largeur de la colonne Mois */
+  left: 54px !important;
   z-index: 14 !important;
   background: white !important;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1); /* Ombre renforcée pour montrer le scroll */
 }
 
-/* 3. Fixation 2D (Haut + Gauche) ultra prioritaire pour les En-têtes */
 #planningTable thead tr th.col-sticky-mois {
   position: -webkit-sticky !important;
   position: sticky !important;
   top: 0 !important;
   left: 0 !important;
-  z-index: 30 !important; /* Le plus haut niveau possible */
+  z-index: 30 !important;
   background: var(--bg-header) !important;
 }
 
@@ -967,13 +877,48 @@
   position: sticky !important;
   top: 0 !important;
   left: 54px !important;
-  z-index: 29 !important; /* Sous Mois, mais au dessus du reste */
+  z-index: 29 !important;
   background: var(--bg-header) !important;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1); /* Ombre renforcée */
 }
 
-/* --- B. MENU BOTTOM SHEET (Mobile Uniquement) --- */
+/* =========================================================
+   9. OPTIMISATIONS MOBILES STRICTES (max-width: 768px)
+   ========================================================= */
+
 @media (max-width: 768px) {
+  /* Plein écran (Full Bleed) pour le tableau sur mobile */
+  .pf-family-calendar .pf-container {
+    padding: 0 !important; /* Retire le padding de la page */
+  }
+
+  #planningTable-wrapper {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    margin-bottom: 0;
+  }
+
+  /* Ajustements des panneaux du bas */
+  .fc-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-two-months-container {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-year-container {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* Modale Bottom Sheet */
   .fc-selection-menu {
     position: fixed !important;
     top: auto !important;
@@ -996,95 +941,37 @@
     }
   }
 
+  .fc-selection-menu::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    margin: 0 auto 10px auto;
+  }
+
   .fc-menu-btn {
     padding: 10px;
     font-size: 0.95rem;
     font-weight: 600;
   }
-}
 
-/* --- C. RÉDUCTION DES ICÔNES SUR MOBILE (Nouveau) --- */
-@media (max-width: 768px) {
-  /* Icône Centre (Emoji) */
+  /* Réduction des icônes pour gagner de la place */
   .fc-day--centre::after {
     font-size: 9px !important;
     top: 1px !important;
     right: 1px !important;
   }
-
-  /* Icône Avis (SVG) */
   .fc-day--avis::after {
     width: 10px !important;
     height: 10px !important;
     top: 1px !important;
     right: 1px !important;
   }
-
-  /* Icône Pep Malade (Emoji) */
   .fc-pep-sick-emoji {
     font-size: 9px !important;
     bottom: 1px !important;
     right: 1px !important;
   }
-}
-
-/* --- ALIGNEMENT DES EN-TÊTES DU MENU --- */
-.fc-menu-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.fc-menu-header strong {
-  margin-bottom: 0 !important; /* Retire l'ancienne marge du bas */
-}
-
-/* Style de l'icône Poubelle */
-.fc-menu-clear-icon {
-  background: transparent;
-  border: none;
-  color: #94a3b8; /* Gris discret par défaut */
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.fc-menu-clear-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Survol de la poubelle : devient rouge clair */
-.fc-menu-clear-icon:hover {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.fc-th-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding-bottom: 4px;
-}
-
-.fc-menu-btn-mini-clear {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 10px;
-  padding: 2px 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.fc-menu-btn-mini-clear:hover {
-  background: #fee2e2;
-  border-color: #fca5a5;
-  transform: scale(1.1);
 }
