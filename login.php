@@ -1,8 +1,9 @@
 <?php
 session_start();
 require __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/i18n.php'; // Toujours s'assurer que tr() est dispo
 
-$pageTitle = "Connexion";
+$pageTitle = tr('login_title');
 $activePage = "login";
 
 if (isset($_SESSION['user'])) {
@@ -17,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if (!$username || !$password) {
-        $error = "Champs obligatoires.";
+        $error = tr('error_missing_fields');
     } else {
         $stmt = $pdo->prepare("SELECT id, username, password_hash, display_name FROM pf_users WHERE username = ?");
         $stmt->execute([$username]);
@@ -33,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . $redirectTo);
             exit;
         } else {
-            $error = "Identifiants incorrects.";
+            $error = tr('error_invalid_credentials');
         }
     }
 }
@@ -42,7 +43,7 @@ require __DIR__ . '/header.php';
 ?>
 
 <div class="pf-login-container">
-  <h1 style="text-align:center; font-size:1.8rem;">Connexion</h1>
+  <h1 style="text-align:center; font-size:1.8rem;"><?= tr('login_header') ?></h1>
   
   <?php if ($error): ?>
     <div class="pf-error"><?= htmlspecialchars($error) ?></div>
@@ -50,16 +51,16 @@ require __DIR__ . '/header.php';
 
   <form method="post" action="/login.php<?= isset($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : '' ?>">
     <div class="pf-form-group">
-      <label for="username">Identifiant</label>
-      <input type="text" id="username" name="username" required autofocus placeholder="ex: pacha">
+      <label for="username"><?= tr('label_username') ?></label>
+      <input type="text" id="username" name="username" required autofocus placeholder="<?= tr('placeholder_username') ?>">
     </div>
 
     <div class="pf-form-group">
-      <label for="password">Mot de passe</label>
+      <label for="password"><?= tr('label_password') ?></label>
       <input type="password" id="password" name="password" required placeholder="••••••">
     </div>
 
-    <button type="submit" class="pf-btn">Se connecter</button>
+    <button type="submit" class="pf-btn"><?= tr('btn_login_submit') ?></button>
   </form>
 </div>
 

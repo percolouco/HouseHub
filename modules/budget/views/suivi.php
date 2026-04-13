@@ -5,14 +5,12 @@
 // 1. GESTION DU MOIS ACTIF ET DE LA NAVIGATION
 // ============================================================================
 
-// A. Déterminer quel est le mois "ouvert" par défaut
 $stmtActive = $pdo->query("SELECT content FROM pf_notes WHERE note_type = 'active_gestion_month' LIMIT 1");
 $defaultActiveMonth = $stmtActive->fetchColumn();
 if (!$defaultActiveMonth) {
     $defaultActiveMonth = date('Y-m-01');
 }
 
-// B. Mois affiché à l'écran
 $viewM = isset($_GET['m']) ? str_pad((int)$_GET['m'], 2, '0', STR_PAD_LEFT) : date('m', strtotime($defaultActiveMonth));
 $viewY = isset($_GET['y']) ? (int)$_GET['y'] : date('Y', strtotime($defaultActiveMonth));
 $viewMonthDate = "$viewY-$viewM-01";
@@ -168,21 +166,18 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
 // 3. RECUPERATION DES DONNEES ET CALCULS
 // ============================================================================
 
-// A. Vérifier si le mois affiché est clôturé
 $stmtCheckClose = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'month_closure' AND reference_id = ?");
 $stmtCheckClose->execute([$viewMonthDate]);
 $closureJson = $stmtCheckClose->fetchColumn();
 $monthState = $closureJson ? json_decode($closureJson, true) : null;
 $isClosed = ($monthState && isset($monthState['is_closed']) && $monthState['is_closed'] === true);
 
-// B. Récupérer le solde bancaire (Snapshot actuel)
 $snapshot = ['date' => date('Y-m-d'), 'amount' => 0];
 $snapStmt = $pdo->query("SELECT * FROM pf_bank_snapshots ORDER BY id DESC LIMIT 1");
 if ($s = $snapStmt->fetch(PDO::FETCH_ASSOC)) {
     $snapshot = ['date' => $s['snapshot_date'], 'amount' => (float)$s['amount']];
 }
 
-// C. Récupérer le solde final du mois PRÉCÉDENT pour avoir la base de ce mois-ci
 $stmtPrevClose = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'month_closure' AND reference_id = ?");
 $stmtPrevClose->execute([$prevDate]);
 $prevClosureJson = $stmtPrevClose->fetchColumn();
@@ -193,7 +188,6 @@ if ($solde_initial === 0 && !$prevMonthState) {
     $solde_initial = $snapshot['amount'];
 }
 
-// D. Les Dépenses assignées à ce MOIS DE GESTION
 $stmt = $pdo->prepare("SELECT * FROM pf_expenses WHERE gestion_month = ? ORDER BY date_exp DESC");
 $stmt->execute([$viewMonthDate]);
 $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -201,13 +195,11 @@ $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $paidItemIds = array_column(array_filter($allExpenses, fn($e) => !empty($e['budget_item_id'])), 'budget_item_id');
 $realExpensesLabels = array_column(array_filter($allExpenses, fn($e) => $e['amount'] < 0), 'label');
 
-// E. Lecture du Budget
 $budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0; $budget_income_prevu = 0;
 $total_income = 0; $total_expenses_prevues = 0;
 $reste_a_venir_calc = 0; 
 $fixedChargesList = []; $incomeList = []; $pending_charges = [];
 
-// CORRECTION BUG N°2 : On supprime la vérification "is_checked" de la base, on ne se fie qu'aux dépenses réelles du mois.
 $stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $absAmount = abs((float)$item['amount']); 
@@ -249,26 +241,25 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
 $budget_autres = max(0, $total_income - $total_expenses_prevues);
 
+// TRADUCTION DES CATÉGORIES
 $categoriesConfig = [
-    'Income' => ['type'=>'credit', 'label'=>'Revenus', 'budget'=>$budget_income_prevu, 'color'=>'#10b981', 'suggestions'=>[]],
-    'FMCG' => ['type'=>'debit', 'label'=>'Courses (FMCG)', 'budget'=>$budget_fmcg, 'color'=>'#3b82f6', 'suggestions'=>['Action', 'Carrefour', 'Lidl']],
-    'Essence' => ['type'=>'debit', 'label'=>'Essence', 'budget'=>$budget_essence, 'color'=>'#f59e0b', 'suggestions'=>['Audi', 'Polo']],
-    'School' => ['type'=>'debit', 'label'=>'École / Garde', 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
-    'Frais' => ['type'=>'debit', 'label'=>'Charges Fixes', 'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>[]],
-    'Autres' => ['type'=>'debit', 'label'=>'Autres / Imprévus', 'budget'=>$budget_autres, 'color'=>'#64748b', 'suggestions'=>['Restaurant', 'Cadeau']],
-    'LivretA' => ['type'=>'debit', 'label'=>'Epargne', 'budget'=>0, 'color'=>'#8b5cf6', 'suggestions'=>['Virement']]
+    'Income'  => ['type'=>'credit', 'label'=>tr('cat_income'), 'budget'=>$budget_income_prevu, 'color'=>'#10b981', 'suggestions'=>[]],
+    'FMCG'    => ['type'=>'debit',  'label'=>tr('cat_fmcg'),   'budget'=>$budget_fmcg, 'color'=>'#3b82f6', 'suggestions'=>['Action', 'Carrefour', 'Lidl']],
+    'Essence' => ['type'=>'debit',  'label'=>tr('cat_fuel'),   'budget'=>$budget_essence, 'color'=>'#f59e0b', 'suggestions'=>['Audi', 'Polo']],
+    'School'  => ['type'=>'debit',  'label'=>tr('cat_school'), 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
+    'Frais'   => ['type'=>'debit',  'label'=>tr('cat_fixed'),  'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>[]],
+    'Autres'  => ['type'=>'debit',  'label'=>tr('cat_others'), 'budget'=>$budget_autres, 'color'=>'#64748b', 'suggestions'=>['Restaurant', 'Cadeau']],
+    'LivretA' => ['type'=>'debit',  'label'=>tr('cat_savings'),'budget'=>0, 'color'=>'#8b5cf6', 'suggestions'=>['Virement']]
 ];
 
 $totals = array_fill_keys(array_keys($categoriesConfig), 0);
 $expensesByCategory = array_fill_keys(array_keys($categoriesConfig), []);
-
 $total_rentrees = 0;
 $depenses_reelles = 0;
 
 foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
     if (!isset($totals[$cat])) $cat = 'Autres';
-    
     $val = (float)$exp['amount'];
     
     if ($cat === 'Income') { $totals[$cat] += $val; } 
@@ -286,28 +277,26 @@ foreach ($allExpenses as $exp) {
     }
 }
 
-// 1. École
+// Reste à venir dynamiques
 $ecole_depense = isset($totals['School']) ? $totals['School'] : 0;
 $reste_ecole = max(0, $budget_school - $ecole_depense);
 if ($reste_ecole > 0) {
     $reste_a_venir_calc += $reste_ecole;
-    $pending_charges[] = ['name' => 'École (Reste estimé)', 'amount' => $reste_ecole];
+    $pending_charges[] = ['name' => tr('bud_rem_school'), 'amount' => $reste_ecole];
 }
 
-// 2. Courses (FMCG)
 $fmcg_depense = isset($totals['FMCG']) ? $totals['FMCG'] : 0;
 $reste_fmcg = max(0, $budget_fmcg - $fmcg_depense);
 if ($reste_fmcg > 0) {
     $reste_a_venir_calc += $reste_fmcg;
-    $pending_charges[] = ['name' => 'Courses (Reste estimé)', 'amount' => $reste_fmcg];
+    $pending_charges[] = ['name' => tr('bud_rem_fmcg'), 'amount' => $reste_fmcg];
 }
 
-// 3. Essence
 $essence_depense = isset($totals['Essence']) ? $totals['Essence'] : 0;
 $reste_essence = max(0, $budget_essence - $essence_depense);
 if ($reste_essence > 0) {
     $reste_a_venir_calc += $reste_essence;
-    $pending_charges[] = ['name' => 'Essence (Reste estimé)', 'amount' => $reste_essence];
+    $pending_charges[] = ['name' => tr('bud_rem_fuel'), 'amount' => $reste_essence];
 }
 
 // F. Calculs des KPIs finaux
@@ -315,7 +304,6 @@ $rentrees_salaires_reels = $totals['Income'] ?? 0;
 $rentrees_autres = $total_rentrees - $rentrees_salaires_reels;
 $salaires_retenus = max($rentrees_salaires_reels, $budget_income_prevu);
 
-// Capacité Max : Solde fin de mois précédent + Salaire retenu + Autres rentrées
 $capacite_max_calc = $solde_initial + $salaires_retenus + $rentrees_autres;
 $solde_theorique_calc = ($solde_initial + $total_rentrees) - $depenses_reelles - $reste_a_venir_calc;
 
@@ -347,8 +335,13 @@ function getDisplayLogic($spent, $bg, $type) {
     return ['pct' => $pct, 'isOver' => $isOver, 'text' => $text];
 }
 
-$moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-$monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
+// Noms des mois traduits
+$monthNames = [
+    1 => tr('month_01'), 2 => tr('month_02'), 3 => tr('month_03'), 4 => tr('month_04'),
+    5 => tr('month_05'), 6 => tr('month_06'), 7 => tr('month_07'), 8 => tr('month_08'),
+    9 => tr('month_09'), 10 => tr('month_10'), 11 => tr('month_11'), 12 => tr('month_12')
+];
+$monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 ?>
 
 <div class="budget-view">
@@ -357,37 +350,37 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
         
         <?php if ($isClosed): ?>
             <div style="position:absolute; top:0; left:0; right:0; background:#f1f5f9; padding:5px; text-align:center; font-size:0.8rem; font-weight:bold; color:#64748b; border-radius:16px 16px 0 0; border-bottom:1px solid #e2e8f0;">
-                🔒 Ce mois est clôturé et archivé.
+                🔒 <?= tr('bud_closed_archived') ?>
             </div>
             <div style="height:20px;"></div>
         <?php endif; ?>
 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom: 20px;">
             <div style="display:flex; align-items:center; gap:15px;">
-                <h2 style="margin:0; font-size:1.3rem; color:#0f172a; text-transform:capitalize;">Budget : <?= $monthName ?></h2>
+                <h2 style="margin:0; font-size:1.3rem; color:#0f172a; text-transform:capitalize;"><?= tr('bud_budget_of') ?> <?= $monthName ?></h2>
             </div>
             
             <div style="display:flex; gap:10px;">
                 <?php if (!$isClosed): ?>
-                    <form method="POST" onsubmit="return confirm('Clôturer ce mois ? Cela figera les soldes actuels et basculera le suivi par défaut sur le mois prochain.');">
+                    <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_close') ?>');">
                         <input type="hidden" name="action" value="close_month">
                         <input type="hidden" name="close_month_date" value="<?= $viewMonthDate ?>">
                         <input type="hidden" name="freeze_solde_actuel" value="<?= $solde_actuel ?>">
                         <input type="hidden" name="freeze_capacite_max" value="<?= $capacite_max ?>">
                         <input type="hidden" name="freeze_solde_theorique" value="<?= $solde_theorique ?>">
                         <input type="hidden" name="freeze_reste_a_venir" value="<?= $reste_a_venir ?>">
-                        <button type="submit" class="pf-btn" style="background:linear-gradient(135deg, #10b981, #059669); padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">🔒 Clôturer</button>
+                        <button type="submit" class="pf-btn" style="background:linear-gradient(135deg, #10b981, #059669); padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">🔒 <?= tr('bud_close_btn') ?></button>
                     </form>
                 <?php else: ?>
-                    <form method="POST" onsubmit="return confirm('Rouvrir ce mois ? Ses soldes seront recalculés en direct.');">
+                    <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_reopen') ?>');">
                         <input type="hidden" name="action" value="reopen_month">
-                        <button type="submit" class="pf-btn btn-secondary" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">🔓 Rouvrir</button>
+                        <button type="submit" class="pf-btn btn-secondary" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">🔓 <?= tr('bud_reopen_btn') ?></button>
                     </form>
                 <?php endif; ?>
 
                 <div class="suivi-nav-group">
                     <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
-                    <a href="<?= $defaultLink ?>" class="suivi-btn-nav">Mois Actif</a>
+                    <a href="<?= $defaultLink ?>" class="suivi-btn-nav"><?= tr('bud_active_month_btn') ?></a>
                     <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
                 </div>
             </div>
@@ -395,17 +388,17 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:25px;">
             <div style="padding:15px; background:#f8fafc; border-radius:12px; position:relative; border:1px solid #e2e8f0;">
-                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde bancaire <?= $isClosed ? "(Figé)" : "(Actuel)" ?></div>
+                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;"><?= tr('bud_bank_balance') ?> <?= $isClosed ? "(".tr('bud_frozen').")" : "(".tr('bud_current').")" ?></div>
                 <div style="font-size:1.4rem; font-weight:700; color:#0f172a;">
                     <?= number_format($solde_actuel, 2, ',', ' ') ?> €
                 </div>
                 <?php if (!$isClosed): ?>
-                    <button onclick="openSuiviModal('snapshotModal')" style="position:absolute; top:12px; right:12px; background:white; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:0.8rem; color:#475569; transition:0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">✏️ MàJ</button>
+                    <button onclick="openSuiviModal('snapshotModal')" style="position:absolute; top:12px; right:12px; background:white; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:0.8rem; color:#475569; transition:0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">✏️ <?= tr('bud_update_btn') ?></button>
                 <?php endif; ?>
             </div>
 
             <div style="padding:15px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
-                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;">Solde théorique fin de mois</div>
+                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;"><?= tr('bud_theoretical_balance') ?></div>
                 <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;">
                     <?= number_format($solde_theorique, 2, ',', ' ') ?> €
                 </div>
@@ -413,7 +406,7 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
 
             <div style="padding:15px; background:#fef2f2; border-radius:12px; border:1px solid #fecaca; position: relative;">
                 <div style="font-size:0.85rem; color:#991b1b; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>Charges à venir</span>
+                    <span><?= tr('bud_upcoming_charges') ?></span>
                     <button onclick="toggleDiv('pendingDetailsList')" style="background:none; border:none; cursor:pointer; font-size:1rem; padding:0; filter: grayscale(1); opacity: 0.7; transition: 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">👁️</button>
                 </div>
                 <div style="font-size:1.4rem; font-weight:700; color:#b91c1c;">
@@ -421,7 +414,7 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
                 </div>
                 <div id="pendingDetailsList" style="display:none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #fca5a5; font-size: 0.8rem; color: #7f1d1d;">
                     <?php if (empty($pending_charges)): ?>
-                        <div style="text-align:center; font-style:italic; opacity:0.8;">Tout est payé !</div>
+                        <div style="text-align:center; font-style:italic; opacity:0.8;"><?= tr('bud_all_paid') ?></div>
                     <?php else: ?>
                         <?php foreach($pending_charges as $pc): ?>
                             <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
@@ -438,12 +431,12 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
             <div style="position: absolute; top: 0px; left: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700;">0 €</div>
             
             <div style="position: absolute; top: 0px; right: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700; text-align:right; cursor:help;" 
-                 title="Calcul : Report Mois Précédent (<?= number_format($solde_initial, 0) ?>€) + Salaires (<?= number_format($salaires_retenus, 0) ?>€) + Autres rentrées (<?= number_format($rentrees_autres, 0) ?>€)">
-                Capacité Max : <?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
+                 title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">
+                <?= tr('bud_max_capacity') ?> : <?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
             </div>
 
             <div style="position: absolute; top: 12px; left: <?= $pct_actuel ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
-                <div style="color: #334155; font-size: 0.75rem; font-weight: 800; white-space: nowrap; margin-bottom: 2px;">Actuel</div>
+                <div style="color: #334155; font-size: 0.75rem; font-weight: 800; white-space: nowrap; margin-bottom: 2px;"><?= tr('bud_actual') ?></div>
                 <div style="width: 3px; height: 18px; background: #334155; margin: 0 auto; border-radius: 2px;"></div>
             </div>
             <div style="height: 24px; background: #e2e8f0; border-radius: 12px; display: flex; overflow: hidden; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
@@ -452,37 +445,37 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
             </div>
             <div style="position: absolute; top: 54px; left: <?= $pct_theorique ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
                 <div style="width: 3px; height: 18px; background: #8b5cf6; margin: 0 auto 2px auto; border-radius: 2px;"></div>
-                <div style="color: #8b5cf6; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">Théorique</div>
+                <div style="color: #8b5cf6; font-size: 0.75rem; font-weight: 800; white-space: nowrap;"><?= tr('bud_theoretical') ?></div>
             </div>
         </div>
     </div>
 
     <?php if (!$isClosed): ?>
         <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <button class="pf-btn btn-secondary" onclick="toggleDiv('importCsvForm')">📂 Importer CSV</button>
+            <button class="pf-btn btn-secondary" onclick="toggleDiv('importCsvForm')">📂 <?= tr('bud_import_csv') ?></button>
         </div>
 
         <div id="importCsvForm" style="display:<?= $showPreview ? 'block' : 'none' ?>; background:#f8fafc; padding:20px; border-radius:12px; margin-bottom:20px;">
             <?php if (!$showPreview): ?>
                 <form method="POST" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
                     <div style="flex:1; min-width:250px;">
-                        <label class="pf-label">Fichier CSV (Point-virgule)</label>
+                        <label class="pf-label"><?= tr('bud_csv_file') ?></label>
                         <input type="file" name="csv_file" accept=".csv" class="pf-input">
                     </div>
-                    <button type="submit" class="pf-btn" style="width:auto;">Prévisualiser</button>
+                    <button type="submit" class="pf-btn" style="width:auto;"><?= tr('bud_preview') ?></button>
                 </form>
             <?php else: ?>
                 <form method="POST" id="formMapping">
                     <input type="hidden" name="action" value="save_import">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                        <h3 style="margin:0;">Valider l'importation</h3>
+                        <h3 style="margin:0;"><?= tr('bud_validate_import') ?></h3>
                         <span id="missingCount" style="color:#ef4444; background:#fee2e2; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; display:none;"></span>
                     </div>
 
                     <div style="max-height:350px; overflow-y:auto; background:white; border:1px solid #eee; border-radius:8px;">
                         <table class="pf-table" style="margin:0;">
                             <thead style="position:sticky; top:0; z-index:10;">
-                                <tr><th><input type="checkbox" onclick="toggleAll(this)" checked></th><th>Imputer au mois</th><th>Date Opération</th><th>Libellé</th><th>Montant</th><th>Catégorie</th></tr>
+                                <tr><th><input type="checkbox" onclick="toggleAll(this)" checked></th><th><?= tr('bud_assign_month') ?></th><th><?= tr('bud_op_date') ?></th><th><?= tr('bud_label') ?></th><th><?= tr('bud_amount') ?></th><th><?= tr('bud_category') ?></th></tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($csvData as $idx => $row): 
@@ -507,17 +500,17 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
                                     <td>
                                         <div style="display:flex; gap:5px;">
                                             <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="flex:1;">
-                                                <option value="">-- <?= $isCrd ? 'Ignorer' : 'À définir' ?> --</option>
+                                                <option value="">-- <?= $isCrd ? tr('bud_ignore') : tr('bud_to_define') ?> --</option>
                                                 <?php foreach ($categoriesConfig as $k => $c): ?>
                                                     <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                             <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="display:none; flex:1;" disabled>
-                                                <option value="">-- Charge ? --</option>
+                                                <option value="">-- <?= tr('bud_is_charge') ?> --</option>
                                                 <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
                                             </select>
                                             <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-income" onchange="checkValidation()" style="display:none; flex:1;" disabled>
-                                                <option value="">-- Revenu ? --</option>
+                                                <option value="">-- <?= tr('bud_is_income') ?> --</option>
                                                 <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
                                             </select>
                                         </div>
@@ -528,8 +521,8 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
                         </table>
                     </div>
                     <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:10px;">
-                        <a href="?tab=suivi" class="pf-btn btn-secondary" style="width:auto;">Annuler</a>
-                        <button type="submit" id="btnImport" class="pf-btn" style="width:auto;">Importer</button>
+                        <a href="?tab=suivi" class="pf-btn btn-secondary" style="width:auto;"><?= tr('btn_cancel') ?></a>
+                        <button type="submit" id="btnImport" class="pf-btn" style="width:auto;"><?= tr('btn_import') ?></button>
                     </div>
                 </form>
             <?php endif; ?>
@@ -558,7 +551,7 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
 
             <div style="flex:1; max-height:300px; overflow-y:auto; padding:0;">
                 <?php if (empty($expensesByCategory[$key])): ?>
-                    <div style="padding:20px; text-align:center; color:#cbd5e1; font-style:italic; font-size:0.85rem;">Aucune ligne.</div>
+                    <div style="padding:20px; text-align:center; color:#cbd5e1; font-style:italic; font-size:0.85rem;"><?= tr('bud_no_lines') ?></div>
                 <?php else: ?>
                     <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
                         <?php foreach ($expensesByCategory[$key] as $exp): ?>
@@ -572,8 +565,8 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
                             </td>
                             <?php if (!$isClosed): ?>
                                 <td style="width:60px; padding-right:10px; text-align:right; white-space:nowrap;">
-                                    <button onclick='openEditModal(<?= json_encode($exp) ?>)' style="background:none; border:none; cursor:pointer; font-size:1rem; margin-right:8px;">✏️</button>
-                                    <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('Supprimer ?')" style="color:#ef4444; text-decoration:none; font-size:1.4rem;">&times;</a>
+                                    <button onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' style="background:none; border:none; cursor:pointer; font-size:1rem; margin-right:8px;">✏️</button>
+                                    <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('<?= tr('bud_confirm_delete') ?>')" style="color:#ef4444; text-decoration:none; font-size:1.4rem;">&times;</a>
                                 </td>
                             <?php endif; ?>
                         </tr>
@@ -589,25 +582,25 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
 <div id="manualExpenseModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:400px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0;" id="modalTitle">Nouvelle transaction</h3>
-            <button type="button" onclick="closeSuiviModal('manualExpenseModal')" style="border:none; background:none; font-size:1.8rem; cursor:pointer;">&times;</button>
+            <h3 style="margin:0;" id="modalTitle"><?= tr('bud_new_transaction') ?></h3>
+            <button type="button" onclick="closeSuiviModal('manualExpenseModal')" class="pf-modal-close">&times;</button>
         </div>
         <form method="POST">
             <input type="hidden" name="action" value="save_expense_manual">
             <input type="hidden" name="expense_id" id="modalExpenseId">
             
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Imputer au mois de gestion :</label>
+                <label class="pf-label"><?= tr('bud_assign_to_month') ?> :</label>
                 <input type="month" name="gestion_month" id="modalGestionMonth" class="pf-input" style="font-weight:bold; color:#2563eb;" required>
             </div>
 
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Date réelle de l'opération</label>
+                <label class="pf-label"><?= tr('bud_real_date') ?></label>
                 <input type="date" name="date" id="modalDate" class="pf-input" required>
             </div>
             
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Catégorie</label>
+                <label class="pf-label"><?= tr('bud_category') ?></label>
                 <select name="category" id="modalCatSelect" class="pf-input" onchange="handleModalCatChange(this)">
                     <?php foreach($categoriesConfig as $key => $conf): ?>
                         <option value="<?= $key ?>"><?= $conf['label'] ?></option>
@@ -616,21 +609,21 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
             </div>
 
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Type</label>
+                <label class="pf-label"><?= tr('bud_type') ?></label>
                 <select name="is_credit" id="modalIsCredit" class="pf-input">
-                    <option value="0">Dépense (-)</option>
-                    <option value="1">Revenu / Remboursement (+)</option>
+                    <option value="0"><?= tr('bud_type_expense') ?> (-)</option>
+                    <option value="1"><?= tr('bud_type_income') ?> (+)</option>
                 </select>
             </div>
             
             <div class="form-group" id="blockInputText" style="margin-bottom:15px;">
-                <label class="pf-label">Libellé</label>
+                <label class="pf-label"><?= tr('bud_label') ?></label>
                 <input type="text" name="label" class="pf-input" id="modalLabelInput" list="modalSuggestions" autocomplete="off">
                 <datalist id="modalSuggestions"></datalist>
             </div>
 
             <div class="form-group" id="blockInputSelect" style="margin-bottom:15px; display:none;">
-                <label class="pf-label">Bénéficiaire</label>
+                <label class="pf-label"><?= tr('bud_beneficiary') ?></label>
                 <select name="label_select" id="schoolSelect" class="pf-input">
                     <option value="Ecole Pol">Ecole Pol</option>
                     <option value="Carole">Carole</option>
@@ -638,7 +631,7 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
             </div>
 
             <div class="form-group" id="blockInputFrais" style="margin-bottom:15px; display:none;">
-                <label class="pf-label">Charge Fixe</label>
+                <label class="pf-label"><?= tr('bud_fixed_charge') ?></label>
                 <select name="budget_item_id" id="fraisSelect" class="pf-input" disabled>
                     <option value="">-- Sélectionner --</option>
                     <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
@@ -646,7 +639,7 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
             </div>
 
             <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
-                <label class="pf-label">Revenu Attendu</label>
+                <label class="pf-label"><?= tr('bud_expected_income') ?></label>
                 <select name="budget_item_id" id="incomeSelect" class="pf-input" disabled>
                     <option value="">-- Sélectionner --</option>
                     <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
@@ -654,13 +647,13 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
             </div>
             
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Montant (€)</label>
+                <label class="pf-label"><?= tr('bud_amount_eur') ?></label>
                 <input type="number" step="0.01" name="amount" id="modalAmount" class="pf-input" placeholder="0.00" required>
             </div>
 
-            <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" onclick="closeSuiviModal('manualExpenseModal')" class="pf-btn btn-secondary" style="width:auto;">Annuler</button>
-                <button type="submit" class="pf-btn" style="width:auto;">Enregistrer</button>
+            <div class="modal-footer">
+                <button type="button" onclick="closeSuiviModal('manualExpenseModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
@@ -668,14 +661,14 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
 
 <div id="snapshotModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:350px;">
-        <h3 style="margin-top:0;">MàJ Solde Bancaire</h3>
+        <h3 style="margin-top:0;"><?= tr('bud_update_balance') ?></h3>
         <form method="POST">
             <input type="hidden" name="action" value="save_snapshot">
             <input type="date" name="snapshot_date" class="pf-input" value="<?= date('Y-m-d') ?>" style="margin-bottom:10px;" required>
-            <input type="number" step="0.01" name="snapshot_amount" class="pf-input" placeholder="Solde (€)" style="margin-bottom:15px;" required>
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn btn-secondary" style="width:auto;">Annuler</button>
-                <button type="submit" class="pf-btn" style="width:auto;">Sauvegarder</button>
+            <input type="number" step="0.01" name="snapshot_amount" class="pf-input" placeholder="<?= tr('bud_balance_eur') ?>" style="margin-bottom:15px;" required>
+            <div class="modal-footer">
+                <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
@@ -684,14 +677,13 @@ $monthName = $moisFr[(int)$viewM] . ' ' . $viewY;
 <script>
 const activeViewMonth = '<?= substr($viewMonthDate, 0, 7) ?>';
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
-function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'; }
-function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; }
+function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'; document.body.classList.add('no-scroll'); }
+function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; document.body.classList.remove('no-scroll');}
 
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
 
 function handleModalCatChange(select) {
     const catKey = select.value;
-    const catText = select.options[select.selectedIndex].text.toLowerCase();
     
     document.getElementById('blockInputText').style.display = 'none';
     document.getElementById('blockInputSelect').style.display = 'none';
@@ -716,10 +708,10 @@ function handleModalCatChange(select) {
 
 function openAddModal(catKey, catLabel) {
     openSuiviModal('manualExpenseModal');
-    document.getElementById('modalTitle').innerText = "Ajouter : " + catLabel;
+    document.getElementById('modalTitle').innerText = "<?= tr('bud_add_title') ?> : " + catLabel;
     document.getElementById('modalExpenseId').value = ""; 
     document.getElementById('modalDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('modalGestionMonth').value = activeViewMonth; // Force le mois de gestion actuel
+    document.getElementById('modalGestionMonth').value = activeViewMonth; 
     document.getElementById('modalLabelInput').value = "";
     document.getElementById('modalAmount').value = "";
     const catSelect = document.getElementById('modalCatSelect'); catSelect.value = catKey; handleModalCatChange(catSelect);
@@ -728,7 +720,7 @@ function openAddModal(catKey, catLabel) {
 
 function openEditModal(e) {
     openSuiviModal('manualExpenseModal');
-    document.getElementById('modalTitle').innerText = "Modifier la transaction";
+    document.getElementById('modalTitle').innerText = "<?= tr('bud_edit_title') ?>";
     document.getElementById('modalExpenseId').value = e.id;
     document.getElementById('modalDate').value = e.date_exp;
     document.getElementById('modalGestionMonth').value = e.gestion_month ? e.gestion_month.substring(0, 7) : activeViewMonth;
@@ -748,7 +740,9 @@ function handleLineCatChange(select) {
     else if (select.value === 'Income') { iSel.style.display = 'block'; iSel.disabled = false; }
     checkValidation();
 }
+
 function toggleAll(src) { document.querySelectorAll('.line-checkbox:not([disabled])').forEach(c => c.checked = src.checked); checkValidation(); }
+
 function checkValidation() {
     let miss = 0;
     document.querySelectorAll('.line-checkbox:checked').forEach(cb => { 
@@ -757,8 +751,9 @@ function checkValidation() {
         if (!v) { miss++; row.style.background = '#fff1f2'; } else row.style.background = '';
     });
     const btn = document.getElementById('btnImport'); const msg = document.getElementById('missingCount');
-    if(miss>0) { btn.disabled = true; btn.style.opacity=0.5; msg.style.display='inline'; msg.innerText=miss+' à définir'; } 
+    if(miss>0) { btn.disabled = true; btn.style.opacity=0.5; msg.style.display='inline'; msg.innerText = miss + ' <?= tr('bud_to_define_js') ?>'; } 
     else { btn.disabled = false; btn.style.opacity=1; msg.style.display='none'; }
 }
+
 if(document.getElementById('formMapping')) { document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s)); checkValidation(); }
 </script>

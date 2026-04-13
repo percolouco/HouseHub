@@ -32,10 +32,12 @@ function openHolidayModal(mode) {
   document.getElementById("list_activity").innerHTML = "";
 
   if (mode === "add") {
-    document.getElementById("modalTitle").innerText = tr("modal_plan_trip");
+    document.getElementById("modalTitle").innerText = tr("hdl_modal_title");
     btnDelete.style.display = "none";
   } else {
-    document.getElementById("modalTitle").innerText = tr("modal_quick_edit");
+    document.getElementById("modalTitle").innerText = tr(
+      "hdl_quick_edit_title",
+    );
     btnDelete.style.display = "block";
   }
 
@@ -120,23 +122,14 @@ function addItem(category, name = "", amount = "", isPaid = 0) {
 
   div.innerHTML = `
         <input type="hidden" name="items[cat][]" value="${category}">
-        
-        <input type="text" name="items[name][]" class="pf-input" 
-               placeholder="${tr("placeholder_title")}" value="${name}" 
-               style="flex: 2; padding: 8px; font-size:0.9rem;" required>
-               
-        <input type="number" step="0.01" name="items[amount][]" class="pf-input" 
-               placeholder="${tr("placeholder_price")}" value="${amount}" 
-               style="width: 80px; text-align: right; padding: 8px; font-size:0.9rem;">
-               
-        <label title="${tr("already_paid")}" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
+        <input type="text" name="items[name][]" class="pf-input" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}" style="flex: 2; padding: 8px; font-size:0.9rem;" required>
+        <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width: 80px; text-align: right; padding: 8px; font-size:0.9rem;">
+        <label title="${tr("hdl_paid")}" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
             <input type="checkbox" ${checkedAttr} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
             <input type="hidden" name="items[paid][]" value="${isPaid}">
-            <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">${tr("paid")}</span>
+            <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">${tr("hdl_paid")}</span>
         </label>
-        
-        <button type="button" onclick="this.parentElement.remove()" title="${tr("remove_line")}" 
-                style="width: 28px; height: 28px; border: none; background: #fee2e2; color: #ef4444; border-radius: 6px; cursor: pointer; font-weight: bold; display:flex; align-items:center; justify-content:center;">
+        <button type="button" onclick="this.parentElement.remove()" title="${tr("btn_delete")}" style="width: 28px; height: 28px; border: none; background: #fee2e2; color: #ef4444; border-radius: 6px; cursor: pointer; font-weight: bold; display:flex; align-items:center; justify-content:center;">
             &times;
         </button>
     `;
@@ -145,7 +138,7 @@ function addItem(category, name = "", amount = "", isPaid = 0) {
 }
 
 function deleteHoliday() {
-  if (!confirm(tr("confirm_delete_trip"))) return;
+  if (!confirm(tr("hdl_js_confirm_del_trip"))) return;
   const form = document.getElementById("holidayForm");
   const input = document.createElement("input");
   input.type = "hidden";
@@ -161,6 +154,7 @@ let map = null;
 
 function toggleMap() {
   const modal = document.getElementById("hol-map-modal");
+  if (!modal) return;
   if (modal.style.display === "flex") {
     modal.style.display = "none";
   } else {
@@ -246,7 +240,7 @@ function initDetailMap() {
 
     marker.bindPopup(`
             <div style="text-align:center;">
-                <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">${tr("step_number")} ${index + 1}</div>
+                <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">${tr("hdl_js_step_label")} ${index + 1}</div>
                 <strong style="font-size:1rem; color:#0f172a;">${pt.location_name}</strong><br>
                 <span style="font-weight:bold; color:${color};">${parseFloat(pt.total_amount).toFixed(2)} €</span>
             </div>
@@ -358,7 +352,6 @@ function openCheckpointModal(mode, data = null) {
 
   container.innerHTML = "";
 
-  // Nettoyage des champs de date et de la barre de recherche
   if (document.getElementById("cp_start_date"))
     document.getElementById("cp_start_date").value = "";
   if (document.getElementById("cp_end_date"))
@@ -366,11 +359,10 @@ function openCheckpointModal(mode, data = null) {
   document.getElementById("searchPlaceInput").value = "";
   document.getElementById("searchResults").innerHTML = "";
 
-  // MODIFICATION : La barre de recherche (et les favoris) est TOUJOURS visible !
   searchBlock.style.display = "block";
 
   if (mode === "add") {
-    document.getElementById("cpModalTitle").innerText = tr("place_new_step");
+    document.getElementById("cpModalTitle").innerText = tr("hdl_btn_add_step");
     formBlock.style.display = "none";
     btnDel.style.display = "none";
     document.getElementById("cp_old_sort_order").value = "";
@@ -378,7 +370,7 @@ function openCheckpointModal(mode, data = null) {
     addCpExpenseLine();
     document.getElementById("cp_is_return").checked = false;
   } else if (mode === "edit" && data) {
-    document.getElementById("cpModalTitle").innerText = tr("edit_step");
+    document.getElementById("cpModalTitle").innerText = tr("hdl_js_edit_step");
     formBlock.style.display = "block";
     btnDel.style.display = "block";
 
@@ -422,7 +414,7 @@ function searchPlace() {
   if (q.length < 3) return;
 
   const resultsDiv = document.getElementById("searchResults");
-  resultsDiv.innerHTML = `<span style="color:#64748b; font-size:0.85rem;">${tr("search_in_progress")}</span>`;
+  resultsDiv.innerHTML = `<span style="color:#64748b; font-size:0.85rem;">${tr("hdl_js_search_loading")}</span>`;
 
   fetch(
     "/modules/holidays/includes/api/geocode.php?limit=5&q=" +
@@ -432,7 +424,7 @@ function searchPlace() {
     .then((data) => {
       resultsDiv.innerHTML = "";
       if (data.error || !data.results || data.results.length === 0) {
-        resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">${tr("no_result_found")}</span>`;
+        resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">${tr("hdl_js_no_result")}</span>`;
         return;
       }
       data.results.forEach((place) => {
@@ -449,7 +441,7 @@ function searchPlace() {
       });
     })
     .catch((err) => {
-      resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">${tr("network_error")}</span>`;
+      resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">${tr("hdl_js_network_error")}</span>`;
     });
 }
 
@@ -478,23 +470,23 @@ function addCpExpenseLine(
 
   div.innerHTML = `
         <div class="hol-form-inner">
-            <select name="items[cat][]" class="pf-input hol-form-select" title="${tr("category")}">
+            <select name="items[cat][]" class="pf-input hol-form-select">
                 <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
-            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("placeholder_label")}" value="${name}">
+            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}">
             <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
-            <label class="hol-form-paid-label" title="${tr("already_paid")}">
+            <label class="hol-form-paid-label" title="${tr("hdl_paid")}">
                 <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
-                <span class="hol-form-paid-text">${tr("paid")}</span>
+                <span class="hol-form-paid-text">${tr("hdl_paid")}</span>
             </label>
             <button type="button" class="btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">&times;</button>
         </div>
         <div class="hol-form-subrow">
-            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("placeholder_notes_link")}" value="${notes}">
+            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("hdl_ph_notes")}" value="${notes}">
         </div>
         <input type="hidden" name="items[id][]" value="${itemId}">
         <input type="hidden" name="items[date][]" value="${itemDate}">
@@ -505,7 +497,7 @@ function addCpExpenseLine(
 }
 
 function deleteCheckpoint() {
-  if (!confirm(tr("confirm_delete_step"))) return;
+  if (!confirm(tr("hdl_js_confirm_del_step"))) return;
   const form = document.getElementById("formCheckpoint");
   const input = document.createElement("input");
   input.type = "hidden";
@@ -592,16 +584,21 @@ document.addEventListener("DOMContentLoaded", () => {
 // ============================================================================
 let selectedItemIdForMove = null;
 
+function closePlanningModal() {
+  document.getElementById("planningModal").style.display = "none";
+  document.body.classList.remove("no-scroll");
+}
+
 function openPlanningModal(step) {
   document.getElementById("planningModalTitle").innerText =
-    tr("planning_of") + step.location_name;
+    tr("hdl_planning_title") + " : " + step.location_name;
   const container = document.getElementById("planningContainer");
   selectedItemIdForMove = null;
 
   let validItems = step.items.filter((it) => it.name !== "PF_TECHNICAL_POINT");
 
   if (!step.step_start_date || !step.step_end_date) {
-    container.innerHTML = `<div style="text-align:center; padding:40px;"><h3>${tr("missing_dates_title")}</h3><p style="color:#64748b;">${tr("missing_dates_msg")}</p></div>`;
+    container.innerHTML = `<div style="text-align:center; padding:40px;"><h3>${tr("hdl_js_missing_dates_title")}</h3><p style="color:#64748b;">${tr("hdl_js_missing_dates_msg")}</p></div>`;
     document.getElementById("planningModal").style.display = "flex";
     return;
   }
@@ -619,15 +616,13 @@ function openPlanningModal(step) {
             <div class="hol-unmapped-zone" id="unmapped-pool" 
                  ondragover="allowDrop(event)" ondrop="handleDropEvent(event, '', '')"
                  onclick="handleZoneTap(event, '', '')">
-                <div class="hol-unmapped-title" style="width:100%;">📥 ${tr("to_place")}</div>
+                <div class="hol-unmapped-title" style="width:100%;">📥 ${tr("hdl_to_place")}</div>
             </div>
             <div class="hol-calendar-zone">
     `;
 
   datesToDisplay.forEach((dateStr) => {
     const dObj = new Date(dateStr);
-
-    // NOUVEAU : On utilise la langue actuelle du navigateur pour traduire les jours !
     const dayName = dObj.toLocaleDateString(currentLang, { weekday: "short" });
     const dayNum = dObj.toLocaleDateString(currentLang, {
       day: "numeric",

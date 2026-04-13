@@ -36,7 +36,6 @@ $nextMonthLink = date('Y-m-01', strtotime("+1 month", $focusTs));
 $cycleConfigs = [];
 $stmtNotes = $pdo->query("SELECT reference_id, content FROM pf_notes WHERE note_type = 'month_config'");
 while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
-    // Convertit "03-2026" en "2026-03-01" (Notre Tiroir)
     $parts = explode('-', $row['reference_id']);
     if (count($parts) == 2) {
         $mKey = $parts[1] . '-' . $parts[0] . '-01';
@@ -81,25 +80,32 @@ $currentNote = $stmtNote->fetchColumn();
 
 // 7. Récupération des vacances actives
 $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN ('draft', 'planned', 'booked') ORDER BY start_date ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+// Helper function pour les mois
+function getTranslatedMonthName($dateString) {
+    $m = date('m', strtotime($dateString));
+    $y = date('Y', strtotime($dateString));
+    return tr('month_' . $m) . ' ' . $y;
+}
 ?>
 
 <div class="prev-container">
 
     <div>
         <div class="prev-section-header">
-            <h2>Revenus <?= $currentYear ?></h2>
+            <h2><?= tr('bud_prev_incomes') ?> <?= $currentYear ?></h2>
         </div>
         
         <table class="prev-salary-table">
             <thead>
                 <tr>
-                    <th>Personne</th>
-                    <th>Salaire</th>
-                    <th>Mensualité<br><small style="font-weight:normal; text-transform:none;">(Cpt Commun)</small></th>
-                    <th>Frais Func.</th>
-                    <th>Eco Perso</th>
-                    <th style="background:#f0f9ff; color:#0284c7;">Eco Family<br><small style="font-weight:normal; text-transform:none;">(Dispo)</small></th>
-                    <th>Restant Perso</th>
+                    <th><?= tr('bud_prev_person') ?></th>
+                    <th><?= tr('bud_prev_salary') ?></th>
+                    <th><?= tr('bud_prev_monthly_payment') ?><br><small style="font-weight:normal; text-transform:none;">(<?= tr('bud_prev_joint_account') ?>)</small></th>
+                    <th><?= tr('bud_prev_func_expenses') ?></th>
+                    <th><?= tr('bud_prev_perso_savings') ?></th>
+                    <th style="background:#f0f9ff; color:#0284c7;"><?= tr('bud_prev_family_savings') ?><br><small style="font-weight:normal; text-transform:none;">(<?= tr('bud_prev_available') ?>)</small></th>
+                    <th><?= tr('bud_prev_perso_remaining') ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -124,8 +130,6 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                     </td>
                 </tr>
                 <?php endforeach; ?>
-                    
-
             </tbody>
         </table>
     </div>
@@ -133,20 +137,19 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
     <div>
         <div class="prev-section-header">
             <div style="display:flex; gap:10px; align-items:center;">
-                <h2>Répartition Budgétaire</h2>
+                <h2><?= tr('bud_prev_budget_alloc') ?></h2>
                 <div class="nav-group">
                     <a href="?tab=budget_prev&focus_date=<?= $prevMonthLink ?>" class="btn-nav">◀</a>
-                    <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav">Auj.</a>
+                    <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav"><?= tr('bud_prev_today') ?></a>
                     <a href="?tab=budget_prev&focus_date=<?= $nextMonthLink ?>" class="btn-nav">▶</a>
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
                 <button class="pf-btn btn-secondary" onclick="duplicateMonth()">
-                    🔁 +1 Mois
+                    🔁 <?= tr('bud_sav_add_one_month') ?>
                 </button>
-                
-                <button class="pf-btn" onclick="document.getElementById('addCatModal').style.display='flex'">
-                    ＋ Nouvelle Ligne
+                <button class="pf-btn" onclick="document.getElementById('addCatModal').style.display='flex'; document.body.classList.add('no-scroll');">
+                    ＋ <?= tr('bud_prev_new_line') ?>
                 </button>
             </div>
         </div>
@@ -161,21 +164,18 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                             $cls = $isCurrent ? 'current' : '';
                         ?>
                             <th colspan="3" class="th-month <?= $cls ?>">
-                                <?= date('F Y', strtotime($month)) ?>
+                                <span style="text-transform:capitalize;"><?= getTranslatedMonthName($month) ?></span>
                                 <?php 
-                                // AFFICHAGE DU CYCLE CONFIGURÉ
                                 if (isset($cycleConfigs[$month]) && !empty($cycleConfigs[$month]['start_date'])) {
                                     $cStart = date('d/m', strtotime($cycleConfigs[$month]['start_date']));
-                                    echo "<div style='font-size:0.75rem; font-weight:normal; color:#64748b; margin-top:2px;'>Dès le $cStart</div>";
+                                    echo "<div style='font-size:0.75rem; font-weight:normal; color:#64748b; margin-top:2px;'>" . sprintf(tr('bud_sav_from_date'), $cStart) . "</div>";
                                 }
                                 ?>
                             </th>
                         <?php endforeach; ?>
                     </tr>
                     <tr>
-                        <th class="col-sticky header-cell">
-                            
-                        </th>
+                        <th class="col-sticky header-cell"></th>
                         <?php foreach ($months as $month): ?>
                             <th class="th-sub">Global</th>
                             <th class="th-sub txt-alex">Alex</th>
@@ -194,7 +194,7 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                     </tr>
 
                     <tr class="row-restant">
-                        <td class="col-sticky" style="text-align:right !important;">Restant (Eco Family)</td>
+                        <td class="col-sticky" style="text-align:right !important;"><?= tr('bud_prev_remaining') ?> (Eco Family)</td>
                         <?php foreach ($months as $m): ?>
                             <td style="border-left:2px solid #cbd5e1; background:#e2e8f0;">-</td>
                             <td class="val-ok sum-target" id="restant_alloc_alex_<?= $m ?>">0</td>
@@ -222,7 +222,7 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                         <div class="row-actions">
                             <button type="button" 
                                     class="btn-icon-action edit" 
-                                    title="Modifier"
+                                    title="<?= tr('edit') ?>"
                                     data-id="<?= $cat['id'] ?>"
                                     data-name="<?= htmlspecialchars($cat['name']) ?>" 
                                     data-target="<?= htmlspecialchars($cat['target']) ?>"
@@ -232,8 +232,8 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                             </button>
 
                             <a href="?tab=budget_prev&id=<?= $cat['id'] ?>&action=delete_category" 
-                               onclick="return confirm('Supprimer cette ligne et tout son historique ?')" 
-                               class="btn-icon-action delete" title="Supprimer">
+                               onclick="return confirm('<?= tr('bud_prev_confirm_del_line') ?>')" 
+                               class="btn-icon-action delete" title="<?= tr('delete') ?>">
                                &times;
                             </a>
                         </div>
@@ -269,34 +269,32 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
     </div>
 
     <div style="margin: 20px 0; background: white; padding: 20px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid #e2e8f0;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">
-            📝 Notes pour <?= date('F Y', strtotime($focusDate)) ?>
-        </h3>
-        <span id="note-save-indicator" style="font-size:0.85rem; color:#10b981; font-weight:bold; opacity:0; transition:opacity 0.3s;">
-            ✓ Enregistré
-        </span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">
+                📝 <?= tr('bud_prev_notes_for') ?> <span style="text-transform:capitalize;"><?= getTranslatedMonthName($focusDate) ?></span>
+            </h3>
+            <span id="note-save-indicator" style="font-size:0.85rem; color:#10b981; font-weight:bold; opacity:0; transition:opacity 0.3s;">
+                ✓ <?= tr('bud_prev_saved') ?>
+            </span>
+        </div>
+        
+        <textarea 
+            id="monthNoteArea" 
+            class="pf-input" 
+            rows="3" 
+            placeholder="<?= tr('bud_prev_notes_ph') ?>" 
+            style="width: 100%; resize: vertical; border-color: #cbd5e1; background: #f8fafc; margin-bottom: 10px;"
+        ><?= htmlspecialchars((string)$currentNote) ?></textarea>
+        
+        <div style="text-align: right;">
+            <button type="button" class="pf-btn" style="width: auto; display: inline-flex;" 
+                    onclick="saveGenericNote('budget_prev', '<?= $focusDate ?>', document.getElementById('monthNoteArea').value)">
+                <?= tr('bud_prev_save_note') ?>
+            </button>
+        </div>
     </div>
-    
-    <textarea 
-        id="monthNoteArea" 
-        class="pf-input" 
-        rows="3" 
-        placeholder="Écrivez vos remarques, rappels ou commentaires pour ce mois ici..." 
-        style="width: 100%; resize: vertical; border-color: #cbd5e1; background: #f8fafc; margin-bottom: 10px;"
-    ><?= htmlspecialchars((string)$currentNote) ?></textarea>
-    
-    <div style="text-align: right;">
-        <button type="button" class="pf-btn" style="width: auto; display: inline-flex;" 
-                onclick="saveGenericNote('budget_prev', '<?= $focusDate ?>', document.getElementById('monthNoteArea').value)">
-            Enregistrer la note
-        </button>
-    </div>
-</div>
-    
 
-
-<?php
+    <?php
     $focusMonth = $months[0]; 
     
     $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
@@ -335,24 +333,24 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
     <div class="recap-wrapper">
         <div class="recap-card">
             <div class="recap-header">
-                Virements à effectuer - <?= date('F Y', strtotime($focusMonth)) ?>
+                <?= tr('bud_prev_transfers_to_make') ?> - <span style="text-transform:capitalize;"><?= getTranslatedMonthName($focusMonth) ?></span>
             </div>
             
             <table class="recap-table">
                 <thead>
                     <tr>
-                        <th style="text-align:left;">Destination</th>
+                        <th style="text-align:left;"><?= tr('bud_prev_destination') ?></th>
                         
                         <th class="col-alex">
                             <div style="display:flex; flex-direction:column; align-items:center; gap:5px;">
                                 <span>ALEX</span>
                                 <?php if($isValidatedAlex): ?>
                                     <div style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.7rem; display:flex; align-items:center; gap:4px;">
-                                        ✓ FAIT
+                                        ✓ <?= tr('bud_prev_done') ?>
                                     </div>
                                 <?php else: ?>
                                     <button onclick="validateTransfers('Alex', '<?= $focusMonth ?>')" class="pf-btn btn-small" style="background:white; color:#0891b2; border:1px solid #0891b2; font-size:0.7rem; padding:2px 8px; height:auto;">
-                                        Valider
+                                        <?= tr('bud_prev_validate') ?>
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -363,11 +361,11 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                                 <span>LAIA</span>
                                 <?php if($isValidatedLaia): ?>
                                     <div style="background:#10b981; color:white; padding:4px 8px; border-radius:4px; font-size:0.7rem; display:flex; align-items:center; gap:4px;">
-                                        ✓ FAIT
+                                        ✓ <?= tr('bud_prev_done') ?>
                                     </div>
                                 <?php else: ?>
                                     <button onclick="validateTransfers('Laia', '<?= $focusMonth ?>')" class="pf-btn btn-small" style="background:white; color:#d97706; border:1px solid #d97706; font-size:0.7rem; padding:2px 8px; height:auto;">
-                                        Valider
+                                        <?= tr('bud_prev_validate') ?>
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -390,7 +388,7 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                 </tbody>
                 <tfoot>
                     <tr class="row-grand-total">
-                        <td>GRAND TOTAL</td>
+                        <td><?= tr('bud_prev_grand_total') ?></td>
                         <td class="col-alex sum-target" id="grand_total_alex">0 €</td>
                         <td class="col-laia sum-target" id="grand_total_laia">0 €</td>
                         <td class="col-global sum-target" id="grand_total_global">0 €</td>
@@ -399,25 +397,24 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
             </table>
         </div>
     </div>
-
 </div>
 
 <div id="addCatModal" class="pf-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15, 23, 42, 0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
     <div class="pf-modal-content" style="background:white; width:95%; max-width:400px; border-radius:20px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); padding:30px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; font-size:1.2rem;">Nouvelle Ligne de Budget</h3>
-            <button onclick="document.getElementById('addCatModal').style.display='none'" style="border:none; background:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+            <h3 class="pf-modal-title" style="margin:0; border:none; font-size:1.2rem;"><?= tr('bud_prev_new_line_title') ?></h3>
+            <button onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');" style="border:none; background:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <form action="/modules/budget/includes/api/save-budget.php" method="POST">
             <input type="hidden" name="action" value="add_category">
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Nom (ex: Vacances)</label>
+                <label class="pf-label"><?= tr('bud_prev_label_name') ?></label>
                 <input type="text" name="name" class="pf-input" required>
             </div>
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Cible (Destination)</label>
+                <label class="pf-label"><?= tr('bud_prev_label_target') ?></label>
                 <select name="target" class="pf-input" required>
-                    <option value="" disabled selected>-- Choisir --</option>
+                    <option value="" disabled selected>-- <?= tr('bud_prev_choose') ?> --</option>
                     <option value="vers L.Pol">vers L.Pol</option>
                     <option value="vers L.Pep">vers L.Pep</option>
                     <option value="vers L.Perso">vers L.Perso</option>
@@ -425,17 +422,17 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                 </select>
             </div>
             <div class="form-group" style="margin-bottom:20px;">
-                <label class="pf-label" style="color:#8b5cf6;">🌴 Lier à un voyage (Optionnel)</label>
+                <label class="pf-label" style="color:#8b5cf6;">🌴 <?= tr('bud_prev_link_holiday') ?></label>
                 <select name="holiday_id" class="pf-input" style="border-color:#8b5cf6; background:#f5f3ff;">
-                    <option value="">-- Ne pas associer --</option>
+                    <option value="">-- <?= tr('bud_prev_no_link') ?> --</option>
                     <?php foreach ($activeHolidays as $hol): ?>
                         <option value="<?= $hol['id'] ?>"><?= htmlspecialchars($hol['title']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="document.getElementById('addCatModal').style.display='none'" class="pf-btn btn-secondary">Annuler</button>
-                <button type="submit" class="pf-btn">Ajouter</button>
+                <button type="button" onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('bud_add_title') ?></button>
             </div>
         </form>
     </div>
@@ -444,19 +441,19 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
 <div id="editCatModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:400px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; font-size:1.2rem;">Modifier la ligne</h3>
-            <button onclick="document.getElementById('editCatModal').style.display='none'" style="border:none; background:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+            <h3 class="pf-modal-title" style="margin:0; border:none; font-size:1.2rem;"><?= tr('bud_prev_edit_line_title') ?></h3>
+            <button onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');" style="border:none; background:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <form action="/modules/budget/includes/api/save-budget.php" method="POST">
             <input type="hidden" name="action" value="update_category">
             <input type="hidden" name="cat_id" id="edit_cat_id">
             
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Nom</label>
+                <label class="pf-label"><?= tr('bud_label_name') ?></label>
                 <input type="text" name="name" id="edit_cat_name" class="pf-input" required>
             </div>
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label">Cible (Destination)</label>
+                <label class="pf-label"><?= tr('bud_prev_label_target') ?></label>
                 <select name="target" id="edit_cat_target" class="pf-input" required>
                     <option value="vers L.Pol">vers L.Pol</option>
                     <option value="vers L.Pep">vers L.Pep</option>
@@ -465,17 +462,17 @@ $activeHolidays = $pdo->query("SELECT id, title FROM pf_holidays WHERE status IN
                 </select>
             </div>
             <div class="form-group" style="margin-bottom:20px;">
-                <label class="pf-label" style="color:#8b5cf6;">🌴 Lier à un voyage (Optionnel)</label>
+                <label class="pf-label" style="color:#8b5cf6;">🌴 <?= tr('bud_prev_link_holiday') ?></label>
                 <select name="holiday_id" id="edit_cat_holiday" class="pf-input" style="border-color:#8b5cf6; background:#f5f3ff;">
-                    <option value="">-- Ne pas associer --</option>
+                    <option value="">-- <?= tr('bud_prev_no_link') ?> --</option>
                     <?php foreach ($activeHolidays as $hol): ?>
                         <option value="<?= $hol['id'] ?>"><?= htmlspecialchars($hol['title']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="document.getElementById('editCatModal').style.display='none'" class="pf-btn btn-secondary">Annuler</button>
-                <button type="submit" class="pf-btn">Enregistrer</button>
+                <button type="button" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
@@ -564,15 +561,28 @@ body.sum-mode-active .sum-target {
 }
 </style>
 
-<button id="fabSumMode" class="pf-fab-sum" onclick="toggleSumMode()" title="Activer l'addition rapide">
+<button id="fabSumMode" class="pf-fab-sum" onclick="toggleSumMode()" title="<?= tr('bud_sav_sum_mode_title') ?>">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="12" y1="8" x2="12" y2="16"></line></svg>
 </button>
 
 <div id="sumResultBar" class="pf-sum-bar">
-    <span class="pf-sum-label">Sélection :</span>
+    <span class="pf-sum-label"><?= tr('bud_sav_selection') ?></span>
     <span id="sumResultValue" class="pf-sum-value">0 €</span>
-    <button onclick="toggleSumMode()" class="pf-sum-close" title="Fermer">&times;</button>
+    <button onclick="toggleSumMode()" class="pf-sum-close" title="<?= tr('btn_close') ?>">&times;</button>
 </div>
+
+<script>
+    window.I18N = {
+        ...window.I18N,
+        'bud_prev_err_no_history': "<?= tr('bud_prev_err_no_history') ?>",
+        'bud_prev_confirm_copy': "<?= tr('bud_prev_confirm_copy') ?>",
+        'bud_prev_confirm_transfers': "<?= tr('bud_prev_confirm_transfers') ?>",
+        'bud_err_tech': "<?= tr('bud_err_tech') ?>"
+    };
+    
+    const currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+</script>
+
 <script>
 function openEditModal(btn) {
     const id = btn.getAttribute('data-id');
@@ -586,6 +596,7 @@ function openEditModal(btn) {
     document.getElementById('edit_cat_holiday').value = holiday; 
     
     document.getElementById('editCatModal').style.display = 'flex';
+    document.body.classList.add('no-scroll');
 }
 
 const currentYear = <?= $currentYear ?>;
@@ -600,7 +611,7 @@ function updateSalary(person, input) {
     const ecoF = parseFloat(row.querySelector('[data-field="eco_family"]').value) || 0;
 
     const restant = salary - (mens + frais + ecoP + ecoF);
-    document.getElementById('restant_' + person).innerText = Math.round(restant).toLocaleString('fr-FR') + ' €';
+    document.getElementById('restant_' + person).innerText = Math.round(restant).toLocaleString(currentLang) + ' €';
 
     saveData('update_salary_config', { year: currentYear, person: person, field: input.dataset.field, value: input.value });
     recalcAllAllocations();
@@ -611,29 +622,24 @@ function updateAlloc(month, catId, personField, input) {
     recalcAllAllocations();
 }
 
-function getMonthName(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR', { month: 'long' }).toUpperCase();
-}
-
 function duplicateMonth() {
     const targetDateStr = months[0];
     const sourceDateStr = months[1];
 
     if (!sourceDateStr) {
-        alert("Impossible : pas d'historique disponible pour copier.");
+        alert(tr("bud_prev_err_no_history"));
         return;
     }
 
     const formatMonth = (d) => {
-        let str = new Date(d).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        let str = new Date(d).toLocaleDateString(currentLang, { month: 'long', year: 'numeric' });
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
     const sourceName = formatMonth(sourceDateStr); 
     const targetName = formatMonth(targetDateStr); 
 
-    const message = `Voulez-vous copier les données de ${sourceName} vers ${targetName} ?\n\n⚠️ Cela écrasera toutes les valeurs déjà présentes pour ${targetName}.`;
+    const message = tr("bud_prev_confirm_copy").replace('%s', sourceName).replace('%t', targetName);
 
     if(!confirm(message)) return;
     
@@ -699,13 +705,13 @@ function recalcAllAllocations() {
         const elRestLaia = document.getElementById('restant_alloc_laia_' + m);
 
         elRestAlex.innerText = Math.round(restAlex) + ' €';
-        elRestAlex.className = 'val-' + (restAlex >= 0 ? 'ok' : 'ko') + ' sum-target'; // On maintient la classe sum-target !
+        elRestAlex.className = 'val-' + (restAlex >= 0 ? 'ok' : 'ko') + ' sum-target'; 
 
         elRestLaia.innerText = Math.round(restLaia) + ' €';
         elRestLaia.className = 'val-' + (restLaia >= 0 ? 'ok' : 'ko') + ' sum-target';
     });
     updateSummaryTable();
-    if(isSumModeActive) updateSumResult(); // Force recalcul si la calculatrice est ouverte
+    if(isSumModeActive) updateSumResult(); 
 }
 
 function updateSummaryTable() {
@@ -739,18 +745,18 @@ function updateSummaryTable() {
             const laiaSum = dataByTarget[targetName] ? dataByTarget[targetName].laia : 0;
             const globalSum = alexSum + laiaSum;
 
-            row.cells[1].innerText = Math.round(alexSum).toLocaleString('fr-FR') + ' €';
-            row.cells[2].innerText = Math.round(laiaSum).toLocaleString('fr-FR') + ' €';
-            row.cells[3].innerText = Math.round(globalSum).toLocaleString('fr-FR') + ' €';
+            row.cells[1].innerText = Math.round(alexSum).toLocaleString(currentLang) + ' €';
+            row.cells[2].innerText = Math.round(laiaSum).toLocaleString(currentLang) + ' €';
+            row.cells[3].innerText = Math.round(globalSum).toLocaleString(currentLang) + ' €';
 
             grandTotalAlex += alexSum;
             grandTotalLaia += laiaSum;
         });
     }
 
-    document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString('fr-FR') + ' €';
-    document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString('fr-FR') + ' €';
-    document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString('fr-FR') + ' €';
+    document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString(currentLang) + ' €';
+    document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString(currentLang) + ' €';
+    document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString(currentLang) + ' €';
 }
 
 function saveData(action, data) {
@@ -761,7 +767,8 @@ function saveData(action, data) {
 }
 
 function validateTransfers(person, month) {
-    if (!confirm(`Confirmer que ${person} a bien effectué tous ses virements pour ${month} ?\n\nCela mettra à jour l'Épargne automatiquement.`)) return;
+    const msg = tr("bud_prev_confirm_transfers").replace('%p', person).replace('%m', month);
+    if (!confirm(msg)) return;
 
     const formData = new FormData();
     formData.append('action', 'validate_transfers');
@@ -777,7 +784,7 @@ function validateTransfers(person, month) {
         if(data.success) window.location.reload();
         else alert("Erreur: " + data.error);
     })
-    .catch(e => alert("Erreur technique"));
+    .catch(e => alert(tr("bud_err_tech")));
 }
 
 function saveGenericNote(noteType, refId, content) {
@@ -845,7 +852,6 @@ function toggleSumMode() {
 
 function extractNumberFromText(text) {
     if (!text) return 0;
-    // Remplace les virgules par des points et supprime tout ce qui n'est pas chiffre, point ou signe moins
     const cleanText = text.replace(',', '.').replace(/[^\d.-]/g, '');
     return parseFloat(cleanText) || 0;
 }
@@ -862,13 +868,12 @@ function updateSumResult() {
         total += val;
     });
     
-    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(currentLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
 }
 
 document.addEventListener('click', function(e) {
     if (!isSumModeActive) return;
 
-    // Cible les inputs type number OU les cellules (td/th/div) ayant la classe .sum-target
     const targetElement = e.target.closest('input[type="number"], .sum-target');
     
     if (targetElement) {
@@ -884,7 +889,7 @@ document.addEventListener('click', function(e) {
         
         updateSumResult();
     }
-}, true); // Le 'true' intercepte le clic avant le focus normal
+}, true);
 
 document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 </script>

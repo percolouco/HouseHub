@@ -17,8 +17,12 @@ $currentMonth = isset($_GET['m']) ? str_pad((int)$_GET['m'], 2, '0', STR_PAD_LEF
 $currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y', strtotime($defaultActiveMonth));
 $viewMonthDate = "$currentYear-$currentMonth-01";
 
+// Conservation du tableau d'origine pour la correspondance en base de données
 $moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-$currentMonthName = $moisFr[(int)$currentMonth] . ' ' . $currentYear;
+
+// Affichage dynamique traduit
+$monthTranslationKey = 'month_' . str_pad((int)$currentMonth, 2, '0', STR_PAD_LEFT);
+$currentMonthName = tr($monthTranslationKey) . ' ' . $currentYear;
 
 // 4. Récupération des Dépenses Réelles du mois (Basé sur le Mois de Gestion !)
 $stmtExp = $pdo->prepare("SELECT amount, label, category, budget_item_id FROM pf_expenses WHERE gestion_month = ?");
@@ -31,20 +35,20 @@ $totalRevenus = 0;
 
 <div class="budget-view">
     <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0;">Récapitulatif Mensuel</h2>
-        <button onclick="openRecapModal('add')" class="pf-btn">＋ Ajouter un frais / revenu</button>
+        <h2 style="margin:0;"><?= tr('bud_recap_monthly_title') ?></h2>
+        <button onclick="openRecapModal('add')" class="pf-btn">＋ <?= tr('bud_recap_btn_add') ?></button>
     </div>
 
     <div class="table-responsive" style="background:white; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0; overflow:hidden;">
         <table class="pf-table" style="margin:0; box-shadow:none;">
             <thead style="background:#f8fafc;">
                 <tr>
-                    <th>Nom</th>
-                    <th>Montant Prévu</th>
-                    <th>Type</th>
-                    <th>Jour</th>
-                    <th>État du mois (<?= $currentMonthName ?>)</th>
-                    <th style="text-align:right;">Actions</th>
+                    <th><?= tr('bud_label_name') ?></th>
+                    <th><?= tr('bud_planned_amount') ?></th>
+                    <th><?= tr('bud_type') ?></th>
+                    <th><?= tr('bud_day') ?></th>
+                    <th><?= tr('bud_month_state') ?> (<?= $currentMonthName ?>)</th>
+                    <th style="text-align:right;"><?= tr('actions') ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -109,7 +113,7 @@ $totalRevenus = 0;
                 <tr class="<?= $rowClass ?>" style="border-bottom:1px solid #f1f5f9;">
                     <td style="padding:15px;">
                         <strong><?= htmlspecialchars($item['name']) ?></strong>
-                        <?= $item['is_estimate'] ? ' <small style="color:#64748b;">(Est.)</small>' : '' ?>
+                        <?= $item['is_estimate'] ? ' <small style="color:#64748b;">('.tr('bud_est_short').')</small>' : '' ?>
                         
                         <?php if(!empty($item['mapping_keywords'])): ?>
                             <span title="<?= htmlspecialchars($item['mapping_keywords']) ?>" style="font-size:0.7rem; cursor:help;">🔗</span>
@@ -117,7 +121,7 @@ $totalRevenus = 0;
                         
                         <?php if(!empty($item['reg_month'])): ?>
                             <div style="font-size:0.75rem; color:#94a3b8; font-style:italic; margin-top:2px;">
-                                📅 Régul. prévue en <?= htmlspecialchars($item['reg_month']) ?>
+                                📅 <?= sprintf(tr('bud_reg_planned_in'), tr('month_'.str_pad(array_search($item['reg_month'], $moisFr), 2, '0', STR_PAD_LEFT))) ?>
                             </div>
                         <?php endif; ?>
                     </td>
@@ -128,30 +132,29 @@ $totalRevenus = 0;
                         <?php if ($hasMatchingExpense): ?>
                             <?php 
                             // Le "Gap" est la différence visuelle. 
-                            // S'il y a plus de $realAbs que prévu, c'est un dépassement ou un bonus.
                             $gap = $realAbs - $targetAbs; 
                             
                             if ($gap > 0.05): ?>
                                 <div style="font-size:0.75rem; color:#ef4444; font-weight:bold;">
-                                    <?= $item['category'] === 'income' ? 'Bonus :' : 'Dépassement :' ?> +<?= number_format($gap, 2, ',', ' ') ?> €
+                                    <?= $item['category'] === 'income' ? tr('bud_bonus') : tr('bud_overrun') ?> : +<?= number_format($gap, 2, ',', ' ') ?> €
                                 </div>
                             <?php elseif ($gap < -0.05): ?>
                                 <div style="font-size:0.75rem; color:#f59e0b; font-weight:normal;">
-                                    Reste : <?= number_format(abs($gap), 2, ',', ' ') ?> €
+                                    <?= tr('bud_remaining') ?> : <?= number_format(abs($gap), 2, ',', ' ') ?> €
                                 </div>
                             <?php else: ?>
                                 <div style="font-size:0.75rem; color:#10b981; font-weight:normal;">
-                                    Montant exact ✓
+                                    <?= tr('bud_exact_amount') ?> ✓
                                 </div>
                             <?php endif; ?>
                         <?php elseif ($item['type'] === 'Annuel'): ?>
-                            <div style="font-size:0.75rem; color:#94a3b8; font-weight:normal;">Soit <?= number_format($amountToAdd, 2, ',', ' ') ?>/mois</div>
+                            <div style="font-size:0.75rem; color:#94a3b8; font-weight:normal;"><?= tr('bud_per_month_short') ?> <?= number_format($amountToAdd, 2, ',', ' ') ?>/<?= tr('bud_month_short') ?></div>
                         <?php endif; ?>
                     </td>
 
                     <td style="padding:15px;">
                         <span class="badge-type <?= strtolower($item['type']) ?>" style="background:#e2e8f0; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:600; color:#475569;">
-                            <?= $item['type'] ?>
+                            <?= tr('bud_freq_'.strtolower($item['type'])) ?>
                         </span>
                     </td>
                     <td style="padding:15px; color:#64748b; font-weight:bold;"><?= $item['payment_day'] ? $item['payment_day'] : '-' ?></td>
@@ -159,23 +162,23 @@ $totalRevenus = 0;
                     <td style="padding:15px;">
                         <?php if ($isAutoChecked): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#f0fdf4; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #bbf7d0;">
-                                <span>✓</span> Validé
+                                <span>✓</span> <?= tr('bud_state_validated') ?>
                             </div>
                         <?php elseif($hasMatchingExpense): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#d97706; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #fde68a;">
-                                <span>⏳</span> Partiel
+                                <span>⏳</span> <?= tr('bud_state_partial') ?>
                             </div>
                         <?php else: ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #e2e8f0;">
-                                <span>○</span> En attente
+                                <span>○</span> <?= tr('bud_state_waiting') ?>
                             </div>
                         <?php endif; ?>
                     </td>
 
                     <td style="padding:15px; text-align:right;">
                         <div class="action-buttons" style="display:flex; gap:5px; justify-content:flex-end;">
-                            <button class="btn-icon" onclick='editRecapItem(<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>)' title="Modifier" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">✏️</button>
-                            <button class="btn-icon" onclick="deleteRecapItem(<?= $item['id'] ?>)" title="Supprimer" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">🗑️</button>
+                            <button class="btn-icon" onclick='editRecapItem(<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>)' title="<?= tr('edit') ?>" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">✏️</button>
+                            <button class="btn-icon" onclick="deleteRecapItem(<?= $item['id'] ?>)" title="<?= tr('delete') ?>" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">🗑️</button>
                         </div>
                     </td>
                 </tr>
@@ -183,18 +186,18 @@ $totalRevenus = 0;
             </tbody>
             <tfoot style="background:#f8fafc;">
                 <tr>
-                    <td colspan="1" style="padding:15px;"><strong>Total Revenus (Lissés)</strong></td>
+                    <td colspan="1" style="padding:15px;"><strong><?= tr('bud_total_income_smoothed') ?></strong></td>
                     <td colspan="5" style="padding:15px; color:#10b981;"><strong>+ <?= number_format($totalRevenus, 2, ',', ' ') ?> €</strong></td>
                 </tr>
                 <tr>
-                    <td colspan="1" style="padding:15px;"><strong>Total Dépenses (Lissées)</strong></td>
+                    <td colspan="1" style="padding:15px;"><strong><?= tr('bud_total_expenses_smoothed') ?></strong></td>
                     <td colspan="5" style="padding:15px; color:#ef4444;"><strong>- <?= number_format($totalDepenses, 2, ',', ' ') ?> €</strong></td>
                 </tr>
                 <tr style="border-top: 2px solid #e2e8f0; background: white;">
-                    <td colspan="1" style="padding:15px; font-size:1.1rem;"><strong>Équilibre théorique</strong></td>
+                    <td colspan="1" style="padding:15px; font-size:1.1rem;"><strong><?= tr('bud_theoretical_balance_recap') ?></strong></td>
                     <?php $balance = $totalRevenus - $totalDepenses; ?>
                     <td colspan="5" style="padding:15px; font-size: 1.3em;" class="<?= $balance >= 0 ? 'text-success' : 'text-danger' ?>">
-                        <strong style="color:<?= $balance >= 0 ? '#10b981' : '#ef4444' ?>;"><?= number_format($balance, 2, ',', ' ') ?> € / mois</strong>
+                        <strong style="color:<?= $balance >= 0 ? '#10b981' : '#ef4444' ?>;"><?= number_format($balance, 2, ',', ' ') ?> € / <?= tr('bud_month_short') ?></strong>
                     </td>
                 </tr>
             </tfoot>
@@ -202,7 +205,7 @@ $totalRevenus = 0;
     </div>
     
     <div class="budget-note" style="margin-top:15px; font-size:0.85rem; color:#64748b;">
-        <p>* L'état de paiement se met à jour automatiquement en fonction des opérations importées dans l'onglet "Suivi Mensuel".</p>
+        <p>* <?= tr('bud_recap_footer_note') ?></p>
     </div>
 </div>
 
@@ -210,7 +213,7 @@ $totalRevenus = 0;
     <div class="pf-modal-content" style="background:white; width:95%; max-width:500px; border-radius:20px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); padding:30px; position:relative;">
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="recapModalTitle" style="margin:0; font-size:1.2rem; color:#1e293b;">Ajouter un élément</h3>
+            <h3 id="recapModalTitle" style="margin:0; font-size:1.2rem; color:#1e293b;"><?= tr('bud_recap_modal_add') ?></h3>
             <button type="button" onclick="closeRecapModal()" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
         </div>
         
@@ -219,67 +222,70 @@ $totalRevenus = 0;
             <input type="hidden" name="id" id="item_id">
             
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Nom</label>
-                <input type="text" name="name" id="item_name" required class="pf-input" placeholder="Ex: Loyer, Salaire..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_label_name') ?></label>
+                <input type="text" name="name" id="item_name" required class="pf-input" placeholder="<?= tr('bud_ph_item_name') ?>" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
             </div>
             
             <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Mots-clés (Détection Auto)</label>
-                <input type="text" name="mapping_keywords" id="item_keywords" class="pf-input" placeholder="Ex: NETFLIX, PRIME VIDEO (séparés par virgule)" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:#f0f9ff; border-color:#bae6fd;">
-                <small style="color:#64748b; font-size:0.75rem;">Si une dépense du mois contient ce mot, la ligne passera en "Validé".</small>
+                <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_label_keywords') ?></label>
+                <input type="text" name="mapping_keywords" id="item_keywords" class="pf-input" placeholder="<?= tr('bud_ph_keywords') ?>" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:#f0f9ff; border-color:#bae6fd;">
+                <small style="color:#64748b; font-size:0.75rem;"><?= tr('bud_help_keywords') ?></small>
             </div>
 
             <div style="display:flex; gap:15px; margin-bottom:15px;">
                 <div style="flex:1;">
-                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Montant (€)</label>
+                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_amount_eur') ?></label>
                     <input type="number" step="0.01" name="amount" id="item_amount" required class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
                 <div style="flex:1;">
-                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Jour (1-31)</label>
+                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_label_day') ?></label>
                     <input type="number" min="1" max="31" name="payment_day" id="item_day" class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
                 </div>
             </div>
 
             <div style="display:flex; gap:15px; margin-bottom:15px;">
                 <div style="flex:1;">
-                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Catégorie</label>
+                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_category') ?></label>
                     <select name="category" id="item_category" class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:white;">
-                        <option value="expense">Dépense (Frais)</option>
-                        <option value="income">Revenu (Salaire)</option>
+                        <option value="expense"><?= tr('bud_cat_expense') ?></option>
+                        <option value="income"><?= tr('bud_cat_income') ?></option>
                     </select>
                 </div>
                 <div style="flex:1;">
-                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Fréquence</label>
+                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_label_frequency') ?></label>
                     <select name="type" id="item_type" class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:white;">
-                        <option value="Mensuel">Mensuel</option>
-                        <option value="Annuel">Annuel</option>
+                        <option value="Mensuel"><?= tr('bud_freq_mensuel') ?></option>
+                        <option value="Annuel"><?= tr('bud_freq_annuel') ?></option>
                     </select>
                 </div>
             </div>
 
             <div style="display:flex; gap:15px; margin-bottom:25px;">
                 <div style="flex:1;">
-                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Type de montant</label>
+                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_label_amount_type') ?></label>
                     <select name="is_estimate" id="item_is_estimate" class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:white;">
-                        <option value="0">Fixe (Facture)</option>
-                        <option value="1">Variable (Estimation)</option>
+                        <option value="0"><?= tr('bud_type_fixed') ?></option>
+                        <option value="1"><?= tr('bud_type_variable') ?></option>
                     </select>
                 </div>
                 <div style="flex:1;">
-                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Régularisation</label>
+                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;"><?= tr('bud_label_regularization') ?></label>
                     <select name="reg_month" id="item_reg_month" class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:white;">
-                        <option value="">Aucune</option>
+                        <option value=""><?= tr('bud_reg_none') ?></option>
                         <?php 
-                        $mois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-                        foreach($mois as $m) echo "<option value='$m'>$m</option>";
+                        foreach($moisFr as $index => $m) {
+                            if($index == 0) continue;
+                            // On injecte la valeur en français (pour la DB) mais on affiche la version traduite
+                            echo "<option value='$m'>" . tr('month_'.str_pad($index, 2, '0', STR_PAD_LEFT)) . "</option>";
+                        }
                         ?>
                     </select>
                 </div>
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" onclick="closeRecapModal()" class="pf-btn btn-secondary" style="width:auto; margin:0; background:#f1f5f9; color:#475569; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;">Annuler</button>
-                <button type="submit" class="pf-btn" style="width:auto; margin:0; background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;">Enregistrer</button>
+                <button type="button" onclick="closeRecapModal()" class="pf-btn btn-secondary" style="width:auto; margin:0; background:#f1f5f9; color:#475569; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn" style="width:auto; margin:0; background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
@@ -290,26 +296,29 @@ window.onclick = function(event) {
     const modal = document.getElementById('budgetRecapModal');
     if (event.target == modal) {
         modal.style.display = 'none';
+        document.body.classList.remove('no-scroll');
     }
 }
 
 function openRecapModal(mode) {
     if (mode === "add") {
-        document.getElementById("recapModalTitle").innerText = "Ajouter un élément";
+        document.getElementById("recapModalTitle").innerText = "<?= tr('bud_recap_modal_add') ?>";
         document.getElementById("item_id").value = "";
         document.getElementById("recapForm").reset();
     }
     document.getElementById("budgetRecapModal").style.display = "flex";
+    document.body.classList.add('no-scroll');
 }
 
 function closeRecapModal() {
     document.getElementById("budgetRecapModal").style.display = "none";
+    document.body.classList.remove('no-scroll');
 }
 
 function editRecapItem(item) {
     const data = typeof item === "string" ? JSON.parse(item) : item;
 
-    document.getElementById("recapModalTitle").innerText = "Modifier : " + data.name;
+    document.getElementById("recapModalTitle").innerText = "<?= tr('bud_recap_modal_edit') ?> : " + data.name;
     document.getElementById("item_id").value = data.id;
     document.getElementById("item_name").value = data.name;
     document.getElementById("item_keywords").value = data.mapping_keywords || ''; 
@@ -322,10 +331,11 @@ function editRecapItem(item) {
     document.getElementById("item_is_estimate").value = data.is_estimate;
 
     document.getElementById("budgetRecapModal").style.display = "flex";
+    document.body.classList.add('no-scroll');
 }
 
 function deleteRecapItem(id) {
-    if (confirm("Voulez-vous vraiment supprimer cet élément ?")) {
+    if (confirm("<?= tr('bud_recap_confirm_delete') ?>")) {
         const formData = new FormData();
         formData.append("action", "delete");
         formData.append("id", id);
@@ -336,7 +346,7 @@ function deleteRecapItem(id) {
         }).then(() => {
             window.location.reload(); 
         }).catch(err => {
-            alert("Erreur lors de la suppression.");
+            alert("<?= tr('bud_err_delete') ?>");
             console.error(err);
         });
     }

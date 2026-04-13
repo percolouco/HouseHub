@@ -4,7 +4,10 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 // 1. Inclusion du moteur de traduction
 require_once __DIR__ . '/includes/i18n.php';
 
-// Petite fonction pour changer de langue sans perdre les paramètres de l'URL (ex: id=5)
+/**
+ * Génère une URL avec le paramètre de langue mis à jour
+ * sans perdre les autres paramètres (ex: id, tab, etc.)
+ */
 function getLangUrl($newLang) {
     $params = $_GET;
     $params['lang'] = $newLang;
@@ -52,13 +55,13 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr'; // Récupération de la langue act
         <div class="pf-user-badge">
           <?= htmlspecialchars($_SESSION['user']['display_name'] ?? $_SESSION['user']['username']) ?>
         </div>
-        <a href="/logout.php" class="pf-logout-btn">Déconnexion</a>
+        <a href="/logout.php" class="pf-logout-btn"><?= tr('btn_logout') ?></a>
       <?php else: ?>
-        <a href="/login.php" class="pf-nav-link">Connexion</a>
+        <a href="/login.php" class="pf-nav-link"><?= tr('btn_login') ?></a>
       <?php endif; ?>
     </div>
 
-    <button class="pf-burger-btn" aria-label="Menu">☰</button>
+    <button class="pf-burger-btn" aria-label="<?= tr('aria_menu') ?>">☰</button>
   </header>
 
   <div class="pf-mobile-menu">
@@ -67,24 +70,39 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr'; // Récupération de la langue act
     <a href="/budget.php" class="pf-mobile-nav-link"><?= tr('menu_budget') ?></a>
     <a href="/holidays.php" class="pf-mobile-nav-link"><?= tr('menu_holidays') ?></a>
     <a href="/gift-list.php" class="pf-mobile-nav-link"><?= tr('menu_gifts') ?></a>
+    <hr style="width: 80%; border: 0; border-top: 1px solid #eee; margin: 10px 0;">
     <?php if (isset($_SESSION['user'])): ?>
-      <a href="/logout.php" class="pf-mobile-nav-link pf-mobile-logout">Se déconnecter</a>
+      <a href="/logout.php" class="pf-mobile-nav-link pf-mobile-logout"><?= tr('btn_logout') ?></a>
     <?php else: ?>
-      <a href="/login.php" class="pf-mobile-nav-link">Se connecter</a>
+      <a href="/login.php" class="pf-mobile-nav-link"><?= tr('btn_login') ?></a>
     <?php endif; ?>
   </div>
 
   <main class="pf-main">
 
   <script>
-    // Script simple pour le menu mobile
+    window.I18N_LANG = '<?= $currentLang === "ca" ? "ca-ES" : "fr-FR" ?>';
+    window.I18N = <?php echo json_encode($current_translations_array ?? []); ?>;
+    
+    function tr(key) {
+        return window.I18N[key] || key;
+    }
+
+    // Gestion du menu mobile
     const burgerBtn = document.querySelector('.pf-burger-btn');
     const mobileMenu = document.querySelector('.pf-mobile-menu');
     
-    if(burgerBtn) {
+    if(burgerBtn && mobileMenu) {
       burgerBtn.addEventListener('click', () => {
         const isOpen = mobileMenu.classList.toggle('is-open');
         burgerBtn.textContent = isOpen ? '✕' : '☰';
+        
+        // Bonus sécurité : empêcher le scroll si le menu est ouvert
+        if (isOpen) {
+          document.body.classList.add('no-scroll');
+        } else {
+          document.body.classList.remove('no-scroll');
+        }
       });
     }
   </script>

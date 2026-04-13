@@ -105,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupModalUI() {
       const headerH2 = document.querySelector(".fc-modal-header h2");
       if (headerH2 && !document.getElementById("holidayYearSelect")) {
-        headerH2.innerHTML = `Vacances Scolaires (Zone C) 
+        headerH2.innerHTML = `${tr("fc_modal_holidays_title")} 
           <select id="holidayYearSelect" style="margin-left:15px; font-size:1rem; padding:4px; border-radius:4px; border:1px solid #cbd5e1;">
             <option value="${this.currentSchoolYearStart - 1}">${this.currentSchoolYearStart - 1} - ${this.currentSchoolYearStart}</option>
             <option value="${this.currentSchoolYearStart}" selected>${this.currentSchoolYearStart} - ${this.currentSchoolYearStart + 1}</option>
@@ -273,20 +273,20 @@ document.addEventListener("DOMContentLoaded", () => {
               (1000 * 60 * 60 * 24),
           ) + 1;
 
-        let name = "Vacances scolaires";
+        let name = tr("leg_school_holidays");
 
         if (m === 10 || m === 11) {
-          name = "Vacances de la Toussaint";
+          name = tr("vac_toussaint");
         } else if (m === 12 || m === 1) {
-          name = "Vacances de Noël";
+          name = tr("vac_noel");
         } else if (m === 2 || m === 3) {
-          name = "Vacances d'Hiver";
+          name = tr("vac_hiver");
         } else if (m === 4 || (m === 5 && durationDays > 6)) {
-          name = "Vacances de Printemps";
+          name = tr("vac_printemps");
         } else if (m === 5 && durationDays <= 6) {
-          name = "Pont de Mai (Ascension)";
+          name = tr("vac_ascension");
         } else if (m === 7 || m === 8) {
-          name = "Vacances d'Été";
+          name = tr("vac_ete");
         }
 
         html += `
@@ -690,22 +690,23 @@ document.addEventListener("DOMContentLoaded", () => {
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
 
+      const lang = window.I18N_LANG || "fr-FR"; // Assure-toi d'avoir cette variable ou utilise une déduction
       const titleEl = document.querySelector("#fc-current-month-year");
       if (titleEl) {
         if (this.viewMode === "year") {
-          titleEl.textContent = `Année scolaire ${this.currentSchoolYearStart} – ${this.currentSchoolYearStart + 1}`;
+          titleEl.textContent = `${tr("fc_school_year")} ${this.currentSchoolYearStart} – ${this.currentSchoolYearStart + 1}`;
         } else if (this.viewMode === "2months") {
           const nextM = new Date(y, m + 1, 1);
-          const m1 = new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(
+          const m1 = new Intl.DateTimeFormat(lang, { month: "long" }).format(
             this.currentMonth,
           );
-          const m2 = new Intl.DateTimeFormat("fr-FR", {
+          const m2 = new Intl.DateTimeFormat(lang, {
             month: "long",
             year: "numeric",
           }).format(nextM);
           titleEl.textContent = `${m1} - ${m2}`;
         } else {
-          titleEl.textContent = new Intl.DateTimeFormat("fr-FR", {
+          titleEl.textContent = new Intl.DateTimeFormat(lang, {
             month: "long",
             year: "numeric",
           }).format(this.currentMonth);
@@ -1261,88 +1262,91 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!menu) return;
 
       this._currentBulkInfo = { dates };
+
+      // Gestion de la date affichée (Singulier/Pluriel)
       const dateLabel =
         dates.length > 1
-          ? `${dates.length} jours`
-          : new Date(dates[0]).toLocaleDateString("fr-FR");
+          ? `${dates.length} ${tr("fc_unit_days")}`
+          : new Date(dates[0]).toLocaleDateString(window.I18N_LANG || "fr-FR");
 
-      // Uniformisation : On définit l'icône SVG une seule fois
+      // Icône SVG Poubelle (Uniformisée)
       const trashSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
 
-      // En-tête principal avec la date
-      let html = `<div class="fc-menu-section" style="border-bottom: none; padding-bottom: 0;">
-                  <strong style="font-size:0.85rem; color:var(--text-main); margin-bottom: 4px;">${dateLabel}</strong>
-                </div>`;
-
-      // Fonction utilitaire pour créer une ligne de titre avec l'icône SVG
+      // Fonction utilitaire interne pour les en-têtes de section avec suppression
       const buildHeader = (title, action, cat) => `
-      <div class="fc-menu-header">
-        <strong>${title}</strong>
-        ${action ? `<button class="fc-menu-clear-icon" title="Effacer" data-action="${action}" ${cat ? `data-cat="${cat}"` : ""}>${trashSvg}</button>` : ""}
-      </div>
-    `;
+        <div class="fc-menu-header">
+          <strong>${title}</strong>
+          ${action ? `<button class="fc-menu-clear-icon" title="${tr("fc_clear")}" data-action="${action}" ${cat ? `data-cat="${cat}"` : ""}>${trashSvg}</button>` : ""}
+        </div>
+      `;
 
-      // Section Carole
-      html += `<div class="fc-menu-section">
-               ${buildHeader("Congés Carole", "clear-type", "CONGE")}
-               <div class="fc-menu-grid">
-                 <button class="fc-menu-btn" data-action="add" data-type="OFF_CAROLE" data-person="Carole">Off</button>
-                 <button class="fc-menu-btn" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">Extra</button>
-               </div>
-             </div>`;
+      // 1. En-tête du menu (Date ou nombre de jours)
+      let html = `<div class="fc-menu-section" style="border-bottom: none; padding-bottom: 0;">
+                    <strong style="font-size:0.85rem; color:var(--text-main); margin-bottom: 4px;">${dateLabel}</strong>
+                  </div>`;
 
-      // Section Garde
+      // 2. Section Carole (Congés)
       html += `<div class="fc-menu-section">
-               ${buildHeader("Garde", "clear-type", "GARDE")}
-               <div class="fc-menu-grid">
-                 <button class="fc-menu-btn" data-action="add" data-type="CENTRE">Centre</button>
-                 <button class="fc-menu-btn" data-action="add" data-type="AVIS">Avis</button>
-               </div>
-             </div>`;
+                 ${buildHeader(tr("fc_menu_carole"), "clear-type", "CONGE")}
+                 <div class="fc-menu-grid">
+                   <button class="fc-menu-btn" data-action="add" data-type="OFF_CAROLE" data-person="Carole">${tr("btn_off")}</button>
+                   <button class="fc-menu-btn" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">${tr("btn_extra")}</button>
+                 </div>
+               </div>`;
 
-      // Section Pep
+      // 3. Section Garde (Centre / Avis)
       html += `<div class="fc-menu-section">
-               ${buildHeader("Pep", "clear-type", "PEP")}
-               <button class="fc-menu-btn" data-action="add" data-type="PEP_SICK" style="width:100%">Pep Malade 🤒</button>
-             </div>`;
+                 ${buildHeader(tr("leg_centre"), "clear-type", "GARDE")}
+                 <div class="fc-menu-grid">
+                   <button class="fc-menu-btn" data-action="add" data-type="CENTRE">${tr("leg_centre")}</button>
+                   <button class="fc-menu-btn" data-action="add" data-type="AVIS">${tr("leg_avis")}</button>
+                 </div>
+               </div>`;
 
-      // --- SECTION ALEX & LAIA AVEC SUPPRESSION INDÉPENDANTE, UNIFORMISÉE ET ALIGNÉE À CÔTÉ (INLINE) ---
+      // 4. Section Pep (Maladie)
       html += `<div class="fc-menu-section">
-               ${buildHeader("Congés Enfants", null, null)}
-               <div class="fc-menu-leaves-table">
-                 <table>
-                   <thead>
-                     <tr>
-                       <th>
-                          <div class="fc-th-inline">
-                            Alex
-                            <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="2" title="Effacer Alex">${trashSvg}</button>
-                          </div>
-                       </th>
-                       <th>
-                          <div class="fc-th-inline">
-                            Laia
-                            <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="3" title="Effacer Laia">${trashSvg}</button>
-                          </div>
-                       </th>
-                     </tr>
-                   </thead>
-                   <tbody>`;
+                 ${buildHeader("Pep", "clear-type", "PEP")}
+                 <button class="fc-menu-btn" data-action="add" data-type="PEP_SICK" style="width:100%">${tr("leg_pep_sick")} 🤒</button>
+               </div>`;
+
+      // 5. Section Enfants (Alex & Laia)
+      html += `<div class="fc-menu-section">
+                 ${buildHeader(tr("fc_menu_kids_leaves"), null, null)}
+                 <div class="fc-menu-leaves-table">
+                   <table>
+                     <thead>
+                       <tr>
+                         <th>
+                            <div class="fc-th-inline">
+                              Alex
+                              <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="2" title="${tr("fc_clear")} Alex">${trashSvg}</button>
+                            </div>
+                         </th>
+                         <th>
+                            <div class="fc-th-inline">
+                              Laia
+                              <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="3" title="${tr("fc_clear")} Laia">${trashSvg}</button>
+                            </div>
+                         </th>
+                       </tr>
+                     </thead>
+                     <tbody>`;
 
       ["CP", "JRA", "JA"].forEach((t) => {
         html += `<tr>
-                 <td><button class="fc-menu-btn" data-action="add-leave" data-pid="2" data-type="${t}">${t}</button></td>
-                 <td><button class="fc-menu-btn" data-action="add-leave" data-pid="3" data-type="${t}">${t}</button></td>
-               </tr>`;
+                   <td><button class="fc-menu-btn" data-action="add-leave" data-pid="2" data-type="${t}">${t}</button></td>
+                   <td><button class="fc-menu-btn" data-action="add-leave" data-pid="3" data-type="${t}">${t}</button></td>
+                 </tr>`;
       });
+
       html += `      </tbody>
-                 </table>
-               </div>
-             </div>`;
+                   </table>
+                 </div>
+               </div>`;
 
       menu.innerHTML = html;
 
-      // Positionnement intelligent du menu
+      // Positionnement (Gestion des bords d'écran)
       const menuWidth = 240;
       let left = x + 10;
       if (left + menuWidth > window.innerWidth) left = x - menuWidth - 10;

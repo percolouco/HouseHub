@@ -4,13 +4,14 @@
 require __DIR__ . '/includes/auth.php';
 require_login('/login.php');
 require __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/i18n.php'; // Toujours s'assurer que tr() est dispo
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 // --- 1. CONFIGURATION & DONNÉES ---
 
 $year       = (int)date('Y');
-$pageTitle  = "PachaFamily - Llista de regals";
+$pageTitle  = tr('gift_page_title');
 $activePage = "gift-list";
 $bodyClass  = "pf-gift-list";
 $pageCss    = "/modules/gift-list/gift-list.css";
@@ -42,14 +43,15 @@ $adultsByChildForAnniv = [
     'Guim' => $baseAdults,
 ];
 
-// Labels & Icônes
+// Labels & Icônes (Utilisation des clés de traduction pour l'affichage)
 $allOccasionLabels = [
-    'TIO'   => 'Tió',
-    'NOEL'  => 'Nadal',
-    'ROIS'  => 'Reis',
-    'ANNIV' => 'Anniversary',
-    'SANT'  => 'Sant',
+    'TIO'   => tr('gift_occ_tio'),
+    'NOEL'  => tr('gift_occ_noel'),
+    'ROIS'  => tr('gift_occ_rois'),
+    'ANNIV' => tr('gift_occ_anniv'),
+    'SANT'  => tr('gift_occ_sant'),
 ];
+
 $occasionIcons = [
     'TIO'   => '/modules/gift-list/assets/img/tio.png',
     'NOEL'  => '/modules/gift-list/assets/img/santa.png',
@@ -62,7 +64,6 @@ $tableGifts = 'pf_gifts';
 
 // --- 2. RÉCUPÉRATION DES DONNÉES ---
 
-// Préparation requête
 $inMarks = implode(',', array_fill(0, count($allowedOccasions), '?'));
 $sql = "SELECT * FROM {$tableGifts} WHERE year = ? AND occasion IN ($inMarks) ORDER BY adult_name, child_name, occasion, created_at";
 $stmt = $pdo->prepare($sql);
@@ -70,26 +71,21 @@ $params = array_merge([$year], $allowedOccasions);
 $stmt->execute($params);
 $gifts = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-// Indexation [occasion][child][adult] pour la matrice
 $byOccasion = [];
 foreach ($gifts as $gift) {
     $byOccasion[$gift['occasion']][$gift['child_name']][$gift['adult_name']][] = $gift;
 }
 
-// Occasions à afficher
 $occasionsToShow = array_values(array_intersect(array_keys($allOccasionLabels), $allowedOccasions));
 
-// --- 3. CALCUL TRICOUNT (Backend) ---
-// On pré-calcule ici pour alléger la vue HTML
+// --- 3. CALCUL TRICOUNT ---
 
 $people = $baseAdults;
 $adultsInDb = array_column($gifts, 'adult_name');
-$payersInDb = array_column($gifts, 'payer_name'); // Peut contenir des NULL si colonne vide, mais array_unique gère
-// Nettoyage et fusion des participants
+$payersInDb = array_column($gifts, 'payer_name');
 $people = array_values(array_unique(array_merge($people, $adultsInDb, $payersInDb)));
-$people = array_filter($people); // Enlève les vides éventuels
+$people = array_filter($people);
 
-// Matrice de dettes
 $matrix = [];
 foreach ($people as $p1) {
     foreach ($people as $p2) $matrix[$p1][$p2] = 0.0;
@@ -100,7 +96,6 @@ foreach ($gifts as $g) {
     $payer = $g['payer_name'] ?? $g['adult_name'];
     $amt   = (float)$g['amount'];
     
-    // Si payé par quelqu'un d'autre que le bénéficiaire (l'adulte responsable)
     if ($amt > 0 && $adult && $payer && $adult !== $payer) {
         if (isset($matrix[$adult][$payer])) {
             $matrix[$adult][$payer] += $amt;
@@ -108,7 +103,6 @@ foreach ($gifts as $g) {
     }
 }
 
-// Résolution des dettes (Liquidations)
 $settlements = [];
 $countPeople = count($people);
 for ($i = 0; $i < $countPeople; $i++) {
@@ -132,18 +126,18 @@ require __DIR__ . '/header.php';
 <div class="pf-container cl-view-<?= htmlspecialchars($currentView) ?>">
     
     <div class="cl-titlebar">
-        <h1>Llista de regals <?= htmlspecialchars($year) ?></h1>
-        <div class="cl-view-switch" aria-label="Canvia la vista">
-            <a href="?view=nadal" class="cl-view-btn <?= $currentView === 'nadal' ? 'is-active' : '' ?>">Nadal</a>
-            <a href="?view=anniversary" class="cl-view-btn <?= $currentView === 'anniversary' ? 'is-active' : '' ?>">Anniversary</a>
+        <h1><?= sprintf(tr('gift_main_title'), htmlspecialchars($year)) ?></h1>
+        <div class="cl-view-switch" aria-label="<?= tr('gift_aria_change_view') ?>">
+            <a href="?view=nadal" class="cl-view-btn <?= $currentView === 'nadal' ? 'is-active' : '' ?>"><?= tr('gift_view_nadal') ?></a>
+            <a href="?view=anniversary" class="cl-view-btn <?= $currentView === 'anniversary' ? 'is-active' : '' ?>"><?= tr('gift_view_anniv') ?></a>
         </div>
     </div>
 
     <section class="pf-section pf-section--panel">
-        <h2>Vista per festa</h2>
+        <h2><?= tr('gift_view_by_party') ?></h2>
 
         <?php if (empty($gifts)): ?>
-            <p class="cl-legend">No hi ha cap regal registrat per a <?= htmlspecialchars($year) ?> en aquesta vista.</p>
+            <p class="cl-legend"><?= sprintf(tr('gift_no_gifts'), htmlspecialchars($year)) ?></p>
         <?php endif; ?>
 
         <?php foreach ($occasionsToShow as $occCode): ?>
@@ -158,12 +152,10 @@ require __DIR__ . '/header.php';
                 <div class="cl-occasion-children-tables">
                     <?php foreach ($children as $childName): ?>
                         <?php
-                            // Détermine quels adultes participent pour cet enfant
                             $adultsForChild = ($currentView === 'anniversary')
                                 ? ($adultsByChildForAnniv[$childName] ?? $baseAdults)
                                 : $baseAdults;
 
-                            // Prépare listes/total par adulte
                             $lists  = [];
                             $totals = [];
                             foreach ($adultsForChild as $adultName) {
@@ -171,7 +163,6 @@ require __DIR__ . '/header.php';
                                 $totals[$adultName] = array_sum(array_column($lists[$adultName], 'amount'));
                             }
                             
-                            // Calcul hauteur tableau
                             $counts = array_map('count', $lists);
                             $maxRowsChild = !empty($counts) ? max($counts) : 0;
                         ?>
@@ -185,7 +176,7 @@ require __DIR__ . '/header.php';
 
                             <caption>
                                 <?= htmlspecialchars($childName) ?>
-                                <button type="button" class="cl-child-add-btn" title="Afegeix un regal"
+                                <button type="button" class="cl-child-add-btn" title="<?= tr('gift_add_gift') ?>"
                                     data-year="<?= $year ?>"
                                     data-child="<?= htmlspecialchars($childName) ?>"
                                     data-occasion="<?= htmlspecialchars($occCode) ?>"
@@ -239,7 +230,7 @@ require __DIR__ . '/header.php';
                                                                 <div class="cl-gift-right">
                                                                     <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
                                                                     <span class="cl-gift-actions">
-                                                                        <button type="button" class="cl-gift-action-btn cl-gift-edit" aria-label="Edita"
+                                                                        <button type="button" class="cl-gift-action-btn cl-gift-edit" aria-label="<?= tr('edit') ?>"
                                                                             data-id="<?= $giftId ?>"
                                                                             data-year="<?= $year ?>"
                                                                             data-child="<?= htmlspecialchars($childName) ?>"
@@ -251,7 +242,7 @@ require __DIR__ . '/header.php';
                                                                             data-link="<?= htmlspecialchars($gift['product_link'] ?? '') ?>">
                                                                             ✎
                                                                         </button>
-                                                                        <button type="button" class="cl-gift-action-btn cl-gift-delete" aria-label="Eliminar" data-id="<?= $giftId ?>">
+                                                                        <button type="button" class="cl-gift-action-btn cl-gift-delete" aria-label="<?= tr('delete') ?>" data-id="<?= $giftId ?>">
                                                                             ×
                                                                         </button>
                                                                     </span>
@@ -259,7 +250,7 @@ require __DIR__ . '/header.php';
                                                             </div>
                                                             
                                                             <?php if (!empty($payer) && $payer !== $gift['adult_name']): ?>
-                                                                <small style="color:#b91c1c; font-style:italic; display:block; font-size:0.75em;">(pagat per <?= htmlspecialchars($payer) ?>)</small>
+                                                                <small style="color:#b91c1c; font-style:italic; display:block; font-size:0.75em;">(<?= sprintf(tr('gift_paid_by'), htmlspecialchars($payer)) ?>)</small>
                                                             <?php endif; ?>
                                                         </div>
                                                     <?php else: ?>
@@ -279,9 +270,8 @@ require __DIR__ . '/header.php';
     </section>
 
     <section class="pf-section pf-section--panel">
-        <h2>Resum del pressupost</h2>
+        <h2><?= tr('gift_summary_title') ?></h2>
         <?php
-            // Calcul agrégé SQL pour vérification
             $stmtSum = $pdo->prepare("SELECT adult_name, child_name, occasion, SUM(amount) AS total FROM {$tableGifts} WHERE year = ? AND occasion IN ($inMarks) GROUP BY adult_name, child_name, occasion ORDER BY adult_name, child_name, occasion");
             $stmtSum->execute($params);
             $sums = $stmtSum->fetchAll(PDO::FETCH_ASSOC);
@@ -289,7 +279,7 @@ require __DIR__ . '/header.php';
         <div class="cl-budget-wrapper">
             <table class="pf-table pf-table--compact">
                 <thead>
-                    <tr><th>Adult</th><th>Infant</th><th>Festa</th><th>Total</th></tr>
+                    <tr><th><?= tr('gift_col_adult') ?></th><th><?= tr('gift_col_child') ?></th><th><?= tr('gift_col_party') ?></th><th>Total</th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($sums as $row): ?>
@@ -311,7 +301,7 @@ require __DIR__ . '/header.php';
             <table class="pf-table pf-table--compact cl-debt-matrix">
                 <thead>
                     <tr>
-                        <th class="cl-matrix-corner"><span>Deutor ↓</span><span>Creditor →</span></th>
+                        <th class="cl-matrix-corner"><span><?= tr('gift_debtor') ?> ↓</span><span><?= tr('gift_creditor') ?> →</span></th>
                         <?php foreach ($people as $p): ?><th><?= htmlspecialchars($p) ?></th><?php endforeach; ?>
                     </tr>
                 </thead>
@@ -334,24 +324,24 @@ require __DIR__ . '/header.php';
             </table>
         </div>
 
-        <h3 style="margin-top:16px; font-size:1.1rem; color:#374151;">Liquidacions</h3>
+        <h3 style="margin-top:16px; font-size:1.1rem; color:#374151;"><?= tr('gift_liquidations') ?></h3>
         <?php if (empty($settlements)): ?>
-            <p class="cl-legend">Cap deute pendent.</p>
+            <p class="cl-legend"><?= tr('gift_no_debt') ?></p>
         <?php else: ?>
             <ul class="hol-list">
                 <?php foreach ($settlements as $s): ?>
-                    <li><strong><?= htmlspecialchars($s['from']) ?></strong> ha de pagar <strong><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong> a <?= htmlspecialchars($s['to']) ?></li>
+                    <li><strong><?= htmlspecialchars($s['from']) ?></strong> <?= tr('gift_owes') ?> <strong><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong> <?= tr('gift_to') ?> <?= htmlspecialchars($s['to']) ?></li>
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
     </section>
 
     <section class="pf-section pf-section--panel">
-        <h2>Llista detallada de regals</h2>
+        <h2><?= tr('gift_detailed_list') ?></h2>
         <div class="cl-detail-wrapper">
             <table class="pf-table pf-table--compact">
                 <thead>
-                    <tr><th>Adult</th><th>Infant</th><th>Festa</th><th>Regal</th><th>€</th><th>Enllaç</th></tr>
+                    <tr><th><?= tr('gift_col_adult') ?></th><th><?= tr('gift_col_child') ?></th><th><?= tr('gift_col_party') ?></th><th><?= tr('gift_col_gift') ?></th><th>€</th><th><?= tr('gift_col_link') ?></th></tr>
                 </thead>
                 <tbody>
                     <?php foreach ($gifts as $g): ?>
@@ -375,6 +365,14 @@ require __DIR__ . '/header.php';
 </div>
 
 <script>
+// Pont de traduction JS
+window.I18N = {
+    ...window.I18N,
+    'gift_modal_title_add': "<?= tr('gift_modal_title_add') ?>",
+    'gift_modal_title_edit': "<?= tr('gift_modal_title_edit') ?>",
+    'gift_confirm_delete': "<?= tr('gift_confirm_delete') ?>"
+};
+
 document.addEventListener('DOMContentLoaded', function () {
     const modal = document.getElementById('cl-gift-modal');
     const backdrop = modal ? modal.querySelector('.cl-modal-backdrop') : null;
@@ -383,9 +381,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function toggleModal(show) {
         if (!modal) return;
         modal.classList.toggle('cl-open', show);
+        if(show) document.body.classList.add('no-scroll');
+        else document.body.classList.remove('no-scroll');
     }
 
-    // Gestion des options de select (Adultes dynamiques selon l'enfant)
     function populateSelects(adults) {
         const selects = [document.getElementById('clm-adult'), document.getElementById('clm-payer')];
         selects.forEach(sel => {
@@ -409,7 +408,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             populateSelects(adults);
             
-            // Valeurs par défaut
             document.getElementById('clm-action').value = 'create';
             document.getElementById('clm-id').value = '';
             document.getElementById('clm-year').value = d.year;
@@ -420,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('clm-amount').value = '';
             document.getElementById('clm-link').value = '';
 
-            document.getElementById('cl-modal-title').textContent = `Afegeix un regal per ${d.child}`;
+            document.getElementById('cl-modal-title').textContent = tr('gift_modal_title_add').replace('%s', d.child);
             toggleModal(true);
         });
     });
@@ -431,12 +429,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!btn) return;
 
         const d = btn.dataset;
-        // Pour l'édition, on s'assure que l'adulte actuel est dans la liste (même si pas standard)
         const adultSelect = document.getElementById('clm-adult');
         const payerSelect = document.getElementById('clm-payer');
         
-        // On ne recharge pas toute la liste adults ici car complexe à récupérer du DOM, 
-        // on ajoute juste l'option si manquante.
         [adultSelect, payerSelect].forEach(sel => {
             const val = (sel === adultSelect) ? d.adult : (d.payer || d.adult);
             if (!Array.from(sel.options).some(o => o.value === val)) {
@@ -458,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('clm-amount').value = d.amount;
         document.getElementById('clm-link').value = d.link;
 
-        document.getElementById('cl-modal-title').textContent = `Edita el regal`;
+        document.getElementById('cl-modal-title').textContent = tr('gift_modal_title_edit');
         toggleModal(true);
     });
 
@@ -467,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const btn = e.target.closest('.cl-gift-delete');
         if (!btn) return;
         
-        if (confirm('Vols eliminar aquest regal?')) {
+        if (confirm(tr('gift_confirm_delete'))) {
             const form = document.getElementById('cl-delete-form');
             document.getElementById('cld-id').value = btn.dataset.id;
             form.submit();
@@ -483,9 +478,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <div id="cl-gift-modal" class="cl-modal" aria-hidden="true">
     <div class="cl-modal-backdrop"></div>
-    <div class="cl-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="cl-modal-title">
+    <div class="cl-modal-dialog pf-modal-content" role="dialog" aria-modal="true" aria-labelledby="cl-modal-title">
         <form method="post" action="/modules/gift-list/save-gift.php" class="cl-modal-form">
-            <h3 id="cl-modal-title">Regal</h3>
+            <h3 id="cl-modal-title" style="margin-top:0;"><?= tr('gift_col_gift') ?></h3>
 
             <input type="hidden" name="year" id="clm-year">
             <input type="hidden" name="child_name" id="clm-child">
@@ -493,34 +488,34 @@ document.addEventListener('DOMContentLoaded', function () {
             <input type="hidden" name="action" id="clm-action">
             <input type="hidden" name="gift_id" id="clm-id">
 
-            <label class="clm-label">
-                Adult
-                <select name="adult_name" id="clm-adult" required></select>
-            </label>
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label"><?= tr('gift_col_adult') ?></label>
+                <select name="adult_name" id="clm-adult" class="pf-input" required></select>
+            </div>
 
-            <label class="clm-label">
-                Pagat per
-                <select name="payer_name" id="clm-payer" required></select>
-            </label>
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label"><?= tr('gift_modal_payer') ?></label>
+                <select name="payer_name" id="clm-payer" class="pf-input" required></select>
+            </div>
 
-            <label class="clm-label">
-                Nom del regal
-                <input type="text" name="gift_description" id="clm-gift" placeholder="p. ex., Lego Star Wars" required>
-            </label>
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label"><?= tr('gift_modal_gift_name') ?></label>
+                <input type="text" name="gift_description" id="clm-gift" class="pf-input" placeholder="<?= tr('gift_modal_ph_name') ?>" required>
+            </div>
 
-            <label class="clm-label">
-                Preu (€)
-                <input type="number" name="amount" id="clm-amount" placeholder="49.99" step="0.01" min="0">
-            </label>
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label"><?= tr('gift_modal_price') ?></label>
+                <input type="number" name="amount" id="clm-amount" class="pf-input" placeholder="49.99" step="0.01" min="0">
+            </div>
 
-            <label class="clm-label">
-                Enllaç (opcional)
-                <input type="url" name="product_link" id="clm-link" placeholder="https://...">
-            </label>
+            <div class="form-group" style="margin-bottom:25px;">
+                <label class="pf-label"><?= tr('gift_modal_link') ?></label>
+                <input type="url" name="product_link" id="clm-link" class="pf-input" placeholder="https://...">
+            </div>
 
-            <div class="cl-modal-actions">
-                <button type="button" class="clm-cancel">Cancel·la</button>
-                <button type="submit" class="clm-ok">Guardar</button>
+            <div class="modal-footer" style="padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" class="clm-cancel pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="clm-ok pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
