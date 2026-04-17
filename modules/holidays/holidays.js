@@ -49,10 +49,20 @@ async function loadWeatherForStep(pt) {
 
     if (res.success) {
       const info = getWeatherInfo(res.data.code);
+
+      // Si c'est une estimation basée sur le passé, on adapte l'affichage
+      const approxSymbol = res.data.is_historical ? "~" : "";
+      const badgeTitle = res.data.is_historical
+        ? `${info.label} (${tr("weather_historical")})`
+        : info.label;
+      const opacityStyle = res.data.is_historical
+        ? "opacity: 0.85; font-style: italic;"
+        : "";
+
       container.innerHTML = `
-        <div class="pf-weather-badge" title="${info.label}">
+        <div class="pf-weather-badge" title="${badgeTitle}" style="${opacityStyle}">
           <span class="pf-weather-icon">${info.icon}</span>
-          <span>${Math.round(res.data.temp_min)}° / ${Math.round(res.data.temp_max)}°C</span>
+          <span>${approxSymbol}${Math.round(res.data.temp_min)}° / ${Math.round(res.data.temp_max)}°C</span>
         </div>`;
     }
   } catch (e) {

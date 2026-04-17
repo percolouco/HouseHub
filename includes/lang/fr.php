@@ -220,6 +220,7 @@ return [
     'weather_cloudy'  => 'Nuageux',
     'weather_rainy'   => 'Pluvieux',
     'weather_snowy'   => 'Neigeux',
+    'weather_historical' => 'Basé sur l\'historique (estimation)',
 
     // Anciennes clés Holidays non préfixées (conservées pour compatibilité si utilisées)
     'outbound_trip'             => 'Aller',
