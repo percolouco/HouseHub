@@ -44,7 +44,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'close_month') {
     $pdo->prepare("INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('active_gestion_month', 'GLOBAL', ?) ON DUPLICATE KEY UPDATE content = VALUES(content)")
         ->execute([$nextMonthToOpen]);
 
-    header("Location: ?tab=suivi&m=" . date('m', strtotime($nextMonthToOpen)) . "&y=" . date('Y', strtotime($nextMonthToOpen)));
+    echo "<script>window.location.href='?tab=suivi&m=" . date('m', strtotime($nextMonthToOpen)) . "&y=" . date('Y', strtotime($nextMonthToOpen)) . "';</script>";
     exit;
 }
 
@@ -52,7 +52,8 @@ if (isset($_POST['action']) && $_POST['action'] === 'reopen_month') {
     $pdo->prepare("DELETE FROM pf_notes WHERE note_type = 'month_closure' AND reference_id = ?")->execute([$viewMonthDate]);
     $pdo->prepare("INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('active_gestion_month', 'GLOBAL', ?) ON DUPLICATE KEY UPDATE content = VALUES(content)")
         ->execute([$viewMonthDate]);
-    header("Location: ?tab=suivi&m=$viewM&y=$viewY");
+    
+    echo "<script>window.location.href='?tab=suivi&m=$viewM&y=$viewY';</script>";
     exit;
 }
 
@@ -81,7 +82,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
             $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                 ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId, $holidayId]);
         }
-        header("Location: ?tab=suivi&m=$viewM&y=$viewY"); exit;
+        
+        echo "<script>window.location.href='?tab=suivi&m=$viewM&y=$viewY';</script>"; 
+        exit;
     }
 }
 
@@ -113,17 +116,24 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
             }
         }
     }
-    header("Location: ?tab=suivi&m=$viewM&y=$viewY&msg=imported_$count"); exit;
+    
+    echo "<script>window.location.href='?tab=suivi&m=$viewM&y=$viewY&msg=imported_$count';</script>"; 
+    exit;
 }
 
 if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     $pdo->query("DELETE FROM pf_bank_snapshots"); 
     $pdo->prepare("INSERT INTO pf_bank_snapshots (snapshot_date, amount) VALUES (?, ?)")->execute([$_POST['snapshot_date'], floatval($_POST['snapshot_amount'])]);
-    header("Location: ?tab=suivi&m=$viewM&y=$viewY"); exit;
+    
+    echo "<script>window.location.href='?tab=suivi&m=$viewM&y=$viewY';</script>"; 
+    exit;
 }
+
 if (isset($_GET['delete_expense'])) {
     $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_GET['delete_expense']]);
-    header("Location: ?tab=suivi&m=$viewM&y=$viewY"); exit;
+    
+    echo "<script>window.location.href='?tab=suivi&m=$viewM&y=$viewY';</script>"; 
+    exit;
 }
 
 // ============================================================================
