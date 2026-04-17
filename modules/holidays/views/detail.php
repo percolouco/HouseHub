@@ -204,8 +204,11 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                             <span style="background: #fff7ed; color: #ea580c; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #ffedd5; vertical-align: middle;">🏁 <?= tr('hdl_return') ?></span>
                                         <?php endif; ?>
                                         <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
-                                            <div style="font-size:0.75rem; color:#64748b; font-weight:normal; margin-top:2px;">
-                                                <?= tr('hdl_from') ?> <?= date('d/m', strtotime($step['step_start_date'])) ?> <?= tr('hdl_to') ?> <?= date('d/m', strtotime($step['step_end_date'])) ?>
+                                            <div style="font-size:0.75rem; color:#64748b; font-weight:normal; margin-top:2px; display: flex; align-items: center; gap: 10px;">
+                                                <span>
+                                                    <?= tr('hdl_from') ?> <?= date('d/m', strtotime($step['step_start_date'])) ?> <?= tr('hdl_to') ?> <?= date('d/m', strtotime($step['step_end_date'])) ?>
+                                                </span>
+                                                <div class="hol-weather-info"></div>
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -352,19 +355,52 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
     </div>
 </div>
 
+<?php include __DIR__ . '/modal.php'; ?>
+
 <script>
-    const MAP_POINTS = <?= json_encode($mapPoints) ?>;
+// --- 1. SÉCURISATION TRADUCTIONS ET VARIABLES ---
+window.MAP_POINTS = <?= json_encode($mapPoints ?? []) ?>;
+window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+
+window.I18N = {
+    ...(window.I18N || {}),
+    'hdl_js_search_loading': "<?= tr('hdl_js_search_loading') ?>",
+    'hdl_js_no_result': "<?= tr('hdl_js_no_result') ?>",
+    'hdl_js_confirm_del_trip': "<?= tr('hdl_js_confirm_del_trip') ?>",
+    'hdl_js_confirm_del_step': "<?= tr('hdl_js_confirm_del_step') ?>",
+    'hdl_js_step_label': "<?= tr('hdl_js_step_label') ?>",
+    'hdl_js_ph_expense_name': "<?= tr('hdl_js_ph_expense_name') ?>",
+    'hdl_js_delete_line': "<?= tr('btn_delete') ?>",
+    'hdl_planning_title': "<?= tr('hdl_planning_title') ?>",
+    'hdl_to_place': "<?= tr('hdl_to_place') ?>",
+    'hdl_js_missing_dates_title': "<?= tr('hdl_js_missing_dates_title') ?>",
+    'hdl_js_missing_dates_msg': "<?= tr('hdl_js_missing_dates_msg') ?>",
+    'hdl_modal_title': "<?= tr('hdl_modal_title') ?>",
+    'hdl_js_edit_step': "<?= tr('hdl_js_edit_step') ?>",
+    'hdl_ph_notes': "<?= tr('hdl_ph_notes') ?>",
+    'hdl_btn_add_step': "<?= tr('hdl_btn_add_step') ?>",
+    'hdl_quick_edit_title': "<?= tr('hdl_quick_edit_title') ?>",
     
-    // Le pont i18n pour Javascript (Holidays specific)
-    window.I18N = {
-        ...window.I18N,
-        'hdl_js_search_loading': "<?= tr('hdl_js_search_loading') ?>",
-        'hdl_js_no_result': "<?= tr('hdl_js_no_result') ?>",
-        'hdl_js_confirm_del_trip': "<?= tr('hdl_js_confirm_del_trip') ?>",
-        'hdl_js_confirm_del_step': "<?= tr('hdl_js_confirm_del_step') ?>",
-        'hdl_js_step_label': "<?= tr('hdl_js_step_label') ?>",
-        'hdl_js_ph_expense_name': "<?= tr('hdl_js_ph_expense_name') ?>",
-        'hdl_js_ph_amount': "0.00",
-        'hdl_js_delete_line': "<?= tr('btn_delete') ?>"
-    };
+    // --- NOUVELLES CLÉS MÉTÉO ICI ---
+    'weather_sunny': "<?= tr('weather_sunny') ?>",
+    'weather_cloudy': "<?= tr('weather_cloudy') ?>",
+    'weather_rainy': "<?= tr('weather_rainy') ?>",
+    'weather_snowy': "<?= tr('weather_snowy') ?>",
+    'weather_forecast': "<?= tr('weather_forecast') ?>"
+};
+
+// Fallback de sécurité pour s'assurer que les modales peuvent toujours se fermer
+window.closeCheckpointModal = window.closeCheckpointModal || function() {
+    const modal = document.getElementById('checkpointModal');
+    if(modal) modal.style.display = 'none';
+    document.body.classList.remove('no-scroll');
+};
+
+window.closePlanningModal = window.closePlanningModal || function() {
+    const modal = document.getElementById('planningModal');
+    if(modal) modal.style.display = 'none';
+    document.body.classList.remove('no-scroll');
+};
 </script>
+
+<script src="/modules/holidays/holidays.js"></script>

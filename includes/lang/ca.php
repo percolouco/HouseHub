@@ -206,6 +206,20 @@ return [
     'hdl_js_missing_dates_title'=> 'Dates mancants',
     'hdl_js_missing_dates_msg'  => 'Cal definir una data d’arribada i sortida per organitzar la planificació.',
     'hdl_to_place'              => 'Per situar',
+    'hdl_from'                  => 'Des del',
+    'hdl_to'                    => 'Fins al',
+    'hdl_btn_add_step'          => 'Afegir una etapa',
+    'hdl_quick_edit_title'      => 'Modificació ràpida',
+    'hdl_paid'                  => 'Pagat',
+    'weather_forecast' => 'Previsions meteorològiques',
+    'weather_not_available' => 'Temps no disponible',
+    'temp_max' => 'Temp. Màxima',
+    'weather_loading' => 'Carregant el temps...',
+    'weather_error'   => 'Temps no disponible',
+    'weather_sunny'   => 'Assolellat',
+    'weather_cloudy'  => 'Ennuvolat',
+    'weather_rainy'   => 'Plujós',
+    'weather_snowy'   => 'Nevat',
 
     // Anciennes clés Holidays non préfixées (conservades)
     'outbound_trip'             => 'Anada',
@@ -373,6 +387,9 @@ return [
     'bud_reg_none'              => 'Cap',
     'bud_recap_confirm_delete'  => 'Segur que vols suprimir aquest element?',
     'bud_err_delete'            => 'Error en suprimir.',
+    'bud_sav_modal_title_add'   => 'Introduir un mes',
+    'bud_sav_ph_name'           => 'Nom (ex: Vacances)',
+    'bud_prev_label_name'       => 'Nom',
 
     // --- BUDGET : EPARGNE ---
     'bud_sav_add_month'            => 'Introduir un mes',

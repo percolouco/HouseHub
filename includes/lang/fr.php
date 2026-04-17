@@ -206,6 +206,20 @@ return [
     'hdl_js_missing_dates_title'=> 'Dates manquantes',
     'hdl_js_missing_dates_msg'  => 'Veuillez définir une date d’arrivée et de départ pour organiser le planning.',
     'hdl_to_place'              => 'À placer',
+    'hdl_from'                  => 'Du',
+    'hdl_to'                    => 'Au',
+    'hdl_btn_add_step'          => 'Ajouter une étape',
+    'hdl_quick_edit_title'      => 'Modification rapide',
+    'hdl_paid'                  => 'Payé',
+    'weather_forecast' => 'Prévisions météo',
+    'weather_not_available' => 'Météo indisponible',
+    'temp_max' => 'Temp. Max',
+    'weather_loading' => 'Chargement météo...',
+    'weather_error'   => 'Météo indisponible',
+    'weather_sunny'   => 'Ensoleillé',
+    'weather_cloudy'  => 'Nuageux',
+    'weather_rainy'   => 'Pluvieux',
+    'weather_snowy'   => 'Neigeux',
 
     // Anciennes clés Holidays non préfixées (conservées pour compatibilité si utilisées)
     'outbound_trip'             => 'Aller',
@@ -438,6 +452,9 @@ return [
     'bud_prev_err_no_history'    => 'Impossible : pas d\'historique disponible pour copier.',
     'bud_prev_confirm_copy'      => "Voulez-vous copier les données de %s vers %t ?\n\n⚠️ Cela écrasera toutes les valeurs déjà présentes pour %t.",
     'bud_prev_confirm_transfers' => "Confirmer que %p a bien effectué tous ses virements pour %m ?\n\nCela mettra à jour l'Épargne automatiquement.",
+    'bud_sav_modal_title_add'   => 'Saisir un mois',
+    'bud_sav_ph_name'           => 'Nom (ex: Vacances)',
+    'bud_prev_label_name'       => 'Nom',
 
     // ==========================================
     // CADEAUX (GIFTS)

@@ -944,10 +944,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       div.innerHTML = `
-         <div class="fc-summary-item"><span class="fc-summary-label">Off Carole</span><span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} jours</span></div>
-         <div class="fc-summary-item"><span class="fc-summary-label">Extra Off Carole</span><span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} jours</span></div>
-         <div class="fc-summary-item"><span class="fc-summary-label">Pep Malade</span><span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} jours</span></div>
-         <div class="fc-summary-item"><span class="fc-summary-label">Présence Pep</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} jours</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_off_carole")}</span><span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} ${tr("fc_unit_days")}</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_extra_off")}</span><span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} ${tr("fc_unit_days")}</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_pep_sick")}</span><span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} ${tr("fc_unit_days")}</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_presence")} Pep</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} ${tr("fc_unit_days")}</span></div>
        `;
     }
 

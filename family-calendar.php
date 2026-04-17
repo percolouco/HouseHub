@@ -196,5 +196,28 @@ require __DIR__ . '/header.php';
     </section>
 </div>
 
+<script>
+window.I18N = {
+    ...(window.I18N || {}),
+    'fc_menu_carole': "<?= tr('fc_menu_carole') ?>",
+    'btn_off': "<?= tr('btn_off') ?>",
+    'btn_extra': "<?= tr('btn_extra') ?>",
+    'leg_centre': "<?= tr('leg_centre') ?>",
+    'leg_avis': "<?= tr('leg_avis') ?>",
+    'leg_pep_sick': "<?= tr('leg_pep_sick') ?>",
+    'fc_menu_kids_leaves': "<?= tr('fc_menu_kids_leaves') ?>",
+    'fc_clear': "<?= tr('fc_clear') ?>",
+    'fc_unit_days': "<?= tr('fc_unit_days') ?>",
+    'vac_toussaint': "<?= tr('vac_toussaint') ?>",
+    'vac_noel': "<?= tr('vac_noel') ?>",
+    'vac_hiver': "<?= tr('vac_hiver') ?>",
+    'vac_printemps': "<?= tr('vac_printemps') ?>",
+    'vac_ascension': "<?= tr('vac_ascension') ?>",
+    'vac_ete': "<?= tr('vac_ete') ?>",
+    'leg_school_holidays': "<?= tr('leg_school_holidays') ?>",
+    'fc_school_year': "<?= tr('fc_school_year') ?>",
+    'fc_modal_holidays_title': "<?= tr('fc_modal_holidays_title') ?>"
+};
+</script>
 <script src="/modules/family-calendar/family-calendar.js"></script>
 <?php require __DIR__ . '/footer.php'; ?>

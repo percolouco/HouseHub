@@ -168,7 +168,6 @@
   min-width: 1000px;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
 }
 
 /* Sticky Header */
@@ -303,12 +302,25 @@
   width: auto !important;
   border-right: 2px solid var(--border-color) !important;
 }
-.col-total,
-.col-alex-sub,
-.col-laia-sub {
+th.col-total,
+td.col-total,
+th.col-alex-sub,
+td.col-alex-sub,
+th.col-laia-sub,
+td.col-laia-sub {
   width: 32px !important;
   min-width: 32px !important;
   max-width: 32px !important;
+  box-sizing: border-box;
+  padding: 0 2px !important; /* On réduit le padding pour que les chiffres respirent */
+  overflow: hidden;
+}
+
+th.col-day,
+td.col-day {
+  width: auto !important;
+  min-width: 35px !important;
+  border-right: 2px solid var(--border-color) !important;
 }
 
 .rotated-text span {

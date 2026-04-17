@@ -5,8 +5,60 @@ function tr(key) {
   return window.I18N && window.I18N[key] ? window.I18N[key] : key;
 }
 
-// On détecte la langue de la page (définie dans la balise <html lang="..."> du header)
-const currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+// On utilise 'var' au lieu de 'const/let' pour éviter les crashs si le fichier est lu 2 fois
+var currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+var selectedItemIdForMove = null; // Déplacé ici pour plus de clarté
+
+// ============================================================================
+// UTILITAIRES MÉTÉO
+// ============================================================================
+function getWeatherInfo(code) {
+  // Transformation en conditions pour regrouper les codes WMO
+  if (code === 0) return { icon: "☀️", label: tr("weather_sunny") };
+  if ([1, 2].includes(code)) return { icon: "🌤️", label: tr("weather_sunny") };
+  if ([3, 45, 48].includes(code))
+    return { icon: "☁️", label: tr("weather_cloudy") };
+  // Les codes 51 à 67 et 80 à 82 couvrent toutes les formes de pluie et bruine
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code))
+    return { icon: "🌧️", label: tr("weather_rainy") };
+  // Les codes neigeux
+  if ([71, 73, 75, 77, 85, 86].includes(code))
+    return { icon: "❄️", label: tr("weather_snowy") };
+  // Orages
+  if ([95, 96, 99].includes(code))
+    return { icon: "⛈️", label: tr("weather_rainy") };
+
+  return { icon: "🌡️", label: tr("weather_forecast") };
+}
+
+async function loadWeatherForStep(pt) {
+  if (!pt.step_start_date || !pt.lat || !pt.lng) return;
+
+  const container = document.querySelector(
+    `#step-card-${pt.sort_order} .hol-weather-info`,
+  );
+  if (!container) return;
+
+  try {
+    const resp = await fetch(
+      `/modules/holidays/includes/api/get_weather.php?lat=${pt.lat}&lng=${pt.lng}&date=${pt.step_start_date}`,
+    );
+    const res = await resp.json();
+
+    console.log(`Météo pour ${pt.location_name} :`, res);
+
+    if (res.success) {
+      const info = getWeatherInfo(res.data.code);
+      container.innerHTML = `
+        <div class="pf-weather-badge" title="${info.label}">
+          <span class="pf-weather-icon">${info.icon}</span>
+          <span>${Math.round(res.data.temp_min)}° / ${Math.round(res.data.temp_max)}°C</span>
+        </div>`;
+    }
+  } catch (e) {
+    console.error("Weather error", e);
+  }
+}
 
 // ============================================================================
 // FERMETURE UNIVERSELLE DES MODALES
@@ -150,7 +202,7 @@ function deleteHoliday() {
 
 // --- 3. GESTION DE LA CARTE ---
 
-let map = null;
+var map = null;
 
 function toggleMap() {
   const modal = document.getElementById("hol-map-modal");
@@ -197,7 +249,7 @@ function initMap() {
 // 4. GESTION DE LA CARTE DÉTAILLÉE (ROADTRIP) ET GÉOCODAGE
 // ============================================================================
 
-let detailMap = null;
+var detailMap = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("tripMap")) {
@@ -207,6 +259,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initDetailMap() {
   if (typeof L === "undefined" || typeof MAP_POINTS === "undefined") return;
+
+  const mapContainer = L.DomUtil.get("tripMap");
+  if (mapContainer !== null && mapContainer._leaflet_id) {
+    mapContainer._leaflet_id = null;
+  }
 
   detailMap = L.map("tripMap");
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -323,6 +380,11 @@ function initDetailMap() {
         }
       });
     });
+    detailMap.fitBounds(bounds, { padding: [50, 50] });
+    // Lancement de la météo pour chaque étape
+    if (typeof MAP_POINTS !== "undefined") {
+      MAP_POINTS.forEach((pt) => loadWeatherForStep(pt));
+    }
   }
 
   function drawFallbackLine(coords, color, weight) {
@@ -582,7 +644,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // ============================================================================
 // MOTEUR DRAG & DROP DU PLANNING
 // ============================================================================
-let selectedItemIdForMove = null;
 
 function closePlanningModal() {
   document.getElementById("planningModal").style.display = "none";
