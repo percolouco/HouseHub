@@ -38,16 +38,26 @@ if ($daysDiff < -2) {
 
 $url = "$baseUrl?latitude=$lat&longitude=$lng&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&start_date=$date&end_date=$date";
 
-// 5. Interrogation d'Open-Meteo
-$res = @file_get_contents($url);
+// 5. Interrogation d'Open-Meteo via cURL (plus robuste)
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Timeout de 5 secondes max
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Contourne les erreurs SSL en local
+
+$res = curl_exec($ch);
+$curlError = curl_error($ch); // On capture l'erreur exacte au cas où
+curl_close($ch);
 
 if (!$res) {
-    echo json_encode(['success' => false, 'message' => 'Erreur API Open-Meteo']); 
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Erreur API Open-Meteo',
+        'debug' => $curlError, // L'inspecteur JS nous donnera la vraie raison !
+        'url' => $url
+    ]); 
     exit;
 }
-
-$data = json_decode($res, true);
-
 // 6. Formatage et envoi au Javascript
 if (isset($data['daily']['weather_code'][0])) {
     echo json_encode([
