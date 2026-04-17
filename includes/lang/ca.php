@@ -220,6 +220,7 @@ return [
     'weather_cloudy'  => 'Ennuvolat',
     'weather_rainy'   => 'Plujós',
     'weather_snowy'   => 'Nevat',
+    'weather_historical' => 'Basat en l\'històric (estimació)',
 
     // Anciennes clés Holidays non préfixées (conservades)
     'outbound_trip'             => 'Anada',

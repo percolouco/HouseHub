@@ -386,7 +386,8 @@ window.I18N = {
     'weather_cloudy': "<?= tr('weather_cloudy') ?>",
     'weather_rainy': "<?= tr('weather_rainy') ?>",
     'weather_snowy': "<?= tr('weather_snowy') ?>",
-    'weather_forecast': "<?= tr('weather_forecast') ?>"
+    'weather_forecast': "<?= tr('weather_forecast') ?>",
+    'weather_historical': "<?= tr('weather_historical') ?>"
 };
 
 // Fallback de sécurité pour s'assurer que les modales peuvent toujours se fermer
