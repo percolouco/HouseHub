@@ -204,8 +204,8 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                             <span style="background: #fff7ed; color: #ea580c; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #ffedd5; vertical-align: middle;">🏁 <?= tr('hdl_return') ?></span>
                                         <?php endif; ?>
                                         <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
-                                            <div style="font-size:0.75rem; color:#64748b; font-weight:normal; margin-top:2px; display: flex; align-items: center; gap: 10px;">
-                                                <span>
+                                            <div class="hol-date-weather-wrapper">
+                                                <span class="hol-step-dates">
                                                     <?= tr('hdl_from') ?> <?= date('d/m', strtotime($step['step_start_date'])) ?> <?= tr('hdl_to') ?> <?= date('d/m', strtotime($step['step_end_date'])) ?>
                                                 </span>
                                                 <div class="hol-weather-info"></div>

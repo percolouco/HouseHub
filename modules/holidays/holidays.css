@@ -482,6 +482,26 @@ body.no-scroll {
     max-height: 100vh;
     border-radius: 0;
   }
+  @media (max-width: 768px) {
+    .hol-date-weather-wrapper {
+      gap: 6px; /* On rapproche la météo de la date sur mobile */
+    }
+
+    /* On aligne le haut de la carte au cas où le contenu passe sur 2 lignes */
+    .hol-cp-header {
+      align-items: flex-start;
+    }
+
+    /* On autorise le titre et les dates à prendre la place nécessaire */
+    .hol-cp-info-group {
+      flex: 1;
+      min-width: 0; /* Empêche le flexbox de "déborder" de l'écran */
+    }
+
+    .hol-cp-title {
+      white-space: normal; /* Permet au titre de l'étape de passer à la ligne si besoin */
+    }
+  }
 }
 
 /* --- 11. CALENDRIER & DATES (Force Light Theme) --- */
@@ -1218,4 +1238,21 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .pf-weather-icon {
   font-size: 0.9rem;
+}
+
+/* Conteneur Date + Météo */
+.hol-date-weather-wrapper {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: normal;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap; /* Le secret pour le responsive ! */
+}
+
+/* On s'assure que le texte de la date ne se coupe pas au milieu d'un mot */
+.hol-step-dates {
+  white-space: nowrap;
 }
