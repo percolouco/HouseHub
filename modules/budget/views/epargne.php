@@ -244,31 +244,27 @@ function getMonthName($dateString) {
 </div>
 
 <script>
-    window.I18N = {
-        ...window.I18N,
-        'bud_sav_ph_name' : "<?= tr('bud_sav_ph_name') ?>",
-        'bud_sav_modal_title_edit' : "<?= tr('bud_sav_modal_title_edit') ?>",
-        'bud_sav_modal_title_add' : "<?= tr('bud_sav_modal_title_add') ?>",
-        'bud_sav_saving' : "<?= tr('bud_sav_saving') ?>",
-        'bud_err_tech' : "<?= tr('bud_err_tech') ?>",
-        'bud_sav_confirm_delete_month' : "<?= tr('bud_sav_confirm_delete_month') ?>",
-        'bud_sav_prompt_duplicate' : "<?= tr('bud_sav_prompt_duplicate') ?>",
-        'bud_err_server' : "<?= tr('bud_err_server') ?>",
-        'bud_err_network_dup' : "<?= tr('bud_err_network_dup') ?>"
-    };
-    
-    // Détection de la langue pour le JS
-    const currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
-</script>
+// --- 1. SÉCURISATION TRADUCTIONS ET LANGUE ---
+window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+window.I18N = {
+    ...(window.I18N || {}),
+    'bud_sav_modal_title_add': "<?= tr('bud_sav_modal_title_add') ?>",
+    'bud_sav_modal_title_edit': "<?= tr('bud_sav_modal_title_edit') ?>",
+    'bud_sav_ph_name': "<?= tr('bud_sav_ph_name') ?>",
+    'bud_sav_confirm_delete_month': "<?= tr('bud_sav_confirm_delete_month') ?>",
+    'bud_sav_prompt_duplicate': "<?= tr('bud_sav_prompt_duplicate') ?>",
+    'bud_err_tech': "<?= tr('bud_err_tech') ?>",
+    'bud_err_server': "<?= tr('bud_err_server') ?>",
+    'bud_err_network_dup': "<?= tr('bud_err_network_dup') ?>",
+    'bud_sav_saving': "<?= tr('bud_sav_saving') ?>",
+    'bud_err_delete': "<?= tr('bud_err_delete') ?>"
+};
 
-<script>
-// ============================================================================
-// 1. GESTION DE L'ÉDITION INVISIBLE EN DIRECT (Input Classique)
-// ============================================================================
+// --- 2. GESTION DE L'ÉDITION INVISIBLE EN DIRECT ---
+const cycleConfigs = <?= json_encode($cycleConfigs ?? []) ?>;
 
 function updateEpargneCell(month, category, owner, inputEl) {
     const val = parseFloat(inputEl.value) || 0;
-
     const formData = new FormData();
     formData.append('action', 'update_single_entry');
     formData.append('month_date', month);
@@ -282,7 +278,7 @@ function updateEpargneCell(month, category, owner, inputEl) {
     }).catch(err => alert(tr("bud_err_tech")));
 
     const totalInput = document.querySelector(`.total-input-${owner}-${month}`);
-    const totalVal = parseFloat(totalInput.value) || 0;
+    const totalVal = parseFloat(totalInput ? totalInput.value : 0) || 0;
 
     let sumCats = 0;
     document.querySelectorAll(`.cat-input-${owner}-${month}`).forEach(inp => {
@@ -293,17 +289,12 @@ function updateEpargneCell(month, category, owner, inputEl) {
     const extraCell = document.getElementById(`extra_${owner}_${month}`);
 
     if (extraCell) {
-        extraCell.innerText = Math.round(extra).toLocaleString(currentLang) + ' €';
+        extraCell.innerText = Math.round(extra).toLocaleString(window.appLang) + ' €';
         extraCell.style.color = extra >= 0 ? '#10b981' : '#ef4444';
     }
     
     if(isSumModeActive) updateSumResult();
 }
-
-// ============================================================================
-// 2. MODALE D'ÉDITION CLASSIQUE / AJOUT
-// ============================================================================
-const cycleConfigs = <?= json_encode($cycleConfigs) ?>;
 
 function addCustomEpargneLine(catName = '', amount = '') {
     const container = document.getElementById('linesContainer');
@@ -315,19 +306,15 @@ function addCustomEpargneLine(catName = '', amount = '') {
             <div style="flex:2;">
                 <input type="text" class="pf-input cat-name-input" value="${catName}" placeholder="${tr("bud_sav_ph_name")}" oninput="updateCustomFieldName(this)" style="padding:6px; font-size:0.9rem;" required>
             </div>
-            
             <div style="width:100px;">
                 <input type="number" step="0.01" class="pf-input base-amount no-spinners" value="${baseAmount}" oninput="recalculateCustomLine(this)" style="padding:6px; font-size:0.9rem; background:#fff;">
             </div>
-
             <div style="width:90px;">
                 <input type="number" step="0.01" class="pf-input adjustment-amount no-spinners" placeholder="+ / -" oninput="recalculateCustomLine(this)" style="padding:6px; font-size:0.9rem; color:#f59e0b; font-weight:bold;">
             </div>
-
             <div style="width:100px;">
                 <input type="number" step="0.01" name="${inputName}" class="pf-input final-amount no-spinners" value="${baseAmount}" style="padding:6px; font-size:0.9rem; font-weight:bold; background:#e0f2fe; border-color:#bae6fd; color:#0369a1;" readonly>
             </div>
-            
             <button type="button" onclick="this.parentElement.remove()" style="width:28px; height:28px; border:none; background:#fee2e2; color:#ef4444; border-radius:4px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold;">&times;</button>
         </div>
     `;
@@ -360,7 +347,7 @@ function editCustomSavingsMonth(monthDate, owner, rowData) {
     document.getElementById('sav_month').value = ym;
     
     const dateObj = new Date(monthDate);
-    const monthName = dateObj.toLocaleDateString(currentLang, { month: 'long', year: 'numeric' });
+    const monthName = dateObj.toLocaleDateString(window.appLang, { month: 'long', year: 'numeric' });
     document.getElementById('savingsModalTitle').innerText = tr("bud_sav_modal_title_edit") + " " + monthName + " (" + owner + ")";
     
     document.getElementById('sav_total').value = rowData['TOTAL_BANQUE'] || '';
@@ -440,7 +427,7 @@ function deleteEntireMonth(monthDate, owner) {
     formData.append("owner", owner);
     fetch("/modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
     .then(() => window.location.reload())
-    .catch(err => alert("<?= tr('bud_err_delete') ?>"));
+    .catch(err => alert(tr('bud_err_delete')));
 }
 
 function duplicateLastMonth(lastMonthDate, owner) {
@@ -451,7 +438,7 @@ function duplicateLastMonth(lastMonthDate, owner) {
     let nextMonthStr = `${year}-${month}-01`;
 
     const formatMonth = (d) => {
-        let str = new Date(d).toLocaleDateString(currentLang, { month: 'long', year: 'numeric' });
+        let str = new Date(d).toLocaleDateString(window.appLang, { month: 'long', year: 'numeric' });
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
@@ -496,15 +483,12 @@ function duplicateLastMonth(lastMonthDate, owner) {
     }
 }
 
-// ============================================================================
-// 3. CALCULATRICE (SOMME RAPIDE)
-// ============================================================================
+// --- CALCULATRICE ---
 let isSumModeActive = false;
 let selectedElementsForSum = new Set();
 
 function toggleSumMode() {
     isSumModeActive = !isSumModeActive;
-    
     const fab = document.getElementById('fabSumMode');
     const resultBar = document.getElementById('sumResultBar');
     
@@ -541,13 +525,12 @@ function updateSumResult() {
         total += val;
     });
     
-    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(currentLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(window.appLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
 }
 
 document.addEventListener('click', function(e) {
     if (!isSumModeActive) return;
 
-    // Cible les inputs type number OU les cellules (td/th/div) ayant la classe .sum-target
     const targetElement = e.target.closest('input[type="number"], .sum-target');
     
     if (targetElement) {
@@ -563,5 +546,5 @@ document.addEventListener('click', function(e) {
         
         updateSumResult();
     }
-}, true); // Le 'true' intercepte le clic avant le focus normal
+}, true); 
 </script>

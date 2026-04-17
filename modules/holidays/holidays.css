@@ -1196,3 +1196,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   box-shadow: 0 0 0 3px var(--primary);
   transform: scale(1.02);
 }
+
+/* Style du badge météo injecté par le JS */
+.hol-weather-info {
+  display: inline-flex;
+}
+
+.pf-weather-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc; /* Slate 50 */
+  border: 1px solid #e2e8f0; /* Slate 200 */
+  padding: 1px 6px;
+  border-radius: 6px;
+  color: #475569; /* Slate 600 */
+  font-weight: 600;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.pf-weather-icon {
+  font-size: 0.9rem;
+}

@@ -90,6 +90,37 @@ foreach ($active as $h) {
 
 <?php include __DIR__ . '/modal.php'; ?>
 
+<script>
+// --- 1. SÉCURISATION TRADUCTIONS ET LANGUE ---
+window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+
+window.I18N = {
+    ...(window.I18N || {}),
+    'hdl_js_search_loading': "<?= tr('hdl_js_search_loading') ?>",
+    'hdl_js_no_result': "<?= tr('hdl_js_no_result') ?>",
+    'hdl_js_confirm_del_trip': "<?= tr('hdl_js_confirm_del_trip') ?>",
+    'hdl_js_confirm_del_step': "<?= tr('hdl_js_confirm_del_step') ?>",
+    'hdl_js_step_label': "<?= tr('hdl_js_step_label') ?>",
+    'hdl_js_ph_expense_name': "<?= tr('hdl_js_ph_expense_name') ?>",
+    'hdl_js_delete_line': "<?= tr('btn_delete') ?>",
+    'hdl_planning_title': "<?= tr('hdl_planning_title') ?>",
+    'hdl_to_place': "<?= tr('hdl_to_place') ?>",
+    'hdl_js_missing_dates_title': "<?= tr('hdl_js_missing_dates_title') ?>",
+    'hdl_js_missing_dates_msg': "<?= tr('hdl_js_missing_dates_msg') ?>",
+    'hdl_modal_title': "<?= tr('hdl_modal_title') ?>",
+    'hdl_quick_edit_title': "<?= tr('hdl_quick_edit_title') ?>"
+};
+
+// Fallback de sécurité pour s'assurer que la modale peut toujours se fermer
+window.closeHolidayModal = window.closeHolidayModal || function() {
+    const modal = document.getElementById('holidayModal');
+    if(modal) modal.style.display = 'none';
+    document.body.classList.remove('no-scroll');
+};
+</script>
+
+<script src="/modules/holidays/holidays.js"></script>
+
 <?php
 function renderHolidayCard($h, $pdo) {
     $stmt = $pdo->prepare("SELECT * FROM pf_holidays_items WHERE holiday_id = ?");
@@ -119,7 +150,6 @@ function renderHolidayCard($h, $pdo) {
     $pctPaid = $cost > 0 ? min(100, ($paid / $cost) * 100) : 0;
     $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
-    // Traduction dynamique du statut
     $statusLabel = tr('hdl_status_' . $h['status']);
 
     echo "

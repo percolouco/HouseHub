@@ -571,19 +571,22 @@ body.sum-mode-active .sum-target {
     <button onclick="toggleSumMode()" class="pf-sum-close" title="<?= tr('btn_close') ?>">&times;</button>
 </div>
 
-<script>
-    window.I18N = {
-        ...window.I18N,
-        'bud_prev_err_no_history': "<?= tr('bud_prev_err_no_history') ?>",
-        'bud_prev_confirm_copy': "<?= tr('bud_prev_confirm_copy') ?>",
-        'bud_prev_confirm_transfers': "<?= tr('bud_prev_confirm_transfers') ?>",
-        'bud_err_tech': "<?= tr('bud_err_tech') ?>"
-    };
-    
-    const currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
-</script>
 
 <script>
+// --- 1. SÉCURISATION TRADUCTIONS ET LANGUE ---
+window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+window.I18N = {
+    ...(window.I18N || {}),
+    'bud_prev_label_name': "<?= tr('bud_prev_label_name') ?>",
+    'bud_prev_err_no_history': "<?= tr('bud_prev_err_no_history') ?>",
+    'bud_prev_confirm_copy': "<?= tr('bud_prev_confirm_copy') ?>",
+    'bud_prev_confirm_transfers': "<?= tr('bud_prev_confirm_transfers') ?>",
+    'bud_err_tech': "<?= tr('bud_err_tech') ?>"
+};
+
+const currentYear = <?= $currentYear ?? 'new Date().getFullYear()' ?>;
+const months = <?= json_encode($months ?? []) ?>;
+
 function openEditModal(btn) {
     const id = btn.getAttribute('data-id');
     const name = btn.getAttribute('data-name');
@@ -599,9 +602,6 @@ function openEditModal(btn) {
     document.body.classList.add('no-scroll');
 }
 
-const currentYear = <?= $currentYear ?>;
-const months = <?= json_encode($months) ?>;
-
 function updateSalary(person, input) {
     const row = input.closest('tr');
     const salary = parseFloat(row.querySelector('[data-field="salary"]').value) || 0;
@@ -611,7 +611,7 @@ function updateSalary(person, input) {
     const ecoF = parseFloat(row.querySelector('[data-field="eco_family"]').value) || 0;
 
     const restant = salary - (mens + frais + ecoP + ecoF);
-    document.getElementById('restant_' + person).innerText = Math.round(restant).toLocaleString(currentLang) + ' €';
+    document.getElementById('restant_' + person).innerText = Math.round(restant).toLocaleString(window.appLang) + ' €';
 
     saveData('update_salary_config', { year: currentYear, person: person, field: input.dataset.field, value: input.value });
     recalcAllAllocations();
@@ -632,7 +632,7 @@ function duplicateMonth() {
     }
 
     const formatMonth = (d) => {
-        let str = new Date(d).toLocaleDateString(currentLang, { month: 'long', year: 'numeric' });
+        let str = new Date(d).toLocaleDateString(window.appLang, { month: 'long', year: 'numeric' });
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
@@ -716,7 +716,6 @@ function recalcAllAllocations() {
 
 function updateSummaryTable() {
     const focusMonth = months[0];
-    const sums = {};
     let grandTotalAlex = 0;
     let grandTotalLaia = 0;    
     const dataByTarget = {};
@@ -745,18 +744,18 @@ function updateSummaryTable() {
             const laiaSum = dataByTarget[targetName] ? dataByTarget[targetName].laia : 0;
             const globalSum = alexSum + laiaSum;
 
-            row.cells[1].innerText = Math.round(alexSum).toLocaleString(currentLang) + ' €';
-            row.cells[2].innerText = Math.round(laiaSum).toLocaleString(currentLang) + ' €';
-            row.cells[3].innerText = Math.round(globalSum).toLocaleString(currentLang) + ' €';
+            row.cells[1].innerText = Math.round(alexSum).toLocaleString(window.appLang) + ' €';
+            row.cells[2].innerText = Math.round(laiaSum).toLocaleString(window.appLang) + ' €';
+            row.cells[3].innerText = Math.round(globalSum).toLocaleString(window.appLang) + ' €';
 
             grandTotalAlex += alexSum;
             grandTotalLaia += laiaSum;
         });
     }
 
-    document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString(currentLang) + ' €';
-    document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString(currentLang) + ' €';
-    document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString(currentLang) + ' €';
+    document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString(window.appLang) + ' €';
+    document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString(window.appLang) + ' €';
+    document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString(window.appLang) + ' €';
 }
 
 function saveData(action, data) {
@@ -825,7 +824,6 @@ function saveGenericNote(noteType, refId, content) {
     });
 }
 
-// LOGIQUE POUR LA CALCULATRICE RAPIDE
 let isSumModeActive = false;
 let selectedElementsForSum = new Set();
 
@@ -868,7 +866,7 @@ function updateSumResult() {
         total += val;
     });
     
-    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(currentLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(window.appLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
 }
 
 document.addEventListener('click', function(e) {
