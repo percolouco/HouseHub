@@ -580,16 +580,63 @@ function deleteCheckpoint() {
 }
 
 // ============================================================================
-// 5. GLISSER-DÉPOSER POUR RÉORDONNER LES ÉTAPES
+// 5. RÉORDONNANCEMENT DES ÉTAPES (DRAG & DROP PC + FLÈCHES MOBILE)
 // ============================================================================
+
+// On sort cette fonction pour pouvoir l'appeler depuis les boutons fléchés sur mobile
+function saveCheckpointOrder() {
+  const locations = [
+    ...document.querySelectorAll(".hol-checkpoint-draggable"),
+  ].map((el) => el.getAttribute("data-location"));
+  const holidayId = document.querySelector('input[name="holiday_id"]').value;
+
+  const formData = new FormData();
+  formData.append("holiday_id", holidayId);
+  formData.append("locations", JSON.stringify(locations));
+
+  fetch("/modules/holidays/includes/api/reorder_checkpoints.php", {
+    method: "POST",
+    body: formData,
+  }).then(() => window.location.reload());
+}
+
+// Fonction appelée par les flèches Haut/Bas sur mobile
+function moveStepMobile(btn, direction) {
+  const item = btn.closest(".hol-checkpoint-draggable");
+  const container = item.parentElement;
+
+  if (
+    direction === -1 &&
+    item.previousElementSibling &&
+    item.previousElementSibling.classList.contains("hol-checkpoint-draggable")
+  ) {
+    container.insertBefore(item, item.previousElementSibling);
+    saveCheckpointOrder();
+  } else if (
+    direction === 1 &&
+    item.nextElementSibling &&
+    item.nextElementSibling.classList.contains("hol-checkpoint-draggable")
+  ) {
+    container.insertBefore(item, item.nextElementSibling.nextElementSibling);
+    saveCheckpointOrder();
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const checkpoints = document.querySelectorAll(".hol-checkpoint-draggable");
   const container = checkpoints[0]?.parentElement;
   if (!container) return;
 
+  const isMobile = window.innerWidth <= 768;
   let draggedItem = null;
 
   checkpoints.forEach((item) => {
+    // Si on est sur mobile, on supprime l'attribut draggable pour éviter les conflits de scroll
+    if (isMobile) {
+      item.removeAttribute("draggable");
+      return;
+    }
+
     item.addEventListener("dragstart", function (e) {
       draggedItem = this;
       setTimeout(() => (this.style.opacity = "0.4"), 0);
@@ -632,22 +679,6 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       { offset: Number.NEGATIVE_INFINITY },
     ).element;
-  }
-
-  function saveCheckpointOrder() {
-    const locations = [
-      ...document.querySelectorAll(".hol-checkpoint-draggable"),
-    ].map((el) => el.getAttribute("data-location"));
-    const holidayId = document.querySelector('input[name="holiday_id"]').value;
-
-    const formData = new FormData();
-    formData.append("holiday_id", holidayId);
-    formData.append("locations", JSON.stringify(locations));
-
-    fetch("/modules/holidays/includes/api/reorder_checkpoints.php", {
-      method: "POST",
-      body: formData,
-    }).then(() => window.location.reload());
   }
 });
 
@@ -702,7 +733,11 @@ function openPlanningModal(step) {
 
     html += `
             <div class="hol-day-column">
-                <div class="hol-calendar-day-header"><div class="hol-cal-weekday">${dayName}</div><div class="hol-cal-date">${dayNum}</div></div>
+                <div class="hol-calendar-day-header">
+                    <div class="hol-cal-weekday">${dayName}</div>
+                    <div class="hol-cal-date">${dayNum}</div>
+                    <div id="plan-weather-${dateStr}" style="margin-top: 5px; display: flex; justify-content: center; min-height: 20px;"></div>
+                </div>
                 <div class="hol-time-slots-container">
         `;
 
@@ -722,6 +757,10 @@ function openPlanningModal(step) {
   html += `</div></div>`;
   container.innerHTML = html;
 
+  // 1. On détecte si on est sur mobile juste avant la boucle
+  const isMobile = window.innerWidth <= 768;
+  const dragAttr = isMobile ? "" : 'draggable="true"';
+
   validItems.forEach((it) => {
     let icon = "🏷️";
     let catClass = "cat-activity";
@@ -739,8 +778,9 @@ function openPlanningModal(step) {
       ? `<div class="hol-drag-note">${it.notes}</div>`
       : "";
 
+    // 2. MODIFICATION ICI : On remplace le texte en dur draggable="true" par la variable ${dragAttr}
     const elHtml = `
-            <div class="hol-drag-item ${catClass}" draggable="true" 
+            <div class="hol-drag-item ${catClass}" ${dragAttr} 
                  id="drag-item-${it.id}" data-id="${it.id}" 
                  style="--duration: ${dur};"
                  ondragstart="dragStart(event)" onclick="handleItemTap(event, ${it.id})">
@@ -774,6 +814,10 @@ function openPlanningModal(step) {
 
   document.getElementById("planningModal").style.display = "flex";
   document.body.classList.add("no-scroll");
+
+  datesToDisplay.forEach((dateStr) => {
+    loadWeatherForPlanning(step.lat, step.lng, dateStr);
+  });
 }
 
 function changeDuration(e, itemId, delta) {
@@ -882,4 +926,33 @@ function saveItemDateTime(itemId, dateStr, timeStr) {
     method: "POST",
     body: formData,
   }).catch((err) => console.error("Erreur:", err));
+}
+
+// ============================================================================
+// MÉTÉO SPÉCIFIQUE AU HEADER DU PLANNING
+// ============================================================================
+async function loadWeatherForPlanning(lat, lng, dateStr) {
+  const container = document.getElementById(`plan-weather-${dateStr}`);
+  if (!container || !lat || !lng) return;
+
+  try {
+    const resp = await fetch(
+      `/modules/holidays/includes/api/get_weather.php?lat=${lat}&lng=${lng}&date=${dateStr}`,
+    );
+    const res = await resp.json();
+
+    if (res.success) {
+      const info = getWeatherInfo(res.data.code);
+      const approxSymbol = res.data.is_historical ? "~" : "";
+
+      container.innerHTML = `
+        <div class="pf-weather-badge" style="font-size: 0.65rem; padding: 2px 6px; ${res.data.is_historical ? "opacity: 0.8;" : ""}" title="${info.label}">
+          <span class="pf-weather-icon">${info.icon}</span>
+          <span>${approxSymbol}${Math.round(res.data.temp_min)}° / ${Math.round(res.data.temp_max)}°C</span>
+        </div>
+      `;
+    }
+  } catch (e) {
+    console.error("Erreur météo planning", e);
+  }
 }

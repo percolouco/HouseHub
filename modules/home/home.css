@@ -129,7 +129,7 @@ body.pf-home .pf-modules-grid {
   }
 
   .pf-hero h1 {
-    font-size: 2rem;
+    font-size: clamp(1.8rem, 6vw, 2.5rem); /* Typographie fluide */
   }
 
   /* Ajustement header mobile */
