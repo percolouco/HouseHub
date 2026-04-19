@@ -74,6 +74,14 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<style>
+  .mobile-only { display: none !important; }
+  @media (max-width: 768px) {
+    .desktop-only { display: none !important; }
+    .mobile-only { display: flex !important; }
+  }
+</style>
+
 <div class="pf-holidays-detail">
     
     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
@@ -197,7 +205,11 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                         <div id="step-card-<?= $step['sort_order'] ?>" class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-location="<?= htmlspecialchars($step['location_name']) ?>">
                             <div class="hol-cp-header">
                                 <div class="hol-cp-info-group">
-                                    <span style="color:#94a3b8; font-size:1.1rem; cursor:grab; user-select:none;">☰</span>
+                                    <span class="desktop-only" style="color:#94a3b8; font-size:1.1rem; cursor:grab; user-select:none;">☰</span>
+                                        <div class="mobile-only" style="flex-direction:column; gap:4px; margin-right:8px;">
+                                            <button type="button" onclick="moveStepMobile(this, -1)" class="btn-icon-small" style="width:24px!important; height:24px!important; font-size:0.6rem;">▲</button>
+                                            <button type="button" onclick="moveStepMobile(this, 1)" class="btn-icon-small" style="width:24px!important; height:24px!important; font-size:0.6rem;">▼</button>
+                                        </div>
                                     <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
                                         📍 <?= htmlspecialchars($step['location_name']) ?>
                                         <?php if (!empty($step['is_return'])): ?>

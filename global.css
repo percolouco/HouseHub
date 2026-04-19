@@ -125,7 +125,9 @@ body {
   top: 64px;
   left: 0;
   right: 0;
-  bottom: 0;
+  height: calc(100vh - 64px); /* Remplace le bottom: 0 pour éviter le bug iOS */
+  overflow-y: auto; /* Permet le scroll si le menu contient beaucoup d'items */
+  -webkit-overflow-scrolling: touch; /* Fluidité sur iOS */
   background: white;
   padding: 20px;
   flex-direction: column;
@@ -306,16 +308,30 @@ p {
   }
   .pf-nav {
     display: none;
-  } /* Caché sur mobile, activé via burger */
+  }
   .pf-header-actions {
     display: none;
-  } /* Caché sur mobile, dans le menu */
-
+  }
   .pf-burger-btn {
     display: block;
-  } /* Affiché sur mobile */
+  }
 
-  /* Menu Mobile Ouvert */
+  /* Ajustements d'espacement pour petits écrans */
+  .pf-main {
+    padding: 16px;
+  }
+
+  .pf-modules-grid {
+    /* Sécurité : force 1 colonne sur mobile au lieu du auto-fill */
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .pf-login-container {
+    margin: 30px 16px; /* Évite de toucher les bords de l'écran */
+    padding: 24px;
+  }
+
   .pf-mobile-nav-link {
     font-size: 1.2rem;
     font-weight: 600;
