@@ -37,29 +37,66 @@ body.no-scroll {
   padding-bottom: 50px;
 }
 
-/* --- 2. EN-TÊTE --- */
+/* --- 2. EN-TÊTE (Refonte Responsive) --- */
 .pf-holidays__titlebar {
   background: transparent;
   padding-bottom: 1rem;
   margin-bottom: 2rem;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  align-items: center;
+  gap: 20px;
 }
 
-.pf-holidays__titlebar h1 {
+.hol-title-group {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  flex: 1; /* Prend l'espace disponible */
+}
+
+.hol-main-title {
   font-size: 1.8rem;
   font-weight: 800;
   color: #0f172a;
   margin: 0;
 }
 
-.hol-title-actions {
+.hol-filters-row {
   display: flex;
+  align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hol-year-select {
+  width: auto !important; /* Force la largeur au contenu sur PC */
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.hol-badge-left-to-pay {
+  background: #fff1f2;
+  color: #be123c;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  border: 1px solid #fecdd3;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hol-badge-amount {
+  font-size: 1rem;
+}
+
+.hol-actions-group {
+  flex-shrink: 0;
 }
 
 /* --- 3. BOUTONS --- */
@@ -457,7 +494,23 @@ body.no-scroll {
 @media (max-width: 768px) {
   .pf-holidays__titlebar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch; /* Étire les éléments de haut en bas */
+    gap: 15px;
+  }
+  .hol-title-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  .hol-filters-row {
+    justify-content: space-between; /* Écarte l'année et le badge */
+    width: 100%;
+  }
+  .hol-badge-left-to-pay {
+    flex: 1;
+    justify-content: center; /* Centre le texte dans le badge */
+    font-size: 0.8rem; /* Un peu plus petit sur mobile */
   }
 
   /* On empile proprement les boutons d'action */
@@ -465,6 +518,12 @@ body.no-scroll {
     width: 100%;
     flex-direction: column; /* Essentiel pour que les boutons width: 100% ne s'écrasent pas */
     gap: 10px;
+  }
+  .hol-actions-group .hol-add-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 1rem;
   }
   .hol-add-btn,
   .hol-map-toggle {
@@ -517,10 +576,16 @@ body.no-scroll {
     flex: 1;
     min-width: 0;
     width: 100%;
+    align-items: flex-start;
   }
 
   .hol-cp-title {
-    white-space: normal;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.4;
+    word-break: break-word;
+    padding-top: 2px;
   }
 
   .hol-cp-actions-group {
