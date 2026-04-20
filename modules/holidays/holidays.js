@@ -270,26 +270,43 @@ document.addEventListener("DOMContentLoaded", () => {
 function initDetailMap() {
   if (typeof L === "undefined" || typeof MAP_POINTS === "undefined") return;
 
-  const mapContainer = L.DomUtil.get("tripMap");
-  if (mapContainer !== null && mapContainer._leaflet_id) {
-    mapContainer._leaflet_id = null;
+  // 1. 🧹 NETTOYAGE PROPRE : On détruit l'ancienne instance si elle existe (Évite le bug de la souris bloquée)
+  if (detailMap !== null) {
+    detailMap.remove();
+    detailMap = null;
   }
 
-  detailMap = L.map("tripMap");
+  const mapContainer = document.getElementById("tripMap");
+  if (!mapContainer) return;
+
+  // 2. 🛡️ BOUCLIER FIREFOX DESKTOP : Empêche le drag natif HTML5 de voler le clic
+  mapContainer.style.touchAction = "none";
+  mapContainer.ondragstart = function (e) {
+    e.preventDefault();
+  };
+
+  // 3. 🛠️ INITIALISATION DE LA CARTE
+  detailMap = L.map("tripMap", {
+    tap: false, // Désactive le tap simulé (anti-warning mobile/Firefox)
+    dragging: true, // Force l'autorisation du déplacement à la souris
+  });
+
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(detailMap);
 
+  // Cas : Aucun point
   if (MAP_POINTS.length === 0) {
-    detailMap.setView([46.6, 2.4], 5);
+    detailMap.setView([46.6, 2.4], 5); // France par défaut
     return;
   }
 
   const latlngs = [];
   const bounds = L.latLngBounds();
 
+  // 4. PLACEMENT DES MARQUEURS
   MAP_POINTS.forEach((pt, index) => {
     const pos = [pt.lat, pt.lng];
     latlngs.push(pos);
@@ -299,20 +316,25 @@ function initDetailMap() {
 
     const marker = L.circleMarker(pos, {
       color: color,
-      radius: 8,
+      radius: window.innerWidth < 768 ? 6 : 8,
       fillOpacity: 1,
       fillColor: "white",
       weight: 3,
     }).addTo(detailMap);
 
-    marker.bindPopup(`
-            <div style="text-align:center;">
-                <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">${tr("hdl_js_step_label")} ${index + 1}</div>
-                <strong style="font-size:1rem; color:#0f172a;">${pt.location_name}</strong><br>
-                <span style="font-weight:bold; color:${color};">${parseFloat(pt.total_amount).toFixed(2)} €</span>
-            </div>
-        `);
+    const stepLabel = window.I18N
+      ? window.I18N["hdl_js_step_label"]
+      : tr("hdl_js_step_label");
 
+    marker.bindPopup(`
+        <div style="text-align:center;">
+            <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">${stepLabel} ${index + 1}</div>
+            <strong style="font-size:1rem; color:#0f172a;">${pt.location_name}</strong><br>
+            <span style="font-weight:bold; color:${color};">${parseFloat(pt.total_amount).toFixed(2)} €</span>
+        </div>
+    `);
+
+    // Animation au clic sur le marqueur
     marker.on("click", function () {
       const card = document.getElementById("step-card-" + pt.sort_order);
       if (card) {
@@ -328,7 +350,14 @@ function initDetailMap() {
     });
   });
 
-  if (latlngs.length > 1) {
+  const mapPadding = window.innerWidth < 768 ? [20, 20] : [50, 50];
+
+  // 5. CENTRAGE ET TRACÉS (OSRM)
+  if (latlngs.length === 1) {
+    detailMap.setView(latlngs[0], 12);
+  } else if (latlngs.length > 1) {
+    detailMap.fitBounds(bounds, { padding: mapPadding });
+
     const routePromises = [];
 
     for (let i = 0; i < latlngs.length - 1; i++) {
@@ -365,14 +394,15 @@ function initDetailMap() {
       results.forEach((res) => {
         const i = res.index;
         let routeColor = "#3b82f6";
-        let routeWeight = 6;
+        let routeWeight = window.innerWidth < 768 ? 4 : 6;
         let routeDash = null;
 
         if (i >= returnStartIndex) {
           routeColor = "#f97316";
-          routeWeight = 3;
+          routeWeight = window.innerWidth < 768 ? 3 : 4;
           routeDash = "10, 10";
         }
+
         if (res.data && res.data.code === "Ok" && res.data.routes.length > 0) {
           const routeCoords = res.data.routes[0].geometry.coordinates.map(
             (c) => [c[1], c[0]],
@@ -390,13 +420,25 @@ function initDetailMap() {
         }
       });
     });
-    detailMap.fitBounds(bounds, { padding: [50, 50] });
-    // Lancement de la météo pour chaque étape
-    if (typeof MAP_POINTS !== "undefined") {
-      MAP_POINTS.forEach((pt) => loadWeatherForStep(pt));
-    }
   }
 
+  // 6. LANCEMENT DE LA MÉTÉO
+  if (typeof MAP_POINTS !== "undefined") {
+    MAP_POINTS.forEach((pt) => {
+      if (typeof loadWeatherForStep === "function") {
+        loadWeatherForStep(pt);
+      }
+    });
+  }
+
+  // 7. FIX FINAL : Force Leaflet à recalculer sa taille une fois le DOM stabilisé
+  setTimeout(() => {
+    if (detailMap) {
+      detailMap.invalidateSize();
+    }
+  }, 300);
+
+  // Fonction utilitaire locale
   function drawFallbackLine(coords, color, weight) {
     L.polyline(coords, {
       color: color,
@@ -405,12 +447,19 @@ function initDetailMap() {
       opacity: 0.7,
     }).addTo(detailMap);
   }
-  detailMap.fitBounds(bounds, { padding: [50, 50] });
 }
 
 function panMapTo(lat, lng) {
   if (detailMap) {
     detailMap.setView([lat, lng], 14, { animate: true });
+
+    // 🛠️ ERGONOMIE MOBILE : Auto-scroll vers la carte si on est sur petit écran
+    if (window.innerWidth < 768) {
+      const mapDiv = document.getElementById("tripMap");
+      if (mapDiv) {
+        mapDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
   }
 }
 
