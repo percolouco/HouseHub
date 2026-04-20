@@ -1282,3 +1282,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .hol-step-dates {
   white-space: nowrap;
 }
+.leaflet-container img.leaflet-tile {
+  pointer-events: none !important;
+  user-select: none !important;
+  -moz-user-select: none !important;
+}
+#tripMap {
+  touch-action: none;
+}

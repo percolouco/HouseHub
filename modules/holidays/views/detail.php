@@ -142,8 +142,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 </div>
                 <button class="pf-btn pf-btn-small" onclick="openCheckpointModal('add')"><?= tr('hdl_btn_add_step') ?></button>
             </div>
-            <div id="tripMap" style="flex:1; width:100%; background:#f1f5f9;"></div>
-        </div>
+                <div id="tripMap" style="flex:1; width:100%; min-height: 400px; background:#f1f5f9; position: relative; z-index: 1;"></div>        </div>
 
         <div class="hol-panel">
             <div class="hol-panel-header">
