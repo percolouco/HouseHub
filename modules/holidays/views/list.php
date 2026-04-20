@@ -42,27 +42,29 @@ foreach ($active as $h) {
 ?>
 
 <div class="pf-holidays">
-    <div class="pf-holidays__titlebar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin-bottom:30px;">
-        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-            <h1 style="margin:0;"><?= tr('hdl_main_title') ?> ✈️</h1>
-            
-            <select onchange="window.location.href='?tab=list&y='+this.value" class="pf-input" style="width:auto; padding:6px 12px; font-weight:bold; cursor:pointer;">
+    <div class="pf-holidays__titlebar">
+    <div class="hol-title-group">
+        <h1 class="hol-main-title"><?= tr('hdl_main_title') ?> ✈️</h1>
+        
+        <div class="hol-filters-row">
+            <select onchange="window.location.href='?tab=list&y='+this.value" class="pf-input hol-year-select">
                 <option value="all" <?= $selectedYear === 'all' ? 'selected' : '' ?>><?= tr('hdl_filter_all') ?></option>
                 <?php foreach($availableYears as $yr): ?>
                     <option value="<?= $yr ?>" <?= (string)$selectedYear === (string)$yr ? 'selected' : '' ?>><?= tr('hdl_filter_year') ?> <?= $yr ?></option>
                 <?php endforeach; ?>
             </select>
 
-            <div style="background:#fff1f2; color:#be123c; padding:6px 12px; border-radius:8px; font-weight:bold; border:1px solid #fecdd3; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+            <div class="hol-badge-left-to-pay">
                 <span>⏳ <?= tr('hdl_left_to_pay_label') ?> (<?= $selectedYear === 'all' ? tr('hdl_filter_all') : $selectedYear ?>) :</span>
-                <span style="font-size:1rem;"><?= number_format($globalLeftToPay, 0, ',', ' ') ?> €</span>
+                <span class="hol-badge-amount"><?= number_format($globalLeftToPay, 0, ',', ' ') ?> €</span>
             </div>
         </div>
-
-        <div>
-            <button class="pf-btn" onclick="openHolidayModal('add')" style="margin:0;">+ <?= tr('hdl_btn_create') ?></button>
-        </div>
     </div>
+
+    <div class="hol-actions-group">
+        <button class="pf-btn hol-add-btn" onclick="openHolidayModal('add')">+ <?= tr('hdl_btn_create') ?></button>
+    </div>
+</div>
 
     <section class="pf-section">
         <div class="hol-ideas-grid">
