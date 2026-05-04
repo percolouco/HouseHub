@@ -41,6 +41,8 @@ return [
     'btn_close'         => 'Tancar',
     'btn_back'          => '◀ Tornar',
     'btn_edit_bases'    => '⚙️ Modificar les bases',
+    'btn_edit'          => 'Modificar',
+    'error_occured'     => 'S\'ha produït un error.',
     
     // Mots génériques & Erreurs
     'error'             => 'Error.',
@@ -234,6 +236,9 @@ return [
     'weather_rainy'   => 'Plujós',
     'weather_snowy'   => 'Nevat',
     'weather_historical' => 'Basat en l\'històric (estimació)',
+    'err_invalid_holiday_id' => 'ID de viatge no vàlid.',
+    'hdl_default_exp_name'   => 'Despesa',
+    'hdl_select_beneficiary' => '-- Seleccionar --',
 
     // Anciennes clés Holidays non préfixées (conservades)
     'outbound_trip'             => 'Anada',

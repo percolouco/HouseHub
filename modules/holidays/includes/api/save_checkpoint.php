@@ -77,7 +77,7 @@ if ($holiday_id > 0 && !empty($location_name)) {
                     $dur  = !empty($_POST['items']['duration'][$i]) ? (int)$_POST['items']['duration'][$i] : 1;
 
                     // Ajout de $is_return à la fin
-                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur, $is_return]);
+                    $stmt->execute([$holiday_id, $cat, $name ?: tr('hdl_default_exp_name'), $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur, $is_return]);
                     $validItemsCount++;
                 }
             }

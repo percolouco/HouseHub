@@ -29,6 +29,7 @@ return [
     'nav_holidays'      => 'Voyages',
     'nav_gifts'         => 'Cadeaux',
     'aria_menu'         => 'Menu mobile',
+    
 
     // Boutons et actions globales
     'actions'           => 'Actions',
@@ -42,6 +43,8 @@ return [
     'btn_close'         => 'Fermer',
     'btn_back'          => '◀ Retour',
     'btn_edit_bases'    => '⚙️ Modifier les bases',
+    'btn_edit'          => 'Modifier',
+    'error_occured'     => 'Une erreur est survenue.',
     
     // Mots génériques & Erreurs
     'error'             => 'Erreur.',
@@ -235,6 +238,9 @@ return [
     'weather_rainy'   => 'Pluvieux',
     'weather_snowy'   => 'Neigeux',
     'weather_historical' => 'Basé sur l\'historique (estimation)',
+    'err_invalid_holiday_id' => 'ID de voyage invalide.',
+    'hdl_default_exp_name'   => 'Dépense',
+    'hdl_select_beneficiary' => '-- Sélectionner --',
 
     // Anciennes clés Holidays non préfixées (conservées pour compatibilité si utilisées)
     'outbound_trip'             => 'Aller',
