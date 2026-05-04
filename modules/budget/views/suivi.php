@@ -100,10 +100,10 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     exit;
 }
 
-if (isset($_GET['delete_expense'])) {
-    $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_GET['delete_expense']]);
-    
-    echo "<script>window.location.href='?tab=suivi&m=$viewM&y=$viewY';</script>"; 
+if (isset($_POST['action']) && $_POST['action'] === 'delete_expense') {
+    $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_POST['id']]);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true]);
     exit;
 }
 
@@ -343,6 +343,10 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             
             <div style="display:flex; gap:10px;">
                 <?php if (!$isClosed): ?>
+                    <button type="button" class="pf-btn btn-secondary" onclick="openSuiviModal('importCsvModal')" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">
+                        📂 <?= tr('bud_import_csv') ?? 'Importer CSV' ?>
+                    </button>
+
                     <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_close') ?>');">
                         <input type="hidden" name="action" value="close_month">
                         <input type="hidden" name="close_month_date" value="<?= $viewMonthDate ?>">
@@ -358,7 +362,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                         <button type="submit" class="pf-btn btn-secondary" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">🔓 <?= tr('bud_reopen_btn') ?></button>
                     </form>
                 <?php endif; ?>
-
+                
                 <div class="suivi-nav-group">
                     <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
                     <a href="<?= $defaultLink ?>" class="suivi-btn-nav"><?= tr('bud_active_month_btn') ?></a>
@@ -408,107 +412,68 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             </div>
         </div>
 
-        <div style="margin-top: 40px; padding: 30px 10px 45px 10px; position:relative;">
-            <div style="position: absolute; top: 0px; left: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700;">0 €</div>
+        <?php
+        // --- 1. CALCULS DE L'ÉCHELLE DYNAMIQUE ---
+        $buffer = max(abs($capacite_max), abs($solde_actuel), abs($solde_theorique)) * 0.05; 
+        $minScale = min(0, $solde_theorique, $solde_actuel) - $buffer;
+        $maxScale = max($capacite_max, $solde_actuel, 0) + $buffer;
+        
+        $range = $maxScale - $minScale;
+        if ($range <= 0) $range = 1;
+
+        $posZero = (($minScale * -1) / $range) * 100;
+        $posActuel = (($solde_actuel - $minScale) / $range) * 100;
+        $posTheorique = (($solde_theorique - $minScale) / $range) * 100;
+        $posMax = (($capacite_max - $minScale) / $range) * 100;
+
+        $widthActuel = (abs($solde_actuel) / $range) * 100;
+        $leftActuel = $solde_actuel >= 0 ? $posZero : $posActuel;
+        
+        $widthDanger = 0; $leftDanger = $posZero;
+        if ($solde_theorique < 0) {
+            $widthDanger = (abs($solde_theorique) / $range) * 100;
+            $leftDanger = $posTheorique; 
+        }
+        ?>
+
+        <div style="margin-top: 65px; margin-bottom: 75px; position: relative; font-family: inherit;">
             
-            <div style="position: absolute; top: 0px; right: 10px; font-size: 0.8rem; color: #64748b; font-weight: 700; text-align:right; cursor:help;" 
-                 title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">
-                <?= tr('bud_max_capacity') ?> : <?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
+            <div style="position: relative; height: 24px; background: #e2e8f0; border-radius: 12px; width: 100%; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                <?php if ($posZero > 0): ?>
+                    <div style="position: absolute; left: 0; width: <?= $posZero ?>%; height: 100%; background: #fef2f2; border-radius: 12px 0 0 12px;"></div>
+                <?php endif; ?>
+                
+                <div style="position: absolute; left: <?= $leftActuel ?>%; width: <?= $widthActuel ?>%; height: 100%; background: repeating-linear-gradient(45deg, #fbbf24, #fbbf24 10px, #f59e0b 10px, #f59e0b 20px); border-radius: <?= $solde_actuel >= 0 ? '0 12px 12px 0' : '12px' ?>; transition: width 0.5s ease-out;"></div>
+                
+                <?php if ($solde_theorique < 0): ?>
+                    <div style="position: absolute; left: <?= $leftDanger ?>%; width: <?= $widthDanger ?>%; height: 100%; background: repeating-linear-gradient(45deg, #ef4444, #ef4444 10px, #dc2626 10px, #dc2626 20px); border-radius: 12px 0 0 12px; opacity: 0.95;"></div>
+                <?php endif; ?>
             </div>
 
-            <div style="position: absolute; top: 12px; left: <?= $pct_actuel ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
-                <div style="color: #334155; font-size: 0.75rem; font-weight: 800; white-space: nowrap; margin-bottom: 2px;"><?= tr('bud_actual') ?></div>
-                <div style="width: 3px; height: 18px; background: #334155; margin: 0 auto; border-radius: 2px;"></div>
+            <div style="position: absolute; left: <?= $posZero ?>%; top: -5px; height: 35px; width: 2px; background: #94a3b8; z-index: 10;"></div>
+            <div style="position: absolute; left: <?= $posZero ?>%; top: 32px; transform: translateX(-50%); font-size: 0.85rem; font-weight: 800; color: #64748b;">0 €</div>
+
+            <div style="position: absolute; left: <?= $posActuel ?>%; top: -15px; height: 40px; width: 3px; background: #1e293b; z-index: 15;"></div>
+            <div style="position: absolute; left: <?= $posActuel ?>%; top: -35px; transform: translateX(-50%); font-size: 0.8rem; font-weight: bold; color: #1e293b;"><?= tr('bud_bar_actual') ?? 'Actuel' ?></div>
+
+            <div style="position: absolute; left: <?= $posTheorique ?>%; top: 24px; height: 30px; width: 3px; background: <?= $solde_theorique >= 0 ? '#8b5cf6' : '#ef4444' ?>; z-index: 12;"></div>
+            <div style="position: absolute; left: <?= $posTheorique ?>%; top: 54px; transform: translateX(-50%); font-size: 0.85rem; font-weight: bold; color: <?= $solde_theorique >= 0 ? '#8b5cf6' : '#ef4444' ?>; white-space: nowrap;"><?= tr('bud_bar_theoretical') ?? 'Théorique' ?></div>
+
+            <?php 
+            $overlapMax = abs($posMax - $posActuel) < 25; 
+            $topMaxText = $overlapMax ? '-60px' : '-35px';
+            $heightMaxLine = $overlapMax ? '65px' : '40px';
+            $topMaxLine = $overlapMax ? '-40px' : '-15px';
+            ?>
+            <div style="position: absolute; left: <?= $posMax ?>%; top: <?= $topMaxLine ?>; height: <?= $heightMaxLine ?>; width: 2px; background: #cbd5e1; z-index: 10;"></div>
+            
+            <div style="position: absolute; left: <?= $posMax ?>%; top: <?= $topMaxText ?>; transform: translateX(calc(-100% + 10px)); font-size: 0.8rem; font-weight: bold; color: #64748b; white-space: nowrap; cursor: help;" title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">
+                <?= tr('bud_bar_max_cap') ?? 'Capacité Max' ?> : <?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
             </div>
-            <div style="height: 24px; background: #e2e8f0; border-radius: 12px; display: flex; overflow: hidden; position: relative; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="width: <?= $pct_net ?>%; background: linear-gradient(90deg, #3b82f6, #0ea5e9);"></div>
-                <div style="width: <?= $pct_charges ?>%; background: repeating-linear-gradient(45deg, #f59e0b, #f59e0b 8px, #fbbf24 8px, #fbbf24 16px);"></div>
-            </div>
-            <div style="position: absolute; top: 54px; left: <?= $pct_theorique ?>%; transform: translateX(-50%); text-align: center; z-index: 10;">
-                <div style="width: 3px; height: 18px; background: #8b5cf6; margin: 0 auto 2px auto; border-radius: 2px;"></div>
-                <div style="color: #8b5cf6; font-size: 0.75rem; font-weight: 800; white-space: nowrap;"><?= tr('bud_theoretical') ?></div>
-            </div>
+            
         </div>
     </div>
 
-    <?php if (!$isClosed): ?>
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <button class="pf-btn btn-secondary" onclick="toggleDiv('importCsvForm')">📂 <?= tr('bud_import_csv') ?></button>
-        </div>
-
-        <div id="importCsvForm" style="display:<?= $showPreview ? 'block' : 'none' ?>; background:#f8fafc; padding:20px; border-radius:12px; margin-bottom:20px;">
-            <?php if (!$showPreview): ?>
-                <form method="POST" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-                    <div style="flex:1; min-width:250px;">
-                        <label class="pf-label"><?= tr('bud_csv_file') ?></label>
-                        <input type="file" name="csv_file" accept=".csv" class="pf-input">
-                    </div>
-                    <button type="submit" class="pf-btn" style="width:auto;"><?= tr('bud_preview') ?></button>
-                </form>
-            <?php else: ?>
-                <form method="POST" id="formMapping">
-                    <input type="hidden" name="action" value="save_import">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                        <h3 style="margin:0;"><?= tr('bud_validate_import') ?></h3>
-                        <span id="missingCount" style="color:#ef4444; background:#fee2e2; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; display:none;"></span>
-                    </div>
-
-                    <div style="max-height:350px; overflow-y:auto; background:white; border:1px solid #eee; border-radius:8px;">
-                        <table class="pf-table" style="margin:0;">
-                            <thead style="position:sticky; top:0; z-index:10;">
-                                <tr><th><input type="checkbox" onclick="toggleAll(this)" checked></th><th><?= tr('bud_assign_month') ?></th><th><?= tr('bud_op_date') ?></th><th><?= tr('bud_label') ?></th><th><?= tr('bud_amount') ?></th><th><?= tr('bud_category') ?></th></tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($csvData as $idx => $row): 
-                                    $dup = $row['is_duplicate']; $isCrd = $row['is_credit']; $dis = $dup?'disabled':''; 
-                                    $bgCol = $dup ? 'opacity:0.5' : (empty($row['cat']) && !$isCrd ? 'background:#fff1f2' : '');
-                                ?>
-                                <tr style="<?= $bgCol ?>">
-                                    <td>
-                                        <input type="checkbox" class="line-checkbox" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
-                                        <input type="hidden" name="lines[<?= $idx ?>][date]" value="<?= $row['date'] ?>">
-                                        <input type="hidden" name="lines[<?= $idx ?>][label]" value="<?= $row['label'] ?>">
-                                        <input type="hidden" name="lines[<?= $idx ?>][amount]" value="<?= $row['amount'] ?>">
-                                        <input type="hidden" name="lines[<?= $idx ?>][ref]" value="<?= $row['ref'] ?>">
-                                        <input type="hidden" class="is-credit-flag" name="lines[<?= $idx ?>][is_credit]" value="<?= $isCrd ?>">
-                                    </td>
-                                    <td>
-                                        <input type="month" name="lines[<?= $idx ?>][gestion_month]" value="<?= substr($viewMonthDate, 0, 7) ?>" class="pf-input" style="padding:4px;" <?= $dis ?>>
-                                    </td>
-                                    <td style="white-space:nowrap; font-weight:600;"><?= date('d/m', strtotime($row['date'])) ?></td>
-                                    <td><?= htmlspecialchars($row['label']) ?></td>
-                                    <td style="font-weight:bold; color:<?= $isCrd ? '#10b981' : '#1e293b' ?>; white-space:nowrap;"><?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'],2) ?> €</td>
-                                    <td>
-                                        <div style="display:flex; gap:5px;">
-                                            <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="flex:1;">
-                                                <option value="">-- <?= $isCrd ? tr('bud_ignore') : tr('bud_to_define') ?> --</option>
-                                                <?php foreach ($categoriesConfig as $k => $c): ?>
-                                                    <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="display:none; flex:1;" disabled>
-                                                <option value="">-- <?= tr('bud_is_charge') ?> --</option>
-                                                <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
-                                            </select>
-                                            <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-income" onchange="checkValidation()" style="display:none; flex:1;" disabled>
-                                                <option value="">-- <?= tr('bud_is_income') ?> --</option>
-                                                <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top:15px; display:flex; justify-content:flex-end; gap:10px;">
-                        <a href="?tab=suivi" class="pf-btn btn-secondary" style="width:auto;"><?= tr('btn_cancel') ?></a>
-                        <button type="submit" id="btnImport" class="pf-btn" style="width:auto;"><?= tr('btn_import') ?></button>
-                    </div>
-                </form>
-            <?php endif; ?>
-        </div>
-    <?php endif; ?>
 
     <div class="categories-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:24px;">
         <?php foreach ($categoriesConfig as $key => $conf): ?>
@@ -547,8 +512,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                             <?php if (!$isClosed): ?>
                                 <td style="width:60px; padding-right:10px; text-align:right; white-space:nowrap;">
                                     <button onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' style="background:none; border:none; cursor:pointer; font-size:1rem; margin-right:8px;">✏️</button>
-                                    <a href="?tab=suivi&delete_expense=<?= $exp['id'] ?>" onclick="return confirm('<?= tr('bud_confirm_delete') ?>')" style="color:#ef4444; text-decoration:none; font-size:1.4rem;">&times;</a>
-                                </td>
+                                    <button class="btn-icon-action btn-safe-click delete" onclick="deleteExpense(<?= $exp['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>                                </td>
                             <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
@@ -655,7 +619,115 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
     </div>
 </div>
 
+<div id="importCsvModal" class="pf-modal" style="display: <?= $showPreview ? 'flex' : 'none' ?>;">
+    <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?? 'Importer un fichier CSV' ?></h3>
+            <button type="button" onclick="<?= $showPreview ? "window.location.href='?tab=suivi&m=$viewM&y=$viewY';" : "closeSuiviModal('importCsvModal');" ?>" class="pf-modal-close" style="font-size:1.8rem; background:none; border:none; cursor:pointer; color:#64748b; padding:0; line-height:1;">&times;</button>
+        </div>
+
+        <?php if (!$showPreview): ?>
+            <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:20px;">
+                <div class="import-dropzone">
+                    <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
+                    <label class="pf-label" style="font-size: 1rem; color: #1e293b; margin-bottom: 10px;"><?= tr('bud_csv_file') ?? 'Sélectionnez le fichier de votre banque' ?></label>
+                    <input type="file" name="csv_file" accept=".csv" class="pf-input" style="max-width: 300px; margin: 0 auto; display: block;" required>
+                </div>
+                <div class="modal-footer" style="margin-top:0; border-top:none;">
+                    <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                    <button type="submit" class="pf-btn"><?= tr('bud_preview') ?? 'Prévisualiser' ?></button>
+                </div>
+            </form>
+
+        <?php else: ?>
+            <form method="POST" id="formMapping">
+                <input type="hidden" name="action" value="save_import">
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                    <p style="margin:0; color:#64748b; font-size:0.95rem;"><?= tr('bud_validate_import') ?? 'Veuillez vérifier et categoriser les lignes avant validation.' ?></p>
+                    <span id="missingCount" style="color:#ef4444; background:#fee2e2; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; display:none;"></span>
+                </div>
+
+                <div class="import-table-wrapper">
+                    <table class="pf-table" style="margin:0; box-shadow:none; border-radius:0;">
+                        <thead style="position:sticky; top:0; z-index:10; background:#f8fafc; outline: 1px solid #e2e8f0;">
+                            <tr>
+                                <th style="padding:10px;"><input type="checkbox" onclick="toggleAll(this)" checked></th>
+                                <th style="padding:10px;"><?= tr('bud_assign_month') ?></th>
+                                <th style="padding:10px;"><?= tr('bud_op_date') ?></th>
+                                <th style="padding:10px;"><?= tr('bud_label') ?></th>
+                                <th style="padding:10px;"><?= tr('bud_amount') ?></th>
+                                <th style="padding:10px;"><?= tr('bud_category') ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($csvData as $idx => $row): 
+                                $dup = $row['is_duplicate']; $isCrd = $row['is_credit']; $dis = $dup?'disabled':''; 
+                                $bgCol = $dup ? 'opacity:0.5' : (empty($row['cat']) && !$isCrd ? 'background:#fff1f2' : '');
+                            ?>
+                            <tr style="<?= $bgCol ?>">
+                                <td style="padding:8px;">
+                                    <input type="checkbox" class="line-checkbox" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
+                                    <input type="hidden" name="lines[<?= $idx ?>][date]" value="<?= $row['date'] ?>">
+                                    <input type="hidden" name="lines[<?= $idx ?>][label]" value="<?= $row['label'] ?>">
+                                    <input type="hidden" name="lines[<?= $idx ?>][amount]" value="<?= $row['amount'] ?>">
+                                    <input type="hidden" name="lines[<?= $idx ?>][ref]" value="<?= $row['ref'] ?>">
+                                    <input type="hidden" class="is-credit-flag" name="lines[<?= $idx ?>][is_credit]" value="<?= $isCrd ?>">
+                                </td>
+                                <td style="padding:8px;">
+                                    <input type="month" name="lines[<?= $idx ?>][gestion_month]" value="<?= substr($viewMonthDate, 0, 7) ?>" class="pf-input" style="padding:4px; font-size:0.85rem;" <?= $dis ?>>
+                                </td>
+                                <td style="padding:8px; white-space:nowrap; font-weight:600;"><?= date('d/m', strtotime($row['date'])) ?></td>
+                                <td style="padding:8px;"><?= htmlspecialchars($row['label']) ?></td>
+                                <td style="padding:8px; font-weight:bold; color:<?= $isCrd ? '#10b981' : '#1e293b' ?>; white-space:nowrap;"><?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'],2) ?> €</td>
+                                <td style="padding:8px;">
+                                    <div style="display:flex; gap:5px; min-width: 250px;">
+                                        <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="padding:4px; font-size:0.85rem; flex:1;">
+                                            <option value="">-- <?= $isCrd ? tr('bud_ignore') : tr('bud_to_define') ?> --</option>
+                                            <?php foreach ($categoriesConfig as $k => $c): ?>
+                                                <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="display:none; padding:4px; font-size:0.85rem; flex:1;" disabled>
+                                            <option value="">-- <?= tr('bud_is_charge') ?> --</option>
+                                            <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
+                                        </select>
+                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-income" onchange="checkValidation()" style="display:none; padding:4px; font-size:0.85rem; flex:1;" disabled>
+                                            <option value="">-- <?= tr('bud_is_income') ?> --</option>
+                                            <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer" style="border-top:none; padding-top:20px;">
+                    <a href="?tab=suivi" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></a>
+                    <button type="submit" id="btnImport" class="pf-btn" style="background:linear-gradient(135deg, #10b981, #059669);"><?= tr('btn_import') ?? 'Importer les lignes cochées' ?></button>
+                </div>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
+
 <script>
+
+<?php if ($showPreview): ?>
+    document.body.classList.add('no-scroll');
+<?php endif; ?>
+
+// --- 1. SÉCURISATION TRADUCTIONS ET LANGUE ---
+window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+window.I18N = {
+    ...(window.I18N || {}),
+    'bud_confirm_delete': <?= json_encode(tr('bud_confirm_delete')) ?>,
+    'bud_to_define_js': <?= json_encode(tr('bud_to_define_js')) ?>,
+    'error_occured': <?= json_encode(tr('error_occured')) ?>,
+    'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>
+};
+
 const activeViewMonth = '<?= substr($viewMonthDate, 0, 7) ?>';
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
 function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'; document.body.classList.add('no-scroll'); }
@@ -732,13 +804,12 @@ function checkValidation() {
         if (!v) { miss++; row.style.background = '#fff1f2'; } else row.style.background = '';
     });
     const btn = document.getElementById('btnImport'); const msg = document.getElementById('missingCount');
-    if(miss>0) { btn.disabled = true; btn.style.opacity=0.5; msg.style.display='inline'; msg.innerText = miss + ' <?= tr('bud_to_define_js') ?>'; } 
+    if(miss>0) { btn.disabled = true; btn.style.opacity=0.5; msg.style.display='inline'; msg.innerText = miss + ' ' + (window.I18N['bud_to_define_js'] || ''); } 
     else { btn.disabled = false; btn.style.opacity=1; msg.style.display='none'; }
 }
 
 if(document.getElementById('formMapping')) { document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s)); checkValidation(); }
 
-// Ferme la modale si on clique sur le background assombri (.pf-modal)
 window.addEventListener('click', (e) => {
     if (e.target.classList.contains('pf-modal')) {
         e.target.style.display = 'none';
@@ -746,25 +817,51 @@ window.addEventListener('click', (e) => {
     }
 });
 
+// --- 2. SUPPRESSION ASYNCHRONE ---
+async function deleteExpense(id) {
+    if (!confirm(window.I18N['bud_confirm_delete'] || "Confirmer ?")) return;
+
+    const formData = new FormData();
+    formData.append("action", "delete_expense");
+    formData.append("id", id);
+
+    try {
+        // Envoi au handler PHP que nous venons de créer en haut de suivi.php
+        const response = await fetch("budget.php?tab=suivi", { method: "POST", body: formData });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const textResult = await response.text();
+        try {
+            const result = JSON.parse(textResult);
+            if (result.success) window.location.reload();
+            else alert((window.I18N['error_occured'] || 'Erreur') + " : " + (result.error || ""));
+        } catch (e) {
+            console.error("Réponse non-JSON :", textResult);
+            window.location.reload(); // Sécurité : on recharge quand même si le serveur dérive
+        }
+    } catch (err) {
+        console.error(err);
+        alert(window.I18N['bud_err_tech'] || 'Erreur technique');
+    }
+}
+
+// --- 3. SAUVEGARDE ASYNCHRONE (AJOUT/MODIF) ---
 document.addEventListener('DOMContentLoaded', () => {
     const formExpense = document.querySelector('#manualExpenseModal form');
-    
     if (formExpense) {
         formExpense.addEventListener('submit', async (e) => {
-            e.preventDefault(); // 🛑 On bloque le rechargement brutal de la page
-            
+            e.preventDefault(); 
             const submitBtn = formExpense.querySelector('button[type="submit"]');
             const originalBtnText = submitBtn.innerText;
             
             try {
-                // 🛡️ Sécurité UI : on désactive le bouton pour éviter les doubles clics (et les doublons en BDD)
                 submitBtn.disabled = true;
                 submitBtn.innerText = '⏳ ...';
 
                 const formData = new FormData(formExpense);
-                // On s'assure que l'action est bien définie pour notre API
                 formData.set('action', 'save_expense_manual'); 
 
+                // 💡 Chemin relatif propre !
                 const response = await fetch('modules/budget/includes/api/manage-item.php', {
                     method: 'POST',
                     body: formData
@@ -772,30 +869,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
                 
-                const result = await response.json();
-
-                if (result.success) {
-                    // ✅ Succès : Fermeture propre de la modale
-                    closeSuiviModal('manualExpenseModal');
-                    formExpense.reset();
-                    
-                    // Pour l'instant, on fait un rechargement propre pour voir les calculs à jour.
-                    // Dans une V2 ultra-opti, on mettra à jour le DOM ligne par ligne ici !
-                    window.location.reload(); 
-                } else {
-                    // ❌ Erreur renvoyée par le PHP
-                    const errorMsg = result.error || 'Erreur inconnue';
-                    alert(window.I18N ? window.I18N.tr('error_occured') + ' : ' + errorMsg : errorMsg);
+                // 🛡️ Double vérification JSON contre les warnings PHP
+                const textResult = await response.text();
+                try {
+                    const result = JSON.parse(textResult);
+                    if (result.success) {
+                        closeSuiviModal('manualExpenseModal');
+                        formExpense.reset();
+                        window.location.reload(); 
+                    } else {
+                        const errorMsg = result.error || 'Erreur inconnue';
+                        alert((window.I18N['error_occured'] || 'Erreur') + ' : ' + errorMsg);
+                    }
+                } catch (jsonErr) {
+                    console.error("Réponse non-JSON :", textResult);
+                    alert("Erreur PHP. Vérifie la console (F12).");
                 }
             } catch (error) {
-                console.error("Erreur lors de l'enregistrement :", error);
-                alert("Une erreur critique est survenue côté réseau ou serveur.");
+                console.error("Erreur réseau :", error);
+                alert(window.I18N['bud_err_tech'] || "Erreur critique réseau.");
             } finally {
-                // 🔄 On restaure le bouton dans tous les cas (succès ou échec)
                 submitBtn.disabled = false;
                 submitBtn.innerText = originalBtnText;
             }
         });
     }
-    });
+});
 </script>

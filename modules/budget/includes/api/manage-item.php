@@ -83,9 +83,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $amount = floatval($_POST['amount'] ?? 0); 
             $date = $_POST['date'] ?? date('Y-m-d');
             
-            // Format attendu pour gestion_month (qui vient de input type="month") : YYYY-MM. On ajoute le jour.
-            $gestionMonth = $_POST['gestion_month'] ?? ''; 
-            if (strlen($gestionMonth) === 7) $gestionMonth .= '-01';
+            // 🛡️ SÉCURITÉ : Format attendu pour gestion_month (qui vient de input type="month") : YYYY-MM.
+            $gestionMonthRaw = $_POST['gestion_month'] ?? '';
+            
+            // Si la valeur est vide ou '0000-00-00'
+            if (empty($gestionMonthRaw) || strpos($gestionMonthRaw, '0000') !== false) {
+                // On force le mois de gestion au 1er jour de la date de la dépense
+                $gestionMonth = date('Y-m-01', strtotime($date));
+            } else {
+                // Si la valeur vient d'un input "month" (ex: "2026-04"), on rajoute "-01"
+                $gestionMonth = (strlen($gestionMonthRaw) === 7) ? $gestionMonthRaw . '-01' : $gestionMonthRaw;
+            }
             
             $label = trim($_POST['label'] ?? '');
             $budgetItemId = null;
