@@ -17,17 +17,29 @@ $currentMonth = isset($_GET['m']) ? str_pad((int)$_GET['m'], 2, '0', STR_PAD_LEF
 $currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y', strtotime($defaultActiveMonth));
 $viewMonthDate = "$currentYear-$currentMonth-01";
 
-// Conservation du tableau d'origine pour la correspondance en base de données
-$moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+$sqlReal = "SELECT budget_item_id, SUM(amount) as total_real 
+            FROM pf_expenses 
+            WHERE gestion_month = ? AND budget_item_id IS NOT NULL 
+            GROUP BY budget_item_id";
+$stmtReal = $pdo->prepare($sqlReal);
+$stmtReal->execute([$viewMonthDate]);
+$realTotals = $stmtReal->fetchAll(PDO::FETCH_KEY_PAIR); // Retourne un tableau [id => total]
 
-// Affichage dynamique traduit
+$sqlCatReal = "SELECT category, SUM(amount) as total_real 
+               FROM pf_expenses 
+               WHERE gestion_month = ? AND budget_item_id IS NULL 
+               GROUP BY category";
+$stmtCatReal = $pdo->prepare($sqlCatReal);
+$stmtCatReal->execute([$viewMonthDate]);
+$catTotals = $stmtCatReal->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$stmtLabels = $pdo->prepare("SELECT label, amount FROM pf_expenses WHERE gestion_month = ? AND budget_item_id IS NULL");
+$stmtLabels->execute([$viewMonthDate]);
+$unlinkedExpenses = $stmtLabels->fetchAll(PDO::FETCH_ASSOC);
+
+$moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 $monthTranslationKey = 'month_' . str_pad((int)$currentMonth, 2, '0', STR_PAD_LEFT);
 $currentMonthName = tr($monthTranslationKey) . ' ' . $currentYear;
-
-// 4. Récupération des Dépenses Réelles du mois (Basé sur le Mois de Gestion !)
-$stmtExp = $pdo->prepare("SELECT amount, label, category, budget_item_id FROM pf_expenses WHERE gestion_month = ?");
-$stmtExp->execute([$viewMonthDate]);
-$allExpenses = $stmtExp->fetchAll(PDO::FETCH_ASSOC);
 
 $totalDepenses = 0;
 $totalRevenus = 0;
@@ -54,59 +66,50 @@ $totalRevenus = 0;
             <tbody>
                 <?php foreach ($items as $item): 
                     // --- 1. CALCUL DES TOTAUX PRÉVUS ---
-                    $targetAbs = abs((float)$item['amount']); // On utilise l'absolu pour l'affichage
+                    $targetAbs = abs((float)$item['amount']); 
                     $amountToAdd = ($item['type'] === 'Annuel') ? $targetAbs / 12 : $targetAbs;
                     
-                    if ($item['category'] === 'expense') $totalDepenses += $amountToAdd;
-                    else $totalRevenus += $amountToAdd;
+                    if ($item['category'] === 'income') $totalRevenus += $amountToAdd;
+                    else $totalDepenses += $amountToAdd;
                     
-                    // --- 2. CALCUL DU RÉEL (SOMME DES LIGNES ASSOCIÉES) ---
+                    // --- 2. CALCUL DU RÉEL (Logique optimisée) ---
                     $realSum = 0;
                     $hasMatchingExpense = false;
 
-                    foreach ($allExpenses as $exp) {
-                        $match = false;
-                        
-                        // 1. Lien direct via l'ID de la charge
-                        if (!empty($exp['budget_item_id']) && (int)$exp['budget_item_id'] === (int)$item['id']) {
-                            $match = true;
-                        } 
-                        // 2. Lien forcé pour l'École
-                        elseif ($exp['category'] === 'School' && trim($item['name']) === 'Estimacio escola') {
-                            $match = true;
+                    // A. Correspondance directe par ID
+                    if (isset($realTotals[$item['id']])) {
+                        $realSum = $realTotals[$item['id']];
+                        $hasMatchingExpense = true;
+                    } 
+                    // B. Correspondance par catégorie système (École, Essence, FMCG)
+                    else {
+                        $catKey = null;
+                        if (trim($item['name']) === 'Estimacio escola') $catKey = 'School';
+                        elseif (trim($item['name']) === 'Estimation gasolina') $catKey = 'Essence';
+                        elseif (trim($item['name']) === 'Estimacio F&B & beauty') $catKey = 'FMCG';
+
+                        if ($catKey && isset($catTotals[$catKey])) {
+                            $realSum = $catTotals[$catKey];
+                            $hasMatchingExpense = true;
                         }
-                        elseif ($exp['category'] === 'Essence' && trim($item['name']) === 'Estimation gasolina') {
-                            $match = true;
-                        }
-                        elseif ($exp['category'] === 'FMCG' && trim($item['name']) === 'Estimacio F&B & beauty') {
-                            $match = true;
-                        }
-                        elseif (empty($exp['budget_item_id']) && !empty($item['mapping_keywords'])) {
+                        // C. Correspondance par mots-clés (seulement sur les dépenses non liées)
+                        elseif (!empty($item['mapping_keywords'])) {
                             $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
-                            foreach ($keywords as $kw) {
-                                if (!empty($kw) && stripos($exp['label'], $kw) !== false) {
-                                    $match = true; 
-                                    break;
+                            foreach ($unlinkedExpenses as $uexp) {
+                                foreach ($keywords as $kw) {
+                                    if (!empty($kw) && stripos($uexp['label'], $kw) !== false) {
+                                        $realSum += (float)$uexp['amount'];
+                                        $hasMatchingExpense = true;
+                                        break; 
+                                    }
                                 }
                             }
                         }
-
-                        if ($match) {
-                            $realSum += (float)$exp['amount'];
-                            $hasMatchingExpense = true;
-                        }
                     }
 
-                    // On convertit le résultat réel en positif pour simplifier la comparaison visuelle UI
                     $realAbs = abs($realSum);
+                    $isAutoChecked = ($hasMatchingExpense && ($realAbs >= ($targetAbs - 0.10)));
 
-                    // --- 3. LOGIQUE D'ÉTAT ---
-                    $isAutoChecked = false;
-                    if ($hasMatchingExpense && ($realAbs >= ($targetAbs - 0.10))) {
-                        $isAutoChecked = true;
-                    }
-
-                    // Styles
                     $rowClass = ($item['category'] === 'income') ? 'row-income' : 'row-expense';
                     if ($item['is_estimate']) $rowClass .= ' row-estimate';
                 ?>

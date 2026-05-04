@@ -21,12 +21,14 @@ if ($selectedYear !== 'all') {
 // 2. Récupération des voyages + Calculs
 $sql = "
     SELECT h.*, 
-           (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE((SELECT SUM(amount) FROM pf_holidays_items WHERE holiday_id = h.id), 0)) as total_cost,
-           ((SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) + (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND is_paid = 1)) as total_paid,
-           (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved
+           (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE(SUM(hi.amount), 0)) as total_cost,
+           (SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) as real_expenses_sum,
+           SUM(CASE WHEN hi.is_paid = 1 THEN hi.amount ELSE 0 END) as items_paid_sum
     FROM pf_holidays h
+    LEFT JOIN pf_holidays_items hi ON h.id = hi.holiday_id
     $whereSQL
-    ORDER BY COALESCE(start_date, '2999-12-31') ASC, FIELD(status, 'booked', 'planned', 'draft', 'passed', 'archived')
+    GROUP BY h.id
+    ORDER BY COALESCE(start_date, '2999-12-31') ASC
 ";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
