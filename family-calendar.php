@@ -39,16 +39,18 @@ require __DIR__ . '/header.php';
                 <button id="btnCloseHolidays" class="fc-modal-close">×</button>
             </div>
             <div class="fc-modal-body">
-                <table id="schoolHolidaysTable" class="fc-holidays-table">
-                    <thead>
-                        <tr>
+                <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table id="schoolHolidaysTable" class="fc-holidays-table" style="min-width: 400px;">
+                        <thead>
+                            <tr>
                             <th><?= tr('fc_col_period') ?></th>
                             <th><?= tr('fc_col_from') ?></th>
                             <th><?= tr('fc_col_to') ?></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

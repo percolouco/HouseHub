@@ -899,38 +899,111 @@ td.col-day {
    ========================================================= */
 
 @media (max-width: 768px) {
-  /* Plein écran (Full Bleed) pour le tableau sur mobile */
+  /* 1. PLEIN ÉCRAN POUR GAGNER DE L'ESPACE */
   .pf-family-calendar .pf-container {
-    padding: 0 !important; /* Retire le padding de la page */
+    padding: 0 !important;
+  }
+  .pf-family-calendar .pf-main {
+    padding-top: 10px;
   }
 
+  /* 2. EN-TÊTES ET BOUTONS GLOBAUX (Empilement propre) */
+  .fc-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+    padding: 0 10px; /* On remet un peu de padding juste pour les textes */
+  }
+  .fc-header-row > div {
+    display: flex;
+    flex-direction: column; /* Les boutons s'empilent */
+    width: 100%;
+    gap: 10px;
+  }
+  .pf-btn-icon-text {
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* 3. CONTRÔLES DU CALENDRIER MENSUEL */
+  .fc-month-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  .fc-view-controls {
+    width: 100%;
+    display: flex;
+    order: 1;
+  }
+  .fc-view-button {
+    flex: 1; /* Les onglets 1 Mois / 2 Mois se partagent l'espace */
+    text-align: center;
+    padding: 8px 4px;
+    font-size: 0.8rem;
+  }
+  #fc-current-month-year {
+    order: 2;
+  }
+  .fc-nav-controls {
+    width: 100%;
+    justify-content: space-between; /* Les flèches de chaque côté */
+    order: 3;
+  }
+
+  /* 4. CONTRÔLES DU PLANNING HEBDO */
+  .fc-week-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 10px;
+  }
+  .fc-week-nav-controls {
+    justify-content: space-between;
+  }
+
+  /* 5. LE GRAND TABLEAU (Suppression des bordures extérieures) */
   #planningTable-wrapper {
     border-radius: 0;
     border-left: none;
     border-right: none;
     margin-bottom: 0;
+    max-height: 75vh; /* Ajusté pour laisser voir un peu le bas */
   }
 
-  /* Ajustements des panneaux du bas */
+  /* Ajustements pour que les colonnes figées (Mois + Semaine) ne prennent pas tout l'écran */
+  .col-month {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    font-size: 0.75rem; /* On réduit le texte "Avril" etc. */
+  }
+  #planningTable tbody td.col-sticky-sem {
+    left: 40px !important; /* Adapté à la nouvelle largeur de la 1ère colonne */
+  }
+  #planningTable thead tr th.col-sticky-sem {
+    left: 40px !important;
+  }
+
+  /* 6. PANNEAUX DU BAS (Légendes et Résumés) */
   .fc-bottom-grid {
     grid-template-columns: 1fr;
+    padding: 0 10px;
   }
-
-  .fc-two-months-container {
-    grid-template-columns: 1fr;
-  }
-
+  .fc-two-months-container,
   .fc-year-container {
     grid-template-columns: 1fr;
   }
-
   .fc-summary-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 12px;
+  }
+  .fc-summary-controls {
+    width: 100%;
+    justify-content: space-between;
   }
 
-  /* Modale Bottom Sheet */
+  /* 7. MODALE BOTTOM SHEET (SÉCURITÉ Z-INDEX) */
   .fc-selection-menu {
     position: fixed !important;
     top: auto !important;
@@ -938,13 +1011,14 @@ td.col-day {
     bottom: 0 !important;
     width: 100% !important;
     border-radius: 24px 24px 0 0;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
     padding: 24px 20px;
     padding-bottom: env(safe-area-inset-bottom, 24px);
     transform: translateY(100%);
     animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     max-height: 85vh;
     overflow-y: auto;
+    z-index: 999999 !important; /* Doit passer AU-DESSUS des colonnes figées du tableau ! */
   }
 
   @keyframes slideUpSheet {
@@ -960,16 +1034,15 @@ td.col-day {
     height: 5px;
     background: #cbd5e1;
     border-radius: 10px;
-    margin: 0 auto 10px auto;
+    margin: 0 auto 15px auto;
   }
 
   .fc-menu-btn {
-    padding: 10px;
+    padding: 12px 10px;
     font-size: 0.95rem;
-    font-weight: 600;
   }
 
-  /* Réduction des icônes pour gagner de la place */
+  /* Réduction des icônes pour le tableau hyper dense */
   .fc-day--centre::after {
     font-size: 9px !important;
     top: 1px !important;

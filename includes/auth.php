@@ -17,10 +17,14 @@ function require_login(?string $loginPage = '/login.php'): void
     }
 
     if (empty($_SESSION['user'])) {
-        // URL de la page courante (ex: /gift-list.php?foo=bar)
-        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
+            header('Content-Type: application/json');
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Session expirée. Veuillez vous reconnecter.']);
+            exit;
+        }
 
-        // On redirige vers la page de login en ajoutant ?redirect=...
+        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
         $redirectParam = urlencode($currentUrl);
         $target = ($loginPage ?? '/login.php') . '?redirect=' . $redirectParam;
 

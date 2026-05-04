@@ -92,30 +92,63 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
 
   <script>
     /**
-     * Pont d'Internationalisation pour le Javascript
+     * Pont d'Internationalisation et Configuration
      */
     window.I18N = <?php echo json_encode($current_translations_array ?? []); ?>;
+
+    // ✅ Injection sécurisée (évite le crash si config.php n'est pas chargé)
+    window.CONFIG = {
+        ID_ALEX: <?php echo defined('ID_ALEX') ? ID_ALEX : 2; ?>,
+        ID_LAIA: <?php echo defined('ID_LAIA') ? ID_LAIA : 3; ?>,
+        CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>'
+    };    
     
     function tr(key) {
         return window.I18N[key] || key;
     }
 
-    // Gestion du menu mobile (Uniquement si le bouton Burger est présent dans le DOM)
+    // Gestion du menu mobile
     <?php if (isset($_SESSION['user'])): ?>
-    const burgerBtn = document.querySelector('.pf-burger-btn');
-    const mobileMenu = document.querySelector('.pf-mobile-menu');
-    
-    if(burgerBtn && mobileMenu) {
-      burgerBtn.addEventListener('click', () => {
-        const isOpen = mobileMenu.classList.toggle('is-open');
-        burgerBtn.textContent = isOpen ? '✕' : '☰';
+    document.addEventListener('DOMContentLoaded', () => {
+        const burgerBtn = document.querySelector('.pf-burger-btn');
+        const mobileMenu = document.querySelector('.pf-mobile-menu');
         
-        if (isOpen) {
-          document.body.classList.add('no-scroll');
-        } else {
-          document.body.classList.remove('no-scroll');
+        if(burgerBtn && mobileMenu) {
+            burgerBtn.addEventListener('click', () => {
+                const isOpen = mobileMenu.classList.toggle('is-open');
+                burgerBtn.textContent = isOpen ? '✕' : '☰';
+                document.body.classList.toggle('no-scroll', isOpen);
+            });
         }
-      });
-    }
+    });
     <?php endif; ?>
-  </script>
+
+    /**
+     * pachaFetch : Utilitaire de requête robuste
+     */
+    async function pachaFetch(url, options = {}) {
+        const finalUrl = url.startsWith('/') ? url.substring(1) : url;
+
+        options.credentials = 'same-origin'; 
+        options.headers = {
+            ...options.headers,
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+
+        try {
+            const response = await fetch(finalUrl, options);
+            const rawText = await response.text();
+            
+            try {
+                return JSON.parse(rawText);
+            } catch (jsonErr) {
+                console.error("Réponse corrompue (HTML reçu au lieu de JSON) :", rawText);
+                throw new Error("Erreur serveur : format JSON invalide.");
+            }
+        } catch (err) {
+            console.error(`Erreur pachaFetch [${finalUrl}] :`, err);
+            throw err;
+        }
+    }
+</script>

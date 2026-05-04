@@ -362,4 +362,40 @@ body.no-scroll {
   .pf-mobile-logout {
     color: var(--danger);
   }
+  /* ✅ Transformation de toutes les modales en "Bottom Sheets" */
+  .pf-modal {
+    align-items: flex-end; /* Aligne la modale en bas */
+    padding: 0;
+  }
+
+  .pf-modal-content {
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: 24px 24px 0 0 !important; /* Arrondi seulement en haut */
+    padding: 24px 20px !important;
+    padding-bottom: env(
+      safe-area-inset-bottom,
+      30px
+    ) !important; /* Gère l'encoche iPhone */
+    transform: translateY(100%);
+    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    max-height: 92vh; /* Laisse un petit espace en haut */
+  }
+
+  /* Barre de drag visuelle en haut de la modale */
+  .pf-modal-content::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    margin: -10px auto 20px auto;
+  }
+
+  @keyframes slideUpSheet {
+    to {
+      transform: translateY(0);
+    }
+  }
 }
