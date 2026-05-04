@@ -63,4 +63,26 @@ require __DIR__ . '/header.php';
     ?>
     </section>
 </div>
+<script>
+// --- AUTO-SCROLL DES ONGLETS MOBILES ---
+document.addEventListener('DOMContentLoaded', () => {
+    const tabsContainer = document.querySelector('.budget-tabs-container');
+    const activeTab = document.querySelector('.tab-item.active');
+    
+    // Si on a bien un conteneur d'onglets ET un onglet actif
+    if (tabsContainer && activeTab) {
+        // On vérifie si le conteneur a un scroll horizontal possible
+        if (tabsContainer.scrollWidth > tabsContainer.clientWidth) {
+            // On calcule la position pour centrer l'onglet à l'écran
+            const scrollPos = activeTab.offsetLeft - (tabsContainer.offsetWidth / 2) + (activeTab.offsetWidth / 2);
+            
+            // On fait glisser le menu doucement
+            tabsContainer.scrollTo({
+                left: scrollPos,
+                behavior: 'smooth'
+            });
+        }
+    }
+});
+</script>
 <?php require __DIR__ . '/footer.php'; ?>

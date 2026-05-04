@@ -178,6 +178,8 @@
   text-decoration: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .pf-btn:hover {
@@ -223,7 +225,7 @@
 /* Sécurité de clic asynchrone */
 .btn-safe-click {
   position: relative;
-  z-index: 50 !important;
+  z-index: 10 !important;
   pointer-events: auto !important;
 }
 
@@ -312,12 +314,16 @@
   overflow-x: auto;
 }
 .sticky-col {
-  position: sticky;
-  left: 0;
-  background: var(--bg-card);
-  z-index: 2;
+  position: sticky !important;
+  left: 0 !important;
+  background: var(--bg-card) !important;
+  z-index: 20 !important;
   border-right: 1px solid var(--bg-page);
   min-width: 150px;
+}
+th.sticky-col {
+  z-index: 30 !important;
+  background: #f8fafc !important;
 }
 
 .cell-amount {
@@ -960,68 +966,212 @@ th.col-laia {
   border: none;
 }
 
-/* --- 12. OPTIMISATIONS MOBILES PREVISIONNEL --- */
+/* --- 12. OPTIMISATIONS MOBILES PREVISIONNEL & SUIVI (V6) --- */
 @media (max-width: 768px) {
+  /* 1. ANTI-DÉBORDEMENT GLOBAL */
   html,
   body {
-    min-width: 680px !important;
-    overflow-x: auto !important;
-    position: relative;
-  }
-  header,
-  footer,
-  .navbar,
-  .site-header,
-  .site-footer {
-    min-width: 680px !important;
-    width: 100% !important;
-    box-sizing: border-box;
+    overflow-x: hidden !important;
+    width: 100vw !important;
   }
   .budget-view {
-    min-width: 680px !important;
-    width: 100%;
-    padding-right: 10px;
-  }
-  .prev-salary-table {
-    min-width: 100%;
-    width: 100%;
-  }
-  .prev-timeline-wrapper {
-    width: 100%;
-    overflow-x: auto !important;
-    display: block;
+    padding: 10px !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
   }
 
-  /* Sur mobile, on garde les actions visibles sans hover */
-  .row-actions {
+  /* 2. ONGLETS PRINCIPAUX (Scroll horizontal fluide) */
+  .budget-tabs-container {
     display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    justify-content: flex-start !important; /* Aligne à gauche pour scroller */
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 5px;
+    /* Masque la barre de défilement inesthétique */
+    scrollbar-width: none;
+  }
+  .budget-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-item {
+    flex: 0 0 auto !important; /* Interdit l'écrasement du texte */
+    padding: 8px 16px !important;
+  }
+
+  /* 3. RÉDUCTION DES ENCADRÉS DE SOLDES */
+  .budget-view > div[style*="display:grid"] {
+    gap: 10px !important;
+    margin-bottom: 15px !important;
+  }
+  .budget-view > div[style*="display:grid"] > div {
+    padding: 12px 10px !important;
+  }
+
+  /* 4. EN-TÊTES EPARGNE (Titre isolé, boutons 50/50 en dessous) */
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header) {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-top: 20px !important;
+  }
+  /* Le titre (Nens/Pol/Pep) prend toute la ligne */
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header)
+    > div:first-child {
+    width: 100% !important;
+  }
+  /* Les boutons se partagent la ligne suivante (50/50) */
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header)
+    > div:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header)
+    > div:last-child
+    .pf-btn {
+    flex: 1 1 50% !important;
+    padding: 0 5px !important;
+    font-size: 0.8rem !important;
+    justify-content: center;
+  }
+
+  /* 5. EN-TÊTES PRÉVISIONNEL (Répartition, Revenus) */
+  .prev-section-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .prev-section-header > div {
+    display: flex !important;
+    flex-direction: row !important; /* On permet l'alignement horizontal */
+    flex-wrap: wrap !important; /* On permet le passage à la ligne */
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .prev-section-header .nav-group {
+    display: flex !important;
+    width: 100% !important; /* La navigation prend toute la ligne du haut */
+    justify-content: space-between !important;
+  }
+  .prev-section-header .nav-group .btn-nav {
+    flex: 1;
+    text-align: center;
+  }
+  .prev-section-header .pf-btn {
+    flex: 1 1 calc(50% - 10px) !important; /* 50/50 pour les boutons du bas */
+    width: auto !important;
+    padding: 0 5px !important;
+    margin: 0 !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* 6. TOUS LES TABLEAUX DEVIENNENT SCROLLABLES */
+  .prev-salary-table,
+  .prev-alloc-table,
+  .pf-table,
+  .savings-table,
+  .recap-wrapper {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    border-radius: 8px !important;
+    margin-bottom: 15px;
+  }
+
+  /* 6b. COMPRESSION DU TABLEAU VIREMENTS POUR ÉVITER LE SCROLL */
+  .recap-card {
+    min-width: 100% !important; /* Retire le blocage à 600px */
+    width: 100% !important;
+  }
+  .recap-table th,
+  .recap-table td {
+    padding: 8px 4px !important; /* Réduit drastiquement l'espace vide horizontal */
+    font-size: 0.8rem !important; /* Réduit un poil la taille du texte */
+  }
+  .recap-header {
+    font-size: 0.9rem !important;
+    padding: 8px 10px !important;
+  }
+  /* On permet au texte "Grand Total" de s'ajuster si besoin */
+  .row-grand-total td {
+    padding: 10px 4px !important;
+  }
+
+  /* 7. BOUTONS D'ÉDITION/SUPPRESSION (FINI LE CHEVAUCHEMENT) */
+  .row-actions {
+    position: static !important;
+    display: inline-flex !important;
     opacity: 1 !important;
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background: #ffffff;
-    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-    padding: 0 10px;
-    align-items: center;
-    gap: 10px;
-    z-index: 50;
-    border-left: 1px solid #e2e8f0;
+    box-shadow: none !important;
+    background: transparent !important;
+    border-left: none !important;
+    padding: 1px 0 !important;
+    transform: none !important;
+    justify-content: flex-start;
+    width: auto !important;
   }
   .btn-icon-action {
-    font-size: 1.2rem;
-    padding: 5px;
-    width: 34px;
-    height: 34px;
+    font-size: 1.1rem !important;
+    padding: 4px !important;
+    width: 20px !important;
+    height: 20px !important;
+    background: #f1f5f9 !important;
+    border-radius: 6px;
+    margin-right: 2px;
   }
-  .col-sticky {
-    min-width: 180px !important;
+
+  /* 8. COLONNE STICKY */
+  .col-sticky,
+  .sticky-col {
+    min-width: 120px !important;
     position: sticky !important;
     left: 0;
+    z-index: 20 !important;
+    white-space: normal !important;
+    background: white !important;
   }
-  .prev-section-header {
-    flex-direction: row;
-    align-items: center;
+  th.sticky-col,
+  th.col-sticky {
+    z-index: 30 !important;
+    background: #f8fafc !important;
+  }
+
+  /* 9. TOOLBAR SUIVI ET MODALES */
+  .action-toolbar {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+  .suivi-nav-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .suivi-btn-nav {
+    flex: 1;
+    text-align: center;
+  }
+
+  .pf-modal-content {
+    padding: 20px 15px !important;
+    width: 95% !important;
+  }
+  .modal-footer {
+    flex-wrap: wrap !important;
+  }
+  .modal-footer .pf-btn {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-bottom: 10px !important;
   }
 }
 

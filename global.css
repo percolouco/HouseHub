@@ -13,12 +13,22 @@
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-* {
+/* 🛡️ RESET MOBILE UNIVERSEL */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+  max-width: 100vw;
+  overflow-x: hidden; /* Empêche le site entier de glisser de gauche à droite */
+}
+
+body {
   font-family:
     "Inter",
     -apple-system,
@@ -31,6 +41,14 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Images et médias responsive par défaut */
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
 }
 
 /* === HEADER === */
@@ -120,14 +138,14 @@ body {
   color: var(--text-main);
 }
 .pf-mobile-menu {
-  display: none; /* caché par défaut */
+  display: none;
   position: fixed;
   top: 64px;
   left: 0;
   right: 0;
-  height: calc(100vh - 64px); /* Remplace le bottom: 0 pour éviter le bug iOS */
-  overflow-y: auto; /* Permet le scroll si le menu contient beaucoup d'items */
-  -webkit-overflow-scrolling: touch; /* Fluidité sur iOS */
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: white;
   padding: 20px;
   flex-direction: column;
@@ -225,7 +243,6 @@ p {
 .pf-module-card:hover .pf-card-cta::after {
   transform: translateX(4px);
 }
-
 .pf-card--disabled {
   opacity: 0.6;
   pointer-events: none;
@@ -320,20 +337,17 @@ body.no-scroll {
   .pf-burger-btn {
     display: block;
   }
-
-  /* Ajustements d'espacement pour petits écrans */
   .pf-main {
-    padding: 16px;
-  }
+    padding: 16px 10px;
+  } /* Moins de padding latéral sur mobile */
 
   .pf-modules-grid {
-    /* Sécurité : force 1 colonne sur mobile au lieu du auto-fill */
     grid-template-columns: 1fr;
     gap: 16px;
   }
 
   .pf-login-container {
-    margin: 30px 16px; /* Évite de toucher les bords de l'écran */
+    margin: 30px 16px;
     padding: 24px;
   }
 
