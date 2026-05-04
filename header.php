@@ -151,4 +151,45 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
             throw err;
         }
     }
+
+    /**
+ * UI Utility : Toasts (Notifications)
+ */
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `pf-toast pf-toast--${type}`;
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    // Animation et suppression
+    setTimeout(() => toast.classList.add('is-visible'), 100);
+    setTimeout(() => {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+/**
+ * UI Utility : Confirmation stylisée (Remplace confirm())
+ */
+async function pachaConfirm(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'pf-modal open';
+        modal.innerHTML = `
+            <div class="pf-modal-content" style="max-width: 400px; align-self: center;">
+                <h3 style="margin-top:0;">${title}</h3>
+                <p style="color:var(--text-muted);">${message}</p>
+                <div class="modal-footer">
+                    <button class="pf-btn btn-secondary" id="confirm-cancel">${tr('btn_cancel')}</button>
+                    <button class="pf-btn" id="confirm-ok" style="background:var(--danger);">${tr('btn_delete')}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        document.getElementById('confirm-cancel').onclick = () => { modal.remove(); resolve(false); };
+        document.getElementById('confirm-ok').onclick = () => { modal.remove(); resolve(true); };
+    });
+}
 </script>
