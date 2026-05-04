@@ -578,7 +578,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div class="form-group" id="blockInputFrais" style="margin-bottom:15px; display:none;">
                 <label class="pf-label"><?= tr('bud_fixed_charge') ?></label>
                 <select name="budget_item_id" id="fraisSelect" class="pf-input" disabled>
-                    <option value="">-- Sélectionner --</option>
+                <option value=""><?= tr('hdl_select_beneficiary') ?></option>
                     <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
@@ -586,7 +586,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
                 <label class="pf-label"><?= tr('bud_expected_income') ?></label>
                 <select name="budget_item_id" id="incomeSelect" class="pf-input" disabled>
-                    <option value="">-- Sélectionner --</option>
+                    <option value=""><?= tr('hdl_select_beneficiary') ?>    </option>
                     <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
