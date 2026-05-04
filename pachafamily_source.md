@@ -1,6 +1,6 @@
 # 🦙 Source Code PachaFamily
 
-> *Généré le 2026-05-04 17:27:25*
+> *Généré le 2026-05-04 18:29:00*
 
 ### 📄 Fichier : `budget.php`
 ```php
@@ -1208,6 +1208,35 @@ body.no-scroll {
   margin-top: auto;
 }
 
+/* Notifications Toasts */
+.pf-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid var(--primary);
+  z-index: 10000;
+  transform: translateX(120%);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-weight: 600;
+  color: var(--text-main);
+}
+.pf-toast.is-visible {
+  transform: translateX(0);
+}
+.pf-toast--success {
+  border-left-color: #10b981;
+}
+.pf-toast--error {
+  border-left-color: #ef4444;
+}
+.pf-toast--warning {
+  border-left-color: #f59e0b;
+}
+
 /* === MOBILE RESPONSIVE === */
 @media (max-width: 768px) {
   .pf-header {
@@ -1246,6 +1275,42 @@ body.no-scroll {
   }
   .pf-mobile-logout {
     color: var(--danger);
+  }
+  /* ✅ Transformation de toutes les modales en "Bottom Sheets" */
+  .pf-modal {
+    align-items: flex-end; /* Aligne la modale en bas */
+    padding: 0;
+  }
+
+  .pf-modal-content {
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: 24px 24px 0 0 !important; /* Arrondi seulement en haut */
+    padding: 24px 20px !important;
+    padding-bottom: env(
+      safe-area-inset-bottom,
+      30px
+    ) !important; /* Gère l'encoche iPhone */
+    transform: translateY(100%);
+    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    max-height: 92vh; /* Laisse un petit espace en haut */
+  }
+
+  /* Barre de drag visuelle en haut de la modale */
+  .pf-modal-content::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 10px;
+    margin: -10px auto 20px auto;
+  }
+
+  @keyframes slideUpSheet {
+    to {
+      transform: translateY(0);
+    }
   }
 }
 
@@ -1349,33 +1414,107 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
 
   <script>
     /**
-     * Pont d'Internationalisation pour le Javascript
+     * Pont d'Internationalisation et Configuration
      */
     window.I18N = <?php echo json_encode($current_translations_array ?? []); ?>;
+
+    // ✅ Injection sécurisée (évite le crash si config.php n'est pas chargé)
+    window.CONFIG = {
+        ID_ALEX: <?php echo defined('ID_ALEX') ? ID_ALEX : 2; ?>,
+        ID_LAIA: <?php echo defined('ID_LAIA') ? ID_LAIA : 3; ?>,
+        CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>'
+    };    
     
     function tr(key) {
         return window.I18N[key] || key;
     }
 
-    // Gestion du menu mobile (Uniquement si le bouton Burger est présent dans le DOM)
+    // Gestion du menu mobile
     <?php if (isset($_SESSION['user'])): ?>
-    const burgerBtn = document.querySelector('.pf-burger-btn');
-    const mobileMenu = document.querySelector('.pf-mobile-menu');
-    
-    if(burgerBtn && mobileMenu) {
-      burgerBtn.addEventListener('click', () => {
-        const isOpen = mobileMenu.classList.toggle('is-open');
-        burgerBtn.textContent = isOpen ? '✕' : '☰';
+    document.addEventListener('DOMContentLoaded', () => {
+        const burgerBtn = document.querySelector('.pf-burger-btn');
+        const mobileMenu = document.querySelector('.pf-mobile-menu');
         
-        if (isOpen) {
-          document.body.classList.add('no-scroll');
-        } else {
-          document.body.classList.remove('no-scroll');
+        if(burgerBtn && mobileMenu) {
+            burgerBtn.addEventListener('click', () => {
+                const isOpen = mobileMenu.classList.toggle('is-open');
+                burgerBtn.textContent = isOpen ? '✕' : '☰';
+                document.body.classList.toggle('no-scroll', isOpen);
+            });
         }
-      });
-    }
+    });
     <?php endif; ?>
-  </script>
+
+    /**
+     * pachaFetch : Utilitaire de requête robuste
+     */
+    async function pachaFetch(url, options = {}) {
+        const finalUrl = url.startsWith('/') ? url.substring(1) : url;
+
+        options.credentials = 'same-origin'; 
+        options.headers = {
+            ...options.headers,
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+
+        try {
+            const response = await fetch(finalUrl, options);
+            const rawText = await response.text();
+            
+            try {
+                return JSON.parse(rawText);
+            } catch (jsonErr) {
+                console.error("Réponse corrompue (HTML reçu au lieu de JSON) :", rawText);
+                throw new Error("Erreur serveur : format JSON invalide.");
+            }
+        } catch (err) {
+            console.error(`Erreur pachaFetch [${finalUrl}] :`, err);
+            throw err;
+        }
+    }
+
+    /**
+ * UI Utility : Toasts (Notifications)
+ */
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `pf-toast pf-toast--${type}`;
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    // Animation et suppression
+    setTimeout(() => toast.classList.add('is-visible'), 100);
+    setTimeout(() => {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+/**
+ * UI Utility : Confirmation stylisée (Remplace confirm())
+ */
+async function pachaConfirm(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'pf-modal open';
+        modal.innerHTML = `
+            <div class="pf-modal-content" style="max-width: 400px; align-self: center;">
+                <h3 style="margin-top:0;">${title}</h3>
+                <p style="color:var(--text-muted);">${message}</p>
+                <div class="modal-footer">
+                    <button class="pf-btn btn-secondary" id="confirm-cancel">${tr('btn_cancel')}</button>
+                    <button class="pf-btn" id="confirm-ok" style="background:var(--danger);">${tr('btn_delete')}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        document.getElementById('confirm-cancel').onclick = () => { modal.remove(); resolve(false); };
+        document.getElementById('confirm-ok').onclick = () => { modal.remove(); resolve(true); };
+    });
+}
+</script>
 ```
 
 ---
@@ -1444,10 +1583,14 @@ function require_login(?string $loginPage = '/login.php'): void
     }
 
     if (empty($_SESSION['user'])) {
-        // URL de la page courante (ex: /gift-list.php?foo=bar)
-        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
+        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
+            header('Content-Type: application/json');
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Session expirée. Veuillez vous reconnecter.']);
+            exit;
+        }
 
-        // On redirige vers la page de login en ajoutant ?redirect=...
+        $currentUrl = $_SERVER['REQUEST_URI'] ?? '/';
         $redirectParam = urlencode($currentUrl);
         $target = ($loginPage ?? '/login.php') . '?redirect=' . $redirectParam;
 
@@ -1460,10 +1603,26 @@ function require_login(?string $loginPage = '/login.php'): void
 
 ---
 
+### 📄 Fichier : `includes/config.php`
+```php
+<?php
+// PachaFamily Config - Version sans erreur
+if (!defined('ID_ALEX')) {
+    define('ID_ALEX', 2);
+    define('ID_LAIA', 3);
+    define('CURRENCY', '€');
+    define('ZONE_SCOLAIRE', 'C');
+}
+```
+
+---
+
 ### 📄 Fichier : `includes/db.php`
 ```php
 <?php
-
+if (file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+}
 // Activer erreurs
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -2623,10 +2782,12 @@ return [
 ```php
 <?php
 // Protection de la page : nécessite d'être connecté
+
 require __DIR__ . '/includes/auth.php';
 require_login('/login.php');
 
 // Inclusion i18n (déjà fait dans header, mais par sécurité si besoin de tr() avant)
+
 require_once __DIR__ . '/includes/i18n.php';
 
 // Configuration de la page
@@ -4873,10 +5034,14 @@ function getTranslatedMonthName($dateString) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach (['Alex', 'Laia'] as $p): 
+                <?php 
+                // Définition des noms à partir de la config
+                $family_members = [ID_ALEX => 'Alex', ID_LAIA => 'Laia'];
+
+                foreach ($family_members as $id => $p): 
                     $d = $salaryConfig[$p]; 
                     $restant = $d['salary'] - ($d['mensualite'] + $d['frais_func'] + $d['eco_perso'] + $d['eco_family']);
-                    $borderColor = ($p === 'Alex') ? '#0891b2' : '#f59e0b';
+                    $borderColor = ($id === ID_ALEX) ? '#0891b2' : '#f59e0b';
                 ?>
                 <tr data-person="<?= $p ?>">
                     <td style="text-align:left; font-weight:bold; color:var(--text-main); border-left:4px solid <?= $borderColor ?>;">
@@ -5163,7 +5328,7 @@ function getTranslatedMonthName($dateString) {
     </div>
 </div>
 
-<div id="addCatModal" class="pf-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15, 23, 42, 0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+<div id="addCatModal" class="pf-modal">
     <div class="pf-modal-content" style="background:white; width:95%; max-width:400px; border-radius:20px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); padding:30px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 class="pf-modal-title" style="margin:0; border:none; font-size:1.2rem;"><?= tr('bud_prev_new_line_title') ?></h3>
@@ -5553,33 +5718,23 @@ function updateSumResult() {
 }
 
 async function deleteCategory(id) {
-    if (!confirm(window.I18N['bud_prev_confirm_del_line'] || "Confirmer la suppression ?")) return;
+    if (!confirm(tr('bud_prev_confirm_del_line'))) return;
     
     const formData = new FormData();
     formData.append('action', 'delete_category');
     formData.append('id', id);
-    formData.append('ajax', '1'); 
+    formData.append('ajax', '1'); // 
 
     try {
-        // 💡 CORRECTION : Chemin relatif (sans le "/" au début) pour s'adapter à ton localhost
-        const response = await fetch('modules/budget/includes/api/save-budget.php', {
+        const result = await pachaFetch('modules/budget/includes/api/save-budget.php', {
             method: 'POST',
             body: formData
         });
         
-        if (!response.ok) throw new Error(`Erreur réseau HTTP ${response.status}`);
-        
-        const result = await response.json();
-        
         if (result.success) {
             window.location.reload(); 
-        } else {
-            alert((window.I18N['bud_err_tech'] || 'Erreur technique') + " : Suppression impossible.");
         }
-    } catch(e) {
-        console.error("Erreur Fetch Suppression:", e);
-        alert("Erreur de communication avec le serveur. Regarde la console (F12) pour plus de détails.");
-    }
+    } catch(e) { console.error(e); }
 }
 
 document.addEventListener('click', function(e) {
@@ -5607,7 +5762,7 @@ document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 // --- INTERCEPTION ASYNCHRONE DES FORMULAIRES DE MODALES ---
 document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form => {
     form.addEventListener('submit', async (e) => {
-        e.preventDefault(); // 🛑 Bloque le rechargement HTML par défaut
+        e.preventDefault();
         
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerText;
@@ -5619,31 +5774,24 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
             const formData = new FormData(form);
             formData.append('ajax', '1');
 
-            // 💡 CORRECTION DU PIÈGE : On utilise getAttribute() pour forcer la lecture de l'URL !
             const actionUrl = form.getAttribute('action'); 
             
-            // On s'assure du bon chemin (chemin relatif depuis budget.php)
-            const finalUrl = actionUrl.startsWith('/') ? actionUrl.substring(1) : actionUrl;
-
-            const response = await fetch(finalUrl, {
+            // On utilise pachaFetch au lieu de fetch
+            const result = await pachaFetch(actionUrl, {
                 method: 'POST',
                 body: formData
             });
-
-            if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
-            
-            const result = await response.json();
 
             if (result.success) {
                 form.closest('.pf-modal').style.display = 'none';
                 document.body.classList.remove('no-scroll');
                 window.location.reload(); 
             } else {
-                alert((window.I18N['bud_err_tech'] || 'Erreur technique') + " : " + (result.error || "Inconnue"));
+                alert((window.I18N['bud_err_tech'] || 'Erreur') + " : " + (result.error || "Inconnue"));
             }
         } catch (error) {
             console.error("Erreur Fetch Modale:", error);
-            alert("Une erreur technique est survenue lors de l'enregistrement.");
+            alert("Une erreur technique est survenue.");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = originalText;
@@ -6235,17 +6383,29 @@ $currentMonth = isset($_GET['m']) ? str_pad((int)$_GET['m'], 2, '0', STR_PAD_LEF
 $currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y', strtotime($defaultActiveMonth));
 $viewMonthDate = "$currentYear-$currentMonth-01";
 
-// Conservation du tableau d'origine pour la correspondance en base de données
-$moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+$sqlReal = "SELECT budget_item_id, SUM(amount) as total_real 
+            FROM pf_expenses 
+            WHERE gestion_month = ? AND budget_item_id IS NOT NULL 
+            GROUP BY budget_item_id";
+$stmtReal = $pdo->prepare($sqlReal);
+$stmtReal->execute([$viewMonthDate]);
+$realTotals = $stmtReal->fetchAll(PDO::FETCH_KEY_PAIR); // Retourne un tableau [id => total]
 
-// Affichage dynamique traduit
+$sqlCatReal = "SELECT category, SUM(amount) as total_real 
+               FROM pf_expenses 
+               WHERE gestion_month = ? AND budget_item_id IS NULL 
+               GROUP BY category";
+$stmtCatReal = $pdo->prepare($sqlCatReal);
+$stmtCatReal->execute([$viewMonthDate]);
+$catTotals = $stmtCatReal->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$stmtLabels = $pdo->prepare("SELECT label, amount FROM pf_expenses WHERE gestion_month = ? AND budget_item_id IS NULL");
+$stmtLabels->execute([$viewMonthDate]);
+$unlinkedExpenses = $stmtLabels->fetchAll(PDO::FETCH_ASSOC);
+
+$moisFr = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 $monthTranslationKey = 'month_' . str_pad((int)$currentMonth, 2, '0', STR_PAD_LEFT);
 $currentMonthName = tr($monthTranslationKey) . ' ' . $currentYear;
-
-// 4. Récupération des Dépenses Réelles du mois (Basé sur le Mois de Gestion !)
-$stmtExp = $pdo->prepare("SELECT amount, label, category, budget_item_id FROM pf_expenses WHERE gestion_month = ?");
-$stmtExp->execute([$viewMonthDate]);
-$allExpenses = $stmtExp->fetchAll(PDO::FETCH_ASSOC);
 
 $totalDepenses = 0;
 $totalRevenus = 0;
@@ -6272,59 +6432,50 @@ $totalRevenus = 0;
             <tbody>
                 <?php foreach ($items as $item): 
                     // --- 1. CALCUL DES TOTAUX PRÉVUS ---
-                    $targetAbs = abs((float)$item['amount']); // On utilise l'absolu pour l'affichage
+                    $targetAbs = abs((float)$item['amount']); 
                     $amountToAdd = ($item['type'] === 'Annuel') ? $targetAbs / 12 : $targetAbs;
                     
-                    if ($item['category'] === 'expense') $totalDepenses += $amountToAdd;
-                    else $totalRevenus += $amountToAdd;
+                    if ($item['category'] === 'income') $totalRevenus += $amountToAdd;
+                    else $totalDepenses += $amountToAdd;
                     
-                    // --- 2. CALCUL DU RÉEL (SOMME DES LIGNES ASSOCIÉES) ---
+                    // --- 2. CALCUL DU RÉEL (Logique optimisée) ---
                     $realSum = 0;
                     $hasMatchingExpense = false;
 
-                    foreach ($allExpenses as $exp) {
-                        $match = false;
-                        
-                        // 1. Lien direct via l'ID de la charge
-                        if (!empty($exp['budget_item_id']) && (int)$exp['budget_item_id'] === (int)$item['id']) {
-                            $match = true;
-                        } 
-                        // 2. Lien forcé pour l'École
-                        elseif ($exp['category'] === 'School' && trim($item['name']) === 'Estimacio escola') {
-                            $match = true;
+                    // A. Correspondance directe par ID
+                    if (isset($realTotals[$item['id']])) {
+                        $realSum = $realTotals[$item['id']];
+                        $hasMatchingExpense = true;
+                    } 
+                    // B. Correspondance par catégorie système (École, Essence, FMCG)
+                    else {
+                        $catKey = null;
+                        if (trim($item['name']) === 'Estimacio escola') $catKey = 'School';
+                        elseif (trim($item['name']) === 'Estimation gasolina') $catKey = 'Essence';
+                        elseif (trim($item['name']) === 'Estimacio F&B & beauty') $catKey = 'FMCG';
+
+                        if ($catKey && isset($catTotals[$catKey])) {
+                            $realSum = $catTotals[$catKey];
+                            $hasMatchingExpense = true;
                         }
-                        elseif ($exp['category'] === 'Essence' && trim($item['name']) === 'Estimation gasolina') {
-                            $match = true;
-                        }
-                        elseif ($exp['category'] === 'FMCG' && trim($item['name']) === 'Estimacio F&B & beauty') {
-                            $match = true;
-                        }
-                        elseif (empty($exp['budget_item_id']) && !empty($item['mapping_keywords'])) {
+                        // C. Correspondance par mots-clés (seulement sur les dépenses non liées)
+                        elseif (!empty($item['mapping_keywords'])) {
                             $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
-                            foreach ($keywords as $kw) {
-                                if (!empty($kw) && stripos($exp['label'], $kw) !== false) {
-                                    $match = true; 
-                                    break;
+                            foreach ($unlinkedExpenses as $uexp) {
+                                foreach ($keywords as $kw) {
+                                    if (!empty($kw) && stripos($uexp['label'], $kw) !== false) {
+                                        $realSum += (float)$uexp['amount'];
+                                        $hasMatchingExpense = true;
+                                        break; 
+                                    }
                                 }
                             }
                         }
-
-                        if ($match) {
-                            $realSum += (float)$exp['amount'];
-                            $hasMatchingExpense = true;
-                        }
                     }
 
-                    // On convertit le résultat réel en positif pour simplifier la comparaison visuelle UI
                     $realAbs = abs($realSum);
+                    $isAutoChecked = ($hasMatchingExpense && ($realAbs >= ($targetAbs - 0.10)));
 
-                    // --- 3. LOGIQUE D'ÉTAT ---
-                    $isAutoChecked = false;
-                    if ($hasMatchingExpense && ($realAbs >= ($targetAbs - 0.10))) {
-                        $isAutoChecked = true;
-                    }
-
-                    // Styles
                     $rowClass = ($item['category'] === 'income') ? 'row-income' : 'row-expense';
                     if ($item['is_estimate']) $rowClass .= ' row-estimate';
                 ?>
@@ -7474,29 +7625,19 @@ window.addEventListener('click', (e) => {
 
 // --- 2. SUPPRESSION ASYNCHRONE ---
 async function deleteExpense(id) {
-    if (!confirm(window.I18N['bud_confirm_delete'] || "Confirmer ?")) return;
+    const confirmed = await pachaConfirm("Suppression", tr('bud_confirm_delete'));
+    if (!confirmed) return;
 
     const formData = new FormData();
     formData.append("action", "delete_expense");
     formData.append("id", id);
 
     try {
-        // Envoi au handler PHP que nous venons de créer en haut de suivi.php
-        const response = await fetch("budget.php?tab=suivi", { method: "POST", body: formData });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const textResult = await response.text();
-        try {
-            const result = JSON.parse(textResult);
-            if (result.success) window.location.reload();
-            else alert((window.I18N['error_occured'] || 'Erreur') + " : " + (result.error || ""));
-        } catch (e) {
-            console.error("Réponse non-JSON :", textResult);
-            window.location.reload(); // Sécurité : on recharge quand même si le serveur dérive
-        }
+        await pachaFetch("budget.php?tab=suivi", { method: "POST", body: formData });
+        showToast("Dépense supprimée !"); // 
+        setTimeout(() => window.location.reload(), 800);
     } catch (err) {
-        console.error(err);
-        alert(window.I18N['bud_err_tech'] || 'Erreur technique');
+        showToast("Erreur lors de la suppression", "error");
     }
 }
 
@@ -7514,31 +7655,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerText = '⏳ ...';
 
                 const formData = new FormData(formExpense);
+                // Force l'action ici pour être sûr
                 formData.set('action', 'save_expense_manual'); 
 
-                // 💡 Chemin relatif propre !
-                const response = await fetch('modules/budget/includes/api/manage-item.php', {
+                const actionUrl = formExpense.getAttribute('action') || 'modules/budget/includes/api/manage-item.php';
+
+                const result = await pachaFetch(actionUrl, {
                     method: 'POST',
                     body: formData
                 });
 
-                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
-                
-                // 🛡️ Double vérification JSON contre les warnings PHP
-                const textResult = await response.text();
-                try {
-                    const result = JSON.parse(textResult);
-                    if (result.success) {
-                        closeSuiviModal('manualExpenseModal');
-                        formExpense.reset();
-                        window.location.reload(); 
-                    } else {
-                        const errorMsg = result.error || 'Erreur inconnue';
-                        alert((window.I18N['error_occured'] || 'Erreur') + ' : ' + errorMsg);
-                    }
-                } catch (jsonErr) {
-                    console.error("Réponse non-JSON :", textResult);
-                    alert("Erreur PHP. Vérifie la console (F12).");
+                if (result.success) {
+                    closeSuiviModal('manualExpenseModal');
+                    formExpense.reset();
+                    window.location.reload(); 
+                } else {
+                    alert((window.I18N['error_occured'] || 'Erreur') + ' : ' + (result.error || 'Inconnue'));
                 }
             } catch (error) {
                 console.error("Erreur réseau :", error);
@@ -9425,9 +9557,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
           if (dayLeaves.length) {
             let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; line-height:1; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
-            if (dayLeaves.some((l) => l.person_id === 2))
+            if (dayLeaves.some((l) => l.person_id === window.CONFIG.ID_ALEX))
               html += `<span style="color:#0f766e; font-weight:800;">A</span>`;
-            if (dayLeaves.some((l) => l.person_id === 3))
+            if (dayLeaves.some((l) => l.person_id === window.CONFIG.ID_LAIA))
               html += `<span style="color:#b45309; font-weight:800;">L</span>`;
             html += `</div>`;
             td.innerHTML += html;
@@ -9787,17 +9919,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async fetchApi(url) {
-      return fetch(url).then((r) => r.json());
+      return pachaFetch(url);
     }
 
     async postApi(url, data) {
-      const res = await fetch(url, {
+      return pachaFetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     }
 
     async changeSchoolYear(delta) {
@@ -10214,7 +10346,6 @@ document.addEventListener("DOMContentLoaded", () => {
             payload,
           );
         } else if (action === "clear-leaves-person") {
-          // --- NOUVELLE ACTION : Suppression ciblée (Alex OU Laia selon le pid) ---
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
             {
@@ -10224,14 +10355,21 @@ document.addEventListener("DOMContentLoaded", () => {
             },
           );
         } else if (action === "clear-leaves") {
-          // --- ACTION GLOBALE : Gardée au cas où vous en auriez besoin ailleurs ---
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
-            { action: "bulk_delete_day_person", dates, person_id: 2 },
+            {
+              action: "bulk_delete_day_person",
+              dates,
+              person_id: window.CONFIG.ID_ALEX,
+            },
           );
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
-            { action: "bulk_delete_day_person", dates, person_id: 3 },
+            {
+              action: "bulk_delete_day_person",
+              dates,
+              person_id: window.CONFIG.ID_LAIA,
+            },
           );
         }
 
@@ -15114,12 +15252,14 @@ if ($selectedYear !== 'all') {
 // 2. Récupération des voyages + Calculs
 $sql = "
     SELECT h.*, 
-           (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE((SELECT SUM(amount) FROM pf_holidays_items WHERE holiday_id = h.id), 0)) as total_cost,
-           ((SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) + (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND is_paid = 1)) as total_paid,
-           (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved
+           (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE(SUM(hi.amount), 0)) as total_cost,
+           (SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) as real_expenses_sum,
+           SUM(CASE WHEN hi.is_paid = 1 THEN hi.amount ELSE 0 END) as items_paid_sum
     FROM pf_holidays h
+    LEFT JOIN pf_holidays_items hi ON h.id = hi.holiday_id
     $whereSQL
-    ORDER BY COALESCE(start_date, '2999-12-31') ASC, FIELD(status, 'booked', 'planned', 'draft', 'passed', 'archived')
+    GROUP BY h.id
+    ORDER BY COALESCE(start_date, '2999-12-31') ASC
 ";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
