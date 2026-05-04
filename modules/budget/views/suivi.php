@@ -341,8 +341,8 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                 <h2 style="margin:0; font-size:1.3rem; color:#0f172a; text-transform:capitalize;"><?= tr('bud_budget_of') ?> <?= $monthName ?></h2>
             </div>
             
-            <div style="display:flex; gap:10px;">
-                <?php if (!$isClosed): ?>
+        <div class="action-toolbar" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <?php if (!$isClosed): ?>
                     <button type="button" class="pf-btn btn-secondary" onclick="openSuiviModal('importCsvModal')" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">
                         📂 <?= tr('bud_import_csv') ?? 'Importer CSV' ?>
                     </button>
@@ -460,7 +460,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div style="position: absolute; left: <?= $posTheorique ?>%; top: 54px; transform: translateX(-50%); font-size: 0.85rem; font-weight: bold; color: <?= $solde_theorique >= 0 ? '#8b5cf6' : '#ef4444' ?>; white-space: nowrap;"><?= tr('bud_bar_theoretical') ?? 'Théorique' ?></div>
 
             <?php 
-            $overlapMax = abs($posMax - $posActuel) < 25; 
+            $overlapMax = abs($posMax - $posActuel) < 35; 
             $topMaxText = $overlapMax ? '-60px' : '-35px';
             $heightMaxLine = $overlapMax ? '65px' : '40px';
             $topMaxLine = $overlapMax ? '-40px' : '-15px';
