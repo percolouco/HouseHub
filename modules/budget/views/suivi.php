@@ -819,29 +819,19 @@ window.addEventListener('click', (e) => {
 
 // --- 2. SUPPRESSION ASYNCHRONE ---
 async function deleteExpense(id) {
-    if (!confirm(window.I18N['bud_confirm_delete'] || "Confirmer ?")) return;
+    const confirmed = await pachaConfirm("Suppression", tr('bud_confirm_delete'));
+    if (!confirmed) return;
 
     const formData = new FormData();
     formData.append("action", "delete_expense");
     formData.append("id", id);
 
     try {
-        // Envoi au handler PHP que nous venons de créer en haut de suivi.php
-        const response = await fetch("budget.php?tab=suivi", { method: "POST", body: formData });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const textResult = await response.text();
-        try {
-            const result = JSON.parse(textResult);
-            if (result.success) window.location.reload();
-            else alert((window.I18N['error_occured'] || 'Erreur') + " : " + (result.error || ""));
-        } catch (e) {
-            console.error("Réponse non-JSON :", textResult);
-            window.location.reload(); // Sécurité : on recharge quand même si le serveur dérive
-        }
+        await pachaFetch("budget.php?tab=suivi", { method: "POST", body: formData });
+        showToast("Dépense supprimée !"); // 
+        setTimeout(() => window.location.reload(), 800);
     } catch (err) {
-        console.error(err);
-        alert(window.I18N['bud_err_tech'] || 'Erreur technique');
+        showToast("Erreur lors de la suppression", "error");
     }
 }
 
