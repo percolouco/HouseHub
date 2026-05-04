@@ -1,64 +1,58 @@
-# 🦙 PachaFamily - Dashboard Familial Sur-Mesure
+🦙 PachaFamily OS
+Système de gestion familiale sur-mesure : Budget, Calendrier, Voyages et Cadeaux.
 
-PachaFamily est une application web privée de gestion familiale. Développée sans framework lourd (Vanilla JS / PHP Natif), elle garantit des performances optimales, une maintenance simplifiée et une personnalisation totale.
+📝 Présentation du projet
+PachaFamily est une application web privée conçue pour centraliser l'organisation de la tribu. Elle repose sur une stack légère (PHP natif / Vanilla JS) pour garantir rapidité et portabilité, avec un support complet de l'internationalisation (FR/CA).
 
-## 🌟 Modules & Fonctionnalités
+🛠️ Fonctionnalités Principales
+💰 Module Budget
+Suivi Mensuel : Interface de gestion des dépenses réelles avec import CSV bancaire et catégorisation automatique.
 
-### 💰 1. Module Budget (`/modules/budget/`)
+Budget Prévisionnel : Planification des revenus et répartition automatique vers les différents comptes (Commune, Livrets, Épargne).
 
-Gestion asynchrone (SPA-like) des finances de la famille.
+Épargne : Visualisation des soldes bancaires et ventilation par postes de dépenses avec mode "Addition Rapide".
 
-- **Suivi Mensuel** : Saisie rapide des dépenses avec répartition automatique (Alex/Laia/Commun).
-- **Budget Prévisionnel** : Configuration des salaires, charges fixes, et calcul des restes à vivre. Mode "Calculatrice" flottant intégré.
-- **Épargne** : Suivi des cagnottes par personne et par catégorie (Vacances, Nens, Perso).
-- **Récapitulatif** : Bilan annuel (À venir).
+📅 Calendrier Familial
+Planning Hebdomadaire : Gestion visuelle des modes de garde, des congés enfants et de la maladie.
 
-### 📅 2. Module Calendrier (`/modules/family-calendar/`)
+Gestion des Congés (CP/JRA/JA) : Calcul automatique des soldes restants avec snapshots de correction.
 
-Agenda partagé pour toute la famille.
+Vacances Scolaires : Intégration automatique via l'API Data.Education (Zone C).
 
-- Affichage des événements et vacances scolaires.
-- Gestion des jours de congés avec compteurs annuels par personne.
+🏖️ Holidays & Roadtrips
+Gestion de Voyages : Planification avec statuts (Brouillon, Confirmé, Terminé).
 
-### 🌴 3. Module Voyages (`/modules/holidays/`)
+Moteur de Roadtrip : Cartographie interactive (Leaflet), itinéraires (OSRM) et gestion des étapes.
 
-Planificateur de roadtrips et vacances.
+Météo Intelligente : Prévisions réelles ou archives historiques (Open-Meteo).
 
-- **Cartographie** : Intégration de Leaflet.js.
-- **Itinéraires** : Calcul des trajets via OSRM et géocodage via Nominatim.
-- Checkpoints, notes et liaisons directes avec le budget d'épargne.
+🚀 Roadmap d'Optimisation & Debug (Incrémental)
+Étape 1 : Fondations & Robustesse (Terminé ✅)
+[x] Moteur AJAX : Création de pachaFetch pour gérer proprement le JSON et les erreurs PHP.
 
-### 🎁 4. Module Cadeaux (`/modules/gift-list/`)
+[x] Correction "Action" : Sécurisation des formulaires via getAttribute('action').
 
-Listes de souhaits pour les événements (Noël, Anniversaires, Rois Mages...).
+[x] Centralisation : Création de config.php pour les IDs (Alex/Laia) et constantes globales.
 
----
+Étape 2 : UX & Mobile (En cours 🏃‍♂️)
+[ ] Harmonisation Mobile : Généralisation des "Bottom Sheets" pour les modales sur smartphone.
 
-## 🚀 Plan d'Optimisation & Debugging (Roadmap)
+[ ] Z-Index Master : Audit des priorités d'affichage des menus contextuels.
 
-Cette section trace les étapes pour épurer la dette technique et optimiser l'application.
+Étape 3 : Performance & Backend
+[ ] Audit SQL : Remplacement des requêtes en boucle par des jointures.
 
-### 🟢 Phase 1 : Quick Wins (Gains rapides)
+[ ] Cache Cleanup : Script de nettoyage pour le cache de géocodage.
 
-- [x] **Refonte Asynchrone Budget** : Remplacement des formulaires classiques par des appels `fetch()` silencieux sur `suivi.php`, `budget_prev.php` et `epargne.php`.
-- [ ] **Nettoyage des Vues** : Extraire le JavaScript et le CSS encore présents dans les fichiers `.php` vers leurs fichiers `.js` et `.css` dédiés.
-- [ ] **Corrections des liens GET** : Remplacer les `<a href="?action=delete">` par des `<button onclick="deleteItem()">` asynchrones partout.
+📌 Patch / Versioning
 
-### 🟡 Phase 2 : Robustesse & UX (Effort moyen)
+- **v1.1.0 :** Refonte de l'expérience mobile. Toutes les modales de l'application sont désormais des "Bottom Sheets" sur smartphone.
+  v1.0.4 : Centralisation des constantes (IDs, devises) dans includes/config.php et injection dans window.CONFIG.
 
-- [ ] **Déploiement des Tests E2E** : Étendre `test-engine.js` pour couvrir le Calendrier et les Voyages.
-- [ ] **Uniformisation Mobile** : Vérifier tous les `hover` et `z-index` pour garantir que les actions (édition/suppression) soient cliquables sur écrans tactiles.
-- [ ] **Gestion des Erreurs JSON** : Appliquer systématiquement le `.text()` avant `JSON.parse()` dans les fetchs pour capturer les erreurs PHP (Warnings).
+v1.0.3 : Migration du module Calendrier vers pachaFetch.
 
-### 🔴 Phase 3 : Architecture & Performances (Heavy lifting)
+v1.0.2 : Correction systématique du bug form.action dans les fichiers Budget.
 
-- [ ] **Optimisation SQL (N+1)** : Réviser les requêtes du module Calendrier pour réduire le nombre d'appels à la base de données.
-- [ ] **Mise en cache API Map** : Implémenter un système de cache local pour les requêtes OSRM/Nominatim afin d'éviter les limites de requêtes (Rate Limits) sur le module Voyages.
-- [ ] **Routeur PHP Global** : Remplacer la navigation par `?tab=` par un routeur natif centralisé (Front Controller).
+v1.0.1 : Création de l'utilitaire global pachaFetch dans le header.
 
----
-
-## 🏷️ Patch / Versions
-
-- **v1.1.0 - Le Grand Bond Asynchrone** (Mai 2026) : Transformation des vues Budget (Prévisionnel & Épargne) en interfaces asynchrones (Fetch API). Création d'un moteur de tests E2E maison (`test-engine.js`). Résolution des conflits de `z-index` sur mobile. Sécurisation des JSON face aux Warnings PHP.
-- **v1.0.0 - MVP Initial** : Mise en place de la structure de base, base de données MariaDB, modules Budget (Suivi), Calendrier, Cadeaux et Voyages (Leaflet).
+v1.0.0 : Version stable initiale.

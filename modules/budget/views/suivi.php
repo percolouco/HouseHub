@@ -859,31 +859,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerText = '⏳ ...';
 
                 const formData = new FormData(formExpense);
+                // Force l'action ici pour être sûr
                 formData.set('action', 'save_expense_manual'); 
 
-                // 💡 Chemin relatif propre !
-                const response = await fetch('modules/budget/includes/api/manage-item.php', {
+                const actionUrl = formExpense.getAttribute('action') || 'modules/budget/includes/api/manage-item.php';
+
+                const result = await pachaFetch(actionUrl, {
                     method: 'POST',
                     body: formData
                 });
 
-                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
-                
-                // 🛡️ Double vérification JSON contre les warnings PHP
-                const textResult = await response.text();
-                try {
-                    const result = JSON.parse(textResult);
-                    if (result.success) {
-                        closeSuiviModal('manualExpenseModal');
-                        formExpense.reset();
-                        window.location.reload(); 
-                    } else {
-                        const errorMsg = result.error || 'Erreur inconnue';
-                        alert((window.I18N['error_occured'] || 'Erreur') + ' : ' + errorMsg);
-                    }
-                } catch (jsonErr) {
-                    console.error("Réponse non-JSON :", textResult);
-                    alert("Erreur PHP. Vérifie la console (F12).");
+                if (result.success) {
+                    closeSuiviModal('manualExpenseModal');
+                    formExpense.reset();
+                    window.location.reload(); 
+                } else {
+                    alert((window.I18N['error_occured'] || 'Erreur') + ' : ' + (result.error || 'Inconnue'));
                 }
             } catch (error) {
                 console.error("Erreur réseau :", error);

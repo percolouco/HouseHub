@@ -1,9 +1,11 @@
 <?php
 // Protection de la page : nécessite d'être connecté
+
 require __DIR__ . '/includes/auth.php';
 require_login('/login.php');
 
 // Inclusion i18n (déjà fait dans header, mais par sécurité si besoin de tr() avant)
+
 require_once __DIR__ . '/includes/i18n.php';
 
 // Configuration de la page

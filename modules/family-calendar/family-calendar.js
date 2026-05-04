@@ -633,9 +633,9 @@ document.addEventListener("DOMContentLoaded", () => {
           const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
           if (dayLeaves.length) {
             let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; line-height:1; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
-            if (dayLeaves.some((l) => l.person_id === 2))
+            if (dayLeaves.some((l) => l.person_id === window.CONFIG.ID_ALEX))
               html += `<span style="color:#0f766e; font-weight:800;">A</span>`;
-            if (dayLeaves.some((l) => l.person_id === 3))
+            if (dayLeaves.some((l) => l.person_id === window.CONFIG.ID_LAIA))
               html += `<span style="color:#b45309; font-weight:800;">L</span>`;
             html += `</div>`;
             td.innerHTML += html;
@@ -995,17 +995,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async fetchApi(url) {
-      return fetch(url).then((r) => r.json());
+      return pachaFetch(url);
     }
 
     async postApi(url, data) {
-      const res = await fetch(url, {
+      return pachaFetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     }
 
     async changeSchoolYear(delta) {
@@ -1422,7 +1422,6 @@ document.addEventListener("DOMContentLoaded", () => {
             payload,
           );
         } else if (action === "clear-leaves-person") {
-          // --- NOUVELLE ACTION : Suppression ciblée (Alex OU Laia selon le pid) ---
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
             {
@@ -1432,14 +1431,21 @@ document.addEventListener("DOMContentLoaded", () => {
             },
           );
         } else if (action === "clear-leaves") {
-          // --- ACTION GLOBALE : Gardée au cas où vous en auriez besoin ailleurs ---
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
-            { action: "bulk_delete_day_person", dates, person_id: 2 },
+            {
+              action: "bulk_delete_day_person",
+              dates,
+              person_id: window.CONFIG.ID_ALEX,
+            },
           );
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-leaf.php",
-            { action: "bulk_delete_day_person", dates, person_id: 3 },
+            {
+              action: "bulk_delete_day_person",
+              dates,
+              person_id: window.CONFIG.ID_LAIA,
+            },
           );
         }
 

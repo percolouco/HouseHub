@@ -109,10 +109,14 @@ function getTranslatedMonthName($dateString) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach (['Alex', 'Laia'] as $p): 
+                <?php 
+                // Définition des noms à partir de la config
+                $family_members = [ID_ALEX => 'Alex', ID_LAIA => 'Laia'];
+
+                foreach ($family_members as $id => $p): 
                     $d = $salaryConfig[$p]; 
                     $restant = $d['salary'] - ($d['mensualite'] + $d['frais_func'] + $d['eco_perso'] + $d['eco_family']);
-                    $borderColor = ($p === 'Alex') ? '#0891b2' : '#f59e0b';
+                    $borderColor = ($id === ID_ALEX) ? '#0891b2' : '#f59e0b';
                 ?>
                 <tr data-person="<?= $p ?>">
                     <td style="text-align:left; font-weight:bold; color:var(--text-main); border-left:4px solid <?= $borderColor ?>;">
@@ -399,7 +403,7 @@ function getTranslatedMonthName($dateString) {
     </div>
 </div>
 
-<div id="addCatModal" class="pf-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15, 23, 42, 0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+<div id="addCatModal" class="pf-modal">
     <div class="pf-modal-content" style="background:white; width:95%; max-width:400px; border-radius:20px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1); padding:30px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 class="pf-modal-title" style="margin:0; border:none; font-size:1.2rem;"><?= tr('bud_prev_new_line_title') ?></h3>
@@ -789,33 +793,23 @@ function updateSumResult() {
 }
 
 async function deleteCategory(id) {
-    if (!confirm(window.I18N['bud_prev_confirm_del_line'] || "Confirmer la suppression ?")) return;
+    if (!confirm(tr('bud_prev_confirm_del_line'))) return;
     
     const formData = new FormData();
     formData.append('action', 'delete_category');
     formData.append('id', id);
-    formData.append('ajax', '1'); 
+    formData.append('ajax', '1'); // 
 
     try {
-        // 💡 CORRECTION : Chemin relatif (sans le "/" au début) pour s'adapter à ton localhost
-        const response = await fetch('modules/budget/includes/api/save-budget.php', {
+        const result = await pachaFetch('modules/budget/includes/api/save-budget.php', {
             method: 'POST',
             body: formData
         });
         
-        if (!response.ok) throw new Error(`Erreur réseau HTTP ${response.status}`);
-        
-        const result = await response.json();
-        
         if (result.success) {
             window.location.reload(); 
-        } else {
-            alert((window.I18N['bud_err_tech'] || 'Erreur technique') + " : Suppression impossible.");
         }
-    } catch(e) {
-        console.error("Erreur Fetch Suppression:", e);
-        alert("Erreur de communication avec le serveur. Regarde la console (F12) pour plus de détails.");
-    }
+    } catch(e) { console.error(e); }
 }
 
 document.addEventListener('click', function(e) {
@@ -843,7 +837,7 @@ document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 // --- INTERCEPTION ASYNCHRONE DES FORMULAIRES DE MODALES ---
 document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form => {
     form.addEventListener('submit', async (e) => {
-        e.preventDefault(); // 🛑 Bloque le rechargement HTML par défaut
+        e.preventDefault();
         
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerText;
@@ -855,31 +849,24 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
             const formData = new FormData(form);
             formData.append('ajax', '1');
 
-            // 💡 CORRECTION DU PIÈGE : On utilise getAttribute() pour forcer la lecture de l'URL !
             const actionUrl = form.getAttribute('action'); 
             
-            // On s'assure du bon chemin (chemin relatif depuis budget.php)
-            const finalUrl = actionUrl.startsWith('/') ? actionUrl.substring(1) : actionUrl;
-
-            const response = await fetch(finalUrl, {
+            // On utilise pachaFetch au lieu de fetch
+            const result = await pachaFetch(actionUrl, {
                 method: 'POST',
                 body: formData
             });
-
-            if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
-            
-            const result = await response.json();
 
             if (result.success) {
                 form.closest('.pf-modal').style.display = 'none';
                 document.body.classList.remove('no-scroll');
                 window.location.reload(); 
             } else {
-                alert((window.I18N['bud_err_tech'] || 'Erreur technique') + " : " + (result.error || "Inconnue"));
+                alert((window.I18N['bud_err_tech'] || 'Erreur') + " : " + (result.error || "Inconnue"));
             }
         } catch (error) {
             console.error("Erreur Fetch Modale:", error);
-            alert("Une erreur technique est survenue lors de l'enregistrement.");
+            alert("Une erreur technique est survenue.");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = originalText;
