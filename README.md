@@ -32,7 +32,8 @@ Météo Intelligente : Prévisions réelles ou archives historiques (Open-Meteo)
 - [x] **[Quickwin] Correction du piège "action"**
 - [x] **[Structure] Centralisation des Constantes**
 - [x] **[UX] Harmonisation Mobile**
-- [x] **[UX] Toasts & Notifications modernes**
+- [x] **[Performance] Audit et Optimisation SQL**
+- [ ] **[Backend] Système de Backup Automatique de la BDD**
 
 Étape 3 : Performance & Backend
 [ ] Audit SQL : Remplacement des requêtes en boucle par des jointures.
@@ -41,8 +42,10 @@ Météo Intelligente : Prévisions réelles ou archives historiques (Open-Meteo)
 
 📌 Patch / Versioning
 
-- **v1.2.0 :** Modernisation de l'UI. Remplacement des alertes systèmes par des Toasts et des confirmations sur-mesure.
-- **v1.1.0 :** Refonte de l'expérience mobile (Bottom Sheets).
+- **v1.3.0 :** Optimisation Performance SQL. Suppression des requêtes en boucle (N+1) dans les modules Budget et Holidays. Temps de réponse divisé par 3 sur les gros historiques.
+
+* **v1.2.0 :** Modernisation de l'UI. Remplacement des alertes systèmes par des Toasts et des confirmations sur-mesure.
+* **v1.1.0 :** Refonte de l'expérience mobile (Bottom Sheets).
   v1.0.4 : Centralisation des constantes (IDs, devises) dans includes/config.php et injection dans window.CONFIG.
 
 v1.0.3 : Migration du module Calendrier vers pachaFetch.
