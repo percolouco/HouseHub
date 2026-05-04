@@ -360,6 +360,21 @@ return [
     'bud_add_title'             => 'Afegir',
     'bud_edit_title'            => 'Modificar la transacció',
     'bud_to_define_js'          => 'per definir',
+    'bud_bar_actual' => "Actual",
+    'bud_bar_theoretical' => "Teòric",
+    'bud_bar_max_cap' => "Capacitat Màx.",
+    // --- MODULE BUDGET : IMPORT CSV ---
+    'bud_import_csv' => "Importar CSV",
+    'bud_csv_file' => "Seleccioneu el fitxer del vostre banc (.csv)",
+    'bud_preview' => "Previsualitzar",
+    'bud_validate_import' => "Si us plau, comproveu i categoritzeu les línies abans de validar.",
+    'bud_assign_month' => "Mes de gestió",
+    'bud_op_date' => "Data",
+    'bud_amount' => "Import",
+    'bud_ignore' => "Ignorar (Crèdit)",
+    'bud_to_define' => "Per definir",
+    'bud_is_charge' => "És un càrrec fix...",
+    'bud_is_income' => "És un ingrés...",
 
     // --- BUDGET : RECAP ---
     'bud_recap_monthly_title'   => 'Resum Mensual',

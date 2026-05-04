@@ -217,7 +217,7 @@ $totalRevenus = 0;
             <button type="button" onclick="closeRecapModal()" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
         </div>
         
-        <form action="/modules/budget/includes/api/manage-item.php" method="POST" id="recapForm">
+        <form action="modules/budget/includes/api/manage-item.php" method="POST" id="recapForm">
             <input type="hidden" name="action" value="save">
             <input type="hidden" name="id" id="item_id">
             
@@ -275,7 +275,6 @@ $totalRevenus = 0;
                         <?php 
                         foreach($moisFr as $index => $m) {
                             if($index == 0) continue;
-                            // On injecte la valeur en français (pour la DB) mais on affiche la version traduite
                             echo "<option value='$m'>" . tr('month_'.str_pad($index, 2, '0', STR_PAD_LEFT)) . "</option>";
                         }
                         ?>
@@ -292,17 +291,21 @@ $totalRevenus = 0;
 </div>
 
 <script>
-window.onclick = function(event) {
-    const modal = document.getElementById('budgetRecapModal');
-    if (event.target == modal) {
-        modal.style.display = 'none';
-        document.body.classList.remove('no-scroll');
-    }
-}
+// --- 1. SÉCURISATION TRADUCTIONS ET LANGUE ---
+window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+window.I18N = {
+    ...(window.I18N || {}),
+    'bud_recap_modal_add': <?= json_encode(tr('bud_recap_modal_add')) ?>,
+    'bud_recap_modal_edit': <?= json_encode(tr('bud_recap_modal_edit')) ?>,
+    'bud_recap_confirm_delete': <?= json_encode(tr('bud_recap_confirm_delete')) ?>,
+    'bud_err_delete': <?= json_encode(tr('bud_err_delete')) ?>,
+    'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>,
+    'bud_saving': <?= json_encode(tr('bud_sav_saving') ?? 'Sauvegarde...') ?>
+};
 
 function openRecapModal(mode) {
     if (mode === "add") {
-        document.getElementById("recapModalTitle").innerText = "<?= tr('bud_recap_modal_add') ?>";
+        document.getElementById("recapModalTitle").innerText = window.I18N['bud_recap_modal_add'] || 'Ajouter';
         document.getElementById("item_id").value = "";
         document.getElementById("recapForm").reset();
     }
@@ -315,14 +318,20 @@ function closeRecapModal() {
     document.body.classList.remove('no-scroll');
 }
 
+window.onclick = function(event) {
+    const modal = document.getElementById('budgetRecapModal');
+    if (event.target == modal) {
+        closeRecapModal();
+    }
+}
+
 function editRecapItem(item) {
     const data = typeof item === "string" ? JSON.parse(item) : item;
 
-    document.getElementById("recapModalTitle").innerText = "<?= tr('bud_recap_modal_edit') ?> : " + data.name;
+    document.getElementById("recapModalTitle").innerText = (window.I18N['bud_recap_modal_edit'] || 'Editer') + " : " + data.name;
     document.getElementById("item_id").value = data.id;
     document.getElementById("item_name").value = data.name;
     document.getElementById("item_keywords").value = data.mapping_keywords || ''; 
-    // On affiche toujours la valeur en positif dans le formulaire
     document.getElementById("item_amount").value = Math.abs(data.amount);
     document.getElementById("item_category").value = data.category;
     document.getElementById("item_type").value = data.type;
@@ -334,21 +343,89 @@ function editRecapItem(item) {
     document.body.classList.add('no-scroll');
 }
 
-function deleteRecapItem(id) {
-    if (confirm("<?= tr('bud_recap_confirm_delete') ?>")) {
-        const formData = new FormData();
-        formData.append("action", "delete");
-        formData.append("id", id);
+// --- 2. INTERCEPTION ASYNCHRONE DU FORMULAIRE ---
+const recapForm = document.getElementById('recapForm');
+if (recapForm) {
+    recapForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+        submitBtn.innerText = window.I18N['bud_saving'] || '⏳ ...';
+        submitBtn.disabled = true;
 
-        fetch("/modules/budget/includes/api/manage-item.php", {
+        const formData = new FormData(this);
+        formData.append('ajax', '1');
+
+        // 💡 Utilisation sécurisée de getAttribute
+        const actionUrl = this.getAttribute('action'); 
+        const finalUrl = actionUrl.startsWith('/') ? actionUrl.substring(1) : actionUrl;
+
+        try {
+            const response = await fetch(finalUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            // 💡 Lecture robuste (anti-Warnings PHP)
+            const textResult = await response.text();
+            try {
+                const result = JSON.parse(textResult);
+                if (result.success) {
+                    closeRecapModal();
+                    window.location.reload();
+                } else {
+                    alert((window.I18N['bud_err_tech'] || 'Erreur') + " : " + (result.error || "Inconnue"));
+                }
+            } catch (jsonError) {
+                console.error("Réponse non-JSON :", textResult);
+                alert("Le serveur a renvoyé une erreur PHP. Regarde la console (F12).");
+            }
+        } catch (error) {
+            console.error("Erreur Fetch:", error);
+            alert(window.I18N['bud_err_tech'] || 'Erreur technique');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = originalText;
+        }
+    });
+}
+
+// --- 3. SUPPRESSION ASYNCHRONE ---
+async function deleteRecapItem(id) {
+    if (!confirm(window.I18N['bud_recap_confirm_delete'] || "Confirmer la suppression ?")) return;
+
+    const formData = new FormData();
+    formData.append("action", "delete");
+    formData.append("id", id);
+    formData.append("ajax", "1"); // Signale à l'API qu'on attend du JSON
+
+    try {
+        const response = await fetch("modules/budget/includes/api/manage-item.php", {
             method: "POST",
             body: formData,
-        }).then(() => {
-            window.location.reload(); 
-        }).catch(err => {
-            alert("<?= tr('bud_err_delete') ?>");
-            console.error(err);
         });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const textResult = await response.text();
+        try {
+            const result = JSON.parse(textResult);
+            // On s'assure que si l'API ne renvoie pas success, on le signale
+            if (result.success !== false) {
+                window.location.reload(); 
+            } else {
+                alert((window.I18N['bud_err_delete'] || 'Erreur de suppression') + " : " + (result.error || ""));
+            }
+        } catch (jsonErr) {
+            console.error("Réponse non-JSON lors de la suppression :", textResult);
+            window.location.reload(); // Fallback si l'API redirige au lieu de répondre en JSON
+        }
+    } catch (err) {
+        console.error("Erreur réseau Suppression:", err);
+        alert(window.I18N['bud_err_delete'] || 'Erreur réseau');
     }
 }
 </script>
