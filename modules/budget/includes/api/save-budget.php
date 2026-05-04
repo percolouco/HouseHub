@@ -82,6 +82,13 @@ if ($action === 'add_category') {
         $stmt = $pdo->prepare("INSERT INTO pf_alloc_categories (name, target, holiday_id) VALUES (?, ?, ?)");
         $stmt->execute([$name, $target, $holiday_id]);
     }
+    
+    // --- NOUVEAU : Réponse AJAX ---
+    if (isset($_POST['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
     header("Location: " . $_SERVER['HTTP_REFERER']); 
     exit;
 }
@@ -97,20 +104,32 @@ if ($action === 'update_category') {
         $stmt = $pdo->prepare("UPDATE pf_alloc_categories SET name = ?, target = ?, holiday_id = ? WHERE id = ?");
         $stmt->execute([$name, $target, $holiday_id, $id]);
     }
+
+    // --- NOUVEAU : Réponse AJAX ---
+    if (isset($_POST['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
     header("Location: " . $_SERVER['HTTP_REFERER']); 
     exit;
 }
 
 // 5. SUPPRESSION CATEGORIE
 if ($action === 'delete_category') {
-    $id = (int)$_GET['id'] ?? (int)$_POST['id']; 
+    $id = (int)($_POST['id'] ?? $_GET['id'] ?? 0); 
     
     if ($id > 0) {
         $pdo->prepare("DELETE FROM pf_alloc_categories WHERE id = ?")->execute([$id]);
         $pdo->prepare("DELETE FROM pf_alloc_values WHERE cat_id = ?")->execute([$id]); 
     }
-    // Redirection vers la page précédente
-    header("Location: " . $_SERVER['HTTP_REFERER']); 
+    
+    if (isset($_POST['ajax']) || isset($_GET['ajax'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
+    header("Location: " . ($_SERVER['HTTP_REFERER'] ?? '/budget.php')); 
     exit;
 }
 

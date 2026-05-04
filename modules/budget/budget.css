@@ -164,7 +164,7 @@
   justify-content: center;
   gap: 8px;
 
-  height: 40px; /* Hauteur Fixe */
+  height: 40px;
   padding: 0 24px;
 
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -208,11 +208,8 @@
   padding: 6px;
   border-radius: var(--radius-s);
   transition: background 0.2s;
-}
-.btn-icon {
   font-size: 1.1rem;
 }
-
 .btn-icon:hover {
   background: #e2e8f0;
   transform: scale(1.1);
@@ -223,11 +220,22 @@
   gap: 8px;
 }
 
+/* Sécurité de clic asynchrone */
+.btn-safe-click {
+  position: relative;
+  z-index: 50 !important;
+  pointer-events: auto !important;
+}
+
 .month-actions {
   display: flex;
   gap: 4px;
   opacity: 0.5;
   transition: opacity 0.2s ease;
+}
+/* Survol des boutons du mois (Epargne) */
+.month-header-container:hover .month-actions {
+  opacity: 1;
 }
 
 .month-actions .btn-icon-small {
@@ -330,7 +338,6 @@
   border-top: 2px solid #e2e8f0;
 }
 
-/* Bouton supprimer au survol (Style Epargne) */
 .btn-cell-delete {
   display: none;
   background: rgba(239, 68, 68, 0.1);
@@ -429,7 +436,6 @@ input[type="checkbox"]:checked::after {
   font-weight: bold;
 }
 
-/* Suppression flèches input number (Cross-browser) */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -530,7 +536,7 @@ input[type="number"] {
   color: var(--text-muted);
 }
 
-/* --- 9. MOBILE RESPONSIVE --- */
+/* --- 9. MOBILE RESPONSIVE (Global) --- */
 @media (max-width: 768px) {
   .budget-tabs-container {
     display: flex;
@@ -563,6 +569,19 @@ input[type="number"] {
   .form-row {
     grid-template-columns: 1fr;
   }
+
+  /* FORCAGE VISIBILITE BOUTONS SUR MOBILE (Pas de hover possible) */
+  .month-actions {
+    opacity: 1 !important;
+  }
+  .btn-cell-delete {
+    display: flex !important;
+    opacity: 0.7;
+  }
+  .row-actions {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
 }
 
 /* --- 10. BUDGET PREVISIONNEL (TIMELINE) --- */
@@ -588,7 +607,6 @@ input[type="number"] {
   letter-spacing: -0.025em;
 }
 
-/* Inputs "Invisible" */
 .prev-input {
   width: 100%;
   border: 1px solid transparent;
@@ -613,7 +631,6 @@ input[type="number"] {
   font-weight: 700;
 }
 
-/* Tableaux Config & Alloc */
 .prev-salary-table {
   width: 100%;
   max-width: 900px;
@@ -665,7 +682,6 @@ input[type="number"] {
   text-align: center;
   font-size: 0.9rem;
 }
-
 .prev-alloc-table td {
   padding: 3px 14px;
   border-bottom: 1px solid #f1f5f9;
@@ -675,7 +691,6 @@ input[type="number"] {
   font-size: 0.9rem;
 }
 
-/* Colonne Sticky */
 .col-sticky {
   position: sticky !important;
   left: 0 !important;
@@ -701,7 +716,6 @@ input[type="number"] {
   font-size: 0.75rem;
 }
 
-/* En-têtes Mois */
 .th-month {
   background: #1e293b !important;
   color: white !important;
@@ -719,7 +733,6 @@ input[type="number"] {
   color: var(--text-muted);
 }
 
-/* Lignes */
 .row-total td {
   background: #f8fafc;
   font-weight: 700;
@@ -732,7 +745,6 @@ input[type="number"] {
   border-bottom: 2px solid #bfdbfe;
 }
 
-/* Couleurs */
 .txt-alex {
   color: #0891b2;
 }
@@ -751,7 +763,6 @@ input[type="number"] {
   color: var(--danger);
 }
 
-/* Navigation */
 .nav-group {
   display: flex;
   gap: 5px;
@@ -775,20 +786,21 @@ input[type="number"] {
 
 /* --- ACTIONS SUR LIGNES (Edit / Delete) --- */
 .row-actions {
-  display: none; /* Masqué par défaut */
   position: absolute;
-  right: 5px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.9); /* Petit fond pour lisibilité */
-  padding: 2px;
-  border-radius: 4px;
+  z-index: 50 !important;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  gap: 8px;
+  transition: opacity 0.2s ease-in-out;
 }
 
-/* On affiche au survol de la cellule */
-td:hover .row-actions {
-  display: flex;
+tr:hover .row-actions {
+  opacity: 1;
+  pointer-events: auto !important;
 }
 
 .btn-icon-action {
@@ -810,28 +822,25 @@ td:hover .row-actions {
 
 .btn-icon-action.edit {
   color: #3b82f6;
-} /* Bleu */
+}
 .btn-icon-action.edit:hover {
   background: #eff6ff;
 }
-
 .btn-icon-action.delete {
   color: #ef4444;
-} /* Rouge */
+}
 .btn-icon-action.delete:hover {
   background: #fef2f2;
 }
 
-/* --- 11. RÉCAPITULATIF VIREMENTS (Tableau Unique) --- */
-
+/* --- 11. RÉCAPITULATIF VIREMENTS --- */
 .recap-wrapper {
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid #e2e8f0;
   display: flex;
-  justify-content: center; /* Centré */
+  justify-content: center;
 }
-
 .recap-card {
   background: white;
   border: 1px solid #e2e8f0;
@@ -839,9 +848,8 @@ td:hover .row-actions {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   width: 100%;
-  max-width: 600px; /* Pas trop large pour rester lisible */
+  max-width: 600px;
 }
-
 .recap-header {
   background: #1e293b;
   color: white;
@@ -852,12 +860,10 @@ td:hover .row-actions {
   letter-spacing: 0.05em;
   text-align: center;
 }
-
 .recap-table {
   width: 100%;
   border-collapse: collapse;
 }
-
 .recap-table th,
 .recap-table td {
   padding: 10px 15px;
@@ -865,7 +871,6 @@ td:hover .row-actions {
   text-align: center;
   font-size: 0.95rem;
 }
-
 .recap-table th {
   font-weight: 700;
   text-transform: uppercase;
@@ -874,15 +879,12 @@ td:hover .row-actions {
   background: #f8fafc;
   border-bottom: 2px solid #e2e8f0;
 }
-
-/* Colonne Labels (Gauche) */
 .recap-table td:first-child {
   text-align: left;
   font-weight: 600;
   color: #1e293b;
 }
 
-/* Colonne Alex (Cyan) */
 .col-alex {
   background-color: #ecfeff;
   color: #0891b2;
@@ -892,8 +894,6 @@ th.col-alex {
   background-color: #cffafe;
   border-bottom-color: #a5f3fc;
 }
-
-/* Colonne Laia (Ambre) */
 .col-laia {
   background-color: #fffbeb;
   color: #d97706;
@@ -903,8 +903,6 @@ th.col-laia {
   background-color: #fef3c7;
   border-bottom-color: #fde68a;
 }
-
-/* Colonne Global */
 .col-global {
   background-color: #f8fafc;
   color: #475569;
@@ -912,7 +910,6 @@ th.col-laia {
   border-left: 2px solid #e2e8f0;
 }
 
-/* Ligne Grand Total */
 .row-grand-total td {
   background-color: #1e293b;
   color: white;
@@ -920,7 +917,6 @@ th.col-laia {
   border: none;
   padding: 12px 15px;
 }
-/* On garde les couleurs de texte même sur fond sombre pour la lisibilité */
 .row-grand-total .col-alex {
   background: #164e63;
   color: #67e8f9;
@@ -937,19 +933,14 @@ th.col-laia {
   border: none;
 }
 
-/* --- 12. OPTIMISATIONS MOBILES (Mode Largeur Fixe 680px) --- */
-
+/* --- 12. OPTIMISATIONS MOBILES PREVISIONNEL --- */
 @media (max-width: 768px) {
-  /* 1. ON FORCE TOUT LE SITE A FAIRE MINIMUM 680px */
-  /* Cela inclut le Header et le Footer global */
   html,
   body {
     min-width: 680px !important;
-    overflow-x: auto !important; /* Active le scroll horizontal global si besoin */
+    overflow-x: auto !important;
     position: relative;
   }
-
-  /* Si ton header/footer a des classes spécifiques, ajoute-les ici */
   header,
   footer,
   .navbar,
@@ -959,32 +950,25 @@ th.col-laia {
     width: 100% !important;
     box-sizing: border-box;
   }
-
-  /* Le conteneur principal du budget */
   .budget-view {
     min-width: 680px !important;
     width: 100%;
-    padding-right: 10px; /* Petite marge de sécurité */
+    padding-right: 10px;
   }
-
-  /* 2. TABLEAU REVENUS (Doit s'afficher en entier sans scroll interne) */
   .prev-salary-table {
-    min-width: 100%; /* Prend toute la largeur dispo (680px) */
+    min-width: 100%;
     width: 100%;
   }
-
-  /* 3. TABLEAU REPARTITION (Timeline) */
-  /* Lui est très large (> 1000px). On le laisse scroller DANS la page de 680px */
   .prev-timeline-wrapper {
     width: 100%;
-    overflow-x: auto !important; /* Scrollbar interne */
+    overflow-x: auto !important;
     display: block;
   }
 
-  /* 4. ACTIONS (Crayon/Poubelle) */
-  /* On garde la logique "au clic" car c'est plus sûr sur mobile */
+  /* Sur mobile, on garde les actions visibles sans hover */
   .row-actions {
-    display: none !important;
+    display: flex !important;
+    opacity: 1 !important;
     position: absolute;
     right: 0;
     top: 0;
@@ -997,37 +981,24 @@ th.col-laia {
     z-index: 50;
     border-left: 1px solid #e2e8f0;
   }
-  .row-actions.show-actions {
-    display: flex !important;
-  }
-
-  /* On ajuste la taille des icônes à cette vue dézoomée */
   .btn-icon-action {
     font-size: 1.2rem;
     padding: 5px;
     width: 34px;
     height: 34px;
   }
-
-  /* 5. COLONNE STICKY */
-  /* Puisque la page est large, on peut laisser une largeur confortable */
   .col-sticky {
     min-width: 180px !important;
     position: sticky !important;
     left: 0;
   }
-
-  /* 6. HEADER DE SECTION (Alignement) */
   .prev-section-header {
-    flex-direction: row; /* On peut garder aligné car on a de la place (680px) */
+    flex-direction: row;
     align-items: center;
   }
 }
 
-/* ============================================================================
-   13. STYLES SPÉCIFIQUES AU SUIVI MENSUEL (suivi.php)
-   ============================================================================ */
-
+/* --- 13. STYLES SPÉCIFIQUES AU SUIVI MENSUEL (suivi.php) --- */
 .cat-card {
   background: var(--bg-card);
   border-radius: var(--radius-l);
@@ -1037,7 +1008,6 @@ th.col-laia {
   overflow: hidden;
   position: relative;
 }
-
 .btn-add-item {
   background: rgba(255, 255, 255, 0.6);
   color: inherit;
@@ -1053,14 +1023,12 @@ th.col-laia {
   justify-content: center;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-
 .btn-add-item:hover {
   background: var(--bg-card);
   transform: rotate(90deg) scale(1.1);
   box-shadow: var(--shadow-sm);
   border-color: currentColor;
 }
-
 .progress-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1068,7 +1036,6 @@ th.col-laia {
   margin-top: 20px;
 }
 
-/* Animation "Charges à venir" */
 .fade-pulse {
   animation: pulseText 2s infinite;
 }
@@ -1084,7 +1051,6 @@ th.col-laia {
   }
 }
 
-/* Navigation par mois (Si elle n'est pas déjà gérée par .nav-group au-dessus) */
 .suivi-nav-group {
   display: flex;
   background: #e2e8f0;
@@ -1110,7 +1076,6 @@ th.col-laia {
   color: var(--primary);
 }
 
-/* Sélecteur dynamique de mois (dans l'import CSV) */
 input[type="month"].pf-input {
   font-family: inherit;
   color: var(--text-main);
@@ -1119,11 +1084,7 @@ input[type="month"].pf-input {
   border-radius: var(--radius-s);
 }
 
-/* ============================================================================
-   14. EPARGNE (epargne.php)
-   ============================================================================ */
-
-/* Style compact pour les inputs intégrés au tableau d'épargne */
+/* --- 14. EPARGNE (epargne.php) --- */
 .epargne-inline-input {
   width: 100%;
   min-width: 60px;
@@ -1137,12 +1098,10 @@ input[type="month"].pf-input {
   font-size: 0.85rem;
   margin: 0 auto;
 }
-
 .epargne-inline-input:hover {
   border-color: #cbd5e1;
   background: #f8fafc;
 }
-
 .epargne-inline-input:focus {
   border-color: var(--primary);
   background: #fff;
@@ -1150,11 +1109,7 @@ input[type="month"].pf-input {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
-/* ==========================================================================
-   COMPOSANT : CALCULATRICE FLOTTANTE (SOMME RAPIDE)
-   ========================================================================== */
-
-/* Bouton flottant à DROITE */
+/* --- 15. COMPOSANT : CALCULATRICE FLOTTANTE (SOMME RAPIDE) --- */
 .pf-fab-sum {
   position: fixed;
   right: 30px;
@@ -1162,7 +1117,7 @@ input[type="month"].pf-input {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background-color: #2563eb; /* Bleu primaire unifié */
+  background-color: #2563eb;
   color: white;
   font-size: 1.5rem;
   display: flex;
@@ -1174,19 +1129,16 @@ input[type="month"].pf-input {
   z-index: 9999;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-
 .pf-fab-sum:hover {
   transform: scale(1.1);
   background-color: #1d4ed8;
 }
-
 .pf-fab-sum.active {
-  background-color: #10b981; /* Devient vert quand activé */
+  background-color: #10b981;
   transform: scale(1.1);
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
 }
 
-/* Barre de résultat en bas au centre */
 .pf-sum-bar {
   position: fixed;
   bottom: 30px;
@@ -1205,24 +1157,20 @@ input[type="month"].pf-input {
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   font-family: inherit;
 }
-
 .pf-sum-bar.visible {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
 }
-
 .pf-sum-label {
   font-size: 0.9rem;
   color: #64748b;
   font-weight: 600;
 }
-
 .pf-sum-value {
   font-size: 1.2rem;
   color: #0f172a;
   font-weight: bold;
 }
-
 .pf-sum-close {
   background: none;
   border: none;
@@ -1234,22 +1182,17 @@ input[type="month"].pf-input {
   line-height: 1;
   transition: color 0.2s;
 }
-
 .pf-sum-close:hover {
-  color: #ef4444; /* Croix rouge au survol */
+  color: #ef4444;
 }
 
-/* Effets sur le curseur quand le mode est actif */
 body.sum-mode-active {
   cursor: cell !important;
 }
-
 body.sum-mode-active input,
 body.sum-mode-active .sum-target {
   cursor: cell !important;
 }
-
-/* Style des champs/cellules sélectionnés */
 .sum-selected {
   outline: 2px dashed #10b981 !important;
   outline-offset: -2px;
