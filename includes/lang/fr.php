@@ -2,6 +2,20 @@
 // Dictionnaire Français
 return [
     // ==========================================
+    // TEST AUTO
+    // ==========================================
+    'test_running' => 'Tests en cours...',
+    'test_passed' => 'Test réussi',
+    'test_failed' => 'Test échoué',
+    'tests_title' => 'Laboratoire de Tests',
+    'tests_run_budget' => 'Tester le Budget',
+    'tests_run_all' => 'Lancer tous les tests',
+    'tests_copy_report' => 'Copier le rapport',
+    'tests_waiting' => 'En attente du lancement...',
+    'tests_report_copied' => 'Rapport copié dans le presse-papier !',
+
+
+    // ==========================================
     // GLOBAL & NAVIGATION
     // ==========================================
     'menu_home'         => 'Accueil',

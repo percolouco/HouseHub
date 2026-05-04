@@ -104,12 +104,12 @@ function getMonthName($dateString) {
                                         ?>
                                     </div>
                                     <div class="month-actions" style="justify-content: center; width: 100%;">
-                                        <button class="btn-icon-small" title="<?= tr('bud_sav_edit_modal') ?>"
+                                        <button class="btn-icon-small btn-safe-click" title="<?= tr('bud_sav_edit_modal') ?>"
                                                 data-json="<?= htmlspecialchars(json_encode($data[$month] ?? []), ENT_QUOTES, 'UTF-8') ?>"
                                                 onclick='editCustomSavingsMonth("<?= $month ?>", "<?= $currentOwner ?>", JSON.parse(this.getAttribute("data-json")))'>
                                             ✏️
                                         </button>
-                                        <button class="btn-icon-small" title="<?= tr('bud_sav_delete_month') ?>"
+                                        <button class="btn-icon-small btn-safe-click" title="<?= tr('bud_sav_delete_month') ?>"
                                                 onclick="deleteEntireMonth('<?= $month ?>', '<?= $currentOwner ?>')"
                                                 style="color: #ef4444; border-color: #fca5a5; background: #fef2f2;">
                                             🗑️
@@ -187,7 +187,7 @@ function getMonthName($dateString) {
             <button type="button" onclick="document.getElementById('savingsModal').style.display='none'; document.body.classList.remove('no-scroll');" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
         </div>
         
-        <form action="/modules/budget/includes/api/save-savings.php" method="POST" id="savingsForm">
+        <form action="modules/budget/includes/api/save-savings.php" method="POST" id="savingsForm">
             <input type="hidden" name="owner" id="sav_owner">
             <input type="hidden" name="redirect_tab" id="redirect_tab" value="<?= htmlspecialchars($requestedOwner) ?>"> 
             <input type="hidden" name="month_date" id="sav_date_hidden">
@@ -248,16 +248,16 @@ function getMonthName($dateString) {
 window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
 window.I18N = {
     ...(window.I18N || {}),
-    'bud_sav_modal_title_add': "<?= tr('bud_sav_modal_title_add') ?>",
-    'bud_sav_modal_title_edit': "<?= tr('bud_sav_modal_title_edit') ?>",
-    'bud_sav_ph_name': "<?= tr('bud_sav_ph_name') ?>",
-    'bud_sav_confirm_delete_month': "<?= tr('bud_sav_confirm_delete_month') ?>",
-    'bud_sav_prompt_duplicate': "<?= tr('bud_sav_prompt_duplicate') ?>",
-    'bud_err_tech': "<?= tr('bud_err_tech') ?>",
-    'bud_err_server': "<?= tr('bud_err_server') ?>",
-    'bud_err_network_dup': "<?= tr('bud_err_network_dup') ?>",
-    'bud_sav_saving': "<?= tr('bud_sav_saving') ?>",
-    'bud_err_delete': "<?= tr('bud_err_delete') ?>"
+    'bud_sav_modal_title_add': <?= json_encode(tr('bud_sav_modal_title_add')) ?>,
+    'bud_sav_modal_title_edit': <?= json_encode(tr('bud_sav_modal_title_edit')) ?>,
+    'bud_sav_ph_name': <?= json_encode(tr('bud_sav_ph_name')) ?>,
+    'bud_sav_confirm_delete_month': <?= json_encode(tr('bud_sav_confirm_delete_month')) ?>,
+    'bud_sav_prompt_duplicate': <?= json_encode(tr('bud_sav_prompt_duplicate')) ?>,
+    'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>,
+    'bud_err_server': <?= json_encode(tr('bud_err_server')) ?>,
+    'bud_err_network_dup': <?= json_encode(tr('bud_err_network_dup')) ?>,
+    'bud_sav_saving': <?= json_encode(tr('bud_sav_saving')) ?>,
+    'bud_err_delete': <?= json_encode(tr('bud_err_delete')) ?>
 };
 
 // --- 2. GESTION DE L'ÉDITION INVISIBLE EN DIRECT ---
@@ -272,10 +272,10 @@ function updateEpargneCell(month, category, owner, inputEl) {
     formData.append('owner', owner);
     formData.append('amount', val);
 
-    fetch('/modules/budget/includes/api/save-savings.php', {
+    fetch('modules/budget/includes/api/save-savings.php', {
         method: 'POST',
         body: formData
-    }).catch(err => alert(tr("bud_err_tech")));
+    }).catch(err => alert(window.I18N['bud_err_tech'] || 'Erreur technique'));
 
     const totalInput = document.querySelector(`.total-input-${owner}-${month}`);
     const totalVal = parseFloat(totalInput ? totalInput.value : 0) || 0;
@@ -304,7 +304,7 @@ function addCustomEpargneLine(catName = '', amount = '') {
     const html = `
         <div class="ventilation-line" style="display:flex; gap:10px; align-items:center; background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
             <div style="flex:2;">
-                <input type="text" class="pf-input cat-name-input" value="${catName}" placeholder="${tr("bud_sav_ph_name")}" oninput="updateCustomFieldName(this)" style="padding:6px; font-size:0.9rem;" required>
+                <input type="text" class="pf-input cat-name-input" value="${catName}" placeholder="${window.I18N['bud_sav_ph_name'] || 'Catégorie'}" oninput="updateCustomFieldName(this)" style="padding:6px; font-size:0.9rem;" required>
             </div>
             <div style="width:100px;">
                 <input type="number" step="0.01" class="pf-input base-amount no-spinners" value="${baseAmount}" oninput="recalculateCustomLine(this)" style="padding:6px; font-size:0.9rem; background:#fff;">
@@ -348,7 +348,7 @@ function editCustomSavingsMonth(monthDate, owner, rowData) {
     
     const dateObj = new Date(monthDate);
     const monthName = dateObj.toLocaleDateString(window.appLang, { month: 'long', year: 'numeric' });
-    document.getElementById('savingsModalTitle').innerText = tr("bud_sav_modal_title_edit") + " " + monthName + " (" + owner + ")";
+    document.getElementById('savingsModalTitle').innerText = (window.I18N['bud_sav_modal_title_edit'] || 'Editer') + " " + monthName + " (" + owner + ")";
     
     document.getElementById('sav_total').value = rowData['TOTAL_BANQUE'] || '';
 
@@ -370,7 +370,7 @@ function openCustomSavingsModal(owner) {
     document.getElementById('sav_month').value = '';
     document.getElementById('sav_total').value = '';
     
-    document.getElementById('savingsModalTitle').innerText = tr("bud_sav_modal_title_add") + " (" + owner + ")";
+    document.getElementById('savingsModalTitle').innerText = (window.I18N['bud_sav_modal_title_add'] || 'Ajouter') + " (" + owner + ")";
     
     const container = document.getElementById('linesContainer');
     container.innerHTML = '';
@@ -400,17 +400,20 @@ if (savingsForm) {
 
         const submitBtn = this.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerText;
-        submitBtn.innerText = tr('bud_sav_saving');
+        submitBtn.innerText = window.I18N['bud_sav_saving'] || 'Sauvegarde...';
         submitBtn.disabled = true;
 
         const formData = new FormData(this);
 
-        fetch(this.action, { method: 'POST', body: formData })
+        const actionUrl = this.getAttribute('action'); 
+        const finalUrl = actionUrl.startsWith('/') ? actionUrl.substring(1) : actionUrl;
+
+        fetch(finalUrl, { method: 'POST', body: formData })
         .then(response => response.text()) 
         .then(text => { window.location.reload(); })
         .catch(error => {
             console.error("Erreur:", error);
-            alert(tr("bud_err_tech"));
+            alert(window.I18N['bud_err_tech'] || 'Erreur Technique');
             submitBtn.innerText = originalText;
             submitBtn.disabled = false;
         });
@@ -418,16 +421,18 @@ if (savingsForm) {
 }
 
 function deleteEntireMonth(monthDate, owner) {
-    const msg = tr('bud_sav_confirm_delete_month').replace('%m', monthDate).replace('%o', owner);
+    const rawMsg = window.I18N['bud_sav_confirm_delete_month'] || "Supprimer %m pour %o ?";
+    const msg = rawMsg.replace('%m', monthDate).replace('%o', owner);
     if (!confirm(msg)) return;
     
     const formData = new FormData();
     formData.append("action", "delete_month_global"); 
     formData.append("month_date", monthDate);
     formData.append("owner", owner);
-    fetch("/modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
+    
+    fetch("modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
     .then(() => window.location.reload())
-    .catch(err => alert(tr('bud_err_delete')));
+    .catch(err => alert(window.I18N['bud_err_delete'] || 'Erreur lors de la suppression'));
 }
 
 function duplicateLastMonth(lastMonthDate, owner) {
@@ -450,10 +455,8 @@ function duplicateLastMonth(lastMonthDate, owner) {
         defaultTotal = cycleConfigs[nextMonthStr].start_balance;
     }
 
-    const message = tr('bud_sav_prompt_duplicate')
-        .replace('%s', sourceName)
-        .replace('%t1', targetName)
-        .replace('%t2', targetName);
+    const rawMsg = window.I18N['bud_sav_prompt_duplicate'] || "Dupliquer %s vers %t1 ?";
+    const message = rawMsg.replace('%s', sourceName).replace('%t1', targetName).replace('%t2', targetName);
 
     let newTotal = prompt(message, defaultTotal);
 
@@ -465,20 +468,20 @@ function duplicateLastMonth(lastMonthDate, owner) {
         formData.append("new_total", newTotal);
         formData.append("owner", owner);
 
-        fetch("/modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
+        fetch("modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
         .then(async r => {
             const text = await r.text(); 
             try {
                 const d = JSON.parse(text); 
                 if (d.success) window.location.reload();
-                else alert(tr('bud_err_server') + (d.error || "Inconnue"));
+                else alert((window.I18N['bud_err_server'] || 'Erreur serveur : ') + (d.error || "Inconnue"));
             } catch(e) {
                 window.location.reload();
             }
         })
         .catch(err => {
             console.error(err);
-            alert(tr("bud_err_network_dup"));
+            alert(window.I18N['bud_err_network_dup'] || 'Erreur réseau.');
         });
     }
 }

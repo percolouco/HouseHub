@@ -72,4 +72,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit;
     }
+
+    // --- ACTION : SAUVEGARDER UNE DÉPENSE MANUELLE (FETCH) ---
+    if ($action === 'save_expense_manual') {
+        header('Content-Type: application/json'); // On force le retour JSON pour notre script JS
+        
+        try {
+            $id = !empty($_POST['expense_id']) ? (int)$_POST['expense_id'] : null;
+            $cat = $_POST['category'] ?? ''; 
+            $amount = floatval($_POST['amount'] ?? 0); 
+            $date = $_POST['date'] ?? date('Y-m-d');
+            
+            // Format attendu pour gestion_month (qui vient de input type="month") : YYYY-MM. On ajoute le jour.
+            $gestionMonth = $_POST['gestion_month'] ?? ''; 
+            if (strlen($gestionMonth) === 7) $gestionMonth .= '-01';
+            
+            $label = trim($_POST['label'] ?? '');
+            $budgetItemId = null;
+            $holidayId = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
+
+            if ($cat === 'School' && !empty($_POST['label_select'])) {
+                $label = trim($_POST['label_select']);
+            } elseif (($cat === 'Frais' || $cat === 'Income') && !empty($_POST['budget_item_id'])) {
+                $budgetItemId = (int)$_POST['budget_item_id'];
+            }
+
+            // Vérification de sécurité
+            if (empty($label) || $amount <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Le label et un montant supérieur à 0 sont obligatoires.']);
+                exit;
+            }
+
+            $is_credit = isset($_POST['is_credit']) ? (int)$_POST['is_credit'] : 0;
+            $finalAmount = $is_credit ? abs($amount) : -abs($amount);
+            
+            if ($id) {
+                // UPDATE
+                $pdo->prepare("UPDATE pf_expenses SET date_exp=?, gestion_month=?, category=?, label=?, amount=?, budget_item_id=?, holiday_id=? WHERE id=?")
+                    ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $budgetItemId, $holidayId, $id]);
+            } else {
+                // INSERT
+                $uniqueRef = "MANUAL_" . uniqid();
+                $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+                    ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId, $holidayId]);
+            }
+            
+            echo json_encode(['success' => true]);
+            exit;
+
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'error' => 'Erreur base de données.']);
+            exit;
+        }
+    }
 }

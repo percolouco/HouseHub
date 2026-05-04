@@ -57,36 +57,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'reopen_month') {
     exit;
 }
 
-if (isset($_POST['action']) && $_POST['action'] === 'save_expense_manual') {
-    $id = !empty($_POST['expense_id']) ? (int)$_POST['expense_id'] : null;
-    $cat = $_POST['category']; 
-    $amount = floatval($_POST['amount']); 
-    $date = $_POST['date'];
-    $gestionMonth = $_POST['gestion_month']; 
-    $label = trim($_POST['label']);
-    $budgetItemId = null;
-    $holidayId = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
 
-    if ($cat === 'School' && !empty($_POST['label_select'])) $label = trim($_POST['label_select']);
-    elseif (($cat === 'Frais' || $cat === 'Income') && !empty($_POST['budget_item_id'])) $budgetItemId = (int)$_POST['budget_item_id'];
-
-    if ($label && $amount > 0) {
-        $is_credit = isset($_POST['is_credit']) ? (int)$_POST['is_credit'] : 0;
-        $finalAmount = $is_credit ? abs($amount) : -abs($amount);
-        
-        if ($id) {
-            $pdo->prepare("UPDATE pf_expenses SET date_exp=?, gestion_month=?, category=?, label=?, amount=?, budget_item_id=?, holiday_id=? WHERE id=?")
-                ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $budgetItemId, $holidayId, $id]);
-        } else {
-            $uniqueRef = "MANUAL_" . uniqid();
-            $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-                ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId, $holidayId]);
-        }
-        
-        echo "<script>window.location.href='?tab=suivi&m=$viewM&y=$viewY';</script>"; 
-        exit;
-    }
-}
 
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
@@ -766,4 +737,65 @@ function checkValidation() {
 }
 
 if(document.getElementById('formMapping')) { document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s)); checkValidation(); }
+
+// Ferme la modale si on clique sur le background assombri (.pf-modal)
+window.addEventListener('click', (e) => {
+    if (e.target.classList.contains('pf-modal')) {
+        e.target.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const formExpense = document.querySelector('#manualExpenseModal form');
+    
+    if (formExpense) {
+        formExpense.addEventListener('submit', async (e) => {
+            e.preventDefault(); // 🛑 On bloque le rechargement brutal de la page
+            
+            const submitBtn = formExpense.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerText;
+            
+            try {
+                // 🛡️ Sécurité UI : on désactive le bouton pour éviter les doubles clics (et les doublons en BDD)
+                submitBtn.disabled = true;
+                submitBtn.innerText = '⏳ ...';
+
+                const formData = new FormData(formExpense);
+                // On s'assure que l'action est bien définie pour notre API
+                formData.set('action', 'save_expense_manual'); 
+
+                const response = await fetch('modules/budget/includes/api/manage-item.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                
+                const result = await response.json();
+
+                if (result.success) {
+                    // ✅ Succès : Fermeture propre de la modale
+                    closeSuiviModal('manualExpenseModal');
+                    formExpense.reset();
+                    
+                    // Pour l'instant, on fait un rechargement propre pour voir les calculs à jour.
+                    // Dans une V2 ultra-opti, on mettra à jour le DOM ligne par ligne ici !
+                    window.location.reload(); 
+                } else {
+                    // ❌ Erreur renvoyée par le PHP
+                    const errorMsg = result.error || 'Erreur inconnue';
+                    alert(window.I18N ? window.I18N.tr('error_occured') + ' : ' + errorMsg : errorMsg);
+                }
+            } catch (error) {
+                console.error("Erreur lors de l'enregistrement :", error);
+                alert("Une erreur critique est survenue côté réseau ou serveur.");
+            } finally {
+                // 🔄 On restaure le bouton dans tous les cas (succès ou échec)
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalBtnText;
+            }
+        });
+    }
+    });
 </script>

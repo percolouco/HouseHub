@@ -231,11 +231,11 @@ function getTranslatedMonthName($dateString) {
                                 ✎
                             </button>
 
-                            <a href="?tab=budget_prev&id=<?= $cat['id'] ?>&action=delete_category" 
-                               onclick="return confirm('<?= tr('bud_prev_confirm_del_line') ?>')" 
-                               class="btn-icon-action delete" title="<?= tr('delete') ?>">
-                               &times;
-                            </a>
+                            <button type="button" 
+                                    onclick="deleteCategory(<?= $cat['id'] ?>)" 
+                                    class="btn-icon-action delete" title="<?= tr('delete') ?>">
+                            &times;
+                            </button>
                         </div>
                     </td>
                     <?php foreach ($months as $m): 
@@ -577,12 +577,13 @@ body.sum-mode-active .sum-target {
 window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
 window.I18N = {
     ...(window.I18N || {}),
-    'bud_prev_label_name': "<?= tr('bud_prev_label_name') ?>",
-    'bud_prev_err_no_history': "<?= tr('bud_prev_err_no_history') ?>",
-    'bud_prev_confirm_copy': "<?= tr('bud_prev_confirm_copy') ?>",
-    'bud_prev_confirm_transfers': "<?= tr('bud_prev_confirm_transfers') ?>",
-    'bud_err_tech': "<?= tr('bud_err_tech') ?>"
+    'bud_prev_label_name': <?= json_encode(tr('bud_prev_label_name')) ?>,
+    'bud_prev_err_no_history': <?= json_encode(tr('bud_prev_err_no_history')) ?>,
+    'bud_prev_confirm_copy': <?= json_encode(tr('bud_prev_confirm_copy')) ?>,
+    'bud_prev_confirm_transfers': <?= json_encode(tr('bud_prev_confirm_transfers')) ?>,
+    'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>
 };
+
 
 const currentYear = <?= $currentYear ?? 'new Date().getFullYear()' ?>;
 const months = <?= json_encode($months ?? []) ?>;
@@ -627,7 +628,7 @@ function duplicateMonth() {
     const sourceDateStr = months[1];
 
     if (!sourceDateStr) {
-        alert(tr("bud_prev_err_no_history"));
+        alert(window.I18N['bud_prev_err_no_history']);
         return;
     }
 
@@ -639,7 +640,7 @@ function duplicateMonth() {
     const sourceName = formatMonth(sourceDateStr); 
     const targetName = formatMonth(targetDateStr); 
 
-    const message = tr("bud_prev_confirm_copy").replace('%s', sourceName).replace('%t', targetName);
+    const message = window.I18N['bud_prev_confirm_copy'].replace('%s', sourceName).replace('%t', targetName);
 
     if(!confirm(message)) return;
     
@@ -762,11 +763,11 @@ function saveData(action, data) {
     const formData = new FormData();
     formData.append('action', action);
     for (const key in data) formData.append(key, data[key]);
-    fetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
+    fetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
 }
 
 function validateTransfers(person, month) {
-    const msg = tr("bud_prev_confirm_transfers").replace('%p', person).replace('%m', month);
+    const msg = window.I18N['bud_prev_confirm_transfers'].replace('%p', person).replace('%m', month);
     if (!confirm(msg)) return;
 
     const formData = new FormData();
@@ -774,7 +775,7 @@ function validateTransfers(person, month) {
     formData.append('person', person);
     formData.append('month_date', month);
     
-    fetch('/modules/budget/includes/api/save-budget.php', {
+    fetch('modules/budget/includes/api/save-budget.php', {
         method: 'POST',
         body: formData
     })
@@ -783,7 +784,7 @@ function validateTransfers(person, month) {
         if(data.success) window.location.reload();
         else alert("Erreur: " + data.error);
     })
-    .catch(e => alert(tr("bud_err_tech")));
+    .catch(e => alert(window.I18N['bud_err_tech']));
 }
 
 function saveGenericNote(noteType, refId, content) {
@@ -793,7 +794,7 @@ function saveGenericNote(noteType, refId, content) {
     formData.append('reference_id', refId);    
     formData.append('content', content);       
 
-    fetch('/modules/budget/includes/api/save-budget.php', {
+    fetch('modules/budget/includes/api/save-budget.php', {
         method: 'POST',
         body: formData
     })
@@ -869,6 +870,36 @@ function updateSumResult() {
     document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(window.appLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
 }
 
+async function deleteCategory(id) {
+    if (!confirm(window.I18N['bud_prev_confirm_del_line'] || "Confirmer la suppression ?")) return;
+    
+    const formData = new FormData();
+    formData.append('action', 'delete_category');
+    formData.append('id', id);
+    formData.append('ajax', '1'); 
+
+    try {
+        // 💡 CORRECTION : Chemin relatif (sans le "/" au début) pour s'adapter à ton localhost
+        const response = await fetch('modules/budget/includes/api/save-budget.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error(`Erreur réseau HTTP ${response.status}`);
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.location.reload(); 
+        } else {
+            alert((window.I18N['bud_err_tech'] || 'Erreur technique') + " : Suppression impossible.");
+        }
+    } catch(e) {
+        console.error("Erreur Fetch Suppression:", e);
+        alert("Erreur de communication avec le serveur. Regarde la console (F12) pour plus de détails.");
+    }
+}
+
 document.addEventListener('click', function(e) {
     if (!isSumModeActive) return;
 
@@ -890,4 +921,51 @@ document.addEventListener('click', function(e) {
 }, true);
 
 document.addEventListener('DOMContentLoaded', recalcAllAllocations);
+
+// --- INTERCEPTION ASYNCHRONE DES FORMULAIRES DE MODALES ---
+document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form => {
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault(); // 🛑 Bloque le rechargement HTML par défaut
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+        
+        try {
+            submitBtn.disabled = true;
+            submitBtn.innerText = '⏳ ...';
+
+            const formData = new FormData(form);
+            formData.append('ajax', '1');
+
+            // 💡 CORRECTION DU PIÈGE : On utilise getAttribute() pour forcer la lecture de l'URL !
+            const actionUrl = form.getAttribute('action'); 
+            
+            // On s'assure du bon chemin (chemin relatif depuis budget.php)
+            const finalUrl = actionUrl.startsWith('/') ? actionUrl.substring(1) : actionUrl;
+
+            const response = await fetch(finalUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+            
+            const result = await response.json();
+
+            if (result.success) {
+                form.closest('.pf-modal').style.display = 'none';
+                document.body.classList.remove('no-scroll');
+                window.location.reload(); 
+            } else {
+                alert((window.I18N['bud_err_tech'] || 'Erreur technique') + " : " + (result.error || "Inconnue"));
+            }
+        } catch (error) {
+            console.error("Erreur Fetch Modale:", error);
+            alert("Une erreur technique est survenue lors de l'enregistrement.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = originalText;
+        }
+    });
+});
 </script>

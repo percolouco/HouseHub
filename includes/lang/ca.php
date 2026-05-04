@@ -2,6 +2,19 @@
 // Dictionnaire Catalan
 return [
     // ==========================================
+    // TEST AUTO
+    // ==========================================
+    'test_running' => 'Proves en curs...',
+    'test_passed' => 'Prova superada',
+    'test_failed' => 'Prova fallida',
+    'tests_title' => 'Laboratori de Proves',
+    'tests_run_budget' => 'Provar el Pressupost',
+    'tests_run_all' => 'Iniciar totes les proves',
+    'tests_copy_report' => 'Copiar l\'informe',
+    'tests_waiting' => 'Esperant l\'inici...',
+    'tests_report_copied' => 'Informe copiat al porta-retalls!',
+
+    // ==========================================
     // GLOBAL & NAVIGATION
     // ==========================================
     'menu_home'         => 'Inici',
