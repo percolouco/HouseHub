@@ -1060,3 +1060,135 @@ td.col-day {
     right: 1px !important;
   }
 }
+
+/* =========================================================
+   10. DÉCOMPTE DES CONGÉS (VUE MENSUELLE)
+   ========================================================= */
+.fc-month-balances {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed var(--border-color);
+}
+.fc-balance-person {
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.fc-balance-name {
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.fc-balance-name.alex {
+  color: var(--text-alex);
+}
+.fc-balance-name.laia {
+  color: var(--text-laia);
+}
+
+.fc-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+.fc-balance-col {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 6px 4px;
+  border: 1px solid #e2e8f0;
+}
+.fc-balance-type {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.fc-balance-numbers {
+  font-size: 0.75rem;
+  font-family: monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fc-bal-val {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.fc-bal-val.start {
+  color: #64748b;
+}
+.fc-bal-val.used {
+  color: #ef4444;
+}
+.fc-bal-val.end {
+  color: #10b981;
+  font-weight: bold;
+  border-top: 1px solid #cbd5e1;
+  margin-top: 3px;
+  padding-top: 3px;
+}
+
+/* =========================================================
+   11. REFONTE MOBILE EXTRÊME (max-width: 768px)
+   ========================================================= */
+@media (max-width: 768px) {
+  /* 1. On DÉTRUIT visuellement le planning hebdo sur mobile ! */
+  .fc-week-header,
+  #planningTable-wrapper {
+    display: none !important;
+  }
+
+  /* 2. On compresse le calendrier mensuel pour qu'il rentre dans l'écran */
+  .fc-month-table td {
+    height: 48px !important; /* Hauteur très réduite */
+    padding: 2px !important;
+    font-size: 0.75rem;
+  }
+  .fc-month-table th {
+    padding: 4px !important;
+    font-size: 0.7rem;
+  }
+
+  /* On miniaturise les pastilles d'événements */
+  .fc-day--centre::after {
+    font-size: 8px !important;
+    top: 1px;
+    right: 1px;
+  }
+  .fc-day--avis::after {
+    width: 8px !important;
+    height: 8px !important;
+    top: 1px;
+    right: 1px;
+  }
+  .fc-pep-sick-emoji {
+    font-size: 8px !important;
+    bottom: 1px;
+    right: 1px;
+  }
+
+  /* On réduit la marge de la box du mois */
+  .fc-month-calendar-wrapper {
+    padding: 15px !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* 3. Les soldes s'empilent sur mobile */
+  .fc-month-balances {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+}
