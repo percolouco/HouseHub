@@ -110,6 +110,7 @@ require __DIR__ . '/header.php';
           <div id="fc-month-calendar" class="fc-month-calendar"></div>
           <div id="fc-month-selectionMenu" class="fc-selection-menu" style="display:none;"></div>
         </div>
+        <div id="fc-month-balances" class="fc-month-balances"></div>
       </div>
     </section>
 
