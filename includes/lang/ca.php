@@ -113,6 +113,7 @@ return [
     'fc_btn_save_snap'          => 'Desar el correctiu',
     'fc_view_1m'                => '1 mes',
     'fc_view_2m'                => '2 mesos',
+    'fc_view_3m'                => '3 mesos',
     'fc_view_year'              => 'Any',
     'fc_weekly_planning'        => 'Planificació setmanal',
     'fc_col_month'              => 'Mes',
