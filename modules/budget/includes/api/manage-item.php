@@ -73,6 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // --- ACTION : SUPPRIMER UNE DÉPENSE RÉELLE (Depuis l'onglet Suivi) ---
+    if ($action === 'delete_expense') {
+        $id = (int)$_POST['id'];
+        $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([$id]);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     // --- ACTION : SAUVEGARDER UNE DÉPENSE MANUELLE (FETCH) ---
     if ($action === 'save_expense_manual') {
         header('Content-Type: application/json'); // On force le retour JSON pour notre script JS

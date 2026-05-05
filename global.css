@@ -1,16 +1,25 @@
 /* global.css */
 
 :root {
+  /* Couleurs de base */
   --primary: #3b82f6;
   --primary-dark: #1d4ed8;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* Textes & Fonds */
   --text-main: #0f172a;
   --text-muted: #64748b;
   --bg-page: #f8fafc;
   --bg-panel: #ffffff;
+
+  /* Bordures, Arrondis & Ombres */
   --border-light: #e2e8f0;
-  --danger: #ef4444;
   --radius: 12px;
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 /* 🛡️ RESET MOBILE UNIVERSEL */
@@ -19,13 +28,12 @@
 *::after {
   box-sizing: border-box;
 }
-
 html,
 body {
   margin: 0;
   padding: 0;
   max-width: 100vw;
-  overflow-x: hidden; /* Empêche le site entier de glisser de gauche à droite */
+  overflow-x: hidden;
 }
 
 body {
@@ -43,15 +51,18 @@ body {
   flex-direction: column;
 }
 
-/* Images et médias responsive par défaut */
 img,
 svg,
 video {
   max-width: 100%;
   height: auto;
 }
+body.no-scroll {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
 
-/* === HEADER === */
+/* === HEADER & NAVIGATION === */
 .pf-header {
   background: white;
   border-bottom: 1px solid var(--border-light);
@@ -64,7 +75,6 @@ video {
   top: 0;
   z-index: 100;
 }
-
 .pf-logo {
   font-weight: 800;
   font-size: 1.25rem;
@@ -72,13 +82,10 @@ video {
   text-decoration: none;
   letter-spacing: -0.03em;
 }
-
-/* Navigation Desktop */
 .pf-nav {
   display: flex;
   gap: 8px;
 }
-
 .pf-nav-link {
   text-decoration: none;
   color: var(--text-muted);
@@ -88,24 +95,19 @@ video {
   border-radius: 8px;
   transition: all 0.2s;
 }
-
 .pf-nav-link:hover {
   background: #f1f5f9;
   color: var(--text-main);
 }
-
 .pf-nav-link--active {
   background: #eff6ff;
   color: var(--primary);
 }
-
-/* Actions Header (User) */
 .pf-header-actions {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-
 .pf-user-badge {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -113,7 +115,6 @@ video {
   align-items: center;
   gap: 8px;
 }
-
 .pf-logout-btn {
   color: var(--danger);
   font-weight: 600;
@@ -127,8 +128,6 @@ video {
   background: #fef2f2;
   border-color: #fecaca;
 }
-
-/* Menu Burger (Mobile) */
 .pf-burger-btn {
   display: none;
   background: none;
@@ -137,6 +136,7 @@ video {
   cursor: pointer;
   color: var(--text-main);
 }
+
 .pf-mobile-menu {
   display: none;
   position: fixed;
@@ -156,7 +156,7 @@ video {
   display: flex;
 }
 
-/* === MAIN CONTENT === */
+/* === MAIN CONTENT & TYPOGRAPHY === */
 .pf-main {
   flex: 1;
   width: 100%;
@@ -164,14 +164,11 @@ video {
   margin: 0 auto;
   padding: 32px 20px;
 }
-
 .pf-container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
-
-/* === TYPOGRAPHY === */
 h1 {
   font-size: 2rem;
   font-weight: 800;
@@ -185,14 +182,13 @@ p {
   margin-bottom: 1.5rem;
 }
 
-/* === CARDS (Modules) === */
+/* === COMPOSANTS GLOBAUX === */
 .pf-modules-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
   margin-top: 32px;
 }
-
 .pf-module-card {
   background: white;
   border: 1px solid var(--border-light);
@@ -206,13 +202,11 @@ p {
   flex-direction: column;
   gap: 12px;
 }
-
 .pf-module-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow);
   border-color: #cbd5e1;
 }
-
 .pf-card-icon {
   font-size: 2rem;
   margin-bottom: 4px;
@@ -236,54 +230,13 @@ p {
   align-items: center;
   gap: 4px;
 }
-.pf-card-cta::after {
-  content: "→";
-  transition: transform 0.2s;
-}
-.pf-module-card:hover .pf-card-cta::after {
-  transform: translateX(4px);
-}
-.pf-card--disabled {
-  opacity: 0.6;
-  pointer-events: none;
-  filter: grayscale(100%);
-}
 
-/* === FORMS (Login) === */
-.pf-login-container {
-  max-width: 400px;
-  margin: 60px auto;
-  background: white;
-  padding: 40px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
-}
-
-.pf-form-group {
-  margin-bottom: 20px;
-}
-.pf-form-group label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-}
-.pf-form-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  font-size: 1rem;
-}
-.pf-form-group input:focus {
-  outline: 2px solid var(--primary);
-  border-color: var(--primary);
-}
-
+/* Boutons Standards */
 .pf-btn {
-  width: 100%;
-  padding: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: var(--primary);
   color: white;
   border: none;
@@ -292,27 +245,155 @@ p {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  padding: 12px 24px;
+  text-decoration: none;
 }
 .pf-btn:hover {
   background: var(--primary-dark);
 }
+.pf-btn.btn-secondary {
+  background: white;
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+}
+.pf-btn.btn-secondary:hover {
+  background: #f8fafc;
+  color: var(--text-main);
+  border-color: #94a3b8;
+}
 
-.pf-error {
-  background: #fef2f2;
-  color: #b91c1c;
-  padding: 12px;
-  border-radius: 8px;
+/* Formulaires & Inputs Standards */
+.pf-form-group {
   margin-bottom: 20px;
+}
+.pf-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
   font-size: 0.9rem;
-  border: 1px solid #fecaca;
+  color: var(--text-muted);
+}
+.pf-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #f8fafc;
+  color: var(--text-main);
+  transition: all 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.pf-input:focus {
+  background: white;
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-body.no-scroll {
-  overflow: hidden !important;
-  height: 100vh !important;
+/* Tableaux Standards */
+.pf-table {
+  width: 100%;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.pf-table th {
+  background: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+.pf-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--bg-page);
+  vertical-align: middle;
+  font-size: 0.95rem;
+}
+.pf-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.pf-table tbody tr:hover {
+  background-color: #f8fafc;
 }
 
-/* === FOOTER === */
+/* === 🪟 LE DESIGN SYSTEM DES MODALES (Applicable partout) === */
+.pf-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.pf-modal.is-active,
+.pf-modal.open {
+  display: flex;
+} /* Supporte tes deux syntaxes JS */
+
+.pf-modal-content {
+  background: var(--bg-panel);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 32px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: pfModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+}
+.pf-modal-title {
+  margin-top: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 15px;
+  margin-bottom: 8px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+  width: 100%;
+  box-sizing: border-box;
+}
+.modal-footer .pf-btn {
+  width: auto;
+  min-width: 100px;
+  padding: 10px 20px;
+} /* Ajustement pour modale */
+
+@keyframes pfModalPop {
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* === FOOTER & TOASTS === */
 .pf-footer {
   border-top: 1px solid var(--border-light);
   background: white;
@@ -322,25 +403,6 @@ body.no-scroll {
   color: var(--text-muted);
   margin-top: auto;
 }
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-light);
-  width: 100%; /* Empêche le débordement */
-  box-sizing: border-box;
-}
-
-/* On s'assure que les boutons ne sont pas géants par défaut */
-.modal-footer .pf-btn {
-  width: auto;
-  min-width: 100px;
-}
-
-/* Notifications Toasts */
 .pf-toast {
   position: fixed;
   bottom: 20px;
@@ -359,24 +421,13 @@ body.no-scroll {
 .pf-toast.is-visible {
   transform: translateX(0);
 }
-.pf-toast--success {
-  border-left-color: #10b981;
-}
-.pf-toast--error {
-  border-left-color: #ef4444;
-}
-.pf-toast--warning {
-  border-left-color: #f59e0b;
-}
 
-/* === MOBILE RESPONSIVE === */
+/* === RESPONSIVE MOBILE === */
 @media (max-width: 768px) {
   .pf-header {
     padding: 0 16px;
   }
-  .pf-nav {
-    display: none;
-  }
+  .pf-nav,
   .pf-header-actions {
     display: none;
   }
@@ -385,18 +436,7 @@ body.no-scroll {
   }
   .pf-main {
     padding: 16px 10px;
-  } /* Moins de padding latéral sur mobile */
-
-  .pf-modules-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
   }
-
-  .pf-login-container {
-    margin: 30px 16px;
-    padding: 24px;
-  }
-
   .pf-mobile-nav-link {
     font-size: 1.2rem;
     font-weight: 600;
@@ -405,44 +445,20 @@ body.no-scroll {
     padding: 12px 0;
     border-bottom: 1px solid var(--border-light);
   }
-  .pf-mobile-logout {
-    color: var(--danger);
-  }
-  /* ✅ Transformation de toutes les modales en "Bottom Sheets" */
-  .pf-modal {
-    align-items: flex-end; /* Aligne la modale en bas */
-    padding: 0;
-    z-index: 1000 !important;
-    background: rgba(15, 23, 42, 0.75);
-  }
 
+  /* 📱 BOTTOM SHEET MODALES MOBILE */
+  .pf-modal {
+    align-items: center !important; /* On remet au centre */
+    padding: 20px;
+  }
   .pf-modal-content {
     width: 100% !important;
     max-width: none !important;
-    border-radius: 24px 24px 0 0 !important; /* Arrondi seulement en haut */
-    padding: 24px 20px !important;
-    padding-bottom: env(
-      safe-area-inset-bottom,
-      30px
-    ) !important; /* Gère l'encoche iPhone */
-    transform: translateY(100%);
-    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    max-height: 92vh; /* Laisse un petit espace en haut */
-    z-index: 1001;
-    overflow: hidden;
+    border-radius: 20px !important; /* On garde les arrondis partout */
+    transform: none !important;
+    animation: pfModalPop 0.3s ease !important; /* On remet l'animation desktop */
+    margin: auto !important;
   }
-  .prev-section-header,
-  .view-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap; /* Important pour le mobile */
-    gap: 15px;
-    margin-bottom: 20px;
-    width: 100%;
-  }
-
-  /* Barre de drag visuelle en haut de la modale */
   .pf-modal-content::before {
     content: "";
     display: block;
@@ -452,12 +468,12 @@ body.no-scroll {
     border-radius: 10px;
     margin: -10px auto 20px auto;
   }
-
   .modal-footer {
-    flex-direction: column-reverse; /* Empilement propre sur mobile */
+    flex-direction: column-reverse;
   }
   .modal-footer .pf-btn {
-    width: 100%; /* Largeur totale uniquement sur mobile */
+    width: 100%;
+    margin-top: 8px;
   }
 
   @keyframes slideUpSheet {
@@ -465,4 +481,34 @@ body.no-scroll {
       transform: translateY(0);
     }
   }
+}
+
+/* === BOUTONS D'ACTION ICÔNES UNIVERSELS (Édition / Suppression) === */
+.btn-icon-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+.btn-icon-action.edit {
+  color: var(--primary);
+}
+.btn-icon-action.edit:hover {
+  background: #eff6ff; /* Fond bleu très clair au survol */
+}
+.btn-icon-action.delete {
+  color: var(--danger);
+}
+.btn-icon-action.delete:hover {
+  background: #fef2f2; /* Fond rouge très clair au survol */
 }

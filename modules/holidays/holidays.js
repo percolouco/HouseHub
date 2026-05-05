@@ -191,8 +191,8 @@ function addItem(category, name = "", amount = "", isPaid = 0) {
             <input type="hidden" name="items[paid][]" value="${isPaid}">
             <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">${tr("hdl_paid")}</span>
         </label>
-        <button type="button" onclick="this.parentElement.remove()" title="${tr("btn_delete")}" style="width: 28px; height: 28px; border: none; background: #fee2e2; color: #ef4444; border-radius: 6px; cursor: pointer; font-weight: bold; display:flex; align-items:center; justify-content:center;">
-            &times;
+        <button type="button" onclick="this.parentElement.remove()" class="btn-icon-action delete" title="${tr("btn_delete")}">
+            🗑️
         </button>
     `;
 
@@ -604,8 +604,7 @@ function addCpExpenseLine(
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
                 <span class="hol-form-paid-text">${tr("hdl_paid")}</span>
             </label>
-            <button type="button" class="btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">&times;</button>
-        </div>
+          <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>        </div>
         <div class="hol-form-subrow">
             <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("hdl_ph_notes")}" value="${notes}">
         </div>

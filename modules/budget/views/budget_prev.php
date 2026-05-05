@@ -237,8 +237,7 @@ function getTranslatedMonthName($dateString) {
 
                             <button type="button" 
                                     onclick="deleteCategory(<?= $cat['id'] ?>)" 
-                                    class="btn-icon-action delete" title="<?= tr('delete') ?>">
-                            &times;
+                                    class="btn-icon-action delete" title="<?= tr('delete') ?>">🗑️
                             </button>
                         </div>
                     </td>

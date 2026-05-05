@@ -1191,8 +1191,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const formSnap = document.getElementById("formSnapshot");
 
       if (btnSnap && modalSnap) {
+        modalSnap.classList.add("is-open");
         btnSnap.addEventListener("click", () => {
-          modalSnap.style.display = "flex"; // Utilise flex au lieu de block pour le centrage
+          modalSnap.classList.add("is-open"); // Utilise flex au lieu de block pour le centrage
           document.body.classList.add("no-scroll");
           // Pré-remplir la date avec le 1er jour du mois en cours
           const today = new Date();

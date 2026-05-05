@@ -32,13 +32,13 @@ require __DIR__ . '/header.php';
         </div>
     </div>
 
-    <div id="modalHolidays" class="fc-modal-overlay" style="display: none;">
-        <div class="fc-modal-content">
-            <div class="fc-modal-header">
-                <h2><?= tr('fc_modal_holidays_title') ?></h2>
-                <button id="btnCloseHolidays" class="fc-modal-close">×</button>
+    <div id="modalHolidays" class="pf-modal">
+        <div class="pf-modal-content">
+            <div class="pf-modal-header">
+                <h3 class="pf-modal-title"><?= tr('fc_modal_holidays_title') ?></h3>
+                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
             </div>
-            <div class="fc-modal-body">
+            <div class="pf-modal-body" style="padding:0;">
                 <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <table id="schoolHolidaysTable" class="fc-holidays-table" style="min-width: 400px;">
                         <thead>
@@ -55,39 +55,50 @@ require __DIR__ . '/header.php';
         </div>
     </div>
 
-    <div id="modalSnapshot" class="fc-modal-overlay" style="display: none;">
-        <div class="fc-modal-content" style="max-width: 400px;">
-            <div class="fc-modal-header">
-                <h2><?= tr('fc_modal_snap_title') ?></h2>
-                <button id="btnCloseSnapshot" class="fc-modal-close">×</button>
-        </div>
-            <div class="fc-modal-body" style="padding: 24px;">
-            <form id="formSnapshot">
-                    <div style="margin-bottom: 16px;">
-                        <label class="pf-label"><?= tr('fc_label_person') ?></label>
-                        <select id="snapPerson" class="pf-input" required>
-                            <option value="2">Alex</option>
-                            <option value="3">Laia</option>
-                        </select>
+    <div id="modalSnapshot" class="pf-modal">
+        <div class="pf-modal-content">
+            <div class="pf-modal-header">
+                <h3 class="pf-modal-title">📸 <?= tr('fc_modal_snap_title') ?></h3>
+                <button type="button" id="btnCloseSnapshot" class="pf-modal-close" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
+            </div>
+            <div class="pf-modal-body">
+                <form id="formSnapshot">
+                    <div class="pf-form-row">
+                        <div class="pf-form-group">
+                            <label class="pf-label"><?= tr('fc_label_person') ?></label>
+                            <select id="snapPerson" class="pf-input" required>
+                                <option value="2">Alex</option>
+                                <option value="3">Laia</option>
+                            </select>
+                        </div>
+                        <div class="pf-form-group">
+                            <label class="pf-label"><?= tr('fc_label_leave_type') ?></label>
+                            <select id="snapType" class="pf-input" required>
+                                <option value="CP">CP</option>
+                                <option value="JRA">JRA</option>
+                                <option value="JA">JA</option>
+                            </select>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 16px;">
-                        <label class="pf-label"><?= tr('fc_label_leave_type') ?></label>
-                        <select id="snapType" class="pf-input" required>
-                            <option value="CP">CP</option>
-                            <option value="JRA">JRA</option>
-                            <option value="JA">JA</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom: 16px;">
-                    <label class="pf-label"><?= tr('fc_label_apply_date') ?></label>
+                    <div class="pf-form-group">
+                        <label class="pf-label"><?= tr('fc_label_apply_date') ?></label>
                         <input type="date" id="snapDate" class="pf-input" required title="<?= tr('fc_snap_date_hint') ?>">
-                </div>
-                    <div style="margin-bottom: 24px;">
-                    <label class="pf-label"><?= tr('fc_label_remaining_balance') ?></label>
-                        <input type="number" step="0.5" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" required>
                     </div>
-                    <button type="submit" class="pf-btn" style="width: 100%;"><?= tr('fc_btn_save_snap') ?></button>
-            </form>
+                    <div class="pf-form-group">
+                        <label class="pf-label"><?= tr('fc_label_remaining_balance') ?></label>
+                        <div style="display:flex; align-items:center;">
+                            <input type="number" step="0.5" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" style="border-radius: 8px 0 0 8px; border-right: none; font-weight: bold; color: var(--pf-primary);" required>
+                            <span style="background: var(--pf-bg-lighter); border: 1px solid var(--pf-border); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--pf-text-muted); font-size: 0.9rem; font-weight: 600;">
+                                <?= tr('fc_unit_days') ?>
+                            </span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="pf-modal-footer">
+                <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
+                <button type="submit" form="formSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
+            </div>
         </div>
     </div>
 </div>

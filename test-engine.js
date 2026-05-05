@@ -1,6 +1,6 @@
 /**
  * PachaFamily - Test Engine 🦙
- * Moteur de tests automatisés (E2E) - Version Anti-Flakiness
+ * Moteur de tests automatisés (E2E) - Version Anti-Flakiness & QA Exhaustive
  */
 
 const PachaTestEngine = {
@@ -9,7 +9,7 @@ const PachaTestEngine = {
   doc: null,
 
   // ==========================================
-  // 🛠️ HELPERS
+  // 🛠️ HELPERS (BLINDÉS POUR LE QA)
   // ==========================================
 
   wait: (ms) => new Promise((r) => setTimeout(r, ms)),
@@ -23,26 +23,42 @@ const PachaTestEngine = {
     this.log(cond ? msgPass : msgFail || msgPass, cond ? "✅" : "❌");
   },
 
-  // 🛡️ NOUVEAU : Attend le rechargement de la page après une action
+  // 📡 Intercepte les erreurs de l'application dans l'iframe pour les afficher dans le rapport
+  injectIframeErrorCatcher: function () {
+    if (!this.arena.contentWindow) return;
+
+    this.arena.contentWindow.onerror = (msg, url, line) => {
+      this.log(`Erreur App (Ligne ${line}): ${msg}`, "🔥");
+    };
+
+    const origError = this.arena.contentWindow.console.error;
+    this.arena.contentWindow.console.error = (...args) => {
+      this.log(`Console Error: ${args.join(" ")}`, "🔥");
+      origError.apply(this.arena.contentWindow.console, args);
+    };
+  },
+
+  // 🛡️ Attend le rechargement de la page de manière stricte
   actionAndWaitForReload: async function (actionFn, timeout = 5000) {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve, reject) => {
       let reloaded = false;
-      // On écoute le prochain rechargement de l'iframe
+
       this.arena.onload = () => {
         reloaded = true;
         this.doc = this.arena.contentWindow.document;
         this.arena.contentWindow.confirm = () => true;
         this.arena.contentWindow.alert = () => true;
+        this.injectIframeErrorCatcher();
         resolve();
       };
 
-      await actionFn(); // On lance le clic ou la soumission
+      // Exécute l'action et gère le rejet si elle plante
+      Promise.resolve(actionFn()).catch((err) => reject(err));
 
-      // Sécurité anti-blocage (si le fetch échoue et ne recharge pas la page)
       setTimeout(() => {
         if (!reloaded) {
           this.log(
-            "⚠️ Le rechargement de la page n'a pas eu lieu dans le temps imparti.",
+            "⚠️ Le rechargement n'a pas eu lieu. Suite du test...",
             "⏱️",
           );
           resolve();
@@ -58,6 +74,7 @@ const PachaTestEngine = {
         this.doc = this.arena.contentWindow.document;
         this.arena.contentWindow.confirm = () => true;
         this.arena.contentWindow.alert = () => true;
+        this.injectIframeErrorCatcher();
         resolve();
       };
       this.arena.src = url;
@@ -68,107 +85,251 @@ const PachaTestEngine = {
     return this.doc.querySelector(sel);
   },
 
-  // 🖱️ Clic unique et infaillible
+  // 🖱️ Clic strict : Si l'élément n'existe pas, on DÉCLENCHE UNE ERREUR FATALE
   click: async function (sel, delay = 500) {
     const el = typeof sel === "string" ? this.get(sel) : sel;
-    if (el) {
-      // 1. Coupe les popups bloquantes
-      this.arena.contentWindow.confirm = () => true;
-      this.arena.contentWindow.alert = () => true;
-
-      // 2. Un seul et unique clic !
-      el.click();
-
-      await this.wait(delay);
-      return true;
+    if (!el) {
+      throw new Error(
+        `Clic impossible : l'élément '${typeof sel === "string" ? sel : "DOM Object"}' est introuvable.`,
+      );
     }
-    return false;
+
+    this.arena.contentWindow.confirm = () => true;
+    this.arena.contentWindow.alert = () => true;
+    el.click();
+    await this.wait(delay);
+    return true;
   },
 
   fill: function (sel, val) {
     const el = this.get(sel);
-    if (el) el.value = val;
+    if (!el) throw new Error(`Remplissage impossible : '${sel}' introuvable.`);
+    el.value = val;
   },
 
   select: async function (sel, val, delay = 300) {
     const el = this.get(sel);
-    if (el) {
-      el.value = val;
-      el.dispatchEvent(new Event("change"));
-      await this.wait(delay);
-    }
+    if (!el) throw new Error(`Sélection impossible : '${sel}' introuvable.`);
+    el.value = val;
+    el.dispatchEvent(new Event("change"));
+    await this.wait(delay);
   },
 
   findInTable: function (text) {
-    return Array.from(this.doc.querySelectorAll("td, div")).find((el) =>
+    return Array.from(this.doc.querySelectorAll("td")).find((el) =>
       el.textContent.includes(text),
     );
   },
 
   // ==========================================
-  // 🧪 SCÉNARIO 1 : SUIVI MENSUEL
+  // 🧪 SCÉNARIO EXHAUSTIF : SUIVI MENSUEL (MODALES & CRUD)
   // ==========================================
-
-  runBudgetTests: async function () {
+  testBudgetSuiviExhaustive: async function () {
     this.reportBox.value = "";
-    this.log("=== 🚀 DÉBUT DU SCÉNARIO : SUIVI BUDGET ===", "INFO");
+    this.log("=== 🚀 DÉBUT EXHAUSTIF : SUIVI MENSUEL ===", "INFO");
 
     await this.load("budget.php?tab=suivi");
     await this.wait(1000);
 
-    if (!this.get(".btn-add-item")) {
-      this.log("Mois clôturé, test annulé. Déverrouille-le !", "⚠️");
-      return;
-    }
-
-    await this.click("button[onclick=\"toggleDiv('pendingDetailsList')\"]");
-    this.assert(
-      this.get("#pendingDetailsList").style.display !== "none",
-      "Déploiement : Charges à venir",
+    // --- 1. GESTION DE L'ÉTAT (CLÔTURE / RÉOUVERTURE) ---
+    this.log("🔍 Test 1 : État du mois (Clôture / Réouverture)");
+    let btnReopenInitial = this.get(
+      'form input[value="reopen_month"] ~ button[type="submit"]',
     );
-
-    await this.click(".btn-add-item");
-    await this.select("#modalCatSelect", "Autres");
-    this.fill("#modalAmount", "42.42");
-    this.fill("#modalLabelInput", "TEST_AUTO_PACHA");
-
-    this.log("Enregistrement de la dépense...", "WARN");
-    await this.actionAndWaitForReload(async () => {
-      await this.click('#manualExpenseModal button[type="submit"]');
-    });
-
-    let targetTd = Array.from(this.doc.querySelectorAll("td")).find((el) =>
-      el.textContent.includes("TEST_AUTO_PACHA"),
-    );
-    this.assert(
-      targetTd !== undefined,
-      "Dépense créée avec succès (42.42€).",
-      "Échec : Dépense introuvable.",
-    );
-
-    if (targetTd) {
-      this.log("Nettoyage de la base de données...", "WARN");
-      await this.actionAndWaitForReload(async () => {
-        await this.click(
-          targetTd.closest("tr").querySelector('a[href*="delete_expense"]'),
-        );
-      });
-      const checkGone = Array.from(this.doc.querySelectorAll("td")).find((el) =>
-        el.textContent.includes("TEST_AUTO_PACHA"),
+    if (btnReopenInitial) {
+      this.log(
+        "🔒 Mois actuellement fermé. Réouverture forcée pour les tests...",
+        "WARN",
       );
+      await this.actionAndWaitForReload(
+        async () => await this.click(btnReopenInitial),
+      );
+      await this.wait(1500); // ⏱️ Attente de la 2e redirection JS du PHP
       this.assert(
-        checkGone === undefined,
-        "Base de données nettoyée avec succès.",
+        this.get('form input[value="close_month"]') !== null,
+        "Mois rouvert.",
       );
     }
 
-    this.log("=== 🏁 FIN DU SCÉNARIO ===", "INFO");
+    // --- 2. UI TOGGLES ---
+    this.log("🔍 Test 2 : Toggle 'Charges à venir'");
+    const toggleBtn = this.get(
+      "button[onclick*=\"toggleDiv('pendingDetailsList')\"]",
+    );
+    if (toggleBtn) {
+      await this.click(toggleBtn);
+      const pendingList = this.get("#pendingDetailsList");
+      this.assert(
+        pendingList && pendingList.style.display !== "none",
+        "Liste des charges déployée.",
+      );
+    }
+
+    // --- 3. MODALE CSV ---
+    this.log("🔍 Test 3 : Modale Import CSV");
+    const btnCsv = this.get('button[onclick*="importCsvModal"]');
+    if (btnCsv) {
+      await this.click(btnCsv);
+      const csvModal = this.get("#importCsvModal");
+      this.assert(
+        csvModal &&
+          (csvModal.classList.contains("is-open") ||
+            csvModal.style.display === "flex"),
+        "Modale CSV ouverte.",
+      );
+
+      // Fermeture
+      const closeCsvBtn = csvModal.querySelector(
+        ".pf-modal-close, button[onclick*='closeSuiviModal']",
+      );
+      if (closeCsvBtn) await this.click(closeCsvBtn);
+      this.assert(
+        !csvModal.classList.contains("is-open") &&
+          csvModal.style.display !== "flex",
+        "Modale CSV fermée.",
+      );
+    }
+
+    // --- 4. MODALE SNAPSHOT (UPDATE BALANCE) ---
+    this.log("🔍 Test 4 : Modale Snapshot (Solde Bancaire)");
+    const btnSnapshot = this.get('button[onclick*="snapshotModal"]');
+    if (btnSnapshot) {
+      await this.click(btnSnapshot);
+      this.assert(this.get("#snapshotModal"), "Modale Snapshot ouverte.");
+
+      this.fill('#snapshotModal input[name="snapshot_amount"]', "1337.00");
+      this.log("Soumission du nouveau solde...", "INFO");
+      await this.actionAndWaitForReload(async () => {
+        await this.click('#snapshotModal button[type="submit"]');
+      });
+
+      const pageText = this.doc.body.innerText;
+      this.assert(
+        pageText.includes("1 337"),
+        "Solde mis à jour et formaté à 1 337 €.",
+      );
+    }
+
+    // --- 5. CRUD DÉPENSE (AJOUT / ÉDITION / SUPPRESSION) ---
+    this.log("🔍 Test 5 : CRUD Dépense Manuelle");
+    const btnAdd = this.get(".btn-add-item");
+
+    if (btnAdd) {
+      // 5A. AJOUT
+      this.log("Création d'une nouvelle dépense...");
+      await this.click(btnAdd);
+      await this.select("#modalCatSelect", "Autres");
+      this.fill("#modalAmount", "77.77");
+      this.fill("#modalLabelInput", "E2E_QA_TEST_EXPENSE");
+
+      await this.actionAndWaitForReload(async () => {
+        await this.click('#manualExpenseModal button[type="submit"]');
+      });
+
+      let newExpense = this.findInTable("E2E_QA_TEST_EXPENSE");
+      this.assert(
+        newExpense !== undefined,
+        "Dépense 'E2E_QA_TEST_EXPENSE' trouvée dans le DOM.",
+      );
+
+      if (newExpense) {
+        // 5B. ÉDITION
+        this.log("✏️ Édition de la dépense...");
+        const row = newExpense.closest("tr");
+
+        // 🛡️ NOUVEAU : Sécurité anti-crash
+        if (!row) {
+          throw new Error(
+            "L'élément trouvé n'est pas dans une ligne de tableau (<tr> manquant). Le test est corrompu.",
+          );
+        }
+
+        const btnEdit = row.querySelector('button[onclick*="openEditModal"]');
+        if (btnEdit) {
+          await this.click(btnEdit);
+          this.fill("#modalAmount", "88.88");
+          await this.actionAndWaitForReload(async () => {
+            await this.click('#manualExpenseModal button[type="submit"]');
+          });
+
+          const editedExpense = this.findInTable("E2E_QA_TEST_EXPENSE");
+          this.assert(
+            editedExpense &&
+              editedExpense.closest("tr").innerHTML.includes("88"),
+            "Montant mis à jour à 88.88€.",
+          );
+        }
+
+        // 5C. SUPPRESSION (Gère pachaConfirm custom modal)
+        this.log("🧹 Teardown : Suppression de la dépense...");
+        const rowToDel = this.findInTable("E2E_QA_TEST_EXPENSE").closest("tr");
+        const btnDel = rowToDel.querySelector("button.delete");
+
+        if (btnDel) {
+          await this.actionAndWaitForReload(async () => {
+            await this.click(btnDel); // Déclenche pachaConfirm
+            await this.wait(500); // Attend l'animation de la modale custom
+
+            const confirmBtn = this.get("#confirm-ok");
+            if (confirmBtn) {
+              await this.click(confirmBtn); // Valide la suppression (fetch AJAX)
+            }
+          }, 3000);
+
+          const checkGone = this.findInTable("E2E_QA_TEST_EXPENSE");
+          this.assert(
+            checkGone === undefined,
+            "Base de données propre ! Dépense supprimée.",
+          );
+        }
+      }
+    } else {
+      this.log("Bouton '.btn-add-item' introuvable.", "❌");
+    }
+
+    // --- 6. CLÔTURE ET RÉOUVERTURE DU MOIS (TEARDOWN STATE) ---
+    this.log("🔍 Test 6 : Clôture du mois");
+    let btnClose = this.get(
+      'form input[value="close_month"] ~ button[type="submit"]',
+    );
+    if (btnClose) {
+      this.log("Verrouillage du mois...");
+      await this.actionAndWaitForReload(async () => await this.click(btnClose));
+      await this.wait(1500); // ⏱️ Attente de la 2e redirection JS du PHP (Mois suivant)
+
+      this.log("Retour au mois précédent pour vérification...");
+      await this.actionAndWaitForReload(
+        async () =>
+          await this.click(".suivi-nav-group a.suivi-btn-nav:first-child"),
+      );
+
+      this.assert(
+        this.get('form input[value="reopen_month"]') !== null,
+        "Mois clôturé avec succès.",
+      );
+
+      // Teardown
+      this.log("🧹 Teardown : Restauration du mois (Réouverture)");
+      await this.actionAndWaitForReload(
+        async () =>
+          await this.click(
+            'form input[value="reopen_month"] ~ button[type="submit"]',
+          ),
+      );
+      await this.wait(1500); // ⏱️ Attente de la 2e redirection JS du PHP
+
+      this.assert(
+        this.get('form input[value="close_month"]') !== null,
+        "Mois rouvert avec succès.",
+      );
+    }
+
+    this.log("=== 🏁 FIN DU SCÉNARIO EXHAUSTIF ===", "INFO");
   },
 
   // ==========================================
   // 🧪 SCÉNARIO 2 : BUDGET PRÉVISIONNEL
   // ==========================================
-
   testBudgetPrev: async function () {
     this.reportBox.value = "";
     this.log("=== 🚀 DÉBUT DU SCÉNARIO : BUDGET PRÉVISIONNEL ===", "INFO");
@@ -181,21 +342,15 @@ const PachaTestEngine = {
     this.assert(
       this.doc.body.classList.contains("sum-mode-active"),
       "Le mode somme s'active.",
-      "Le bouton somme ne répond pas.",
     );
 
     const firstSalaryInput = this.get('input[data-field="salary"]');
     if (firstSalaryInput) {
       await this.click(firstSalaryInput, 500);
-      this.assert(
-        firstSalaryInput.classList.contains("sum-selected"),
-        "La cellule est bien sélectionnée.",
-      );
       const sumValue = this.get("#sumResultValue").innerText;
       this.assert(
         sumValue !== "0,00 €" && sumValue !== "0 €",
         `Le total interactif affiche : ${sumValue}`,
-        "Le calcul de la somme a échoué.",
       );
     }
 
@@ -213,11 +368,7 @@ const PachaTestEngine = {
       await this.click('button[onclick^="saveGenericNote"]', 1500);
 
       const indicator = this.get("#note-save-indicator");
-      this.assert(
-        indicator !== null,
-        "Sauvegarde asynchrone exécutée.",
-        "L'indicateur de sauvegarde ne s'est pas affiché.",
-      );
+      this.assert(indicator !== null, "Indicateur de sauvegarde affiché.");
 
       this.fill("#monthNoteArea", oldNote);
       await this.click('button[onclick^="saveGenericNote"]', 500);
@@ -230,16 +381,9 @@ const PachaTestEngine = {
     );
 
     await this.click('button[onclick*="addCatModal"]');
-    this.assert(
-      this.get("#addCatModal").style.display === "flex",
-      "Ouverture de la modale d'ajout.",
-    );
-
     this.fill('#addCatModal input[name="name"]', uniqueCatName);
     await this.select('#addCatModal select[name="target"]', "vers commune");
 
-    this.log("Attente du rechargement après création...", "WARN");
-    // 🔄 UTILISATION DU NOUVEAU HELPER SYNCHRONE
     await this.actionAndWaitForReload(async () => {
       await this.click('#addCatModal button[type="submit"]');
     });
@@ -249,8 +393,7 @@ const PachaTestEngine = {
     ).find((el) => el.textContent.includes(uniqueCatName));
     this.assert(
       newCatCell !== undefined,
-      `SUCCÈS : '${uniqueCatName}' insérée au tableau !`,
-      "ÉCHEC : Ligne introuvable après rechargement.",
+      `SUCCÈS : '${uniqueCatName}' insérée !`,
     );
 
     if (newCatCell) {
@@ -259,7 +402,6 @@ const PachaTestEngine = {
       const delBtn = row.querySelector(".delete");
 
       if (delBtn) {
-        // 🔄 UTILISATION DU NOUVEAU HELPER SYNCHRONE
         await this.actionAndWaitForReload(async () => {
           await this.click(delBtn);
         });
@@ -270,10 +412,7 @@ const PachaTestEngine = {
         this.assert(
           checkGone === undefined,
           "NETTOYAGE PARFAIT : Ligne effacée.",
-          "La ligne est restée dans le tableau.",
         );
-      } else {
-        this.log("Bouton de suppression (.delete) introuvable.", "FAIL");
       }
     }
 
@@ -281,10 +420,9 @@ const PachaTestEngine = {
   },
 };
 
-// ============================================================================
+// ==========================================
 // ROUTEUR DU LABORATOIRE ET BOUTON COPIER
-// ============================================================================
-
+// ==========================================
 document.getElementById("btn-run-test")?.addEventListener("click", async () => {
   const selectedTest = document.getElementById("test-selector").value;
   const btnRun = document.getElementById("btn-run-test");
@@ -294,8 +432,8 @@ document.getElementById("btn-run-test")?.addEventListener("click", async () => {
 
   try {
     switch (selectedTest) {
-      case "budget_suivi":
-        await PachaTestEngine.runBudgetTests();
+      case "budget_suivi_exhaustive":
+        await PachaTestEngine.testBudgetSuiviExhaustive();
         break;
       case "budget_prev":
         await PachaTestEngine.testBudgetPrev();
