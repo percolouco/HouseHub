@@ -230,7 +230,7 @@ require __DIR__ . '/header.php';
                                                                 <div class="cl-gift-right">
                                                                     <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
                                                                     <span class="cl-gift-actions">
-                                                                        <button type="button" class="cl-gift-action-btn cl-gift-edit" aria-label="<?= tr('edit') ?>"
+                                                                        <button type="button" class="btn-icon-action edit cl-gift-edit" aria-label="<?= tr('edit') ?>"
                                                                             data-id="<?= $giftId ?>"
                                                                             data-year="<?= $year ?>"
                                                                             data-child="<?= htmlspecialchars($childName) ?>"
@@ -240,10 +240,10 @@ require __DIR__ . '/header.php';
                                                                             data-desc="<?= htmlspecialchars($gift['gift_description']) ?>"
                                                                             data-amount="<?= htmlspecialchars($gift['amount']) ?>"
                                                                             data-link="<?= htmlspecialchars($gift['product_link'] ?? '') ?>">
-                                                                            ✎
+                                                                            ✏️
                                                                         </button>
-                                                                        <button type="button" class="cl-gift-action-btn cl-gift-delete" aria-label="<?= tr('delete') ?>" data-id="<?= $giftId ?>">
-                                                                            ×
+                                                                        <button type="button" class="btn-icon-action delete cl-gift-delete" aria-label="<?= tr('delete') ?>" data-id="<?= $giftId ?>">
+                                                                            🗑️
                                                                         </button>
                                                                     </span>
                                                                 </div>

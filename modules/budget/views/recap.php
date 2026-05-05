@@ -180,8 +180,8 @@ $totalRevenus = 0;
 
                     <td style="padding:15px; text-align:right;">
                         <div class="action-buttons" style="display:flex; gap:5px; justify-content:flex-end;">
-                            <button class="btn-icon" onclick='editRecapItem(<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>)' title="<?= tr('edit') ?>" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">✏️</button>
-                            <button class="btn-icon" onclick="deleteRecapItem(<?= $item['id'] ?>)" title="<?= tr('delete') ?>" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">🗑️</button>
+                            <button class="btn-icon-action edit" onclick='editRecapItem(<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>)' title="<?= tr('edit') ?>">✏️</button>
+                            <button class="btn-icon-action delete" onclick="deleteRecapItem(<?= $item['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
                         </div>
                     </td>
                 </tr>

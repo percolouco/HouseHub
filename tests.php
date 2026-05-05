@@ -105,7 +105,7 @@ require_once 'header.php';
             <div class="lab-controls" style="display: flex; align-items: center; gap: 10px;">
                 <select id="test-selector" class="lab-select">
                     <optgroup label="💰 Module Budget">
-                        <option value="budget_suivi">Suivi Mensuel (Dépenses)</option>
+                        <option value="budget_suivi_exhaustive">Suivi Mensuel (Modales & CRUD)</option>
                         <option value="budget_prev">Budget Prévisionnel</option>
                         <option value="budget_epargne" disabled>Épargne (Bientôt...)</option>
                         <option value="budget_recap" disabled>Récapitulatif (Bientôt...)</option>

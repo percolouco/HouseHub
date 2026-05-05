@@ -100,12 +100,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     exit;
 }
 
-if (isset($_POST['action']) && $_POST['action'] === 'delete_expense') {
-    $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_POST['id']]);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => true]);
-    exit;
-}
 
 // ============================================================================
 // E-Bis. LECTURE ET PRÉVISUALISATION DU FICHIER CSV
@@ -478,10 +472,10 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
     <div class="categories-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:24px;">
         <?php foreach ($categoriesConfig as $key => $conf): ?>
         <div class="cat-card" <?= $isClosed ? 'style="opacity:0.8;"' : '' ?>>
-            <div style="background:<?= $conf['color'] ?>15; padding:15px; border-bottom:1px solid <?= $conf['color'] ?>30; display:flex; justify-content:space-between; align-items:center;">
-                <div>
+            <div class="cat-card-header" style="background:<?= $conf['color'] ?>15; border-bottom:1px solid <?= $conf['color'] ?>30;">
+                <div class="cat-card-title-group">
                     <h3 style="margin:0; font-size:1rem; color:<?= $conf['color'] ?>;"><?= $conf['label'] ?></h3>
-                    <div style="font-size:0.85rem; color:#64748b; font-weight:600; margin-top:2px;">
+                    <div class="cat-card-subtitle">
                         <?php $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']); echo $logic['text']; ?>
                     </div>
                 </div>
@@ -510,9 +504,10 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                                 <?= $exp['amount'] > 0 ? '+' : '-' ?><?= number_format(abs($exp['amount']), 2) ?>
                             </td>
                             <?php if (!$isClosed): ?>
-                                <td style="width:60px; padding-right:10px; text-align:right; white-space:nowrap;">
-                                    <button onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' style="background:none; border:none; cursor:pointer; font-size:1rem; margin-right:8px;">✏️</button>
-                                    <button class="btn-icon-action btn-safe-click delete" onclick="deleteExpense(<?= $exp['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>                                </td>
+                                <td style="width:70px; padding-right:10px; text-align:right; white-space:nowrap;">
+                                    <button class="btn-icon-action edit" onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' title="<?= tr('edit') ?>">✏️</button>
+                                    <button class="btn-icon-action delete btn-safe-click" onclick="deleteExpense(<?= $exp['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
+                                </td>
                             <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
@@ -606,20 +601,29 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 
 <div id="snapshotModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:350px;">
-        <h3 style="margin-top:0;"><?= tr('bud_update_balance') ?></h3>
-        <form method="POST">
-            <input type="hidden" name="action" value="save_snapshot">
-            <input type="date" name="snapshot_date" class="pf-input" value="<?= date('Y-m-d') ?>" style="margin-bottom:10px;" required>
-            <input type="number" step="0.01" name="snapshot_amount" class="pf-input" placeholder="<?= tr('bud_balance_eur') ?>" style="margin-bottom:15px;" required>
-            <div class="modal-footer">
-                <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
-                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
-            </div>
-        </form>
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">🏦 <?= tr('bud_update_balance') ?></h3>
+            <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-modal-close">&times;</button>
+        </div>
+        <div class="pf-modal-body">
+            <form id="snapshotForm" method="POST">
+                <input type="hidden" name="action" value="save_snapshot">
+                <div class="pf-form-group">
+                    <input type="date" name="snapshot_date" class="pf-input" value="<?= date('Y-m-d') ?>" required>
+                </div>
+                <div class="pf-form-group">
+                    <input type="number" step="0.01" name="snapshot_amount" class="pf-input" placeholder="<?= tr('bud_balance_eur') ?>" required>
+                </div>
+            </form>
+        </div>
+        <div class="pf-modal-footer">
+            <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn pf-btn-secondary"><?= tr('btn_cancel') ?></button>
+            <button type="submit" form="snapshotForm" class="pf-btn pf-btn-primary"><?= tr('btn_save') ?></button>
+        </div>
     </div>
 </div>
 
-<div id="importCsvModal" class="pf-modal" style="display: <?= $showPreview ? 'flex' : 'none' ?>;">
+<div id="importCsvModal" class="pf-modal <?= $showPreview ? 'open' : '' ?>">
     <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?></h3>
@@ -729,8 +733,8 @@ window.I18N = {
 
 const activeViewMonth = '<?= substr($viewMonthDate, 0, 7) ?>';
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
-function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'; document.body.classList.add('no-scroll'); }
-function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; document.body.classList.remove('no-scroll');}
+function openSuiviModal(id) { document.getElementById(id).classList.add('open'); document.body.classList.add('no-scroll'); }
+function closeSuiviModal(id) { document.getElementById(id).classList.remove('open'); document.body.classList.remove('no-scroll');}
 
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
 
@@ -826,11 +830,11 @@ async function deleteExpense(id) {
     formData.append("id", id);
 
     try {
-        await pachaFetch("budget.php?tab=suivi", { method: "POST", body: formData });
-        showToast(tr('bud_toast_deleted')); // 
+        await pachaFetch("modules/budget/includes/api/manage-item.php", { method: "POST", body: formData });
+        showToast(window.I18N['bud_toast_deleted'] || "Supprimé"); 
         setTimeout(() => window.location.reload(), 800);
     } catch (err) {
-        showToast(tr('error_occured'), "error");
+        showToast(window.I18N['error_occured'] || "Erreur", "error");
     }
 }
 

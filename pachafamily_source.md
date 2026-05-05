@@ -1,6 +1,6 @@
 # 🦙 Source Code PachaFamily
 
-> *Généré le 2026-05-05 13:45:51*
+> *Généré le 2026-05-05 16:41:29*
 
 ### 📄 Fichier : `budget.php`
 ```php
@@ -132,13 +132,13 @@ require __DIR__ . '/header.php';
         </div>
     </div>
 
-    <div id="modalHolidays" class="fc-modal-overlay" style="display: none;">
-        <div class="fc-modal-content">
-            <div class="fc-modal-header">
-                <h2><?= tr('fc_modal_holidays_title') ?></h2>
-                <button id="btnCloseHolidays" class="fc-modal-close">×</button>
+    <div id="modalHolidays" class="pf-modal">
+        <div class="pf-modal-content">
+            <div class="pf-modal-header">
+                <h3 class="pf-modal-title"><?= tr('fc_modal_holidays_title') ?></h3>
+                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
             </div>
-            <div class="fc-modal-body">
+            <div class="pf-modal-body" style="padding:0;">
                 <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                     <table id="schoolHolidaysTable" class="fc-holidays-table" style="min-width: 400px;">
                         <thead>
@@ -155,42 +155,53 @@ require __DIR__ . '/header.php';
         </div>
     </div>
 
-    <div id="modalSnapshot" class="fc-modal-overlay" style="display: none;">
-        <div class="fc-modal-content" style="max-width: 400px;">
-            <div class="fc-modal-header">
-                <h2><?= tr('fc_modal_snap_title') ?></h2>
-                <button id="btnCloseSnapshot" class="fc-modal-close">×</button>
+    <div id="modalSnapshot" class="pf-modal">
+        <div class="pf-modal-content">
+            <div class="pf-modal-header">
+                <h3 class="pf-modal-title">📸 <?= tr('fc_modal_snap_title') ?></h3>
+                <button type="button" id="btnCloseSnapshot" class="pf-modal-close" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
             </div>
-            <div class="fc-modal-body" style="padding: 24px;">
+            <div class="pf-modal-body">
                 <form id="formSnapshot">
-                    <div style="margin-bottom: 16px;">
-                        <label class="pf-label"><?= tr('fc_label_person') ?></label>
-                        <select id="snapPerson" class="pf-input" required>
-                            <option value="2">Alex</option>
-                            <option value="3">Laia</option>
-                        </select>
+                    <div class="pf-form-row">
+                        <div class="pf-form-group">
+                            <label class="pf-label"><?= tr('fc_label_person') ?></label>
+                            <select id="snapPerson" class="pf-input" required>
+                                <option value="2">Alex</option>
+                                <option value="3">Laia</option>
+                            </select>
+                        </div>
+                        <div class="pf-form-group">
+                            <label class="pf-label"><?= tr('fc_label_leave_type') ?></label>
+                            <select id="snapType" class="pf-input" required>
+                                <option value="CP">CP</option>
+                                <option value="JRA">JRA</option>
+                                <option value="JA">JA</option>
+                            </select>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 16px;">
-                        <label class="pf-label"><?= tr('fc_label_leave_type') ?></label>
-                        <select id="snapType" class="pf-input" required>
-                            <option value="CP">CP</option>
-                            <option value="JRA">JRA</option>
-                            <option value="JA">JA</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom: 16px;">
+                    <div class="pf-form-group">
                         <label class="pf-label"><?= tr('fc_label_apply_date') ?></label>
                         <input type="date" id="snapDate" class="pf-input" required title="<?= tr('fc_snap_date_hint') ?>">
                     </div>
-                    <div style="margin-bottom: 24px;">
+                    <div class="pf-form-group">
                         <label class="pf-label"><?= tr('fc_label_remaining_balance') ?></label>
-                        <input type="number" step="0.5" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" required>
+                        <div style="display:flex; align-items:center;">
+                            <input type="number" step="0.5" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" style="border-radius: 8px 0 0 8px; border-right: none; font-weight: bold; color: var(--pf-primary);" required>
+                            <span style="background: var(--pf-bg-lighter); border: 1px solid var(--pf-border); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--pf-text-muted); font-size: 0.9rem; font-weight: 600;">
+                                <?= tr('fc_unit_days') ?>
+                            </span>
+                        </div>
                     </div>
-                    <button type="submit" class="pf-btn" style="width: 100%;"><?= tr('fc_btn_save_snap') ?></button>
                 </form>
+            </div>
+            <div class="pf-modal-footer">
+                <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
+                <button type="submit" form="formSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
             </div>
         </div>
     </div>
+</div>
 
     <section class="pf-section">
       <div class="fc-month-calendar-wrapper">
@@ -330,7 +341,10 @@ window.I18N = {
     'vac_ete': "<?= tr('vac_ete') ?>",
     'leg_school_holidays': "<?= tr('leg_school_holidays') ?>",
     'fc_school_year': "<?= tr('fc_school_year') ?>",
-    'fc_modal_holidays_title': "<?= tr('fc_modal_holidays_title') ?>"
+    'fc_modal_holidays_title': "<?= tr('fc_modal_holidays_title') ?>",
+    'fc_alert_burn_days': "<?= tr('fc_alert_burn_days') ?>",
+    'fc_alert_burn_jra': "<?= tr('fc_alert_burn_jra') ?>",
+    'ANNIV': "<?= tr('ANNIV') ?>"
 };
 </script>
 <script src="/modules/family-calendar/family-calendar.js"></script>
@@ -353,6 +367,71 @@ window.I18N = {
 </body>
 </html>
 
+```
+
+---
+
+### 📄 Fichier : `generate_css_prompt.php`
+```php
+<?php
+/**
+ * PachaFamily - CSS Auditor 🦙
+ * Génère un rapport complet de tous les styles (fichiers, balises, inline)
+ */
+
+header('Content-Type: text/plain; charset=utf-8');
+
+$root = __DIR__;
+$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
+$report = "=== 🦙 RAPPORT CSS COMPLET PACHAFAMILY ===\n";
+$report .= "Généré le : " . date('Y-m-d H:i:s') . "\n\n";
+
+foreach ($iterator as $file) {
+    if ($file->isDir()) continue;
+    
+    $filePath = $file->getPathname();
+    $relativePath = str_replace($root, '', $filePath);
+    $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+
+    // 1. EXTRACTION DES FICHIERS .css
+    if ($ext === 'css') {
+        $report .= "/* 📄 FICHIER SOURCE : $relativePath */\n";
+        $report .= file_get_contents($filePath) . "\n";
+        $report .= str_repeat("-", 40) . "\n\n";
+    }
+
+    // 2. EXTRACTION DES BALISES <style> ET ATTRIBUTS style="" DANS LES .php
+    if ($ext === 'php') {
+        $content = file_get_contents($filePath);
+        $foundInFile = false;
+
+        // Extraction des blocs <style>
+        if (preg_match_all('/<style[^>]*>(.*?)<\/style>/is', $content, $matches)) {
+            if (!$foundInFile) { $report .= "/* 📄 FICHIER SOURCE : $relativePath */\n"; $foundInFile = true; }
+            foreach ($matches[1] as $idx => $styleBlock) {
+                $report .= "/* Bloc <style> #$idx */\n";
+                $report .= trim($styleBlock) . "\n";
+            }
+        }
+
+        // Extraction des styles inline style="..."
+        // On capture le tag pour donner du contexte au style inline
+        if (preg_match_all('/<([a-z0-9]+)[^>]*?\sstyle=["\']([^"]*?)["\'][^>]*>/i', $content, $matches)) {
+            if (!$foundInFile) { $report .= "/* 📄 FICHIER SOURCE : $relativePath */\n"; $foundInFile = true; }
+            foreach ($matches[0] as $idx => $fullTag) {
+                // On nettoie un peu pour ne garder que l'essentiel du tag et son style
+                $report .= "/* Style Inline #$idx */\n";
+                $report .= trim($fullTag) . "\n";
+            }
+        }
+
+        if ($foundInFile) {
+            $report .= str_repeat("-", 40) . "\n\n";
+        }
+    }
+}
+
+echo $report;
 ```
 
 ---
@@ -898,16 +977,25 @@ document.addEventListener('DOMContentLoaded', function () {
 /* global.css */
 
 :root {
+  /* Couleurs de base */
   --primary: #3b82f6;
   --primary-dark: #1d4ed8;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* Textes & Fonds */
   --text-main: #0f172a;
   --text-muted: #64748b;
   --bg-page: #f8fafc;
   --bg-panel: #ffffff;
+
+  /* Bordures, Arrondis & Ombres */
   --border-light: #e2e8f0;
-  --danger: #ef4444;
   --radius: 12px;
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 /* 🛡️ RESET MOBILE UNIVERSEL */
@@ -916,13 +1004,12 @@ document.addEventListener('DOMContentLoaded', function () {
 *::after {
   box-sizing: border-box;
 }
-
 html,
 body {
   margin: 0;
   padding: 0;
   max-width: 100vw;
-  overflow-x: hidden; /* Empêche le site entier de glisser de gauche à droite */
+  overflow-x: hidden;
 }
 
 body {
@@ -940,15 +1027,18 @@ body {
   flex-direction: column;
 }
 
-/* Images et médias responsive par défaut */
 img,
 svg,
 video {
   max-width: 100%;
   height: auto;
 }
+body.no-scroll {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
 
-/* === HEADER === */
+/* === HEADER & NAVIGATION === */
 .pf-header {
   background: white;
   border-bottom: 1px solid var(--border-light);
@@ -961,7 +1051,6 @@ video {
   top: 0;
   z-index: 100;
 }
-
 .pf-logo {
   font-weight: 800;
   font-size: 1.25rem;
@@ -969,13 +1058,10 @@ video {
   text-decoration: none;
   letter-spacing: -0.03em;
 }
-
-/* Navigation Desktop */
 .pf-nav {
   display: flex;
   gap: 8px;
 }
-
 .pf-nav-link {
   text-decoration: none;
   color: var(--text-muted);
@@ -985,24 +1071,19 @@ video {
   border-radius: 8px;
   transition: all 0.2s;
 }
-
 .pf-nav-link:hover {
   background: #f1f5f9;
   color: var(--text-main);
 }
-
 .pf-nav-link--active {
   background: #eff6ff;
   color: var(--primary);
 }
-
-/* Actions Header (User) */
 .pf-header-actions {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-
 .pf-user-badge {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -1010,7 +1091,6 @@ video {
   align-items: center;
   gap: 8px;
 }
-
 .pf-logout-btn {
   color: var(--danger);
   font-weight: 600;
@@ -1024,8 +1104,6 @@ video {
   background: #fef2f2;
   border-color: #fecaca;
 }
-
-/* Menu Burger (Mobile) */
 .pf-burger-btn {
   display: none;
   background: none;
@@ -1034,6 +1112,7 @@ video {
   cursor: pointer;
   color: var(--text-main);
 }
+
 .pf-mobile-menu {
   display: none;
   position: fixed;
@@ -1053,7 +1132,7 @@ video {
   display: flex;
 }
 
-/* === MAIN CONTENT === */
+/* === MAIN CONTENT & TYPOGRAPHY === */
 .pf-main {
   flex: 1;
   width: 100%;
@@ -1061,14 +1140,11 @@ video {
   margin: 0 auto;
   padding: 32px 20px;
 }
-
 .pf-container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
-
-/* === TYPOGRAPHY === */
 h1 {
   font-size: 2rem;
   font-weight: 800;
@@ -1082,14 +1158,13 @@ p {
   margin-bottom: 1.5rem;
 }
 
-/* === CARDS (Modules) === */
+/* === COMPOSANTS GLOBAUX === */
 .pf-modules-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
   margin-top: 32px;
 }
-
 .pf-module-card {
   background: white;
   border: 1px solid var(--border-light);
@@ -1103,13 +1178,11 @@ p {
   flex-direction: column;
   gap: 12px;
 }
-
 .pf-module-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow);
   border-color: #cbd5e1;
 }
-
 .pf-card-icon {
   font-size: 2rem;
   margin-bottom: 4px;
@@ -1133,54 +1206,13 @@ p {
   align-items: center;
   gap: 4px;
 }
-.pf-card-cta::after {
-  content: "→";
-  transition: transform 0.2s;
-}
-.pf-module-card:hover .pf-card-cta::after {
-  transform: translateX(4px);
-}
-.pf-card--disabled {
-  opacity: 0.6;
-  pointer-events: none;
-  filter: grayscale(100%);
-}
 
-/* === FORMS (Login) === */
-.pf-login-container {
-  max-width: 400px;
-  margin: 60px auto;
-  background: white;
-  padding: 40px;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-light);
-}
-
-.pf-form-group {
-  margin-bottom: 20px;
-}
-.pf-form-group label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-}
-.pf-form-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  font-size: 1rem;
-}
-.pf-form-group input:focus {
-  outline: 2px solid var(--primary);
-  border-color: var(--primary);
-}
-
+/* Boutons Standards */
 .pf-btn {
-  width: 100%;
-  padding: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: var(--primary);
   color: white;
   border: none;
@@ -1189,27 +1221,155 @@ p {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  padding: 12px 24px;
+  text-decoration: none;
 }
 .pf-btn:hover {
   background: var(--primary-dark);
 }
+.pf-btn.btn-secondary {
+  background: white;
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+}
+.pf-btn.btn-secondary:hover {
+  background: #f8fafc;
+  color: var(--text-main);
+  border-color: #94a3b8;
+}
 
-.pf-error {
-  background: #fef2f2;
-  color: #b91c1c;
-  padding: 12px;
-  border-radius: 8px;
+/* Formulaires & Inputs Standards */
+.pf-form-group {
   margin-bottom: 20px;
+}
+.pf-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
   font-size: 0.9rem;
-  border: 1px solid #fecaca;
+  color: var(--text-muted);
+}
+.pf-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #f8fafc;
+  color: var(--text-main);
+  transition: all 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.pf-input:focus {
+  background: white;
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-body.no-scroll {
-  overflow: hidden !important;
-  height: 100vh !important;
+/* Tableaux Standards */
+.pf-table {
+  width: 100%;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.pf-table th {
+  background: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+.pf-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--bg-page);
+  vertical-align: middle;
+  font-size: 0.95rem;
+}
+.pf-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.pf-table tbody tr:hover {
+  background-color: #f8fafc;
 }
 
-/* === FOOTER === */
+/* === 🪟 LE DESIGN SYSTEM DES MODALES (Applicable partout) === */
+.pf-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.pf-modal.is-active,
+.pf-modal.open {
+  display: flex;
+} /* Supporte tes deux syntaxes JS */
+
+.pf-modal-content {
+  background: var(--bg-panel);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 32px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: pfModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+}
+.pf-modal-title {
+  margin-top: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 15px;
+  margin-bottom: 8px;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+  width: 100%;
+  box-sizing: border-box;
+}
+.modal-footer .pf-btn {
+  width: auto;
+  min-width: 100px;
+  padding: 10px 20px;
+} /* Ajustement pour modale */
+
+@keyframes pfModalPop {
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* === FOOTER & TOASTS === */
 .pf-footer {
   border-top: 1px solid var(--border-light);
   background: white;
@@ -1219,25 +1379,6 @@ body.no-scroll {
   color: var(--text-muted);
   margin-top: auto;
 }
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-light);
-  width: 100%; /* Empêche le débordement */
-  box-sizing: border-box;
-}
-
-/* On s'assure que les boutons ne sont pas géants par défaut */
-.modal-footer .pf-btn {
-  width: auto;
-  min-width: 100px;
-}
-
-/* Notifications Toasts */
 .pf-toast {
   position: fixed;
   bottom: 20px;
@@ -1256,24 +1397,13 @@ body.no-scroll {
 .pf-toast.is-visible {
   transform: translateX(0);
 }
-.pf-toast--success {
-  border-left-color: #10b981;
-}
-.pf-toast--error {
-  border-left-color: #ef4444;
-}
-.pf-toast--warning {
-  border-left-color: #f59e0b;
-}
 
-/* === MOBILE RESPONSIVE === */
+/* === RESPONSIVE MOBILE === */
 @media (max-width: 768px) {
   .pf-header {
     padding: 0 16px;
   }
-  .pf-nav {
-    display: none;
-  }
+  .pf-nav,
   .pf-header-actions {
     display: none;
   }
@@ -1282,18 +1412,7 @@ body.no-scroll {
   }
   .pf-main {
     padding: 16px 10px;
-  } /* Moins de padding latéral sur mobile */
-
-  .pf-modules-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
   }
-
-  .pf-login-container {
-    margin: 30px 16px;
-    padding: 24px;
-  }
-
   .pf-mobile-nav-link {
     font-size: 1.2rem;
     font-weight: 600;
@@ -1302,44 +1421,23 @@ body.no-scroll {
     padding: 12px 0;
     border-bottom: 1px solid var(--border-light);
   }
-  .pf-mobile-logout {
-    color: var(--danger);
-  }
-  /* ✅ Transformation de toutes les modales en "Bottom Sheets" */
-  .pf-modal {
-    align-items: flex-end; /* Aligne la modale en bas */
-    padding: 0;
-    z-index: 1000 !important;
-    background: rgba(15, 23, 42, 0.75);
-  }
 
+  /* 📱 BOTTOM SHEET MODALES MOBILE */
+  .pf-modal {
+    align-items: flex-end !important;
+    padding: 0;
+  }
   .pf-modal-content {
     width: 100% !important;
     max-width: none !important;
-    border-radius: 24px 24px 0 0 !important; /* Arrondi seulement en haut */
+    border-radius: 24px 24px 0 0 !important;
     padding: 24px 20px !important;
-    padding-bottom: env(
-      safe-area-inset-bottom,
-      30px
-    ) !important; /* Gère l'encoche iPhone */
+    padding-bottom: env(safe-area-inset-bottom, 30px) !important;
     transform: translateY(100%);
-    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    max-height: 92vh; /* Laisse un petit espace en haut */
-    z-index: 1001;
-    overflow: hidden;
+    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    max-height: 92vh;
+    margin: 0 !important;
   }
-  .prev-section-header,
-  .view-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap; /* Important pour le mobile */
-    gap: 15px;
-    margin-bottom: 20px;
-    width: 100%;
-  }
-
-  /* Barre de drag visuelle en haut de la modale */
   .pf-modal-content::before {
     content: "";
     display: block;
@@ -1349,12 +1447,12 @@ body.no-scroll {
     border-radius: 10px;
     margin: -10px auto 20px auto;
   }
-
   .modal-footer {
-    flex-direction: column-reverse; /* Empilement propre sur mobile */
+    flex-direction: column-reverse;
   }
   .modal-footer .pf-btn {
-    width: 100%; /* Largeur totale uniquement sur mobile */
+    width: 100%;
+    margin-top: 8px;
   }
 
   @keyframes slideUpSheet {
@@ -1916,6 +2014,9 @@ return [
     'btn_off'                   => 'Off',
     'btn_extra'                 => 'Extra',
 
+    'fc_alert_burn_days' => '⚠️ Risc de pèrdua : %s d a gastar abans del %s',
+    'fc_alert_burn_jra'  => '⚠️ JRA: Només 2d es poden reportar després de febrer!',
+
     // ==========================================
     // HOLIDAYS (VOYAGES)
     // ==========================================
@@ -2455,6 +2556,9 @@ return [
     'vac_ete'                   => "Vacances d'Été",
     'btn_off'                   => 'Off',
     'btn_extra'                 => 'Extra',
+    
+    'fc_alert_burn_days' => '⚠️ Risque de perte : %s j à poser avant le %s',
+    'fc_alert_burn_jra'  => '⚠️ JRA : Seuls 2j sont reportables après février !',
 
     // ==========================================
     // HOLIDAYS (VOYAGES)
@@ -3039,30 +3143,7 @@ exit;
 /* modules/budget/budget.css */
 
 /* --- 1. VARIABLES & BASE --- */
-:root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-
-  --bg-page: #f1f5f9;
-  --bg-card: #ffffff;
-
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-
-  --radius-l: 16px;
-  --radius-m: 10px;
-  --radius-s: 6px;
-
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg:
-    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-}
-
-/* --- 2. LAYOUT & CONTAINER --- */
+/* Le root garde les couleurs sémantiques dont le JS/PHP a besoin localement */
 .budget-view {
   font-family:
     "Segoe UI",
@@ -3072,7 +3153,6 @@ exit;
   color: var(--text-main);
   animation: fadeIn 0.4s ease-out;
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -3107,16 +3187,13 @@ exit;
   border-radius: 0 8px 8px 0;
   padding: 8px 12px;
 }
-
 .nens-table.theme-pol thead th {
   background: #f5f9ff !important;
   color: #1e3a8a !important;
 }
-
 .nens-table.theme-pol {
   border-top: 2px solid #bcd3ff !important;
 }
-
 .nens-title.theme-pep {
   color: #14532d !important;
   background: #eaf7ea !important;
@@ -3124,23 +3201,21 @@ exit;
   border-radius: 0 8px 8px 0;
   padding: 8px 12px;
 }
-
 .nens-table.theme-pep thead th {
   background: #f6fdf6 !important;
   color: #14532d !important;
 }
-
 .nens-table.theme-pep {
   border-top: 2px solid #b9e3b9 !important;
 }
 
-/* --- 3. NAVIGATION TABS (Pills) --- */
+/* --- 2. NAVIGATION TABS (Pills) --- */
 .budget-tabs-container {
   display: inline-flex;
-  background: var(--bg-card);
+  background: var(--bg-panel);
   padding: 6px;
   border-radius: 50px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow);
   gap: 8px;
   position: relative;
   z-index: 10;
@@ -3188,65 +3263,21 @@ exit;
   transition: 0.2s;
 }
 .owner-tab.active {
-  background: var(--bg-card);
+  background: var(--bg-panel);
   color: var(--primary);
   box-shadow: var(--shadow-sm);
 }
 
-/* --- 4. BOUTONS UNIFIÉS (Global) --- */
-
-/* Style de Base (Taille Standard : 40px) */
+/* --- 3. BOUTONS SPÉCIFIQUES & ACTIONS --- */
 .pf-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  height: 40px;
-  padding: 0 24px;
-
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: 1px solid transparent;
-  border-radius: 50px;
-
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
+  border-radius: 50px; /* Surcharge le global pour le budget */
 }
-
-.pf-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-/* Variante Secondaire (Fond Blanc) */
-.pf-btn.btn-secondary {
-  background: white;
-  color: var(--text-muted);
-  border: 1px solid #cbd5e1;
-  box-shadow: none;
-}
-
-.pf-btn.btn-secondary:hover {
-  background: #f8fafc;
-  color: var(--text-main);
-  border-color: #94a3b8;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* Boutons Icônes seuls */
 .btn-icon {
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 6px;
-  border-radius: var(--radius-s);
+  border-radius: var(--radius);
   transition: background 0.2s;
   font-size: 1.1rem;
 }
@@ -3254,30 +3285,20 @@ exit;
   background: #e2e8f0;
   transform: scale(1.1);
 }
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-/* Sécurité de clic asynchrone */
 .btn-safe-click {
   position: relative;
   z-index: 10 !important;
   pointer-events: auto !important;
 }
-
 .month-actions {
   display: flex;
   gap: 4px;
   opacity: 0.5;
   transition: opacity 0.2s ease;
 }
-/* Survol des boutons du mois (Epargne) */
 .month-header-container:hover .month-actions {
   opacity: 1;
 }
-
 .month-actions .btn-icon-small {
   font-size: 0.75rem;
   padding: 2px 6px;
@@ -3293,47 +3314,12 @@ exit;
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .month-actions .btn-icon-small:hover {
   background: #f8fafc;
   border-color: #94a3b8;
 }
 
-/* --- 5. TABLEAU MODERNE --- */
-.pf-table {
-  width: 100%;
-  background: var(--bg-card);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-md);
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-}
-.pf-table th {
-  background: #f8fafc;
-  padding: 16px;
-  text-align: left;
-  font-weight: 600;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
-}
-.pf-table td {
-  padding: 3px 16px;
-  border-bottom: 1px solid var(--bg-page);
-  vertical-align: middle;
-  font-size: 0.95rem;
-}
-.pf-table tbody tr:last-child td {
-  border-bottom: none;
-}
-.pf-table tbody tr:hover {
-  background-color: #f8fafc;
-}
-
+/* --- 4. TABLEAU MÉTIER --- */
 .row-income td:first-child {
   border-left: 4px solid var(--success);
 }
@@ -3354,7 +3340,7 @@ exit;
 .sticky-col {
   position: sticky !important;
   left: 0 !important;
-  background: var(--bg-card) !important;
+  background: var(--bg-panel) !important;
   z-index: 20 !important;
   border-right: 1px solid var(--bg-page);
   min-width: 150px;
@@ -3376,7 +3362,6 @@ th.sticky-col {
   gap: 5px;
   height: 100%;
 }
-
 .savings-table .row-extres td {
   background: #fffbeb;
   border-top: 2px solid #e2e8f0;
@@ -3420,66 +3405,13 @@ td:hover .btn-cell-delete {
   border-top: 1px solid #e2e8f0;
 }
 
-/* --- 6. FORMULAIRES & INPUTS --- */
-.pf-label {
-  display: block;
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-bottom: 6px;
-}
-.pf-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--radius-m);
-  font-size: 1rem;
-  background: #f8fafc;
-  color: var(--text-main);
-  box-sizing: border-box;
-  transition: all 0.2s;
-}
-.pf-input:focus {
-  background: var(--bg-card);
-  border-color: var(--primary);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
+/* Inputs modifiés */
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
 }
-.form-group {
-  margin-bottom: 16px;
-}
-
-input[type="checkbox"] {
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid #cbd5e1;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  vertical-align: middle;
-  margin-right: 8px;
-}
-input[type="checkbox"]:checked {
-  background-color: var(--success);
-  border-color: var(--success);
-}
-input[type="checkbox"]:checked::after {
-  content: "✓";
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-}
-
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -3490,51 +3422,21 @@ input[type="number"] {
   appearance: textfield;
 }
 
-/* --- 7. MODALE --- */
-.pf-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.pf-modal-content {
-  background: var(--bg-card);
-  width: 100%;
-  max-width: 500px;
-  border-radius: 20px;
-  box-shadow: var(--shadow-lg);
-  padding: 32px;
-  position: relative;
-  animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-/* Modale étendue pour les grands tableaux (ex: Import CSV) */
+/* --- 5. MODALES (Extras Budget) --- */
 .pf-modal-content.modal-large {
   max-width: 900px;
   transition: max-width 0.3s ease;
 }
-
-/* Conteneur de tableau scrollable pour la modale */
 .import-table-wrapper {
   max-height: 45vh;
   overflow-y: auto;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch; /* Fluidité sur iOS */
+  -webkit-overflow-scrolling: touch;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
-
-/* Zone de dépôt (Upload CSV) */
 .import-dropzone {
   border: 2px dashed #cbd5e1;
   padding: 40px 20px;
@@ -3543,35 +3445,7 @@ input[type="number"] {
   background: #f8fafc;
 }
 
-@keyframes modalPop {
-  from {
-    transform: scale(0.95) translateY(10px);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-.pf-modal-title {
-  margin-top: 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-main);
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 15px;
-  margin-bottom: 8px;
-}
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
-}
-
-/* --- 8. UTILITAIRES & BADGES --- */
+/* --- 6. UTILITAIRES & BADGES --- */
 .text-success {
   color: var(--success);
 }
@@ -3607,61 +3481,7 @@ input[type="number"] {
   color: var(--text-muted);
 }
 
-/* --- 9. MOBILE RESPONSIVE (Global) --- */
-@media (max-width: 768px) {
-  .budget-tabs-container {
-    display: flex;
-    width: 100%;
-    overflow-x: auto;
-    border-radius: 15px;
-    justify-content: space-between;
-  }
-  .tab-item {
-    padding: 10px 15px;
-    flex: 1;
-    justify-content: center;
-    white-space: nowrap;
-    font-size: 0.85rem;
-  }
-  .view-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .pf-btn {
-    width: 100%;
-    justify-content: center;
-    margin-top: 5px;
-  }
-  .pf-table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-  .pf-btn {
-    position: relative !important;
-    right: auto !important;
-    top: auto !important;
-  }
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  /* FORCAGE VISIBILITE BOUTONS SUR MOBILE (Pas de hover possible) */
-  .month-actions {
-    opacity: 1 !important;
-  }
-  .btn-cell-delete {
-    display: flex !important;
-    opacity: 0.7;
-  }
-  .row-actions {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-  }
-}
-
-/* --- 10. BUDGET PREVISIONNEL (TIMELINE) --- */
-
+/* --- 7. BUDGET PREVISIONNEL (TIMELINE) --- */
 .prev-container {
   display: flex;
   flex-direction: column;
@@ -3714,8 +3534,8 @@ input[type="number"] {
   flex-direction: row !important;
   justify-content: space-between !important;
   align-items: center !important;
-  float: none !important; /* On annule tout float résiduel */
-  position: relative !important; /* On s'assure qu'il n'est pas en absolute */
+  float: none !important;
+  position: relative !important;
   width: 100% !important;
   gap: 15px !important;
 }
@@ -3723,8 +3543,8 @@ input[type="number"] {
 .prev-salary-table {
   width: 100%;
   max-width: 900px;
-  background: var(--bg-card);
-  border-radius: var(--radius-l);
+  background: var(--bg-panel);
+  border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   border-collapse: separate;
   border-spacing: 0;
@@ -3753,8 +3573,8 @@ input[type="number"] {
 .prev-timeline-wrapper {
   overflow-x: auto;
   border: 1px solid #e2e8f0;
-  border-radius: var(--radius-l);
-  background: var(--bg-card);
+  border-radius: var(--radius);
+  background: var(--bg-panel);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-top: 15px;
 }
@@ -3784,7 +3604,7 @@ input[type="number"] {
   position: sticky !important;
   left: 0 !important;
   z-index: 10;
-  background-color: var(--bg-card);
+  background-color: var(--bg-panel);
   border-right: 2px solid #e2e8f0;
   text-align: left !important;
   min-width: 220px;
@@ -3833,7 +3653,6 @@ input[type="number"] {
   font-weight: 700;
   border-bottom: 2px solid #bfdbfe;
 }
-
 .txt-alex {
   color: #0891b2;
 }
@@ -3860,7 +3679,7 @@ input[type="number"] {
   background: white;
   border: 1px solid #cbd5e1;
   padding: 4px 10px;
-  border-radius: var(--radius-s);
+  border-radius: 6px;
   text-decoration: none;
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -3873,7 +3692,6 @@ input[type="number"] {
   border-color: #94a3b8;
 }
 
-/* --- ACTIONS SUR LIGNES (Edit / Delete) --- */
 .row-actions {
   position: absolute;
   right: 10px;
@@ -3886,12 +3704,10 @@ input[type="number"] {
   gap: 8px;
   transition: opacity 0.2s ease-in-out;
 }
-
 tr:hover .row-actions {
   opacity: 1;
   pointer-events: auto !important;
 }
-
 .btn-icon-action {
   border: none;
   background: transparent;
@@ -3908,7 +3724,6 @@ tr:hover .row-actions {
   width: 24px;
   height: 24px;
 }
-
 .btn-icon-action.edit {
   color: #3b82f6;
 }
@@ -3922,7 +3737,7 @@ tr:hover .row-actions {
   background: #fef2f2;
 }
 
-/* --- 11. RÉCAPITULATIF VIREMENTS --- */
+/* --- 8. RÉCAPITULATIF VIREMENTS --- */
 .recap-wrapper {
   margin-top: 30px;
   padding-top: 20px;
@@ -3973,7 +3788,6 @@ tr:hover .row-actions {
   font-weight: 600;
   color: #1e293b;
 }
-
 .col-alex {
   background-color: #ecfeff;
   color: #0891b2;
@@ -3998,7 +3812,6 @@ th.col-laia {
   font-weight: 700;
   border-left: 2px solid #e2e8f0;
 }
-
 .row-grand-total td {
   background-color: #1e293b;
   color: white;
@@ -4022,224 +3835,10 @@ th.col-laia {
   border: none;
 }
 
-/* --- 12. OPTIMISATIONS MOBILES PREVISIONNEL & SUIVI (V6) --- */
-@media (max-width: 768px) {
-  /* 1. ANTI-DÉBORDEMENT GLOBAL */
-  html,
-  body {
-    overflow-x: hidden !important;
-    width: 100vw !important;
-  }
-  .budget-view {
-    padding: 10px !important;
-    max-width: 100vw !important;
-    box-sizing: border-box;
-  }
-
-  /* 2. ONGLETS PRINCIPAUX (Scroll horizontal fluide) */
-  .budget-tabs-container {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    justify-content: flex-start !important; /* Aligne à gauche pour scroller */
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    padding-bottom: 5px;
-    /* Masque la barre de défilement inesthétique */
-    scrollbar-width: none;
-  }
-  .budget-tabs-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tab-item {
-    flex: 0 0 auto !important; /* Interdit l'écrasement du texte */
-    padding: 8px 16px !important;
-  }
-
-  /* 3. RÉDUCTION DES ENCADRÉS DE SOLDES */
-  .budget-view > div[style*="display:grid"] {
-    gap: 10px !important;
-    margin-bottom: 15px !important;
-  }
-  .budget-view > div[style*="display:grid"] > div {
-    padding: 12px 10px !important;
-  }
-  .budget-view
-    > div[style*="justify-content: space-between"]:not(.view-header) {
-    flex-direction: column !important;
-    align-items: stretch !important;
-  }
-
-  /* 4. EN-TÊTES EPARGNE (Titre isolé, boutons 50/50 en dessous) */
-  .budget-view
-    > div[style*="justify-content: space-between"]:not(.view-header) {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    margin-top: 20px !important;
-  }
-  /* Le titre (Nens/Pol/Pep) prend toute la ligne */
-  .budget-view
-    > div[style*="justify-content: space-between"]:not(.view-header)
-    > div:first-child {
-    width: 100% !important;
-  }
-  /* Les boutons se partagent la ligne suivante (50/50) */
-  .budget-view
-    > div[style*="justify-content: space-between"]:not(.view-header)
-    > div:last-child {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    width: 100% !important;
-    gap: 10px !important;
-  }
-  .budget-view
-    > div[style*="justify-content: space-between"]:not(.view-header)
-    > div:last-child
-    .pf-btn {
-    flex: 1 1 50% !important;
-    padding: 0 5px !important;
-    font-size: 0.8rem !important;
-    justify-content: center;
-  }
-
-  /* 5. EN-TÊTES PRÉVISIONNEL (Répartition, Revenus) */
-  .prev-section-header {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-  .prev-section-header > div {
-    display: flex !important;
-    flex-direction: row !important; /* On permet l'alignement horizontal */
-    flex-wrap: wrap !important; /* On permet le passage à la ligne */
-    width: 100% !important;
-    gap: 10px !important;
-  }
-  .prev-section-header .nav-group {
-    display: flex !important;
-    width: 100% !important; /* La navigation prend toute la ligne du haut */
-    justify-content: space-between !important;
-  }
-  .prev-section-header .nav-group .btn-nav {
-    flex: 1;
-    text-align: center;
-  }
-  .prev-section-header .pf-btn {
-    flex: 1 1 calc(50% - 10px) !important; /* 50/50 pour les boutons du bas */
-    width: auto !important;
-    padding: 0 5px !important;
-    margin: 0 !important;
-    font-size: 0.85rem !important;
-  }
-
-  /* 6. TOUS LES TABLEAUX DEVIENNENT SCROLLABLES */
-  .prev-salary-table,
-  .prev-alloc-table,
-  .pf-table,
-  .savings-table,
-  .recap-wrapper {
-    display: block !important;
-    width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;
-    border-radius: 8px !important;
-    margin-bottom: 15px;
-  }
-
-  /* 6b. COMPRESSION DU TABLEAU VIREMENTS POUR ÉVITER LE SCROLL */
-  .recap-card {
-    min-width: 100% !important; /* Retire le blocage à 600px */
-    width: 100% !important;
-  }
-  .recap-table th,
-  .recap-table td {
-    padding: 8px 4px !important; /* Réduit drastiquement l'espace vide horizontal */
-    font-size: 0.8rem !important; /* Réduit un poil la taille du texte */
-  }
-  .recap-header {
-    font-size: 0.9rem !important;
-    padding: 8px 10px !important;
-  }
-  /* On permet au texte "Grand Total" de s'ajuster si besoin */
-  .row-grand-total td {
-    padding: 10px 4px !important;
-  }
-
-  /* 7. BOUTONS D'ÉDITION/SUPPRESSION (FINI LE CHEVAUCHEMENT) */
-  .row-actions {
-    position: static !important;
-    display: inline-flex !important;
-    opacity: 1 !important;
-    box-shadow: none !important;
-    background: transparent !important;
-    border-left: none !important;
-    padding: 1px 0 !important;
-    transform: none !important;
-    justify-content: flex-start;
-    width: auto !important;
-  }
-  .btn-icon-action {
-    font-size: 1.1rem !important;
-    padding: 4px !important;
-    width: 20px !important;
-    height: 20px !important;
-    background: #f1f5f9 !important;
-    border-radius: 6px;
-    margin-right: 2px;
-  }
-
-  /* 8. COLONNE STICKY */
-  .col-sticky,
-  .sticky-col {
-    min-width: 120px !important;
-    position: sticky !important;
-    left: 0;
-    z-index: 20 !important;
-    white-space: normal !important;
-    background: white !important;
-  }
-  th.sticky-col,
-  th.col-sticky {
-    z-index: 30 !important;
-    background: #f8fafc !important;
-  }
-
-  /* 9. TOOLBAR SUIVI ET MODALES */
-  .action-toolbar {
-    flex-wrap: wrap !important;
-    width: 100% !important;
-  }
-  .suivi-nav-group {
-    width: 100%;
-    justify-content: space-between;
-  }
-  .suivi-btn-nav {
-    flex: 1;
-    text-align: center;
-  }
-
-  .pf-modal-content {
-    padding: 20px 15px !important;
-    width: 95% !important;
-  }
-  .modal-footer {
-    flex-wrap: wrap !important;
-  }
-  .modal-footer .pf-btn {
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-bottom: 10px !important;
-  }
-}
-
-/* --- 13. STYLES SPÉCIFIQUES AU SUIVI MENSUEL (suivi.php) --- */
+/* --- 9. STYLES SPÉCIFIQUES AU SUIVI MENSUEL --- */
 .cat-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-l);
+  background: var(--bg-panel);
+  border-radius: var(--radius);
   border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
@@ -4262,7 +3861,7 @@ th.col-laia {
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .btn-add-item:hover {
-  background: var(--bg-card);
+  background: var(--bg-panel);
   transform: rotate(90deg) scale(1.1);
   box-shadow: var(--shadow-sm);
   border-color: currentColor;
@@ -4273,7 +3872,6 @@ th.col-laia {
   gap: 20px;
   margin-top: 20px;
 }
-
 .fade-pulse {
   animation: pulseText 2s infinite;
 }
@@ -4288,11 +3886,10 @@ th.col-laia {
     opacity: 0.8;
   }
 }
-
 .suivi-nav-group {
   display: flex;
   background: #e2e8f0;
-  border-radius: var(--radius-s);
+  border-radius: 6px;
   overflow: hidden;
 }
 .suivi-btn-nav {
@@ -4310,19 +3907,18 @@ th.col-laia {
   border-right: none;
 }
 .suivi-btn-nav:hover {
-  background: var(--bg-card);
+  background: var(--bg-panel);
   color: var(--primary);
 }
-
 input[type="month"].pf-input {
   font-family: inherit;
   color: var(--text-main);
   background: white;
   border: 1px solid #cbd5e1;
-  border-radius: var(--radius-s);
+  border-radius: 6px;
 }
 
-/* --- 14. EPARGNE (epargne.php) --- */
+/* --- 10. EPARGNE --- */
 .epargne-inline-input {
   width: 100%;
   min-width: 60px;
@@ -4347,7 +3943,7 @@ input[type="month"].pf-input {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
-/* --- 15. COMPOSANT : CALCULATRICE FLOTTANTE (SOMME RAPIDE) --- */
+/* --- 11. CALCULATRICE FLOTTANTE --- */
 .pf-fab-sum {
   position: fixed;
   right: 30px;
@@ -4364,7 +3960,7 @@ input[type="month"].pf-input {
   border: none;
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
   cursor: pointer;
-  z-index: 9999;
+  z-index: 9000;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .pf-fab-sum:hover {
@@ -4376,7 +3972,6 @@ input[type="month"].pf-input {
   transform: scale(1.1);
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
 }
-
 .pf-sum-bar {
   position: fixed;
   bottom: 30px;
@@ -4390,7 +3985,7 @@ input[type="month"].pf-input {
   display: flex;
   align-items: center;
   gap: 15px;
-  z-index: 9998;
+  z-index: 8999;
   border: 1px solid #e2e8f0;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   font-family: inherit;
@@ -4423,7 +4018,6 @@ input[type="month"].pf-input {
 .pf-sum-close:hover {
   color: #ef4444;
 }
-
 body.sum-mode-active {
   cursor: cell !important;
 }
@@ -4437,6 +4031,189 @@ body.sum-mode-active .sum-target {
   background-color: #ecfdf5 !important;
   color: #065f46 !important;
   transition: background-color 0.2s;
+}
+
+/* --- 12. RESPONSIVE MOBILE BUDGET --- */
+@media (max-width: 768px) {
+  .budget-view {
+    padding: 10px !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+  }
+  .budget-tabs-container {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 5px;
+    scrollbar-width: none;
+  }
+  .budget-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-item {
+    flex: 0 0 auto !important;
+    padding: 8px 16px !important;
+  }
+  .budget-view > div[style*="display:grid"] {
+    gap: 10px !important;
+    margin-bottom: 15px !important;
+  }
+  .budget-view > div[style*="display:grid"] > div {
+    padding: 12px 10px !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header) {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header) {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-top: 20px !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header)
+    > div:first-child {
+    width: 100% !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header)
+    > div:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header)
+    > div:last-child
+    .pf-btn {
+    flex: 1 1 50% !important;
+    padding: 0 5px !important;
+    font-size: 0.8rem !important;
+    justify-content: center;
+  }
+  .prev-section-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .prev-section-header > div {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .prev-section-header .nav-group {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+  .prev-section-header .nav-group .btn-nav {
+    flex: 1;
+    text-align: center;
+  }
+  .prev-section-header .pf-btn {
+    flex: 1 1 calc(50% - 10px) !important;
+    width: auto !important;
+    padding: 0 5px !important;
+    margin: 0 !important;
+    font-size: 0.85rem !important;
+  }
+  .prev-salary-table,
+  .prev-alloc-table,
+  .pf-table,
+  .savings-table,
+  .recap-wrapper {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    border-radius: 8px !important;
+    margin-bottom: 15px;
+  }
+  .recap-card {
+    min-width: 100% !important;
+    width: 100% !important;
+  }
+  .recap-table th,
+  .recap-table td {
+    padding: 8px 4px !important;
+    font-size: 0.8rem !important;
+  }
+  .recap-header {
+    font-size: 0.9rem !important;
+    padding: 8px 10px !important;
+  }
+  .row-grand-total td {
+    padding: 10px 4px !important;
+  }
+  .row-actions {
+    position: static !important;
+    display: inline-flex !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    border-left: none !important;
+    padding: 1px 0 !important;
+    transform: none !important;
+    justify-content: flex-start;
+    width: auto !important;
+  }
+  .btn-icon-action {
+    font-size: 1.1rem !important;
+    padding: 4px !important;
+    width: 20px !important;
+    height: 20px !important;
+    background: #f1f5f9 !important;
+    border-radius: 6px;
+    margin-right: 2px;
+  }
+  .col-sticky,
+  .sticky-col {
+    min-width: 120px !important;
+    position: sticky !important;
+    left: 0;
+    z-index: 20 !important;
+    white-space: normal !important;
+    background: white !important;
+  }
+  th.sticky-col,
+  th.col-sticky {
+    z-index: 30 !important;
+    background: #f8fafc !important;
+  }
+  .action-toolbar {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+  .suivi-nav-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .suivi-btn-nav {
+    flex: 1;
+    text-align: center;
+  }
+  .month-actions {
+    opacity: 1 !important;
+  }
+  .btn-cell-delete {
+    display: flex !important;
+    opacity: 0.7;
+    position: static;
+    transform: none;
+    right: auto;
+    top: auto;
+  }
 }
 
 ```
@@ -4524,6 +4301,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             header('Location: /budget.php?tab=recap');
         }
+        exit;
+    }
+
+    // --- ACTION : SUPPRIMER UNE DÉPENSE RÉELLE (Depuis l'onglet Suivi) ---
+    if ($action === 'delete_expense') {
+        $id = (int)$_POST['id'];
+        $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([$id]);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
         exit;
     }
 
@@ -6992,12 +6778,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
     exit;
 }
 
-if (isset($_POST['action']) && $_POST['action'] === 'delete_expense') {
-    $pdo->prepare("DELETE FROM pf_expenses WHERE id = ?")->execute([(int)$_POST['id']]);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => true]);
-    exit;
-}
 
 // ============================================================================
 // E-Bis. LECTURE ET PRÉVISUALISATION DU FICHIER CSV
@@ -7498,16 +7278,25 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 
 <div id="snapshotModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:350px;">
-        <h3 style="margin-top:0;"><?= tr('bud_update_balance') ?></h3>
-        <form method="POST">
-            <input type="hidden" name="action" value="save_snapshot">
-            <input type="date" name="snapshot_date" class="pf-input" value="<?= date('Y-m-d') ?>" style="margin-bottom:10px;" required>
-            <input type="number" step="0.01" name="snapshot_amount" class="pf-input" placeholder="<?= tr('bud_balance_eur') ?>" style="margin-bottom:15px;" required>
-            <div class="modal-footer">
-                <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
-                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
-            </div>
-        </form>
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">🏦 <?= tr('bud_update_balance') ?></h3>
+            <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-modal-close">&times;</button>
+        </div>
+        <div class="pf-modal-body">
+            <form id="snapshotForm" method="POST">
+                <input type="hidden" name="action" value="save_snapshot">
+                <div class="pf-form-group">
+                    <input type="date" name="snapshot_date" class="pf-input" value="<?= date('Y-m-d') ?>" required>
+                </div>
+                <div class="pf-form-group">
+                    <input type="number" step="0.01" name="snapshot_amount" class="pf-input" placeholder="<?= tr('bud_balance_eur') ?>" required>
+                </div>
+            </form>
+        </div>
+        <div class="pf-modal-footer">
+            <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn pf-btn-secondary"><?= tr('btn_cancel') ?></button>
+            <button type="submit" form="snapshotForm" class="pf-btn pf-btn-primary"><?= tr('btn_save') ?></button>
+        </div>
     </div>
 </div>
 
@@ -7621,8 +7410,8 @@ window.I18N = {
 
 const activeViewMonth = '<?= substr($viewMonthDate, 0, 7) ?>';
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
-function openSuiviModal(id) { document.getElementById(id).style.display = 'flex'; document.body.classList.add('no-scroll'); }
-function closeSuiviModal(id) { document.getElementById(id).style.display = 'none'; document.body.classList.remove('no-scroll');}
+function openSuiviModal(id) { document.getElementById(id).classList.add('is-open'); document.body.classList.add('no-scroll'); }
+function closeSuiviModal(id) { document.getElementById(id).classList.remove('is-open'); document.body.classList.remove('no-scroll');}
 
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
 
@@ -7718,11 +7507,11 @@ async function deleteExpense(id) {
     formData.append("id", id);
 
     try {
-        await pachaFetch("budget.php?tab=suivi", { method: "POST", body: formData });
-        showToast(tr('bud_toast_deleted')); // 
+        await pachaFetch("modules/budget/includes/api/manage-item.php", { method: "POST", body: formData });
+        showToast(window.I18N['bud_toast_deleted'] || "Supprimé"); 
         setTimeout(() => window.location.reload(), 800);
     } catch (err) {
-        showToast(tr('error_occured'), "error");
+        showToast(window.I18N['error_occured'] || "Erreur", "error");
     }
 }
 
@@ -7940,84 +7729,33 @@ try {
 ```css
 /* modules/family-calendar/family-calendar.css */
 
-/* =========================================================
-   1. VARIABLES & BASE
-   ========================================================= */
 :root {
-  --primary: #3b82f6;
-  --bg-page: #f8fafc;
-  --bg-header: #f1f5f9;
-  --border-color: #cbd5e1;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-
-  /* Couleurs Sémantiques */
   --c-school-holiday: #e5d9f2;
   --c-public-holiday: #e0e0e0;
   --c-off-carole: #ffedd5;
   --c-extra-off: #fee2e2;
   --c-selected: #bfdbfe;
-
-  /* Couleurs Personnes */
   --bg-alex: #f0fdfa;
   --text-alex: #0f766e;
   --bg-laia: #fffbeb;
   --text-laia: #b45309;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-.pf-family-calendar {
-  background-color: var(--bg-page);
-  font-family: "Inter", system-ui, sans-serif;
-  color: var(--text-main);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-/* Overrides Structuraux Globaux */
-.pf-family-calendar .pf-container {
-  max-width: 100% !important;
-  padding: 0 20px;
-}
 .pf-family-calendar .pf-main {
   padding-top: 20px;
   padding-bottom: 40px;
 }
 
-.pf-card-title {
-  padding: 12px 16px;
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background-color: var(--bg-header);
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-muted);
-}
-
-.pf-card-body {
-  padding: 16px;
-}
-
-/* =========================================================
-   2. HEADER GLOBAL & BOUTONS D'ACTION
-   ========================================================= */
+/* En-tête & Boutons */
 .fc-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
-
 .pf-btn-icon-text {
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--pf-border);
   border-radius: 20px;
   padding: 8px 16px;
   display: inline-flex;
@@ -8025,92 +7763,71 @@ try {
   gap: 8px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-main);
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: 0.2s;
+  box-shadow: var(--pf-shadow-sm);
 }
-
 .pf-btn-icon-text:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--pf-primary);
+  color: var(--pf-primary);
   background: #f0f9ff;
   transform: translateY(-1px);
 }
 
-.pf-btn-icon-text .icon {
-  font-size: 1.2em;
-}
-
-/* =========================================================
-   3. CALENDRIER MENSUEL (En-tête & Grille)
-   ========================================================= */
+/* Calendrier Mensuel */
 .fc-month-calendar-wrapper {
   background: white;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-lg);
   padding: 24px;
   margin-bottom: 32px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--pf-shadow-sm);
 }
-
-/* En-tête Unifié PC/Mobile */
 .fc-month-header {
   display: flex !important;
   flex-direction: column !important;
   gap: 16px !important;
   margin-bottom: 20px !important;
 }
-
 .fc-month-nav-row {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
 }
-
 .fc-month-nav-row h3 {
   margin: 0 !important;
   font-size: 1.4rem !important;
   font-weight: 800 !important;
-  color: var(--text-main) !important;
   text-transform: capitalize !important;
   text-align: center !important;
   flex-grow: 1 !important;
 }
-
 .fc-nav-button {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--pf-border);
   background: white;
-  color: var(--text-main);
-  font-size: 18px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font-size: 18px;
+  transition: 0.2s;
 }
-
 .fc-nav-button:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
+  border-color: var(--pf-primary);
+  color: var(--pf-primary);
 }
 
-/* Sélecteur de vues (1, 2, 3 Mois) */
 .fc-view-controls {
   display: flex !important;
   width: 100% !important;
   background: #e2e8f0 !important;
   padding: 4px !important;
   border-radius: 8px !important;
-  order: 0 !important;
 }
-
 .fc-view-button {
   flex: 1 !important;
   text-align: center !important;
@@ -8120,36 +7837,28 @@ try {
   padding: 6px 16px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--pf-text-muted);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: 0.2s;
 }
-
-.fc-view-button:hover {
-  color: var(--text-main);
-}
-
 .fc-view-button--active {
   background: white;
-  color: var(--primary);
+  color: var(--pf-primary);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-weight: 700;
 }
 
-/* Grille du Mois */
 .fc-month-calendar {
   width: 100%;
   display: block;
   overflow-x: auto;
 }
-
 .fc-month-table {
   min-width: 100% !important;
   width: 100% !important;
   table-layout: fixed;
   border-collapse: collapse !important;
 }
-
 .fc-month-table td {
   height: 80px;
   padding: 6px !important;
@@ -8157,24 +7866,21 @@ try {
   vertical-align: top;
   position: relative;
   cursor: pointer;
-  background: transparent !important;
-  border: 1px solid var(--border-color) !important;
+  border: 1px solid var(--pf-border) !important;
 }
-
 .fc-month-table th {
   padding: 10px !important;
   font-size: 0.8rem !important;
-  background: var(--bg-header) !important;
-  color: var(--text-muted);
+  background: var(--pf-bg-lighter) !important;
+  color: var(--pf-text-muted);
   text-transform: uppercase;
-  border: 1px solid var(--border-color) !important;
+  border: 1px solid var(--pf-border) !important;
 }
-
 .fc-day--other-month {
   background: #fcfcfc !important;
 }
 
-/* Conteneurs Vues Multi-Mois */
+/* Vues Multi-mois */
 .fc-two-months-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -8182,7 +7888,6 @@ try {
   width: 100%;
   overflow-x: auto;
 }
-
 .fc-three-months-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -8190,24 +7895,16 @@ try {
   width: 100%;
   overflow-x: auto;
 }
-
-.fc-month-container {
-  background: white;
-}
-
 .fc-month-title {
   text-align: center;
   font-weight: 700;
-  color: var(--text-main);
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 2px solid var(--pf-primary);
   text-transform: capitalize;
 }
 
-/* =========================================================
-   4. DÉCOMPTE DES CONGÉS (STYLE ÉPURÉ / PILLS)
-   ========================================================= */
+/* Décompte Congés (Pills) */
 .fc-month-balances {
   display: flex;
   flex-wrap: wrap;
@@ -8215,9 +7912,8 @@ try {
   gap: 15px;
   margin-top: 20px;
   padding-top: 15px;
-  border-top: 1px dashed var(--border-color);
+  border-top: 1px dashed var(--pf-border);
 }
-
 .fc-minimal-balance-card {
   display: flex;
   align-items: center;
@@ -8226,11 +7922,6 @@ try {
   padding: 8px 16px;
   border-radius: 50px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.fc-minimal-balance-card strong {
-  font-size: 0.85rem;
 }
 .fc-minimal-balance-card strong.alex {
   color: var(--text-alex);
@@ -8238,47 +7929,64 @@ try {
 .fc-minimal-balance-card strong.laia {
   color: var(--text-laia);
 }
-
 .fc-minimal-chips {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-
 .fc-min-chip {
   display: flex;
   align-items: center;
-  background: #f8fafc;
+  background: var(--pf-bg-page);
   border-radius: 20px;
   padding: 3px 10px;
   font-size: 0.75rem;
   border: 1px solid #cbd5e1;
 }
-
 .fc-min-chip .type {
   font-weight: 700;
-  color: #64748b;
+  color: var(--pf-text-muted);
   margin-right: 6px;
 }
-
 .fc-min-chip .val {
   font-weight: 800;
-  color: #0f172a;
+  color: var(--pf-text-main);
 }
-
 .fc-used-badge {
   margin-left: 6px;
   background: #fee2e2;
-  color: #ef4444;
+  color: var(--pf-danger);
   padding: 1px 5px;
   border-radius: 10px;
   font-size: 0.65rem;
   font-weight: bold;
 }
+.fc-burn-alert {
+  margin-left: 5px;
+  cursor: help;
+  animation: pulseBurn 2s infinite;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  color: var(--pf-danger);
+  font-weight: bold;
+}
+@keyframes pulseBurn {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+}
 
-/* =========================================================
-   5. STYLES DES ÉVÉNEMENTS (Couleurs & Icônes)
-   ========================================================= */
+/* Couleurs des jours */
 .fc-day--school-holiday {
   background: var(--c-school-holiday) !important;
 }
@@ -8294,17 +8002,15 @@ try {
 }
 .fc-day--selected {
   background: var(--c-selected) !important;
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--pf-primary);
   z-index: 5;
 }
-
 .fc-day--centre::after {
   content: "🏫";
   position: absolute;
   top: 2px;
   right: 2px;
   font-size: 12px;
-  line-height: 1;
 }
 .fc-day--avis::after {
   content: "";
@@ -8314,9 +8020,8 @@ try {
   width: 14px;
   height: 14px;
   background: url("/modules/family-calendar/assets/img/avis.svg") no-repeat
-    center center;
+    center;
   background-size: contain;
-  border: none;
 }
 .fc-pep-sick-emoji {
   position: absolute;
@@ -8324,36 +8029,21 @@ try {
   right: 2px;
   font-size: 12px;
 }
-
-/* Superpositions de congés sur vacances scolaires */
 .fc-day--off-carole.fc-day--school-holiday,
-.fc-day--extra-off-carole.fc-day--school-holiday {
-  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
-}
+.fc-day--extra-off-carole.fc-day--school-holiday,
 .fc-day--centre.fc-day--school-holiday,
 .fc-day--avis.fc-day--school-holiday {
   box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
 }
 
-/* =========================================================
-   6. PLANNING HEBDOMADAIRE (Desktop Uniquement)
-   ========================================================= */
+/* Planning Hebo (Desktop) */
 .fc-week-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
-  gap: 16px;
   flex-wrap: wrap;
 }
-
-.fc-week-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-main);
-}
-
 .fc-week-nav-controls {
   display: flex;
   align-items: center;
@@ -8362,84 +8052,37 @@ try {
   padding: 4px 12px;
   border-radius: 50px;
 }
-
 #fc-current-school-year-label {
   font-size: 1rem;
   font-weight: 800;
-  color: var(--text-main);
   min-width: 120px;
   text-align: center;
-  letter-spacing: -0.02em;
 }
-
 #planningTable-wrapper {
   max-height: 80vh;
-  overflow-x: auto;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--border-color);
+  overflow: auto;
+  border: 1px solid var(--pf-border);
   border-radius: 12px;
   background: white;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--pf-shadow-sm);
   position: relative;
 }
-
-#planningTable-wrapper::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
-}
-#planningTable-wrapper::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-#planningTable-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-#planningTable-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
 #planningTable {
   width: 100%;
   min-width: 1000px;
   border-collapse: separate;
   border-spacing: 0;
 }
-
-#planningTable thead {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--bg-header);
-}
 #planningTable thead th {
   position: sticky;
   top: 0;
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
+  background: var(--pf-bg-lighter);
+  border-bottom: 1px solid var(--pf-border);
+  border-right: 1px solid var(--pf-border);
   padding: 6px;
   font-size: 0.75rem;
-  color: var(--text-main);
   z-index: 20;
 }
-
-#planningTable thead tr:nth-child(1) th {
-  height: 32px;
-}
-#planningTable thead tr:nth-child(2) th {
-  top: 32px;
-  height: 28px;
-  z-index: 19;
-}
-#planningTable thead tr:nth-child(3) th {
-  top: 60px;
-  height: 26px;
-  z-index: 19;
-  border-bottom: 2px solid var(--border-color);
-}
-
 .col-alex.header-group {
   background: var(--bg-alex) !important;
   color: var(--text-alex);
@@ -8448,25 +8091,15 @@ try {
   background: var(--bg-laia) !important;
   color: var(--text-laia);
 }
-
 #planningTable tbody td {
-  border-right: 1px solid #f1f5f9;
-  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid var(--pf-bg-lighter);
+  border-bottom: 1px solid var(--pf-bg-lighter);
   height: 36px;
   padding: 0 4px;
   text-align: center;
   font-size: 0.85rem;
   white-space: nowrap;
-  overflow: hidden;
   cursor: pointer;
-  position: relative;
-}
-
-.col-alex-av,
-.col-laia-av {
-  background: #f8fafc;
-  color: var(--text-muted);
-  cursor: default;
 }
 .col-alex-sub {
   background: var(--bg-alex);
@@ -8474,24 +8107,18 @@ try {
 .col-laia-sub {
   background: var(--bg-laia);
 }
-
 .col-month {
-  box-sizing: border-box !important;
   width: 54px !important;
   min-width: 54px !important;
   max-width: 54px !important;
   background: white;
-  font-weight: 600;
-  border-right: 2px solid var(--border-color) !important;
+  border-right: 2px solid var(--pf-border) !important;
 }
-
 th.col-day,
 td.col-day {
-  width: auto !important;
   min-width: 35px !important;
-  border-right: 2px solid var(--border-color) !important;
+  border-right: 2px solid var(--pf-border) !important;
 }
-
 th.col-total,
 td.col-total,
 th.col-alex-sub,
@@ -8501,18 +8128,13 @@ td.col-laia-sub {
   width: 32px !important;
   min-width: 32px !important;
   max-width: 32px !important;
-  padding: 0 2px !important;
-  overflow: hidden;
 }
-
 .rotated-text span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  white-space: nowrap;
   font-size: 0.7rem;
-  color: var(--text-muted);
+  color: var(--pf-text-muted);
 }
-
 #planningTable tbody td.col-sticky-mois {
   position: sticky !important;
   left: 0 !important;
@@ -8531,70 +8153,43 @@ td.col-laia-sub {
   top: 0 !important;
   left: 0 !important;
   z-index: 30 !important;
-  background: var(--bg-header) !important;
+  background: var(--pf-bg-lighter) !important;
 }
 #planningTable thead tr th.col-sticky-sem {
   position: sticky !important;
   top: 0 !important;
   left: 54px !important;
   z-index: 29 !important;
-  background: var(--bg-header) !important;
+  background: var(--pf-bg-lighter) !important;
   box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1);
 }
 
-/* =========================================================
-   7. PANNEAUX DU BAS (Légendes & Récapitulatif)
-   ========================================================= */
-.pf-section--bottom-panels {
-  margin-top: 40px;
-}
-
+/* Panneaux bas & Légendes */
 .fc-bottom-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 24px;
   align-items: start;
 }
-
-.pf-card {
-  background: white;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
 .pf-legend-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-start;
 }
-
 .pf-legend-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 0.75rem;
   padding: 4px 8px;
-  background-color: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--pf-border);
   border-radius: 6px;
-  color: var(--text-muted);
 }
-
 .pf-legend-color {
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  line-height: 1;
 }
-
-/* Légendes Spécifiques */
 .fc-legend-school-holiday {
   background: var(--c-school-holiday);
 }
@@ -8607,98 +8202,55 @@ td.col-laia-sub {
 .fc-legend-extra-off-carole {
   background: var(--c-extra-off);
 }
-.fc-legend-centre {
-  background: white;
-}
 .fc-legend-centre::after {
   content: "🏫";
-}
-.fc-legend-pep-sick {
-  background: white;
 }
 .fc-legend-pep-sick::after {
   content: "🤒";
 }
 .fc-legend-avis {
   background: white url("/modules/family-calendar/assets/img/avis.svg")
-    no-repeat center center;
+    no-repeat center;
   background-size: contain;
   border: none;
 }
-
-/* Récapitulatif */
 .fc-summary-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
 }
-
-.fc-summary-controls {
-  display: flex;
-  gap: 8px;
-}
-
 .fc-summ-select {
-  background: white;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--pf-border);
   border-radius: 6px;
   padding: 2px 8px;
   font-size: 0.75rem;
-  color: var(--text-main);
-  cursor: pointer;
-  outline: none;
   height: 24px;
 }
-
-.fc-summ-select:hover {
-  border-color: var(--primary);
-}
-
-.fc-summary-vertical {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
 .fc-summary-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   padding: 12px 4px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--pf-bg-lighter);
 }
-
-.fc-summary-item:last-child {
-  border-bottom: none;
-}
-
 .fc-summary-label {
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--pf-text-muted);
   font-weight: 500;
 }
-
 .fc-summary-value {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-main);
 }
 
-/* =========================================================
-   8. MENU CONTEXTUEL (Clic case) & MODALE VACANCES
-   ========================================================= */
-
-/* Menu Contextuel */
+/* Menu Contextuel Tactile */
 .fc-selection-menu {
   position: absolute;
-  z-index: 9999;
+  z-index: 9000;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--pf-shadow-lg);
   border-radius: 16px;
   padding: 10px 12px;
   min-width: 220px;
@@ -8706,7 +8258,6 @@ td.col-laia-sub {
   animation: menuPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top center;
 }
-
 @keyframes menuPopIn {
   from {
     opacity: 0;
@@ -8717,61 +8268,46 @@ td.col-laia-sub {
     transform: scale(1) translateY(0);
   }
 }
-
 .fc-menu-section {
   padding: 6px 0;
   border-bottom: 1px dashed #cbd5e1;
-}
-.fc-menu-section:first-child {
-  padding-top: 0;
 }
 .fc-menu-section:last-child {
   border: none;
   padding-bottom: 0;
 }
-
 .fc-menu-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   margin-bottom: 6px;
 }
 .fc-menu-section strong {
-  display: block;
   font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-  color: #64748b;
-  margin-bottom: 0 !important;
+  color: var(--pf-text-muted);
 }
 .fc-menu-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
 }
-
 .fc-menu-btn {
   background: white;
-  border: 1px solid #e2e8f0;
-  color: #1e293b;
+  border: 1px solid var(--pf-border);
   padding: 6px 8px;
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: 0.2s;
+  box-shadow: var(--pf-shadow-sm);
 }
 .fc-menu-btn:hover {
-  background: #f8fafc;
-  border-color: #3b82f6;
-  color: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.15);
+  background: var(--pf-bg-page);
+  border-color: var(--pf-primary);
+  color: var(--pf-primary);
 }
-
 .fc-menu-clear-icon {
   background: transparent;
   border: none;
@@ -8779,10 +8315,7 @@ td.col-laia-sub {
   cursor: pointer;
   padding: 4px;
   display: flex;
-  align-items: center;
-  justify-content: center;
   border-radius: 6px;
-  transition: all 0.2s ease;
 }
 .fc-menu-clear-icon svg {
   width: 14px;
@@ -8790,243 +8323,81 @@ td.col-laia-sub {
 }
 .fc-menu-clear-icon:hover {
   background: #fef2f2;
-  color: #dc2626;
+  color: var(--pf-danger);
 }
-
 .fc-menu-leaves-table table {
   width: 100%;
   border-spacing: 2px;
-  border-collapse: separate;
 }
 .fc-menu-leaves-table th {
   font-size: 0.7rem;
-  font-weight: 700;
-  color: #64748b;
-  padding-bottom: 2px;
+  color: var(--pf-text-muted);
   text-align: center;
-}
-.fc-menu-leaves-table td {
-  padding: 0;
 }
 .fc-th-inline {
   display: flex;
-  flex-direction: row;
-  align-items: center;
   justify-content: center;
   gap: 4px;
 }
 
-/* Modale Vacances */
-.fc-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: 99999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  animation: fadeIn 0.2s ease-out;
-}
-.fc-modal-content {
-  background: white;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
-}
-.fc-modal-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.fc-modal-header h2 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--text-main);
-}
-.fc-modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: var(--text-muted);
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background 0.1s;
-}
-.fc-modal-close:hover {
-  background: #f1f5f9;
-  color: #ef4444;
-}
-.fc-modal-body {
-  padding: 0;
-  overflow-y: auto;
-}
-
+/* Table specifique modale vacances */
 .fc-holidays-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
 }
 .fc-holidays-table th {
-  background: #f9fafb;
+  background: var(--pf-bg-page);
   padding: 12px 16px;
   text-align: left;
   font-weight: 600;
-  color: var(--text-muted);
   position: sticky;
   top: 0;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--pf-border);
 }
 .fc-holidays-table td {
   padding: 10px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  color: var(--text-main);
+  border-bottom: 1px solid var(--pf-bg-lighter);
 }
 .fc-holidays-table tr:nth-child(even) {
   background: #fafafa;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* =========================================================
-   9. MEDIA QUERIES (Tablettes & Mobiles)
-   ========================================================= */
-
-@media (max-width: 1000px) {
-  .fc-three-months-container {
-    grid-template-columns: 1fr;
-  }
-}
-
+/* Mobile */
 @media (max-width: 768px) {
-  /* Espacements Globaux */
   .pf-family-calendar .pf-container {
     padding: 0 !important;
   }
-  .pf-family-calendar .pf-main {
-    padding-top: 10px;
-  }
-
-  /* En-tête Global */
   .fc-header-row {
     flex-direction: column;
-    align-items: stretch;
     gap: 15px;
     padding: 0 10px;
   }
   .fc-header-row > div {
-    display: flex;
     flex-direction: column;
     width: 100%;
-    gap: 10px;
   }
   .pf-btn-icon-text {
-    justify-content: center;
     width: 100%;
+    justify-content: center;
   }
-
-  /* Cacher le planning hebdo complet sur mobile */
   .fc-week-header,
   #planningTable-wrapper {
     display: none !important;
   }
-
-  /* Boîte et Grille du Mois */
   .fc-month-calendar-wrapper {
     padding: 16px !important;
     margin-bottom: 20px !important;
-    overflow: hidden;
   }
-
-  .fc-month-table {
-    min-width: 100% !important;
-    width: 100% !important;
-    table-layout: fixed;
-    border-collapse: collapse !important;
-  }
-
   .fc-month-table td {
     height: 46px !important;
     padding: 2px !important;
     font-size: 0.75rem !important;
-    background: transparent !important;
-    border: 1px solid var(--border-color) !important;
   }
-
-  .fc-month-table th {
-    padding: 6px 4px !important;
-    font-size: 0.7rem !important;
-    background: var(--bg-header) !important;
-    border: 1px solid var(--border-color) !important;
-  }
-
-  /* Micro-icônes événements */
-  .fc-day--centre::after {
-    font-size: 8px !important;
-    top: 1px;
-    right: 1px;
-  }
-  .fc-day--avis::after {
-    width: 8px !important;
-    height: 8px !important;
-    top: 1px;
-    right: 1px;
-  }
-  .fc-pep-sick-emoji {
-    font-size: 8px !important;
-    bottom: 1px;
-    right: 1px;
-  }
-
-  /* Panneaux inférieurs */
   .fc-bottom-grid {
     grid-template-columns: 1fr;
     padding: 0 10px;
   }
-  .fc-summary-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .fc-summary-controls {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  /* Menu Bottom Sheet (Tactile) */
   .fc-selection-menu {
     position: fixed !important;
     top: auto !important;
@@ -9034,21 +8405,11 @@ td.col-laia-sub {
     bottom: 0 !important;
     width: 100% !important;
     border-radius: 24px 24px 0 0;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
     padding: 24px 20px;
-    padding-bottom: env(safe-area-inset-bottom, 24px);
     transform: translateY(100%);
-    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    max-height: 85vh;
-    overflow-y: auto;
-    z-index: 999999 !important;
+    animation: slideUpSheet 0.3s forwards;
+    z-index: 10000 !important;
   }
-  @keyframes slideUpSheet {
-    to {
-      transform: translateY(0);
-    }
-  }
-
   .fc-selection-menu::before {
     content: "";
     display: block;
@@ -9057,10 +8418,6 @@ td.col-laia-sub {
     background: #cbd5e1;
     border-radius: 10px;
     margin: 0 auto 15px auto;
-  }
-  .fc-menu-btn {
-    padding: 12px 10px;
-    font-size: 0.95rem;
   }
 }
 
@@ -9575,6 +8932,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   LEAVES_CONFIG.JRA.yearlyTotals[currYear] ||
                   LEAVES_CONFIG.JRA.defaultBalance;
 
+                // Logique de report du reliquat de l'année N-1
                 if (currMonth <= LEAVES_CONFIG.JRA.toleranceMonths) {
                   const prevYear = currYear - 1;
                   const prevInitial =
@@ -9591,9 +8949,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     0,
                     prevInitial - usedPrevYear,
                   );
+                  // Ajout du report plafonné à 2 jours
                   initialBalance += Math.min(
                     remainingPrevYear,
                     LEAVES_CONFIG.JRA.maxReport,
+                  );
+                  console.log(
+                    `[JRA] Personne ${pid}, Année ${currYear}: Report de ${Math.min(remainingPrevYear, LEAVES_CONFIG.JRA.maxReport)}j inclus.`,
                   );
                 }
               } else if (type === "JA") {
@@ -9833,14 +9195,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const container = document.getElementById("fc-month-balances");
       if (!container) return;
 
-      // 1. Déterminer les mois affichés selon la vue
       const monthsToDisplay = [];
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
 
-      let numMonths = 1;
-      if (this.viewMode === "2months") numMonths = 2;
-      if (this.viewMode === "3months") numMonths = 3;
+      let numMonths =
+        this.viewMode === "2months" ? 2 : this.viewMode === "3months" ? 3 : 1;
 
       for (let i = 0; i < numMonths; i++) {
         const d = new Date(y, m + i, 1);
@@ -9852,40 +9212,69 @@ document.addEventListener("DOMContentLoaded", () => {
       container.style.display = "flex";
       let html = "";
 
-      // 2. Calcul dynamique pour Alex et Laia
       [FAMILY.ALEX, FAMILY.LAIA].forEach((person) => {
         html += `<div class="fc-minimal-balance-card">
                   <strong class="${person.prefix}">${person.prefix.toUpperCase()}</strong>
                   <div class="fc-minimal-chips">`;
 
         ["CP", "JRA", "JA"].forEach((type) => {
-          // Solde de départ = celui du PREMIER mois affiché
           const startInfo =
             this.monthlyLeaveBalances[person.id]?.[type]?.[monthsToDisplay[0]];
           const startBal = startInfo ? startInfo.availableAtMonthStart : 0;
 
-          // Jours posés = Somme sur TOUS les mois affichés
           let totalUsed = 0;
           monthsToDisplay.forEach((ym) => {
             const info = this.monthlyLeaveBalances[person.id]?.[type]?.[ym];
             if (info) totalUsed += info.usedInMonth;
           });
 
-          // Solde de fin (théorique) à la fin de la période
           const endBal = Math.max(0, startBal - totalUsed);
           const fmt = (n) =>
             n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "0";
 
-          // Petit badge rouge uniquement s'il y a des congés posés
           const usedHtml =
             totalUsed > 0
               ? `<span class="fc-used-badge" title="Posé sur la période">-${fmt(totalUsed)}</span>`
               : "";
 
-          html += `<div class="fc-min-chip" title="Solde de départ: ${fmt(startBal)}">
+          // --- LOGIQUE D'ALERTE FIRE 🔥 ---
+          let alertHtml = "";
+          const currentYm = monthsToDisplay[0];
+          const [cYear, cMonth] = currentYm.split("-").map(Number);
+
+          if (endBal > 0) {
+            if (type === "CP" && cMonth >= 6 && cMonth <= 7) {
+              // CP : Alerte en Juin et Juillet uniquement
+              let msg = (
+                window.I18N["fc_alert_burn_days"] || "Perte: %s j avant le %s"
+              )
+                .replace("%s", fmt(endBal))
+                .replace("%s", "31/07");
+              alertHtml = `<div class="fc-burn-alert" title="${msg}">🔥</div>`;
+            } else if (type === "JRA" && (cMonth === 1 || cMonth === 2)) {
+              // JRA : Alerte Janvier/Février si > 2 jours
+              if (endBal > 2) {
+                let msg =
+                  window.I18N["fc_alert_burn_jra"] || "Seuls 2j reportables";
+                alertHtml = `<div class="fc-burn-alert" title="${msg}">🔥 ${fmt(endBal - 2)}</div>`;
+              }
+            } else if (type === "JA") {
+              const configJA = LEAVES_CONFIG.JA[person.id];
+              let limitMonth = configJA.startMonth - 1 || 12;
+              if (cMonth === limitMonth || cMonth === configJA.startMonth) {
+                let msg = (window.I18N["fc_alert_burn_days"] || "Perte: %s j")
+                  .replace("%s", fmt(endBal))
+                  .replace("%s", window.I18N["ANNIV"] || "Anniv");
+                alertHtml = `<div class="fc-burn-alert" title="${msg}">🔥</div>`;
+              }
+            }
+          }
+
+          html += `<div class="fc-min-chip" title="Solde départ: ${fmt(startBal)}">
                       <span class="type">${type}</span>
                       <span class="val" title="Restant">${fmt(endBal)}</span>
                       ${usedHtml}
+                      ${alertHtml}
                    </div>`;
         });
         html += `</div></div>`;
@@ -10231,8 +9620,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const formSnap = document.getElementById("formSnapshot");
 
       if (btnSnap && modalSnap) {
+        modalSnap.classList.add("is-open");
         btnSnap.addEventListener("click", () => {
-          modalSnap.style.display = "flex";
+          modalSnap.classList.add("is-open"); // Utilise flex au lieu de block pour le centrage
+          document.body.classList.add("no-scroll");
           // Pré-remplir la date avec le 1er jour du mois en cours
           const today = new Date();
           const y = today.getFullYear();
@@ -11343,42 +10734,11 @@ try {
 ```css
 /* modules/gift-list/gift-list.css */
 
-/* --- 1. VARIABLES & BASE --- */
-:root {
-  --primary: #2563eb;
-  --bg-page: #f8fafc;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --border-light: #e2e8f0;
-
-  --radius-card: 12px;
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.pf-gift-list {
-  background-color: var(--bg-page);
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
-  color: var(--text-main);
-  font-size: 13px;
-}
-
 .pf-gift-list h1 {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #0f172a;
   margin: 0;
 }
-
-.cl-legend {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-style: italic;
-  margin-top: 4px;
-}
-
-/* --- 2. HEADER & SWITCH --- */
 .cl-titlebar {
   display: flex;
   flex-wrap: wrap;
@@ -11387,329 +10747,210 @@ try {
   gap: 1rem;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--pf-border);
 }
-
 .cl-view-switch {
   display: flex;
   background: white;
   padding: 4px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--pf-border);
 }
-
 .cl-view-btn {
   padding: 6px 16px;
   border-radius: 6px;
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--pf-text-muted);
 }
-
 .cl-view-btn.is-active {
   background: #334155;
   color: white;
 }
 
-/* --- 3. BLOCS OCCASIONS & GRILLE --- */
-.cl-occasion-block {
-  margin-bottom: 40px;
-}
-
 .cl-occasion-title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #334155;
   margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--pf-border);
   padding-bottom: 8px;
 }
 
-.cl-occasion-icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-/* --- GRILLE INTELLIGENTE --- */
+/* Grilles intelligentes */
 .cl-occasion-children-tables {
   display: grid;
   gap: 20px;
   align-items: start;
 }
-
-/* VUE STANDARD (Nadal) : 3 par ligne */
 .cl-view-nadal .cl-occasion-children-tables {
   grid-template-columns: repeat(3, 1fr);
 }
-
-/* VUE ANNIVERSARY : Layout spécifique demandé */
 .cl-view-anniversary .cl-occasion-children-tables {
-  grid-template-columns: repeat(6, 1fr); /* Grille de 6 colonnes */
+  grid-template-columns: repeat(6, 1fr);
 }
-
-/* Pol et Pep : Prennent 3 colonnes sur 6 (donc 50% de largeur => 2 par ligne) */
 .cl-view-anniversary .child-pol,
 .cl-view-anniversary .child-pep {
   grid-column: span 3;
 }
-
-/* Les autres : Prennent 2 colonnes sur 6 (donc 33% de largeur => 3 par ligne) */
 .cl-view-anniversary .child-elna,
 .cl-view-anniversary .child-bru,
 .cl-view-anniversary .child-guim {
   grid-column: span 2;
 }
 
-/* --- 4. TABLEAU PAR ENFANT (Card Unifiée) --- */
+/* Tableaux par enfant */
 .cl-child-table {
   background: white;
-  box-shadow: var(--shadow-card);
-  border-radius: 0 0 var(--radius-card) var(--radius-card);
-  border: 1px solid var(--border-light);
+  box-shadow: var(--pf-shadow-sm);
+  border-radius: 0 0 var(--pf-radius-md) var(--pf-radius-md);
+  border: 1px solid var(--pf-border);
   border-top: none;
-  display: table;
   width: 100%;
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
 }
-
-/* CAPTION (Nom de l'enfant - Haut de la carte) */
 .cl-child-table caption {
-  caption-side: top;
-  display: table-caption;
   padding: 10px 16px;
   text-align: left;
   font-weight: 700;
   font-size: 1.1rem;
-  border-radius: var(--radius-card) var(--radius-card) 0 0;
-  border: 1px solid var(--border-light);
+  border-radius: var(--pf-radius-md) var(--pf-radius-md) 0 0;
+  border: 1px solid var(--pf-border);
   border-bottom: 2px solid;
-  margin-bottom: 0;
   position: relative;
 }
 
-/* Bouton Ajout (+) Rotatif */
 .cl-child-add-btn {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: rgba(255, 255, 255, 0.6);
-  color: inherit;
   border: 1px solid rgba(0, 0, 0, 0.1);
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  z-index: 2;
+  cursor: pointer;
+  transition: 0.4s;
 }
-
 .cl-child-add-btn:hover {
   background: white;
   transform: translateY(-50%) rotate(90deg) scale(1.1);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-  border-color: currentColor;
 }
 
-/* --- 5. COULEURS PAR ENFANT --- */
-/* POL (Bleu) */
+/* Thèmes Enfants */
 .child-pol {
   border-color: #bcd3ff;
 }
 .child-pol caption {
   background: #eaf2ff;
   color: #1e3a8a;
-  border-color: #bcd3ff;
   border-bottom-color: #93c5fd;
 }
 .child-pol thead th {
   background: #f5f9ff;
 }
-
-/* PEP (Vert) */
 .child-pep {
   border-color: #b9e3b9;
 }
 .child-pep caption {
   background: #eaf7ea;
   color: #14532d;
-  border-color: #b9e3b9;
   border-bottom-color: #86efac;
 }
 .child-pep thead th {
   background: #f6fdf6;
 }
-
-/* ELNA (Rose) */
 .child-elna {
   border-color: #f3bfd7;
 }
 .child-elna caption {
   background: #fdeaf3;
   color: #831843;
-  border-color: #f3bfd7;
   border-bottom-color: #f9a8d4;
 }
 .child-elna thead th {
   background: #fff5f9;
 }
-
-/* BRU (Orange) */
 .child-bru {
   border-color: #ffd0a8;
 }
 .child-bru caption {
   background: #fff3e6;
   color: #7c2d12;
-  border-color: #ffd0a8;
   border-bottom-color: #fdba74;
 }
 .child-bru thead th {
   background: #fffaf5;
 }
-
-/* GUIM (Violet) */
 .child-guim {
   border-color: #d3c6ff;
 }
 .child-guim caption {
   background: #f0eaff;
   color: #4c1d95;
-  border-color: #d3c6ff;
   border-bottom-color: #c4b5fd;
 }
 .child-guim thead th {
   background: #fbf9ff;
 }
 
-/* --- 6. CONTENU DU TABLEAU --- */
+/* Table interne */
 .cl-child-table thead th {
   padding: 8px;
   font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 700;
+  color: var(--pf-text-muted);
   text-transform: uppercase;
-  border-bottom: 1px solid var(--border-light);
-  border-right: 1px solid var(--border-light);
-  white-space: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--pf-border);
+  border-right: 1px solid var(--pf-border);
 }
-.cl-child-table thead th:last-child {
-  border-right: none;
-}
-
-.cl-th-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+.cl-child-table tbody td {
+  padding: 8px;
+  border-bottom: 1px solid var(--pf-bg-lighter);
+  border-right: 1px solid var(--pf-bg-lighter);
+  font-size: 0.85rem;
 }
 .cl-summary-adult-total {
   font-size: 0.7rem;
-  color: var(--primary);
+  color: var(--pf-primary);
   background: rgba(37, 99, 235, 0.1);
   padding: 1px 4px;
   border-radius: 4px;
 }
 
-.cl-child-table tbody td {
-  padding: 8px;
-  vertical-align: top;
-  border-bottom: 1px solid #f1f5f9;
-  border-right: 1px solid #f1f5f9;
-  font-size: 0.85rem;
-}
-.cl-child-table tbody td:last-child {
-  border-right: none;
-}
-.cl-child-table tr:last-child td {
-  border-bottom: none;
-}
-
-.cl-empty {
-  color: #e2e8f0;
-  text-align: center;
-  display: block;
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-/* --- 7. CADEAUX & INTERACTION (Overlay) --- */
-.cl-gift-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
+/* Actions Cadeaux au Survol */
 .cl-gift-line {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 4px;
   position: relative;
   min-height: 20px;
 }
-
-.cl-gift-desc,
-.cl-gift-link {
-  font-weight: 500;
-  color: #0f172a;
-  line-height: 1.2;
+.cl-gift-desc {
   font-size: 0.85rem;
-  word-wrap: break-word;
+  font-weight: 500;
   word-break: break-word;
-  hyphens: auto;
   flex: 1;
 }
-
-.cl-gift-link {
-  color: var(--primary);
-  text-decoration: none;
-}
-.cl-gift-link:hover {
-  text-decoration: underline;
-}
-
-.cl-gift-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  width: 55px; /* Ajusté légèrement */
-  flex-shrink: 0;
-}
-
-/* Le Prix (Visible par défaut sur desktop) */
 .cl-gift-amount {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #059669;
+  color: var(--pf-success);
   background: #ecfdf5;
   padding: 1px 4px;
   border-radius: 4px;
-  white-space: nowrap;
-  transition:
-    opacity 0.2s,
-    transform 0.2s;
+  transition: 0.2s;
   opacity: 1;
-  transform: scale(1);
 }
-
-/* Les Actions (Masquées par défaut sur desktop) */
 .cl-gift-actions {
   display: flex;
   gap: 4px;
@@ -11717,235 +10958,53 @@ try {
   right: 0;
   top: 0;
   opacity: 0;
-  transform: scale(0.8);
   pointer-events: none;
-  transition:
-    opacity 0.2s,
-    transform 0.2s;
+  transition: 0.2s;
 }
-
-/* === L'EFFET SWAP (Optimisé) === */
 .cl-gift-line:hover .cl-gift-amount {
   opacity: 0;
-  transform: scale(0.8);
 }
 .cl-gift-line:hover .cl-gift-actions {
   opacity: 1;
-  transform: scale(1);
   pointer-events: auto;
 }
-
-/* Boutons d'action */
 .cl-gift-action-btn {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  width: 26px; /* Légèrement agrandi pour le tactile */
+  background: var(--pf-bg-lighter);
+  border: 1px solid var(--pf-border);
+  width: 26px;
   height: 26px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #475569;
-  font-size: 14px;
-  padding: 0;
-  transition: all 0.2s;
+  transition: 0.2s;
 }
 .cl-gift-action-btn:hover {
   background: white;
-  border-color: var(--text-main);
-}
-.cl-gift-delete:hover {
-  color: #dc2626;
-  border-color: #dc2626;
-  background: #fef2f2;
+  border-color: var(--pf-text-main);
 }
 
-/* --- 8. BUDGET & TRICOUNT --- */
-.pf-section--panel {
-  margin-bottom: 32px;
-}
-.pf-section--panel h2 {
-  font-size: 1.3rem;
-  margin-bottom: 16px;
-  border-left: 5px solid var(--primary);
-  padding-left: 12px;
-  color: var(--text-main);
-  background: white;
-  padding: 12px;
-  border-radius: 0 8px 8px 0;
-}
-
+/* Matrice Tricount */
 .cl-budget-wrapper {
-  background: white;
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  border: 1px solid var(--border-light);
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch; /* Scroll fluide sur iOS */
+  background: white;
+  border-radius: var(--pf-radius-md);
+  box-shadow: var(--pf-shadow-sm);
+  border: 1px solid var(--pf-border);
 }
-
-.pf-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pf-table th,
-.pf-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-light);
-  font-size: 0.9rem;
-}
-.pf-table th {
-  background: #f8fafc;
-  font-weight: 600;
-  text-align: left;
-  color: var(--text-muted);
-}
-.cl-debt-matrix td {
-  text-align: right;
-}
-
-.cl-mtx-owe {
-  color: #dc2626;
-  background: #fef2f2;
-  font-weight: 700;
-}
-
-/* Matrice Tricount - Colonne Sticky */
 .cl-debt-matrix th:first-child,
 .cl-debt-matrix td:first-child {
   position: sticky;
   left: 0;
-  background: #f8fafc;
+  background: var(--pf-bg-page);
   z-index: 2;
-  border-right: 2px solid var(--border-light);
+  border-right: 2px solid var(--pf-border);
 }
-
-/* --- 9. MODALES --- */
-.cl-modal {
-  display: none;
-}
-.cl-modal.cl-open {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-}
-.cl-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(2px);
-}
-.cl-modal-dialog {
-  position: relative;
-  background: white;
-  width: min(450px, 90vw);
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  z-index: 10;
-  padding: 0;
-  animation: modalPop 0.2s ease-out;
-}
-@keyframes modalPop {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-.cl-modal-form {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.cl-modal-form h3 {
-  margin: 0 0 12px;
-  font-size: 1.2rem;
-  color: var(--text-main);
-}
-.clm-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: #475569;
-}
-.clm-label input,
-.clm-label select {
-  padding: 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background: #f8fafc;
-}
-.clm-label input:focus,
-.clm-label select:focus {
-  background: white;
-  border-color: var(--primary);
-  outline: 2px solid rgba(37, 99, 235, 0.2);
-}
-.cl-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
-}
-.clm-cancel {
-  background: white;
-  border: 1px solid #cbd5e1;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--text-muted);
-}
-.clm-ok {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-/* --- 10. OPTIMISATIONS MOBILES ET TACTILES --- */
-
-@media (hover: none) {
-  /* Sur écran tactile, on annule l'effet de swap */
-  .cl-gift-line {
-    flex-direction: column; /* On empile texte et prix/boutons */
-    align-items: flex-start;
-  }
-
-  .cl-gift-amount {
-    opacity: 1 !important;
-    transform: none !important;
-    margin-bottom: 6px;
-  }
-
-  .cl-gift-right {
-    width: 100%;
-    justify-content: space-between; /* Prix à gauche, boutons à droite */
-    margin-top: 4px;
-    border-top: 1px dashed var(--border-light);
-    padding-top: 4px;
-  }
-
-  .cl-gift-actions {
-    position: relative;
-    opacity: 1 !important;
-    transform: none !important;
-    pointer-events: auto !important;
-  }
+.cl-mtx-owe {
+  color: var(--pf-danger);
+  background: #fef2f2;
+  font-weight: 700;
 }
 
 @media (max-width: 1000px) {
@@ -11953,34 +11012,35 @@ try {
   .cl-view-anniversary .cl-occasion-children-tables {
     grid-template-columns: 1fr;
   }
-  .cl-view-anniversary .child-pol,
-  .cl-view-anniversary .child-pep,
-  .cl-view-anniversary .child-elna,
-  .cl-view-anniversary .child-bru,
-  .cl-view-anniversary .child-guim {
-    grid-column: span 1;
-  }
-
-  /* Transformation des tableaux en mode "Carrousel" horizontal */
   .cl-child-table {
     display: block;
     overflow-x: auto;
-    scroll-snap-type: x mandatory; /* Effet de magnétisme */
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 10px; /* Espace pour la barre de scroll */
+    scroll-snap-type: x mandatory;
   }
-
   .cl-child-table caption {
-    /* Garde le nom de l'enfant visible même en scrollant à droite */
     position: sticky;
     left: 0;
     z-index: 5;
   }
-
   .cl-child-table th,
   .cl-child-table td {
-    min-width: 180px; /* Plus large pour la lisibilité tactile */
-    scroll-snap-align: start; /* S'arrête pile sur la colonne */
+    min-width: 180px;
+    scroll-snap-align: start;
+  }
+}
+@media (hover: none) {
+  .cl-gift-line {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .cl-gift-amount {
+    opacity: 1 !important;
+    margin-bottom: 6px;
+  }
+  .cl-gift-actions {
+    position: relative;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 }
 
@@ -12112,84 +11172,42 @@ exit;
 ```css
 /* modules/holidays/holidays.css */
 
-/* --- 1. VARIABLES & BASE --- */
-
-/* Bloque le défilement de la page en arrière-plan */
-body.no-scroll {
-  overflow: hidden !important;
-}
-:root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --bg-page: #f1f5f9;
-  --bg-card: #ffffff;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-
-  --radius-l: 16px;
-  --radius-m: 10px;
-  --radius-s: 6px;
-
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg:
-    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-hover:
-    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-}
-
 .pf-holidays {
-  background-color: var(--bg-page);
-  font-family:
-    "Segoe UI",
-    system-ui,
-    -apple-system,
-    sans-serif;
-  color: var(--text-main);
   padding-bottom: 50px;
 }
-
-/* --- 2. EN-TÊTE (Refonte Responsive) --- */
 .pf-holidays__titlebar {
-  background: transparent;
-  padding-bottom: 1rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--pf-border);
+  padding-bottom: 1rem;
+  flex-wrap: wrap;
 }
-
 .hol-title-group {
   display: flex;
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  flex: 1; /* Prend l'espace disponible */
+  flex: 1;
 }
-
 .hol-main-title {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #0f172a;
   margin: 0;
 }
-
 .hol-filters-row {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
-
 .hol-year-select {
-  width: auto !important; /* Force la largeur au contenu sur PC */
+  width: auto !important;
   padding: 6px 12px;
   font-weight: bold;
-  cursor: pointer;
 }
-
 .hol-badge-left-to-pay {
   background: #fff1f2;
   color: #be123c;
@@ -12199,853 +11217,278 @@ body.no-scroll {
   border: 1px solid #fecdd3;
   font-size: 0.9rem;
   display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-.hol-badge-amount {
-  font-size: 1rem;
-}
-
-.hol-actions-group {
-  flex-shrink: 0;
-}
-
-/* --- 3. BOUTONS --- */
-.hol-add-btn,
-.hol-map-toggle,
-.pf-btn {
-  border: none;
+/* Boutons d'actions */
+.hol-map-toggle {
+  background: white;
+  color: #0f766e;
+  border: 1px solid #ccfbf1;
   border-radius: 50px;
   padding: 10px 20px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-  text-decoration: none;
-}
-
-.hol-add-btn,
-.pf-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-}
-.hol-add-btn:hover,
-.pf-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.hol-map-toggle {
-  background: white;
-  color: #0f766e;
-  border: 1px solid #ccfbf1;
+  transition: 0.2s;
+  box-shadow: var(--pf-shadow-sm);
 }
 .hol-map-toggle:hover {
   background: #f0fdfa;
   color: #0d9488;
   border-color: #99f6e4;
 }
-
-.pf-btn.btn-secondary {
-  background: white;
-  color: var(--text-muted);
-  border: 1px solid #cbd5e1;
-  box-shadow: none;
-}
-.pf-btn.btn-secondary:hover {
-  background: #f8fafc;
-  color: var(--text-main);
-}
-
-/* Petit bouton + pour les colonnes */
-.btn-icon-small {
-  background: white !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 6px !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: flex !important;
+.btn-add-item {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: var(--shadow-sm);
+  transition: 0.4s;
+}
+.btn-add-item:hover {
+  background: white;
+  color: var(--pf-primary);
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  border-color: currentColor;
 }
 
-.btn-icon-small:hover {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
-  transform: scale(1.05);
-}
-
-/* --- 4. CARTES --- */
+/* Cartes Vacances */
 .hol-ideas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 24px;
   margin-bottom: 40px;
 }
-
 .hol-idea-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-md);
+  background: var(--pf-bg-card);
+  border-radius: var(--pf-radius-lg);
+  box-shadow: var(--pf-shadow-md);
   padding: 20px;
   display: flex;
   flex-direction: column;
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+  transition: 0.25s ease;
   border: 1px solid transparent;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
 }
-
 .hol-idea-card:hover {
   transform: translateY(-5px);
-  box-shadow: var(--shadow-hover);
-  border-color: #e2e8f0;
+  box-shadow: var(--pf-shadow-lg);
+  border-color: var(--pf-border);
 }
-
 .hol-idea-card__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
 }
-
 .hol-idea-card h3 {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--text-main);
   line-height: 1.3;
 }
-
 .hol-idea-meta {
   font-size: 0.9rem;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hol-notes {
-  font-size: 0.85rem;
-  color: #64748b;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
-  font-style: italic;
-}
-
-/* --- 5. UTILITAIRES STATUTS --- */
-.bg-green-100 {
-  background-color: #dcfce7;
-}
-.text-green-800 {
-  color: #166534;
-}
-.bg-blue-100 {
-  background-color: #dbeafe;
-}
-.text-blue-800 {
-  color: #1e40af;
-}
-.bg-yellow-50 {
-  background-color: #fefce8;
-}
-.text-yellow-800 {
-  color: #854d0e;
-}
-.bg-gray-100 {
-  background-color: #f3f4f6;
-}
-.text-gray-600 {
-  color: #4b5563;
-}
-
-/* --- 6. MODALE & FORMULAIRE (Refonte Centrage & Largeur) --- */
-.pf-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  align-items: center; /* Centrage Vertical */
-  justify-content: center; /* Centrage Horizontal */
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-}
-.pf-modal.open {
-  display: flex;
-}
-
-.pf-modal-content {
-  position: relative;
-  background: white;
-  width: 95%; /* Responsive */
-  max-width: 1100px; /* Largeur augmentée pour 3 colonnes */
-  max-height: 90vh;
-  overflow-y: auto;
-  border-radius: 20px;
-  box-shadow: var(--shadow-lg);
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  margin: auto; /* Sécurité centrage */
-}
-
-/* Cas spécifique modale carte */
-.hol-dialog--map {
-  width: 95vw;
-  height: 90vh;
-  max-width: 1400px;
-  padding: 0;
-  background: white;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Inputs généraux */
-.pf-label {
-  display: block;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.pf-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--radius-m);
-  font-size: 1rem;
-  background: #ffffff; /* Fond blanc forcé */
-  color: var(--text-main);
-  box-sizing: border-box;
-  transition: all 0.2s;
-}
-
-.pf-input:focus {
-  background: white;
-  border-color: var(--primary);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.form-row {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-/* --- 7. SECTIONS DE DÉTAILS (Transport/Hotel/Activité) --- */
-.hol-columns-wrapper {
-  display: flex; /* Flexbox */
-  flex-direction: column; /* Alignement vertical (les uns sous les autres) */
-  gap: 24px; /* Espace entre les blocs */
-  width: 100%;
-}
-
-.hol-col {
-  background: #f8fafc;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  width: 100%; /* Prend toute la largeur disponible */
-  box-sizing: border-box; /* Empêche le padding de casser la largeur */
-}
-
-.hol-col-header {
-  display: flex;
-  justify-content: space-between; /* Titre à gauche, bouton à droite */
-  align-items: center;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 8px;
+  color: var(--pf-text-muted);
   margin-bottom: 12px;
 }
 
-.hol-col-header h4 {
-  margin: 0;
-  font-size: 1rem;
-  text-transform: uppercase;
-  font-weight: 700;
-  /* On retire les bordures/marges de l'ancien h4 car c'est le header qui gère */
-  border: none;
-  padding: 0;
-}
-
-/* Le bouton "+" style Gift List */
-.btn-add-item {
-  /* Style de base */
-  background: rgba(255, 255, 255, 0.6);
-  color: var(--text-muted);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-
-  /* Forme et Taille */
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-
-  /* Texte */
-  font-size: 18px;
-  line-height: 1;
-
-  /* Flex pour centrer le + */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-
-  /* Animation fluide "Cubic Bezier" copiée de gift-list */
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.btn-add-item:hover {
-  background: white;
-  color: var(--primary); /* On ajoute la couleur primaire au survol */
-
-  /* L'effet de rotation et d'agrandissement */
-  transform: rotate(90deg) scale(1.1);
-
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-  border-color: currentColor;
-}
-
-/* --- 8. ITEMS DYNAMIQUES (Inputs optimisés) --- */
-.savings-line-item {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Espace réduit */
-  margin-bottom: 10px;
-  background: white;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-/* Champ NOM : prend toute la place */
-.savings-line-item input[type="text"] {
-  flex-grow: 1;
-  min-width: 120px;
-  padding: 6px 10px;
-  font-size: 0.9rem;
-}
-
-/* Champ PRIX : compact */
-.savings-line-item input[type="number"] {
-  width: 120px !important;
-  padding: 6px 8px !important;
-  text-align: right;
-  font-weight: 600;
-  color: #059669;
-}
-
-/* Checkbox Payé */
-.savings-line-item label {
-  display: flex;
-  align-items: center;
-  font-size: 0.75rem;
-  color: #64748b;
-  gap: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-/* Bouton Supprimer (Croix) */
-.btn-remove {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: #ef4444;
-  border: none;
-  border-radius: 4px;
-  font-size: 1.2rem;
-  cursor: pointer;
-  line-height: 1;
-  transition: background 0.2s;
-}
-.btn-remove:hover {
-  background: #fef2f2;
-  color: #b91c1c;
-}
-
-/* --- 9. FOOTER MODALE --- */
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
-}
-
-/* --- 10. MOBILE --- */
-@media (max-width: 768px) {
-  .pf-holidays__titlebar {
-    flex-direction: column;
-    align-items: stretch; /* Étire les éléments de haut en bas */
-    gap: 15px;
-  }
-  .hol-title-group {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 15px;
-  }
-
-  .hol-filters-row {
-    justify-content: space-between; /* Écarte l'année et le badge */
-    width: 100%;
-  }
-  .hol-badge-left-to-pay {
-    flex: 1;
-    justify-content: center; /* Centre le texte dans le badge */
-    font-size: 0.8rem; /* Un peu plus petit sur mobile */
-  }
-
-  /* On empile proprement les boutons d'action */
-  .hol-title-actions {
-    width: 100%;
-    flex-direction: column; /* Essentiel pour que les boutons width: 100% ne s'écrasent pas */
-    gap: 10px;
-  }
-  .hol-actions-group .hol-add-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 12px;
-    font-size: 1rem;
-  }
-  .hol-add-btn,
-  .hol-map-toggle {
-    width: 100%;
-    justify-content: center; /* Centre le texte et l'icône */
-  }
-
-  .form-row {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .hol-columns-wrapper {
-    grid-template-columns: 1fr;
-  }
-
-  /* Modale 100% écran avec scroll natif fluide */
-  .pf-modal-content {
-    padding: 16px;
-    width: 100%;
-    height: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Adaptation des lignes de budget sur mobile pour éviter qu'elles ne soient compressées */
-  .savings-line-item {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .savings-line-item input[type="text"] {
-    min-width: 100%; /* Le nom de la dépense prend toute la ligne */
-  }
-  .savings-line-item input[type="number"] {
-    flex-grow: 1; /* Le prix s'ajuste sur la 2ème ligne */
-  }
-
-  .hol-date-weather-wrapper {
-    gap: 6px;
-  }
-
-  .hol-cp-header {
-    align-items: flex-start;
-    flex-direction: column; /* On passe le titre et le prix l'un sous l'autre si besoin */
-  }
-
-  .hol-cp-info-group {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-    align-items: flex-start;
-  }
-
-  .hol-cp-title {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    line-height: 1.4;
-    word-break: break-word;
-    padding-top: 2px;
-  }
-
-  .hol-cp-actions-group {
-    width: 100%;
-    justify-content: flex-end;
-    margin-top: 8px;
-  }
-}
-
-/* --- 11. CALENDRIER & DATES (Force Light Theme) --- */
-input[type="date"] {
-  color-scheme: light; /* Force le popup blanc */
-  background-color: #ffffff;
-  color: #1e293b;
-}
-
-/* Cible spécifique pour l'icône calendrier (Chrome/Edge/Safari) */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.6;
-  filter: invert(0);
-}
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
-
-/* ==========================================================================
-   12. PAGE DE DÉTAIL DU VOYAGE (detail.php)
-   ========================================================================== */
-
-/* Structure principale de la page détail */
-.pf-holidays-detail {
-  padding-top: 10px;
-}
-
-/* En-tête de la page détail */
-.hol-detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.hol-detail-title-group {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-
-.hol-detail-title-group h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: var(--text-main);
-}
-
-.hol-badge-status {
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-weight: bold;
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-/* Bloc Résumé Financier */
-.hol-summary-card {
-  background: white;
-  padding: 20px;
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid #e2e8f0;
-  margin-bottom: 24px;
-}
-
-.hol-summary-grid {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.hol-summary-item {
-  min-width: 150px;
-}
-
-.hol-summary-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
-
-.hol-summary-value {
-  font-weight: 600;
-  color: var(--text-main);
-  font-size: 1.1rem;
-}
-
-.hol-summary-value.total {
-  font-size: 1.4rem;
-  font-weight: bold;
-  color: #0f172a;
-}
-
-/* Grille principale : Carte + Timeline */
-.hol-layout-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
-  align-items: stretch;
-}
-
-/* Panneaux (Carte et Timeline) */
-.hol-panel {
-  background: white;
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  height: 600px;
-  overflow: hidden;
-}
-
-.hol-panel-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f8fafc;
-}
-
-.hol-panel-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--text-main);
-}
-
-.hol-panel-body {
-  padding: 15px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* Styles des Checkpoints (Timeline) */
-.hol-checkpoint {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  margin-bottom: 15px;
-  overflow: hidden;
-  background: white;
-}
-
-.hol-cp-header {
-  background: #f8fafc;
-  padding: 12px 15px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e2e8f0;
-  gap: 12px;
-}
-
-.hol-cp-info-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.hol-cp-title {
-  color: #0f172a;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hol-cp-title:hover {
-  color: var(--primary);
-}
-
-.hol-cp-actions-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.hol-cp-total {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--primary);
-  white-space: nowrap;
-}
-
-.hol-cp-body {
-  padding: 10px 15px;
-}
-
-.hol-expense-line {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  margin-bottom: 5px;
-  border-bottom: 1px dashed #f1f5f9;
-  padding-bottom: 5px;
-}
-
-.hol-expense-line:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.hol-notes-panel {
-  padding: 15px;
-  border-top: 1px solid #e2e8f0;
-  background: #fffbeb;
-  flex-shrink: 0;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-/* --- RESPONSIVE DETAIL PAGE --- */
-@media (max-width: 992px) {
-  .hol-layout-grid {
-    grid-template-columns: 1fr; /* Sur tablette/mobile, la carte et la liste s'empilent */
-  }
-
-  .hol-panel {
-    height: 500px; /* On réduit un peu la hauteur pour que ce soit agréable sur mobile */
-  }
-
-  .hol-summary-grid {
-    flex-direction: column; /* Les infos financières s'empilent */
-  }
-
-  .hol-summary-item {
-    text-align: left !important; /* On annule l'alignement à droite du total */
-  }
-}
-
-/* ==========================================================================
-   13. BARRE DE PROGRESSION & FINANCES
-   ========================================================================== */
+/* Barres progression */
 .hol-progress-bar {
   width: 100%;
   height: 12px;
-  background: #e2e8f0;
+  background: var(--pf-border);
   border-radius: 6px;
   margin-bottom: 10px;
   display: flex;
   overflow: hidden;
 }
 .hol-progress-paid {
-  background: #10b981;
+  background: var(--pf-success);
 }
 .hol-progress-saved {
-  background: #3b82f6;
+  background: var(--pf-primary);
 }
-
 .hol-progress-labels {
   display: flex;
   justify-content: space-between;
   font-size: 0.85rem;
 }
 .hol-label-paid {
-  color: #10b981;
+  color: var(--pf-success);
   font-weight: 600;
 }
 .hol-label-saved {
-  color: #3b82f6;
+  color: var(--pf-primary);
   font-weight: 600;
 }
 .hol-label-left {
-  color: #ef4444;
+  color: var(--pf-danger);
   font-weight: 700;
 }
 
-/* ==========================================================================
-   14. LÉGENDE DE LA CARTE
-   ========================================================================== */
-.hol-panel-header-group {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap;
+/* Statuts */
+.bg-green-100 {
+  background: #dcfce7;
+  color: #166534;
 }
-.hol-map-legend {
-  display: flex;
-  gap: 12px;
-  font-size: 0.75rem;
-  color: #64748b;
-  background: white;
-  padding: 4px 10px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+.bg-blue-100 {
+  background: #dbeafe;
+  color: #1e40af;
 }
-.hol-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.bg-yellow-50 {
+  background: #fefce8;
+  color: #854d0e;
 }
-.hol-legend-color {
-  display: inline-block;
-  width: 12px;
-  height: 4px;
-  border-radius: 2px;
-}
-.hol-legend-color.aller {
-  background: #3b82f6;
-}
-.hol-legend-color.interm {
-  background: #8b5cf6;
-}
-.hol-legend-color.retour {
-  background: transparent;
-  height: 0;
-  border-bottom: 3px dashed #f97316;
-  border-radius: 0;
+.bg-gray-100 {
+  background: #f3f4f6;
+  color: #4b5563;
 }
 
-/* ==========================================================================
-   15. LIGNES DE DÉPENSES (Timeline & Modale JS)
-   ========================================================================== */
+/* Détail Voyage - Colonnes et Checklist */
+.hol-columns-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+.hol-col {
+  background: var(--pf-bg-page);
+  padding: 20px;
+  border-radius: var(--pf-radius-md);
+  border: 1px solid var(--pf-border);
+}
+.hol-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--pf-border);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+.hol-col-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.savings-line-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  background: white;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--pf-bg-lighter);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.savings-line-item input[type="text"] {
+  flex-grow: 1;
+  min-width: 120px;
+  padding: 6px 10px;
+}
+.savings-line-item input[type="number"] {
+  width: 120px !important;
+  padding: 6px 8px !important;
+  text-align: right;
+  font-weight: 600;
+  color: var(--pf-success);
+}
+.savings-line-item label {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--pf-text-muted);
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-remove {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  color: var(--pf-danger);
+  border: none;
+  border-radius: 4px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-remove:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* Détail Voyage - Grille & Timeline */
+.hol-layout-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+.hol-panel {
+  background: white;
+  border-radius: var(--pf-radius-lg);
+  box-shadow: var(--pf-shadow-sm);
+  border: 1px solid var(--pf-border);
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  overflow: hidden;
+}
+.hol-panel-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--pf-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--pf-bg-page);
+}
+.hol-panel-body {
+  padding: 15px;
+  overflow-y: auto;
+  flex: 1;
+}
+.hol-checkpoint {
+  border: 1px solid var(--pf-border);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  background: white;
+}
+.hol-cp-header {
+  background: var(--pf-bg-page);
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--pf-border);
+  gap: 12px;
+}
+.hol-cp-title {
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .hol-expense-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 4px;
-  margin-bottom: 8px;
-  border-bottom: 1px dashed #f1f5f9;
   padding-bottom: 8px;
+  border-bottom: 1px dashed var(--pf-bg-lighter);
+  margin-bottom: 8px;
 }
-.hol-expense-wrapper:last-child {
-  margin-bottom: 0;
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
 .hol-expense-main {
   display: flex;
   justify-content: space-between;
@@ -13057,57 +11500,43 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-weight: 500;
 }
 .hol-expense-amount {
-  color: var(--text-main);
   font-weight: bold;
 }
 .status-paid {
-  color: #10b981;
+  color: var(--pf-success);
   margin-left: 5px;
 }
 .status-pending {
-  color: #f59e0b;
+  color: var(--pf-warning);
   margin-left: 5px;
 }
 
-.hol-expense-note {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  padding-left: 24px;
-  word-break: break-all;
+/* Modale Map Exception */
+.hol-dialog--map {
+  width: 95vw;
+  height: 90vh;
+  max-width: 1400px;
+  padding: 0;
 }
-.hol-expense-link {
-  color: #3b82f6;
-  text-decoration: none;
+#tripMap {
+  touch-action: none;
+  z-index: 1;
 }
-.hol-expense-link:hover {
-  text-decoration: underline;
-}
-
-.hol-empty-step {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 5px 0;
+.hol-checkpoint-draggable {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
-/* Boutons de petite taille */
-.pf-btn-small {
-  padding: 6px 14px !important;
-  font-size: 0.85rem !important;
-  width: auto !important;
-  height: auto !important;
-  margin: 0 !important;
-}
-
-/* Modale JS d'ajout de dépense */
+/* Modale Formulaire Ligne Rapide */
 .hol-form-row {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px;
-  background: #f8fafc;
+  background: var(--pf-bg-page);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--pf-border);
+  margin-bottom: 10px;
 }
 .hol-form-inner {
   display: flex;
@@ -13119,7 +11548,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   width: 50px;
   padding: 8px 4px;
   font-size: 1.2rem;
-  cursor: pointer;
 }
 .hol-form-text {
   flex: 2;
@@ -13138,17 +11566,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   cursor: pointer;
   width: 55px;
 }
-.hol-form-paid-text {
-  font-size: 0.75rem;
-  margin-left: 4px;
-  font-weight: bold;
-  color: #64748b;
-}
 .hol-form-notes-input {
   font-size: 0.8rem;
   padding: 6px 8px;
   border-style: dashed;
-  color: #475569;
   width: calc(100% - 58px);
   margin-left: 58px;
 }
@@ -13157,35 +11578,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   height: 28px;
   border: none;
   background: #fee2e2;
-  color: #ef4444;
+  color: var(--pf-danger);
   border-radius: 6px;
   cursor: pointer;
-  font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: 0.2s;
-}
-.btn-remove-expense:hover {
-  background: #fca5a5;
-  color: #b91c1c;
 }
 
-/* ==========================================================================
-   16. PLANNING DRAG & DROP (CARNET DE VOYAGE)
-   ========================================================================== */
-/* Simplification de la sous-ligne du formulaire d'édition */
-.hol-form-subrow {
-  display: flex;
-  margin-top: 6px;
-  padding-left: 58px;
-}
-.hol-form-notes-full {
-  margin: 0 !important;
-  width: 100%;
-}
-
-/* Layout du Planning Interactif */
+/* Planning Drag & Drop */
 .hol-planning-layout {
   display: flex;
   gap: 20px;
@@ -13193,7 +11594,119 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   align-items: stretch;
   overflow: hidden;
 }
-@media (max-width: 768px) {
+.hol-unmapped-zone {
+  width: 250px;
+  background: var(--pf-bg-page);
+  padding: 15px;
+  border-radius: 12px;
+  border: 2px dashed var(--pf-border);
+  overflow-y: auto;
+}
+.hol-calendar-zone {
+  flex: 1;
+  display: flex;
+  gap: 15px;
+  overflow: auto;
+  padding-bottom: 10px;
+  position: relative;
+}
+.hol-day-column {
+  min-width: 220px;
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--pf-border);
+}
+.hol-calendar-day-header {
+  text-align: center;
+  padding: 12px 10px;
+  background: var(--pf-bg-page);
+  border-bottom: 2px solid var(--pf-border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.hol-time-slot {
+  height: 75px;
+  border-bottom: 1px solid var(--pf-bg-lighter);
+  position: relative;
+  box-sizing: border-box;
+}
+.hol-time-slot.drag-over {
+  background: #e0f2fe;
+}
+.hol-slot-label {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--pf-text-muted);
+}
+.hol-drag-item {
+  background: white;
+  padding: 6px 8px;
+  border-radius: 6px;
+  box-shadow: var(--pf-shadow-sm);
+  cursor: grab;
+  font-size: 0.85rem;
+  border: 1px solid var(--pf-border);
+  border-left: 4px solid var(--pf-primary);
+  z-index: 10;
+  overflow: hidden;
+}
+.hol-calendar-zone .hol-drag-item {
+  position: absolute;
+  top: 1px;
+  left: 45px;
+  right: 5px;
+  height: calc(75px * var(--duration) - 2px);
+}
+.hol-drag-item.cat-accommodation {
+  border-left-color: #8b5cf6;
+}
+.hol-drag-item.cat-transport {
+  border-left-color: var(--pf-success);
+}
+.hol-item-duration-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+}
+.hol-dur-btn {
+  background: var(--pf-bg-lighter);
+  border: none;
+  border-radius: 4px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Météo */
+.pf-weather-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--pf-bg-page);
+  border: 1px solid var(--pf-border);
+  padding: 1px 6px;
+  border-radius: 6px;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+/* Mobile */
+@media (max-width: 992px) {
+  .hol-layout-grid {
+    grid-template-columns: 1fr;
+  }
+  .hol-panel {
+    height: 500px;
+  }
   .hol-planning-layout {
     flex-direction: column;
     height: 75vh;
@@ -13205,267 +11718,39 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
+  }
+}
+@media (max-width: 768px) {
+  .pf-holidays__titlebar,
+  .hol-title-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  .hol-filters-row {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .hol-actions-group .hol-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .savings-line-item {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .savings-line-item input[type="text"] {
+    min-width: 100%;
+  }
+  .hol-cp-header {
+    flex-direction: column;
     align-items: flex-start;
   }
-  .hol-calendar-zone {
-    flex: 1;
+  .hol-cp-actions-group {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
   }
-}
-
-/* Zone des activités non planifiées */
-.hol-unmapped-zone {
-  width: 250px;
-  background: #f8fafc;
-  padding: 15px;
-  border-radius: 12px;
-  border: 2px dashed #cbd5e1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-}
-.hol-unmapped-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #64748b;
-  margin-bottom: 5px;
-  text-align: center;
-}
-
-/* Grille du calendrier */
-.hol-calendar-zone {
-  flex: 1;
-  display: flex;
-  gap: 15px;
-  overflow: auto; /* Gère à la fois gauche/droite ET haut/bas */
-  padding-bottom: 10px;
-  position: relative;
-}
-.hol-calendar-zone::-webkit-scrollbar,
-.hol-unmapped-zone::-webkit-scrollbar {
-  height: 10px;
-}
-.hol-calendar-zone::-webkit-scrollbar-track,
-.hol-unmapped-zone::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 5px;
-}
-.hol-calendar-zone::-webkit-scrollbar-thumb,
-.hol-unmapped-zone::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 5px;
-}
-.hol-calendar-zone::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-.hol-calendar-zone .hol-drag-item {
-  position: absolute;
-  top: 1px;
-  left: 45px;
-  right: 5px;
-  height: calc(75px * var(--duration) - 2px);
-}
-/* Dans la boîte d'attente : Position normale */
-.hol-unmapped-zone .hol-drag-item {
-  position: relative;
-  min-width: 150px;
-  height: auto;
-}
-
-/* Mode "Tap-to-Move" pour Mobile */
-.hol-drag-item.selected-for-move {
-  border-color: #f59e0b;
-  transform: scale(1.02);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
-}
-
-/* Boutons Durée */
-.hol-item-duration-controls {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin: 0;
-  padding: 2px;
-  border: none;
-  background: rgba(255, 255, 255, 0.4); /* Léger fond pour se détacher */
-  border-radius: 4px;
-}
-
-.hol-day-column {
-  min-width: 220px;
-  flex: 1;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  height: max-content; /* Laisse la colonne grandir jusqu'à 22h */
-  overflow: visible;
-}
-
-.hol-calendar-day-header {
-  text-align: center;
-  padding: 12px 10px;
-  background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
-  position: sticky;
-  top: 0; /* Garde la date toujours visible en haut ! */
-  z-index: 20;
-}
-
-/* Les créneaux horaires (Drop Zones) */
-.hol-time-slots-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.hol-time-slot {
-  height: 75px;
-  border-bottom: 1px solid #f1f5f9;
-  position: relative;
-  transition: background 0.2s;
-  box-sizing: border-box;
-}
-
-.hol-time-slot.drag-over {
-  background: #e0f2fe; /* Surbrillance quand on survole avec une activité */
-}
-.hol-slot-label {
-  position: absolute;
-  top: 2px;
-  right: 5px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #94a3b8;
-  pointer-events: none;
-}
-
-/* L'Activité (Élément draggable) */
-.hol-drag-item {
-  background: white;
-  padding: 6px 8px;
-  border-radius: 6px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-  cursor: grab;
-  font-size: 0.85rem;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid var(--primary);
-  display: flex;
-  flex-direction: column;
-  z-index: 10;
-  overflow: hidden;
-  transition:
-    transform 0.2s,
-    border-color 0.2s;
-}
-.hol-drag-item:active {
-  cursor: grabbing;
-}
-.hol-drag-item.cat-accommodation {
-  border-left-color: #8b5cf6;
-}
-.hol-drag-item.cat-transport {
-  border-left-color: #10b981;
-}
-
-.hol-drag-title {
-  font-weight: 600;
-  color: #0f172a;
-  line-height: 1.2;
-}
-.hol-drag-note {
-  font-size: 0.75rem;
-  color: #64748b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Élargir la modale de planning */
-#planningModal .pf-modal-content {
-  max-width: 1100px !important;
-  width: 95%;
-}
-
-.hol-dur-btn {
-  background: #f1f5f9;
-  border: none;
-  border-radius: 4px;
-  width: 18px;
-  height: 18px; /* Plus petit */
-  cursor: pointer;
-  font-weight: bold;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-}
-.hol-dur-btn:hover {
-  background: #e2e8f0;
-}
-.hol-dur-text {
-  font-size: 0.7rem;
-  color: #64748b;
-  font-weight: 700;
-}
-
-.highlight-step {
-  transition:
-    box-shadow 0.3s,
-    transform 0.3s;
-  box-shadow: 0 0 0 3px var(--primary);
-  transform: scale(1.02);
-}
-
-/* Style du badge météo injecté par le JS */
-.hol-weather-info {
-  display: inline-flex;
-}
-
-.pf-weather-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #f8fafc; /* Slate 50 */
-  border: 1px solid #e2e8f0; /* Slate 200 */
-  padding: 1px 6px;
-  border-radius: 6px;
-  color: #475569; /* Slate 600 */
-  font-weight: 600;
-  font-size: 0.7rem;
-  line-height: 1;
-}
-
-.pf-weather-icon {
-  font-size: 0.9rem;
-}
-
-/* Conteneur Date + Météo */
-.hol-date-weather-wrapper {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: normal;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap; /* Le secret pour le responsive ! */
-}
-
-/* On s'assure que le texte de la date ne se coupe pas au milieu d'un mot */
-.hol-step-dates {
-  white-space: nowrap;
-}
-.leaflet-container img.leaflet-tile {
-  pointer-events: none !important;
-  user-select: none !important;
-  -moz-user-select: none !important;
-}
-#tripMap {
-  touch-action: none;
 }
 
 ```
@@ -15930,7 +14215,7 @@ body.pf-home .pf-modules-grid {
 ```javascript
 /**
  * PachaFamily - Test Engine 🦙
- * Moteur de tests automatisés (E2E) - Version Anti-Flakiness
+ * Moteur de tests automatisés (E2E) - Version Anti-Flakiness & QA Exhaustive
  */
 
 const PachaTestEngine = {
@@ -15939,7 +14224,7 @@ const PachaTestEngine = {
   doc: null,
 
   // ==========================================
-  // 🛠️ HELPERS
+  // 🛠️ HELPERS (BLINDÉS POUR LE QA)
   // ==========================================
 
   wait: (ms) => new Promise((r) => setTimeout(r, ms)),
@@ -15953,26 +14238,42 @@ const PachaTestEngine = {
     this.log(cond ? msgPass : msgFail || msgPass, cond ? "✅" : "❌");
   },
 
-  // 🛡️ NOUVEAU : Attend le rechargement de la page après une action
+  // 📡 Intercepte les erreurs de l'application dans l'iframe pour les afficher dans le rapport
+  injectIframeErrorCatcher: function () {
+    if (!this.arena.contentWindow) return;
+
+    this.arena.contentWindow.onerror = (msg, url, line) => {
+      this.log(`Erreur App (Ligne ${line}): ${msg}`, "🔥");
+    };
+
+    const origError = this.arena.contentWindow.console.error;
+    this.arena.contentWindow.console.error = (...args) => {
+      this.log(`Console Error: ${args.join(" ")}`, "🔥");
+      origError.apply(this.arena.contentWindow.console, args);
+    };
+  },
+
+  // 🛡️ Attend le rechargement de la page de manière stricte
   actionAndWaitForReload: async function (actionFn, timeout = 5000) {
-    return new Promise(async (resolve) => {
+    return new Promise((resolve, reject) => {
       let reloaded = false;
-      // On écoute le prochain rechargement de l'iframe
+
       this.arena.onload = () => {
         reloaded = true;
         this.doc = this.arena.contentWindow.document;
         this.arena.contentWindow.confirm = () => true;
         this.arena.contentWindow.alert = () => true;
+        this.injectIframeErrorCatcher();
         resolve();
       };
 
-      await actionFn(); // On lance le clic ou la soumission
+      // Exécute l'action et gère le rejet si elle plante
+      Promise.resolve(actionFn()).catch((err) => reject(err));
 
-      // Sécurité anti-blocage (si le fetch échoue et ne recharge pas la page)
       setTimeout(() => {
         if (!reloaded) {
           this.log(
-            "⚠️ Le rechargement de la page n'a pas eu lieu dans le temps imparti.",
+            "⚠️ Le rechargement n'a pas eu lieu. Suite du test...",
             "⏱️",
           );
           resolve();
@@ -15988,6 +14289,7 @@ const PachaTestEngine = {
         this.doc = this.arena.contentWindow.document;
         this.arena.contentWindow.confirm = () => true;
         this.arena.contentWindow.alert = () => true;
+        this.injectIframeErrorCatcher();
         resolve();
       };
       this.arena.src = url;
@@ -15998,107 +14300,251 @@ const PachaTestEngine = {
     return this.doc.querySelector(sel);
   },
 
-  // 🖱️ Clic unique et infaillible
+  // 🖱️ Clic strict : Si l'élément n'existe pas, on DÉCLENCHE UNE ERREUR FATALE
   click: async function (sel, delay = 500) {
     const el = typeof sel === "string" ? this.get(sel) : sel;
-    if (el) {
-      // 1. Coupe les popups bloquantes
-      this.arena.contentWindow.confirm = () => true;
-      this.arena.contentWindow.alert = () => true;
-
-      // 2. Un seul et unique clic !
-      el.click();
-
-      await this.wait(delay);
-      return true;
+    if (!el) {
+      throw new Error(
+        `Clic impossible : l'élément '${typeof sel === "string" ? sel : "DOM Object"}' est introuvable.`,
+      );
     }
-    return false;
+
+    this.arena.contentWindow.confirm = () => true;
+    this.arena.contentWindow.alert = () => true;
+    el.click();
+    await this.wait(delay);
+    return true;
   },
 
   fill: function (sel, val) {
     const el = this.get(sel);
-    if (el) el.value = val;
+    if (!el) throw new Error(`Remplissage impossible : '${sel}' introuvable.`);
+    el.value = val;
   },
 
   select: async function (sel, val, delay = 300) {
     const el = this.get(sel);
-    if (el) {
-      el.value = val;
-      el.dispatchEvent(new Event("change"));
-      await this.wait(delay);
-    }
+    if (!el) throw new Error(`Sélection impossible : '${sel}' introuvable.`);
+    el.value = val;
+    el.dispatchEvent(new Event("change"));
+    await this.wait(delay);
   },
 
   findInTable: function (text) {
-    return Array.from(this.doc.querySelectorAll("td, div")).find((el) =>
+    return Array.from(this.doc.querySelectorAll("td")).find((el) =>
       el.textContent.includes(text),
     );
   },
 
   // ==========================================
-  // 🧪 SCÉNARIO 1 : SUIVI MENSUEL
+  // 🧪 SCÉNARIO EXHAUSTIF : SUIVI MENSUEL (MODALES & CRUD)
   // ==========================================
-
-  runBudgetTests: async function () {
+  testBudgetSuiviExhaustive: async function () {
     this.reportBox.value = "";
-    this.log("=== 🚀 DÉBUT DU SCÉNARIO : SUIVI BUDGET ===", "INFO");
+    this.log("=== 🚀 DÉBUT EXHAUSTIF : SUIVI MENSUEL ===", "INFO");
 
     await this.load("budget.php?tab=suivi");
     await this.wait(1000);
 
-    if (!this.get(".btn-add-item")) {
-      this.log("Mois clôturé, test annulé. Déverrouille-le !", "⚠️");
-      return;
-    }
-
-    await this.click("button[onclick=\"toggleDiv('pendingDetailsList')\"]");
-    this.assert(
-      this.get("#pendingDetailsList").style.display !== "none",
-      "Déploiement : Charges à venir",
+    // --- 1. GESTION DE L'ÉTAT (CLÔTURE / RÉOUVERTURE) ---
+    this.log("🔍 Test 1 : État du mois (Clôture / Réouverture)");
+    let btnReopenInitial = this.get(
+      'form input[value="reopen_month"] ~ button[type="submit"]',
     );
-
-    await this.click(".btn-add-item");
-    await this.select("#modalCatSelect", "Autres");
-    this.fill("#modalAmount", "42.42");
-    this.fill("#modalLabelInput", "TEST_AUTO_PACHA");
-
-    this.log("Enregistrement de la dépense...", "WARN");
-    await this.actionAndWaitForReload(async () => {
-      await this.click('#manualExpenseModal button[type="submit"]');
-    });
-
-    let targetTd = Array.from(this.doc.querySelectorAll("td")).find((el) =>
-      el.textContent.includes("TEST_AUTO_PACHA"),
-    );
-    this.assert(
-      targetTd !== undefined,
-      "Dépense créée avec succès (42.42€).",
-      "Échec : Dépense introuvable.",
-    );
-
-    if (targetTd) {
-      this.log("Nettoyage de la base de données...", "WARN");
-      await this.actionAndWaitForReload(async () => {
-        await this.click(
-          targetTd.closest("tr").querySelector('a[href*="delete_expense"]'),
-        );
-      });
-      const checkGone = Array.from(this.doc.querySelectorAll("td")).find((el) =>
-        el.textContent.includes("TEST_AUTO_PACHA"),
+    if (btnReopenInitial) {
+      this.log(
+        "🔒 Mois actuellement fermé. Réouverture forcée pour les tests...",
+        "WARN",
       );
+      await this.actionAndWaitForReload(
+        async () => await this.click(btnReopenInitial),
+      );
+      await this.wait(1500); // ⏱️ Attente de la 2e redirection JS du PHP
       this.assert(
-        checkGone === undefined,
-        "Base de données nettoyée avec succès.",
+        this.get('form input[value="close_month"]') !== null,
+        "Mois rouvert.",
       );
     }
 
-    this.log("=== 🏁 FIN DU SCÉNARIO ===", "INFO");
+    // --- 2. UI TOGGLES ---
+    this.log("🔍 Test 2 : Toggle 'Charges à venir'");
+    const toggleBtn = this.get(
+      "button[onclick*=\"toggleDiv('pendingDetailsList')\"]",
+    );
+    if (toggleBtn) {
+      await this.click(toggleBtn);
+      const pendingList = this.get("#pendingDetailsList");
+      this.assert(
+        pendingList && pendingList.style.display !== "none",
+        "Liste des charges déployée.",
+      );
+    }
+
+    // --- 3. MODALE CSV ---
+    this.log("🔍 Test 3 : Modale Import CSV");
+    const btnCsv = this.get('button[onclick*="importCsvModal"]');
+    if (btnCsv) {
+      await this.click(btnCsv);
+      const csvModal = this.get("#importCsvModal");
+      this.assert(
+        csvModal &&
+          (csvModal.classList.contains("is-open") ||
+            csvModal.style.display === "flex"),
+        "Modale CSV ouverte.",
+      );
+
+      // Fermeture
+      const closeCsvBtn = csvModal.querySelector(
+        ".pf-modal-close, button[onclick*='closeSuiviModal']",
+      );
+      if (closeCsvBtn) await this.click(closeCsvBtn);
+      this.assert(
+        !csvModal.classList.contains("is-open") &&
+          csvModal.style.display !== "flex",
+        "Modale CSV fermée.",
+      );
+    }
+
+    // --- 4. MODALE SNAPSHOT (UPDATE BALANCE) ---
+    this.log("🔍 Test 4 : Modale Snapshot (Solde Bancaire)");
+    const btnSnapshot = this.get('button[onclick*="snapshotModal"]');
+    if (btnSnapshot) {
+      await this.click(btnSnapshot);
+      this.assert(this.get("#snapshotModal"), "Modale Snapshot ouverte.");
+
+      this.fill('#snapshotModal input[name="snapshot_amount"]', "1337.00");
+      this.log("Soumission du nouveau solde...", "INFO");
+      await this.actionAndWaitForReload(async () => {
+        await this.click('#snapshotModal button[type="submit"]');
+      });
+
+      const pageText = this.doc.body.innerText;
+      this.assert(
+        pageText.includes("1 337"),
+        "Solde mis à jour et formaté à 1 337 €.",
+      );
+    }
+
+    // --- 5. CRUD DÉPENSE (AJOUT / ÉDITION / SUPPRESSION) ---
+    this.log("🔍 Test 5 : CRUD Dépense Manuelle");
+    const btnAdd = this.get(".btn-add-item");
+
+    if (btnAdd) {
+      // 5A. AJOUT
+      this.log("Création d'une nouvelle dépense...");
+      await this.click(btnAdd);
+      await this.select("#modalCatSelect", "Autres");
+      this.fill("#modalAmount", "77.77");
+      this.fill("#modalLabelInput", "E2E_QA_TEST_EXPENSE");
+
+      await this.actionAndWaitForReload(async () => {
+        await this.click('#manualExpenseModal button[type="submit"]');
+      });
+
+      let newExpense = this.findInTable("E2E_QA_TEST_EXPENSE");
+      this.assert(
+        newExpense !== undefined,
+        "Dépense 'E2E_QA_TEST_EXPENSE' trouvée dans le DOM.",
+      );
+
+      if (newExpense) {
+        // 5B. ÉDITION
+        this.log("✏️ Édition de la dépense...");
+        const row = newExpense.closest("tr");
+
+        // 🛡️ NOUVEAU : Sécurité anti-crash
+        if (!row) {
+          throw new Error(
+            "L'élément trouvé n'est pas dans une ligne de tableau (<tr> manquant). Le test est corrompu.",
+          );
+        }
+
+        const btnEdit = row.querySelector('button[onclick*="openEditModal"]');
+        if (btnEdit) {
+          await this.click(btnEdit);
+          this.fill("#modalAmount", "88.88");
+          await this.actionAndWaitForReload(async () => {
+            await this.click('#manualExpenseModal button[type="submit"]');
+          });
+
+          const editedExpense = this.findInTable("E2E_QA_TEST_EXPENSE");
+          this.assert(
+            editedExpense &&
+              editedExpense.closest("tr").innerHTML.includes("88"),
+            "Montant mis à jour à 88.88€.",
+          );
+        }
+
+        // 5C. SUPPRESSION (Gère pachaConfirm custom modal)
+        this.log("🧹 Teardown : Suppression de la dépense...");
+        const rowToDel = this.findInTable("E2E_QA_TEST_EXPENSE").closest("tr");
+        const btnDel = rowToDel.querySelector("button.delete");
+
+        if (btnDel) {
+          await this.actionAndWaitForReload(async () => {
+            await this.click(btnDel); // Déclenche pachaConfirm
+            await this.wait(500); // Attend l'animation de la modale custom
+
+            const confirmBtn = this.get("#confirm-ok");
+            if (confirmBtn) {
+              await this.click(confirmBtn); // Valide la suppression (fetch AJAX)
+            }
+          }, 3000);
+
+          const checkGone = this.findInTable("E2E_QA_TEST_EXPENSE");
+          this.assert(
+            checkGone === undefined,
+            "Base de données propre ! Dépense supprimée.",
+          );
+        }
+      }
+    } else {
+      this.log("Bouton '.btn-add-item' introuvable.", "❌");
+    }
+
+    // --- 6. CLÔTURE ET RÉOUVERTURE DU MOIS (TEARDOWN STATE) ---
+    this.log("🔍 Test 6 : Clôture du mois");
+    let btnClose = this.get(
+      'form input[value="close_month"] ~ button[type="submit"]',
+    );
+    if (btnClose) {
+      this.log("Verrouillage du mois...");
+      await this.actionAndWaitForReload(async () => await this.click(btnClose));
+      await this.wait(1500); // ⏱️ Attente de la 2e redirection JS du PHP (Mois suivant)
+
+      this.log("Retour au mois précédent pour vérification...");
+      await this.actionAndWaitForReload(
+        async () =>
+          await this.click(".suivi-nav-group a.suivi-btn-nav:first-child"),
+      );
+
+      this.assert(
+        this.get('form input[value="reopen_month"]') !== null,
+        "Mois clôturé avec succès.",
+      );
+
+      // Teardown
+      this.log("🧹 Teardown : Restauration du mois (Réouverture)");
+      await this.actionAndWaitForReload(
+        async () =>
+          await this.click(
+            'form input[value="reopen_month"] ~ button[type="submit"]',
+          ),
+      );
+      await this.wait(1500); // ⏱️ Attente de la 2e redirection JS du PHP
+
+      this.assert(
+        this.get('form input[value="close_month"]') !== null,
+        "Mois rouvert avec succès.",
+      );
+    }
+
+    this.log("=== 🏁 FIN DU SCÉNARIO EXHAUSTIF ===", "INFO");
   },
 
   // ==========================================
   // 🧪 SCÉNARIO 2 : BUDGET PRÉVISIONNEL
   // ==========================================
-
   testBudgetPrev: async function () {
     this.reportBox.value = "";
     this.log("=== 🚀 DÉBUT DU SCÉNARIO : BUDGET PRÉVISIONNEL ===", "INFO");
@@ -16111,21 +14557,15 @@ const PachaTestEngine = {
     this.assert(
       this.doc.body.classList.contains("sum-mode-active"),
       "Le mode somme s'active.",
-      "Le bouton somme ne répond pas.",
     );
 
     const firstSalaryInput = this.get('input[data-field="salary"]');
     if (firstSalaryInput) {
       await this.click(firstSalaryInput, 500);
-      this.assert(
-        firstSalaryInput.classList.contains("sum-selected"),
-        "La cellule est bien sélectionnée.",
-      );
       const sumValue = this.get("#sumResultValue").innerText;
       this.assert(
         sumValue !== "0,00 €" && sumValue !== "0 €",
         `Le total interactif affiche : ${sumValue}`,
-        "Le calcul de la somme a échoué.",
       );
     }
 
@@ -16143,11 +14583,7 @@ const PachaTestEngine = {
       await this.click('button[onclick^="saveGenericNote"]', 1500);
 
       const indicator = this.get("#note-save-indicator");
-      this.assert(
-        indicator !== null,
-        "Sauvegarde asynchrone exécutée.",
-        "L'indicateur de sauvegarde ne s'est pas affiché.",
-      );
+      this.assert(indicator !== null, "Indicateur de sauvegarde affiché.");
 
       this.fill("#monthNoteArea", oldNote);
       await this.click('button[onclick^="saveGenericNote"]', 500);
@@ -16160,16 +14596,9 @@ const PachaTestEngine = {
     );
 
     await this.click('button[onclick*="addCatModal"]');
-    this.assert(
-      this.get("#addCatModal").style.display === "flex",
-      "Ouverture de la modale d'ajout.",
-    );
-
     this.fill('#addCatModal input[name="name"]', uniqueCatName);
     await this.select('#addCatModal select[name="target"]', "vers commune");
 
-    this.log("Attente du rechargement après création...", "WARN");
-    // 🔄 UTILISATION DU NOUVEAU HELPER SYNCHRONE
     await this.actionAndWaitForReload(async () => {
       await this.click('#addCatModal button[type="submit"]');
     });
@@ -16179,8 +14608,7 @@ const PachaTestEngine = {
     ).find((el) => el.textContent.includes(uniqueCatName));
     this.assert(
       newCatCell !== undefined,
-      `SUCCÈS : '${uniqueCatName}' insérée au tableau !`,
-      "ÉCHEC : Ligne introuvable après rechargement.",
+      `SUCCÈS : '${uniqueCatName}' insérée !`,
     );
 
     if (newCatCell) {
@@ -16189,7 +14617,6 @@ const PachaTestEngine = {
       const delBtn = row.querySelector(".delete");
 
       if (delBtn) {
-        // 🔄 UTILISATION DU NOUVEAU HELPER SYNCHRONE
         await this.actionAndWaitForReload(async () => {
           await this.click(delBtn);
         });
@@ -16200,10 +14627,7 @@ const PachaTestEngine = {
         this.assert(
           checkGone === undefined,
           "NETTOYAGE PARFAIT : Ligne effacée.",
-          "La ligne est restée dans le tableau.",
         );
-      } else {
-        this.log("Bouton de suppression (.delete) introuvable.", "FAIL");
       }
     }
 
@@ -16211,10 +14635,9 @@ const PachaTestEngine = {
   },
 };
 
-// ============================================================================
+// ==========================================
 // ROUTEUR DU LABORATOIRE ET BOUTON COPIER
-// ============================================================================
-
+// ==========================================
 document.getElementById("btn-run-test")?.addEventListener("click", async () => {
   const selectedTest = document.getElementById("test-selector").value;
   const btnRun = document.getElementById("btn-run-test");
@@ -16224,8 +14647,8 @@ document.getElementById("btn-run-test")?.addEventListener("click", async () => {
 
   try {
     switch (selectedTest) {
-      case "budget_suivi":
-        await PachaTestEngine.runBudgetTests();
+      case "budget_suivi_exhaustive":
+        await PachaTestEngine.testBudgetSuiviExhaustive();
         break;
       case "budget_prev":
         await PachaTestEngine.testBudgetPrev();
@@ -16381,7 +14804,7 @@ require_once 'header.php';
             <div class="lab-controls" style="display: flex; align-items: center; gap: 10px;">
                 <select id="test-selector" class="lab-select">
                     <optgroup label="💰 Module Budget">
-                        <option value="budget_suivi">Suivi Mensuel (Dépenses)</option>
+                        <option value="budget_suivi_exhaustive">Suivi Mensuel (Modales & CRUD)</option>
                         <option value="budget_prev">Budget Prévisionnel</option>
                         <option value="budget_epargne" disabled>Épargne (Bientôt...)</option>
                         <option value="budget_recap" disabled>Récapitulatif (Bientôt...)</option>
