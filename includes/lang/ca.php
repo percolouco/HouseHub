@@ -148,6 +148,9 @@ return [
     'btn_off'                   => 'Off',
     'btn_extra'                 => 'Extra',
 
+    'fc_alert_burn_days' => '⚠️ Risc de pèrdua : %s d a gastar abans del %s',
+    'fc_alert_burn_jra'  => '⚠️ JRA: Només 2d es poden reportar després de febrer!',
+
     // ==========================================
     // HOLIDAYS (VOYAGES)
     // ==========================================

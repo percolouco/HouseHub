@@ -60,9 +60,9 @@ require __DIR__ . '/header.php';
             <div class="fc-modal-header">
                 <h2><?= tr('fc_modal_snap_title') ?></h2>
                 <button id="btnCloseSnapshot" class="fc-modal-close">×</button>
-            </div>
+        </div>
             <div class="fc-modal-body" style="padding: 24px;">
-                <form id="formSnapshot">
+            <form id="formSnapshot">
                     <div style="margin-bottom: 16px;">
                         <label class="pf-label"><?= tr('fc_label_person') ?></label>
                         <select id="snapPerson" class="pf-input" required>
@@ -79,18 +79,18 @@ require __DIR__ . '/header.php';
                         </select>
                     </div>
                     <div style="margin-bottom: 16px;">
-                        <label class="pf-label"><?= tr('fc_label_apply_date') ?></label>
+                    <label class="pf-label"><?= tr('fc_label_apply_date') ?></label>
                         <input type="date" id="snapDate" class="pf-input" required title="<?= tr('fc_snap_date_hint') ?>">
-                    </div>
+                </div>
                     <div style="margin-bottom: 24px;">
-                        <label class="pf-label"><?= tr('fc_label_remaining_balance') ?></label>
+                    <label class="pf-label"><?= tr('fc_label_remaining_balance') ?></label>
                         <input type="number" step="0.5" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" required>
                     </div>
                     <button type="submit" class="pf-btn" style="width: 100%;"><?= tr('fc_btn_save_snap') ?></button>
-                </form>
-            </div>
+            </form>
         </div>
     </div>
+</div>
 
     <section class="pf-section">
       <div class="fc-month-calendar-wrapper">
@@ -230,7 +230,10 @@ window.I18N = {
     'vac_ete': "<?= tr('vac_ete') ?>",
     'leg_school_holidays': "<?= tr('leg_school_holidays') ?>",
     'fc_school_year': "<?= tr('fc_school_year') ?>",
-    'fc_modal_holidays_title': "<?= tr('fc_modal_holidays_title') ?>"
+    'fc_modal_holidays_title': "<?= tr('fc_modal_holidays_title') ?>",
+    'fc_alert_burn_days': "<?= tr('fc_alert_burn_days') ?>",
+    'fc_alert_burn_jra': "<?= tr('fc_alert_burn_jra') ?>",
+    'ANNIV': "<?= tr('ANNIV') ?>"
 };
 </script>
 <script src="/modules/family-calendar/family-calendar.js"></script>
