@@ -94,23 +94,30 @@ require __DIR__ . '/header.php';
 
     <section class="pf-section">
       <div class="fc-month-calendar-wrapper">
+        
         <div class="fc-month-header">
+          
+          <div class="fc-month-nav-row">
+            <button id="fc-prev-month" class="fc-nav-button">‹</button>
+            <h3 id="fc-current-month-year"></h3>
+            <button id="fc-next-month" class="fc-nav-button">›</button>
+          </div>
+          
           <div class="fc-view-controls">
             <button class="fc-view-button fc-view-button--active" data-view="1month"><?= tr('fc_view_1m') ?></button>
             <button class="fc-view-button" data-view="2months"><?= tr('fc_view_2m') ?></button>
-            <button class="fc-view-button" data-view="year"><?= tr('fc_view_year') ?></button>
+            <button class="fc-view-button" data-view="3months">3 Mois</button>
           </div>
-          <h3 id="fc-current-month-year"></h3>
-          <div class="fc-nav-controls">
-            <button id="fc-prev-month" class="fc-nav-button">‹</button>
-            <button id="fc-next-month" class="fc-nav-button">›</button>
-          </div>
+
         </div>
+        
         <div class="fc-calendar-container">
           <div id="fc-month-calendar" class="fc-month-calendar"></div>
           <div id="fc-month-selectionMenu" class="fc-selection-menu" style="display:none;"></div>
         </div>
+
         <div id="fc-month-balances" class="fc-month-balances"></div>
+        
       </div>
     </section>
 
@@ -165,20 +172,6 @@ require __DIR__ . '/header.php';
 
     <section class="pf-section pf-section--bottom-panels">
         <div class="fc-bottom-grid">
-            <div class="pf-card">
-                <h2 class="pf-card-title"><?= tr('fc_legend_title') ?></h2>
-                <div class="pf-card-body">
-                    <div class="pf-legend-grid">
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span><?= tr('leg_school_holidays') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-off-carole"></div><span><?= tr('leg_off_carole') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-extra-off-carole"></div><span><?= tr('leg_extra_off') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-centre"></div><span><?= tr('leg_centre') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-avis"></div><span><?= tr('leg_avis') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-pep-sick"></div><span><?= tr('leg_pep_sick') ?></span></div>
-                    </div>
-                </div>
-            </div>
 
             <div class="pf-card">
                 <div class="pf-card-title fc-summary-header">
@@ -195,6 +188,21 @@ require __DIR__ . '/header.php';
                     <div id="globalSummary" class="fc-summary-vertical"></div>
                 </div>
             </div>
+
+            <div class="pf-card">
+                <h2 class="pf-card-title"><?= tr('fc_legend_title') ?></h2>
+                <div class="pf-card-body">
+                    <div class="pf-legend-grid">
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span><?= tr('leg_school_holidays') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-off-carole"></div><span><?= tr('leg_off_carole') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-extra-off-carole"></div><span><?= tr('leg_extra_off') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-centre"></div><span><?= tr('leg_centre') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-avis"></div><span><?= tr('leg_avis') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-pep-sick"></div><span><?= tr('leg_pep_sick') ?></span></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 </div>
@@ -208,6 +216,9 @@ window.I18N = {
     'leg_centre': "<?= tr('leg_centre') ?>",
     'leg_avis': "<?= tr('leg_avis') ?>",
     'leg_pep_sick': "<?= tr('leg_pep_sick') ?>",
+    'leg_off_carole': "<?= tr('leg_off_carole') ?>",
+    'leg_extra_off': "<?= tr('leg_extra_off') ?>",
+    'leg_presence Pep': "<?= tr('leg_presence Pep') ?>",
     'fc_menu_kids_leaves': "<?= tr('fc_menu_kids_leaves') ?>",
     'fc_clear': "<?= tr('fc_clear') ?>",
     'fc_unit_days': "<?= tr('fc_unit_days') ?>",

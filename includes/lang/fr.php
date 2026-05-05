@@ -115,6 +115,7 @@ return [
     'fc_btn_save_snap'          => 'Enregistrer le correctif',
     'fc_view_1m'                => '1 mois',
     'fc_view_2m'                => '2 mois',
+    'fc_view_3m'                => '3 mois',
     'fc_view_year'              => 'Année',
     'fc_weekly_planning'        => 'Planning hebdomadaire',
     'fc_col_month'              => 'Mois',

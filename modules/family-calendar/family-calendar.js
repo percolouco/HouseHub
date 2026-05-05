@@ -689,40 +689,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
-
       const lang = window.I18N_LANG || "fr-FR";
       const titleEl = document.querySelector("#fc-current-month-year");
+
       if (titleEl) {
-        if (this.viewMode === "year") {
-          titleEl.textContent = `${tr("fc_school_year")} ${this.currentSchoolYearStart} – ${this.currentSchoolYearStart + 1}`;
-        } else if (this.viewMode === "2months") {
-          const nextM = new Date(y, m + 1, 1);
-          const m1 = new Intl.DateTimeFormat(lang, { month: "long" }).format(
+        if (this.viewMode === "3months") {
+          const nextM2 = new Date(y, m + 2, 1);
+          const m1 = new Intl.DateTimeFormat(lang, { month: "short" }).format(
             this.currentMonth,
           );
           const m2 = new Intl.DateTimeFormat(lang, {
-            month: "long",
+            month: "short",
+            year: "numeric",
+          }).format(nextM2);
+          titleEl.textContent = `${m1} - ${m2}`;
+          this.renderThreeMonthsView();
+        } else if (this.viewMode === "2months") {
+          const nextM = new Date(y, m + 1, 1);
+          const m1 = new Intl.DateTimeFormat(lang, { month: "short" }).format(
+            this.currentMonth,
+          );
+          const m2 = new Intl.DateTimeFormat(lang, {
+            month: "short",
             year: "numeric",
           }).format(nextM);
           titleEl.textContent = `${m1} - ${m2}`;
+          this.renderTwoMonthsView();
         } else {
           titleEl.textContent = new Intl.DateTimeFormat(lang, {
             month: "long",
             year: "numeric",
           }).format(this.currentMonth);
+          this.monthCalendar.innerHTML = this.generateMonthHTML(y, m);
         }
       }
 
-      if (this.viewMode === "year") {
-        this.renderYearView();
-      } else if (this.viewMode === "2months") {
-        this.renderTwoMonthsView();
-      } else {
-        this.monthCalendar.innerHTML = this.generateMonthHTML(y, m);
-      }
-
       this.renderMonthBalances();
-
       this.syncSummaryWithMonth();
     }
 
@@ -730,86 +732,107 @@ document.addEventListener("DOMContentLoaded", () => {
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
       const nextDate = new Date(y, m + 1, 1);
+      const lang = window.I18N_LANG || "fr-FR";
+
       let html = `<div class="fc-two-months-container">`;
-      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(this.currentMonth)}</div>${this.generateMonthHTML(y, m)}</div>`;
-      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(nextDate)}</div>${this.generateMonthHTML(nextDate.getFullYear(), nextDate.getMonth())}</div>`;
+      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(this.currentMonth)}</div>${this.generateMonthHTML(y, m)}</div>`;
+      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(nextDate)}</div>${this.generateMonthHTML(nextDate.getFullYear(), nextDate.getMonth())}</div>`;
+      html += `</div>`;
+
+      this.monthCalendar.innerHTML = html;
+    }
+
+    renderThreeMonthsView() {
+      const y = this.currentMonth.getFullYear();
+      const m = this.currentMonth.getMonth();
+      const d1 = this.currentMonth;
+      const d2 = new Date(y, m + 1, 1);
+      const d3 = new Date(y, m + 2, 1);
+
+      let html = `<div class="fc-three-months-container">`;
+      [d1, d2, d3].forEach((d) => {
+        html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(d)}</div>${this.generateMonthHTML(d.getFullYear(), d.getMonth())}</div>`;
+      });
       html += `</div>`;
       this.monthCalendar.innerHTML = html;
     }
 
-    renderYearView() {
-      const startYear = this.currentSchoolYearStart;
-      let html = '<div class="fc-year-container">';
-      for (let i = 8; i < 12; i++)
-        html += `<div class="fc-year-month"><div class="fc-year-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(new Date(startYear, i))}</div>${this.generateMonthHTML(startYear, i)}</div>`;
-      for (let i = 0; i < 8; i++)
-        html += `<div class="fc-year-month"><div class="fc-year-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(new Date(startYear + 1, i))}</div>${this.generateMonthHTML(startYear + 1, i)}</div>`;
-      html += "</div>";
-      this.monthCalendar.innerHTML = html;
-    }
-
-    // Affiche le décompte des congés (Début, Utilisé, Reste) sous le calendrier
     renderMonthBalances() {
       const container = document.getElementById("fc-month-balances");
       if (!container) return;
 
-      // On n'affiche les soldes que si on regarde 1 seul mois pour éviter la confusion
-      if (this.viewMode !== "1month") {
-        container.innerHTML = "";
-        container.style.display = "none";
-        return;
+      // 1. Déterminer les mois affichés selon la vue
+      const monthsToDisplay = [];
+      const y = this.currentMonth.getFullYear();
+      const m = this.currentMonth.getMonth();
+
+      let numMonths = 1;
+      if (this.viewMode === "2months") numMonths = 2;
+      if (this.viewMode === "3months") numMonths = 3;
+
+      for (let i = 0; i < numMonths; i++) {
+        const d = new Date(y, m + i, 1);
+        monthsToDisplay.push(
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        );
       }
 
-      container.style.display = "grid";
-      const ym = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, "0")}`;
+      container.style.display = "flex";
       let html = "";
 
+      // 2. Calcul dynamique pour Alex et Laia
       [FAMILY.ALEX, FAMILY.LAIA].forEach((person) => {
-        html += `<div class="fc-balance-person">
-                  <div class="fc-balance-name ${person.prefix}">${person.prefix}</div>
-                  <div class="fc-balance-grid">`;
+        html += `<div class="fc-minimal-balance-card">
+                  <strong class="${person.prefix}">${person.prefix.toUpperCase()}</strong>
+                  <div class="fc-minimal-chips">`;
 
         ["CP", "JRA", "JA"].forEach((type) => {
-          // Utilisation des données pré-calculées par calculateMonthlyBalances()
-          const info = this.monthlyLeaveBalances[person.id]?.[type]?.[ym];
-          const start = info ? info.availableAtMonthStart : 0;
-          const used = info ? info.usedInMonth : 0;
-          const end = Math.max(0, start - used);
+          // Solde de départ = celui du PREMIER mois affiché
+          const startInfo =
+            this.monthlyLeaveBalances[person.id]?.[type]?.[monthsToDisplay[0]];
+          const startBal = startInfo ? startInfo.availableAtMonthStart : 0;
 
+          // Jours posés = Somme sur TOUS les mois affichés
+          let totalUsed = 0;
+          monthsToDisplay.forEach((ym) => {
+            const info = this.monthlyLeaveBalances[person.id]?.[type]?.[ym];
+            if (info) totalUsed += info.usedInMonth;
+          });
+
+          // Solde de fin (théorique) à la fin de la période
+          const endBal = Math.max(0, startBal - totalUsed);
           const fmt = (n) =>
             n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "0";
 
-          html += `<div class="fc-balance-col">
-                      <span class="fc-balance-type">${type}</span>
-                      <div class="fc-balance-numbers">
-                          <div class="fc-bal-val start"><span title="Début de mois">▶</span><span>${fmt(start)}</span></div>
-                          <div class="fc-bal-val used"><span title="Posé ce mois">➖</span><span>${fmt(used)}</span></div>
-                          <div class="fc-bal-val end"><span title="Solde fin de mois">⏸</span><span>${fmt(end)}</span></div>
-                      </div>
+          // Petit badge rouge uniquement s'il y a des congés posés
+          const usedHtml =
+            totalUsed > 0
+              ? `<span class="fc-used-badge" title="Posé sur la période">-${fmt(totalUsed)}</span>`
+              : "";
+
+          html += `<div class="fc-min-chip" title="Solde de départ: ${fmt(startBal)}">
+                      <span class="type">${type}</span>
+                      <span class="val" title="Restant">${fmt(endBal)}</span>
+                      ${usedHtml}
                    </div>`;
         });
-
-        html += ` </div></div>`;
+        html += `</div></div>`;
       });
-
       container.innerHTML = html;
     }
 
-    // Force le menu déroulant du récapitulatif à se caler sur le mois affiché
     syncSummaryWithMonth() {
       const typeSelect = document.getElementById("summType");
       const valueSelect = document.getElementById("summValue");
 
-      if (typeSelect && valueSelect && this.viewMode === "1month") {
+      if (typeSelect && valueSelect) {
+        // Le récap se synchronise avec le PREMIER mois affiché de la période
         const ym = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, "0")}`;
 
-        // Si on passe d'année à mois, on doit forcer le peuplement du select
         if (typeSelect.value !== "month") {
           typeSelect.value = "month";
-          typeSelect.dispatchEvent(new Event("change")); // Déclenche populateValues()
+          typeSelect.dispatchEvent(new Event("change"));
         }
-
-        // On sélectionne le mois actuel
         valueSelect.value = ym;
         this.updateGlobalSummary();
       }
