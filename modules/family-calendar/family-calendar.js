@@ -503,6 +503,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   LEAVES_CONFIG.JRA.yearlyTotals[currYear] ||
                   LEAVES_CONFIG.JRA.defaultBalance;
 
+                // Logique de report du reliquat de l'année N-1
                 if (currMonth <= LEAVES_CONFIG.JRA.toleranceMonths) {
                   const prevYear = currYear - 1;
                   const prevInitial =
@@ -519,9 +520,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     0,
                     prevInitial - usedPrevYear,
                   );
+                  // Ajout du report plafonné à 2 jours
                   initialBalance += Math.min(
                     remainingPrevYear,
                     LEAVES_CONFIG.JRA.maxReport,
+                  );
+                  console.log(
+                    `[JRA] Personne ${pid}, Année ${currYear}: Report de ${Math.min(remainingPrevYear, LEAVES_CONFIG.JRA.maxReport)}j inclus.`,
                   );
                 }
               } else if (type === "JA") {
@@ -761,14 +766,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const container = document.getElementById("fc-month-balances");
       if (!container) return;
 
-      // 1. Déterminer les mois affichés selon la vue
       const monthsToDisplay = [];
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
 
-      let numMonths = 1;
-      if (this.viewMode === "2months") numMonths = 2;
-      if (this.viewMode === "3months") numMonths = 3;
+      let numMonths =
+        this.viewMode === "2months" ? 2 : this.viewMode === "3months" ? 3 : 1;
 
       for (let i = 0; i < numMonths; i++) {
         const d = new Date(y, m + i, 1);
@@ -780,40 +783,69 @@ document.addEventListener("DOMContentLoaded", () => {
       container.style.display = "flex";
       let html = "";
 
-      // 2. Calcul dynamique pour Alex et Laia
       [FAMILY.ALEX, FAMILY.LAIA].forEach((person) => {
         html += `<div class="fc-minimal-balance-card">
                   <strong class="${person.prefix}">${person.prefix.toUpperCase()}</strong>
                   <div class="fc-minimal-chips">`;
 
         ["CP", "JRA", "JA"].forEach((type) => {
-          // Solde de départ = celui du PREMIER mois affiché
           const startInfo =
             this.monthlyLeaveBalances[person.id]?.[type]?.[monthsToDisplay[0]];
           const startBal = startInfo ? startInfo.availableAtMonthStart : 0;
 
-          // Jours posés = Somme sur TOUS les mois affichés
           let totalUsed = 0;
           monthsToDisplay.forEach((ym) => {
             const info = this.monthlyLeaveBalances[person.id]?.[type]?.[ym];
             if (info) totalUsed += info.usedInMonth;
           });
 
-          // Solde de fin (théorique) à la fin de la période
           const endBal = Math.max(0, startBal - totalUsed);
           const fmt = (n) =>
             n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "0";
 
-          // Petit badge rouge uniquement s'il y a des congés posés
           const usedHtml =
             totalUsed > 0
               ? `<span class="fc-used-badge" title="Posé sur la période">-${fmt(totalUsed)}</span>`
               : "";
 
-          html += `<div class="fc-min-chip" title="Solde de départ: ${fmt(startBal)}">
+          // --- LOGIQUE D'ALERTE FIRE 🔥 ---
+          let alertHtml = "";
+          const currentYm = monthsToDisplay[0];
+          const [cYear, cMonth] = currentYm.split("-").map(Number);
+
+          if (endBal > 0) {
+            if (type === "CP" && cMonth >= 6 && cMonth <= 7) {
+              // CP : Alerte en Juin et Juillet uniquement
+              let msg = (
+                window.I18N["fc_alert_burn_days"] || "Perte: %s j avant le %s"
+              )
+                .replace("%s", fmt(endBal))
+                .replace("%s", "31/07");
+              alertHtml = `<div class="fc-burn-alert" title="${msg}">🔥</div>`;
+            } else if (type === "JRA" && (cMonth === 1 || cMonth === 2)) {
+              // JRA : Alerte Janvier/Février si > 2 jours
+              if (endBal > 2) {
+                let msg =
+                  window.I18N["fc_alert_burn_jra"] || "Seuls 2j reportables";
+                alertHtml = `<div class="fc-burn-alert" title="${msg}">🔥 ${fmt(endBal - 2)}</div>`;
+              }
+            } else if (type === "JA") {
+              const configJA = LEAVES_CONFIG.JA[person.id];
+              let limitMonth = configJA.startMonth - 1 || 12;
+              if (cMonth === limitMonth || cMonth === configJA.startMonth) {
+                let msg = (window.I18N["fc_alert_burn_days"] || "Perte: %s j")
+                  .replace("%s", fmt(endBal))
+                  .replace("%s", window.I18N["ANNIV"] || "Anniv");
+                alertHtml = `<div class="fc-burn-alert" title="${msg}">🔥</div>`;
+              }
+            }
+          }
+
+          html += `<div class="fc-min-chip" title="Solde départ: ${fmt(startBal)}">
                       <span class="type">${type}</span>
                       <span class="val" title="Restant">${fmt(endBal)}</span>
                       ${usedHtml}
+                      ${alertHtml}
                    </div>`;
         });
         html += `</div></div>`;
@@ -1160,7 +1192,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (btnSnap && modalSnap) {
         btnSnap.addEventListener("click", () => {
-          modalSnap.style.display = "flex";
+          modalSnap.style.display = "flex"; // Utilise flex au lieu de block pour le centrage
+          document.body.classList.add("no-scroll");
           // Pré-remplir la date avec le 1er jour du mois en cours
           const today = new Date();
           const y = today.getFullYear();

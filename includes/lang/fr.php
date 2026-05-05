@@ -149,6 +149,9 @@ return [
     'vac_ete'                   => "Vacances d'Été",
     'btn_off'                   => 'Off',
     'btn_extra'                 => 'Extra',
+    
+    'fc_alert_burn_days' => '⚠️ Risque de perte : %s j à poser avant le %s',
+    'fc_alert_burn_jra'  => '⚠️ JRA : Seuls 2j sont reportables après février !',
 
     // ==========================================
     // HOLIDAYS (VOYAGES)

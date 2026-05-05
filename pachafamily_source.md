@@ -1,6 +1,6 @@
 # 🦙 Source Code PachaFamily
 
-> *Généré le 2026-05-04 18:29:00*
+> *Généré le 2026-05-05 13:45:51*
 
 ### 📄 Fichier : `budget.php`
 ```php
@@ -194,22 +194,30 @@ require __DIR__ . '/header.php';
 
     <section class="pf-section">
       <div class="fc-month-calendar-wrapper">
+        
         <div class="fc-month-header">
+          
+          <div class="fc-month-nav-row">
+            <button id="fc-prev-month" class="fc-nav-button">‹</button>
+            <h3 id="fc-current-month-year"></h3>
+            <button id="fc-next-month" class="fc-nav-button">›</button>
+          </div>
+          
           <div class="fc-view-controls">
             <button class="fc-view-button fc-view-button--active" data-view="1month"><?= tr('fc_view_1m') ?></button>
             <button class="fc-view-button" data-view="2months"><?= tr('fc_view_2m') ?></button>
-            <button class="fc-view-button" data-view="year"><?= tr('fc_view_year') ?></button>
+            <button class="fc-view-button" data-view="3months">3 Mois</button>
           </div>
-          <h3 id="fc-current-month-year"></h3>
-          <div class="fc-nav-controls">
-            <button id="fc-prev-month" class="fc-nav-button">‹</button>
-            <button id="fc-next-month" class="fc-nav-button">›</button>
-          </div>
+
         </div>
+        
         <div class="fc-calendar-container">
           <div id="fc-month-calendar" class="fc-month-calendar"></div>
           <div id="fc-month-selectionMenu" class="fc-selection-menu" style="display:none;"></div>
         </div>
+
+        <div id="fc-month-balances" class="fc-month-balances"></div>
+        
       </div>
     </section>
 
@@ -264,20 +272,6 @@ require __DIR__ . '/header.php';
 
     <section class="pf-section pf-section--bottom-panels">
         <div class="fc-bottom-grid">
-            <div class="pf-card">
-                <h2 class="pf-card-title"><?= tr('fc_legend_title') ?></h2>
-                <div class="pf-card-body">
-                    <div class="pf-legend-grid">
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span><?= tr('leg_school_holidays') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-off-carole"></div><span><?= tr('leg_off_carole') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-extra-off-carole"></div><span><?= tr('leg_extra_off') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-centre"></div><span><?= tr('leg_centre') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-avis"></div><span><?= tr('leg_avis') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-pep-sick"></div><span><?= tr('leg_pep_sick') ?></span></div>
-                    </div>
-                </div>
-            </div>
 
             <div class="pf-card">
                 <div class="pf-card-title fc-summary-header">
@@ -294,6 +288,21 @@ require __DIR__ . '/header.php';
                     <div id="globalSummary" class="fc-summary-vertical"></div>
                 </div>
             </div>
+
+            <div class="pf-card">
+                <h2 class="pf-card-title"><?= tr('fc_legend_title') ?></h2>
+                <div class="pf-card-body">
+                    <div class="pf-legend-grid">
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span><?= tr('leg_school_holidays') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-off-carole"></div><span><?= tr('leg_off_carole') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-extra-off-carole"></div><span><?= tr('leg_extra_off') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-centre"></div><span><?= tr('leg_centre') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-avis"></div><span><?= tr('leg_avis') ?></span></div>
+                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-pep-sick"></div><span><?= tr('leg_pep_sick') ?></span></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 </div>
@@ -307,6 +316,9 @@ window.I18N = {
     'leg_centre': "<?= tr('leg_centre') ?>",
     'leg_avis': "<?= tr('leg_avis') ?>",
     'leg_pep_sick': "<?= tr('leg_pep_sick') ?>",
+    'leg_off_carole': "<?= tr('leg_off_carole') ?>",
+    'leg_extra_off': "<?= tr('leg_extra_off') ?>",
+    'leg_presence Pep': "<?= tr('leg_presence Pep') ?>",
     'fc_menu_kids_leaves': "<?= tr('fc_menu_kids_leaves') ?>",
     'fc_clear': "<?= tr('fc_clear') ?>",
     'fc_unit_days': "<?= tr('fc_unit_days') ?>",
@@ -1208,6 +1220,23 @@ body.no-scroll {
   margin-top: auto;
 }
 
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+  width: 100%; /* Empêche le débordement */
+  box-sizing: border-box;
+}
+
+/* On s'assure que les boutons ne sont pas géants par défaut */
+.modal-footer .pf-btn {
+  width: auto;
+  min-width: 100px;
+}
+
 /* Notifications Toasts */
 .pf-toast {
   position: fixed;
@@ -1280,6 +1309,8 @@ body.no-scroll {
   .pf-modal {
     align-items: flex-end; /* Aligne la modale en bas */
     padding: 0;
+    z-index: 1000 !important;
+    background: rgba(15, 23, 42, 0.75);
   }
 
   .pf-modal-content {
@@ -1294,6 +1325,18 @@ body.no-scroll {
     transform: translateY(100%);
     animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     max-height: 92vh; /* Laisse un petit espace en haut */
+    z-index: 1001;
+    overflow: hidden;
+  }
+  .prev-section-header,
+  .view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap; /* Important pour le mobile */
+    gap: 15px;
+    margin-bottom: 20px;
+    width: 100%;
   }
 
   /* Barre de drag visuelle en haut de la modale */
@@ -1305,6 +1348,13 @@ body.no-scroll {
     background: #cbd5e1;
     border-radius: 10px;
     margin: -10px auto 20px auto;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse; /* Empilement propre sur mobile */
+  }
+  .modal-footer .pf-btn {
+    width: 100%; /* Largeur totale uniquement sur mobile */
   }
 
   @keyframes slideUpSheet {
@@ -1759,6 +1809,8 @@ return [
     'btn_close'         => 'Tancar',
     'btn_back'          => '◀ Tornar',
     'btn_edit_bases'    => '⚙️ Modificar les bases',
+    'btn_edit'          => 'Modificar',
+    'error_occured'     => 'S\'ha produït un error.',
     
     // Mots génériques & Erreurs
     'error'             => 'Error.',
@@ -1829,6 +1881,7 @@ return [
     'fc_btn_save_snap'          => 'Desar el correctiu',
     'fc_view_1m'                => '1 mes',
     'fc_view_2m'                => '2 mesos',
+    'fc_view_3m'                => '3 mesos',
     'fc_view_year'              => 'Any',
     'fc_weekly_planning'        => 'Planificació setmanal',
     'fc_col_month'              => 'Mes',
@@ -1952,6 +2005,9 @@ return [
     'weather_rainy'   => 'Plujós',
     'weather_snowy'   => 'Nevat',
     'weather_historical' => 'Basat en l\'històric (estimació)',
+    'err_invalid_holiday_id' => 'ID de viatge no vàlid.',
+    'hdl_default_exp_name'   => 'Despesa',
+    'hdl_select_beneficiary' => '-- Seleccionar --',
 
     // Anciennes clés Holidays non préfixées (conservades)
     'outbound_trip'             => 'Anada',
@@ -2279,6 +2335,7 @@ return [
     'nav_holidays'      => 'Voyages',
     'nav_gifts'         => 'Cadeaux',
     'aria_menu'         => 'Menu mobile',
+    
 
     // Boutons et actions globales
     'actions'           => 'Actions',
@@ -2292,6 +2349,8 @@ return [
     'btn_close'         => 'Fermer',
     'btn_back'          => '◀ Retour',
     'btn_edit_bases'    => '⚙️ Modifier les bases',
+    'btn_edit'          => 'Modifier',
+    'error_occured'     => 'Une erreur est survenue.',
     
     // Mots génériques & Erreurs
     'error'             => 'Erreur.',
@@ -2362,6 +2421,7 @@ return [
     'fc_btn_save_snap'          => 'Enregistrer le correctif',
     'fc_view_1m'                => '1 mois',
     'fc_view_2m'                => '2 mois',
+    'fc_view_3m'                => '3 mois',
     'fc_view_year'              => 'Année',
     'fc_weekly_planning'        => 'Planning hebdomadaire',
     'fc_col_month'              => 'Mois',
@@ -2485,6 +2545,9 @@ return [
     'weather_rainy'   => 'Pluvieux',
     'weather_snowy'   => 'Neigeux',
     'weather_historical' => 'Basé sur l\'historique (estimation)',
+    'err_invalid_holiday_id' => 'ID de voyage invalide.',
+    'hdl_default_exp_name'   => 'Dépense',
+    'hdl_select_beneficiary' => '-- Sélectionner --',
 
     // Anciennes clés Holidays non préfixées (conservées pour compatibilité si utilisées)
     'outbound_trip'             => 'Aller',
@@ -3574,6 +3637,11 @@ input[type="number"] {
     overflow-x: auto;
     white-space: nowrap;
   }
+  .pf-btn {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+  }
   .form-row {
     grid-template-columns: 1fr;
   }
@@ -3637,6 +3705,19 @@ input[type="number"] {
 .prev-input.bold-blue {
   color: #0284c7;
   font-weight: 700;
+}
+
+.prev-section-header,
+.view-header,
+.budget-view > div[style*="justify-content: space-between"] {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  float: none !important; /* On annule tout float résiduel */
+  position: relative !important; /* On s'assure qu'il n'est pas en absolute */
+  width: 100% !important;
+  gap: 15px !important;
 }
 
 .prev-salary-table {
@@ -3983,6 +4064,11 @@ th.col-laia {
   }
   .budget-view > div[style*="display:grid"] > div {
     padding: 12px 10px !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header) {
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
 
   /* 4. EN-TÊTES EPARGNE (Titre isolé, boutons 50/50 en dessous) */
@@ -5064,24 +5150,24 @@ function getTranslatedMonthName($dateString) {
     </div>
 
     <div>
-        <div class="prev-section-header">
-            <div style="display:flex; gap:10px; align-items:center;">
-                <h2><?= tr('bud_prev_budget_alloc') ?></h2>
-                <div class="nav-group">
-                    <a href="?tab=budget_prev&focus_date=<?= $prevMonthLink ?>" class="btn-nav">◀</a>
-                    <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav"><?= tr('bud_prev_today') ?></a>
-                    <a href="?tab=budget_prev&focus_date=<?= $nextMonthLink ?>" class="btn-nav">▶</a>
-                </div>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button class="pf-btn btn-secondary" onclick="duplicateMonth()">
-                    🔁 <?= tr('bud_sav_add_one_month') ?>
-                </button>
-                <button class="pf-btn" onclick="document.getElementById('addCatModal').style.display='flex'; document.body.classList.add('no-scroll');">
-                    ＋ <?= tr('bud_prev_new_line') ?>
-                </button>
-            </div>
+        <div class="prev-section-header" style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+    <div style="display:flex; gap:10px; align-items:center;">
+        <h2 style="margin:0; font-size:1.3rem;"><?= tr('bud_prev_budget_alloc') ?></h2>
+        <div class="nav-group" style="display:flex; gap:5px;">
+            <a href="?tab=budget_prev&focus_date=<?= $prevMonthLink ?>" class="btn-nav">◀</a>
+            <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav"><?= tr('bud_prev_today') ?></a>
+            <a href="?tab=budget_prev&focus_date=<?= $nextMonthLink ?>" class="btn-nav">▶</a>
         </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button type="button" class="pf-btn btn-secondary" onclick="duplicateMonth()">
+            🔁 <?= tr('bud_sav_add_one_month') ?>
+        </button>
+        <button type="button" class="pf-btn" onclick="document.getElementById('addCatModal').style.display='flex'; document.body.classList.add('no-scroll');">
+            ＋ <?= tr('bud_prev_new_line') ?>
+        </button>
+    </div>
+</div>
 
         <div class="prev-timeline-wrapper">
             <table class="prev-alloc-table">
@@ -7384,7 +7470,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div class="form-group" id="blockInputFrais" style="margin-bottom:15px; display:none;">
                 <label class="pf-label"><?= tr('bud_fixed_charge') ?></label>
                 <select name="budget_item_id" id="fraisSelect" class="pf-input" disabled>
-                    <option value="">-- Sélectionner --</option>
+                <option value=""><?= tr('bud_select_beneficiary') ?></option>
                     <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
@@ -7392,7 +7478,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
                 <label class="pf-label"><?= tr('bud_expected_income') ?></label>
                 <select name="budget_item_id" id="incomeSelect" class="pf-input" disabled>
-                    <option value="">-- Sélectionner --</option>
+                    <option value=""><?= tr('bud_select_beneficiary') ?>    </option>
                     <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
@@ -7428,23 +7514,22 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 <div id="importCsvModal" class="pf-modal" style="display: <?= $showPreview ? 'flex' : 'none' ?>;">
     <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?? 'Importer un fichier CSV' ?></h3>
-            <button type="button" onclick="<?= $showPreview ? "window.location.href='?tab=suivi&m=$viewM&y=$viewY';" : "closeSuiviModal('importCsvModal');" ?>" class="pf-modal-close" style="font-size:1.8rem; background:none; border:none; cursor:pointer; color:#64748b; padding:0; line-height:1;">&times;</button>
+            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?></h3>
+            <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
 
         <?php if (!$showPreview): ?>
-            <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:20px;">
+            <form method="POST" enctype="multipart/form-data">
                 <div class="import-dropzone">
                     <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
-                    <label class="pf-label" style="font-size: 1rem; color: #1e293b; margin-bottom: 10px;"><?= tr('bud_csv_file') ?? 'Sélectionnez le fichier de votre banque' ?></label>
-                    <input type="file" name="csv_file" accept=".csv" class="pf-input" style="max-width: 300px; margin: 0 auto; display: block;" required>
+                    <label class="pf-label"><?= tr('bud_csv_file') ?></label>
+                    <input type="file" name="csv_file" accept=".csv" class="pf-input" style="max-width: 300px; margin: 10px auto; display: block;" required>
                 </div>
-                <div class="modal-footer" style="margin-top:0; border-top:none;">
+                <div class="modal-footer">
                     <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
-                    <button type="submit" class="pf-btn"><?= tr('bud_preview') ?? 'Prévisualiser' ?></button>
+                    <button type="submit" class="pf-btn"><?= tr('bud_preview') ?></button>
                 </div>
             </form>
-
         <?php else: ?>
             <form method="POST" id="formMapping">
                 <input type="hidden" name="action" value="save_import">
@@ -7634,10 +7719,10 @@ async function deleteExpense(id) {
 
     try {
         await pachaFetch("budget.php?tab=suivi", { method: "POST", body: formData });
-        showToast("Dépense supprimée !"); // 
+        showToast(tr('bud_toast_deleted')); // 
         setTimeout(() => window.location.reload(), 800);
     } catch (err) {
-        showToast("Erreur lors de la suppression", "error");
+        showToast(tr('error_occured'), "error");
     }
 }
 
@@ -7855,7 +7940,9 @@ try {
 ```css
 /* modules/family-calendar/family-calendar.css */
 
-/* --- 1. VARIABLES --- */
+/* =========================================================
+   1. VARIABLES & BASE
+   ========================================================= */
 :root {
   --primary: #3b82f6;
   --bg-page: #f8fafc;
@@ -7871,10 +7958,9 @@ try {
   --c-extra-off: #fee2e2;
   --c-selected: #bfdbfe;
 
-  /* NOUVELLES COULEURS (Neutres) */
+  /* Couleurs Personnes */
   --bg-alex: #f0fdfa;
   --text-alex: #0f766e;
-
   --bg-laia: #fffbeb;
   --text-laia: #b45309;
 }
@@ -7885,7 +7971,6 @@ try {
   box-sizing: border-box;
 }
 
-/* Base */
 .pf-family-calendar {
   background-color: var(--bg-page);
   font-family: "Inter", system-ui, sans-serif;
@@ -7894,7 +7979,7 @@ try {
   line-height: 1.4;
 }
 
-/* OVERRIDES STRUCTURAUX */
+/* Overrides Structuraux Globaux */
 .pf-family-calendar .pf-container {
   max-width: 100% !important;
   padding: 0 20px;
@@ -7904,7 +7989,6 @@ try {
   padding-bottom: 40px;
 }
 
-/* Titres */
 .pf-card-title {
   padding: 12px 16px;
   margin: 0;
@@ -7921,7 +8005,9 @@ try {
   padding: 16px;
 }
 
-/* --- 2. HEADER PAGE & BOUTON VACANCES --- */
+/* =========================================================
+   2. HEADER GLOBAL & BOUTONS D'ACTION
+   ========================================================= */
 .fc-header-row {
   display: flex;
   justify-content: space-between;
@@ -7944,161 +8030,267 @@ try {
   transition: all 0.2s;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
+
 .pf-btn-icon-text:hover {
   border-color: var(--primary);
   color: var(--primary);
   background: #f0f9ff;
   transform: translateY(-1px);
 }
+
 .pf-btn-icon-text .icon {
   font-size: 1.2em;
 }
 
-/* --- 3. PLANNING HEBDO --- */
-.fc-week-header {
+/* =========================================================
+   3. CALENDRIER MENSUEL (En-tête & Grille)
+   ========================================================= */
+.fc-month-calendar-wrapper {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* En-tête Unifié PC/Mobile */
+.fc-month-header {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  margin-bottom: 20px !important;
+}
+
+.fc-month-nav-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.fc-month-nav-row h3 {
+  margin: 0 !important;
+  font-size: 1.4rem !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  text-transform: capitalize !important;
+  text-align: center !important;
+  flex-grow: 1 !important;
+}
+
+.fc-nav-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: white;
+  color: var(--text-main);
+  font-size: 18px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 16px;
-  flex-wrap: wrap;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-.fc-week-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 800;
+
+.fc-nav-button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* Sélecteur de vues (1, 2, 3 Mois) */
+.fc-view-controls {
+  display: flex !important;
+  width: 100% !important;
+  background: #e2e8f0 !important;
+  padding: 4px !important;
+  border-radius: 8px !important;
+  order: 0 !important;
+}
+
+.fc-view-button {
+  flex: 1 !important;
+  text-align: center !important;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fc-view-button:hover {
   color: var(--text-main);
 }
 
-/* Contrôles Année Scolaire */
-.fc-week-nav-controls {
+.fc-view-button--active {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+}
+
+/* Grille du Mois */
+.fc-month-calendar {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+}
+
+.fc-month-table {
+  min-width: 100% !important;
+  width: 100% !important;
+  table-layout: fixed;
+  border-collapse: collapse !important;
+}
+
+.fc-month-table td {
+  height: 80px;
+  padding: 6px !important;
+  font-size: 0.85rem;
+  vertical-align: top;
+  position: relative;
+  cursor: pointer;
+  background: transparent !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.fc-month-table th {
+  padding: 10px !important;
+  font-size: 0.8rem !important;
+  background: var(--bg-header) !important;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  border: 1px solid var(--border-color) !important;
+}
+
+.fc-day--other-month {
+  background: #fcfcfc !important;
+}
+
+/* Conteneurs Vues Multi-Mois */
+.fc-two-months-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fc-three-months-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.fc-month-container {
+  background: white;
+}
+
+.fc-month-title {
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--primary);
+  text-transform: capitalize;
+}
+
+/* =========================================================
+   4. DÉCOMPTE DES CONGÉS (STYLE ÉPURÉ / PILLS)
+   ========================================================= */
+.fc-month-balances {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.fc-minimal-balance-card {
   display: flex;
   align-items: center;
   gap: 12px;
   background: white;
-  padding: 4px 12px;
+  padding: 8px 16px;
   border-radius: 50px;
-}
-#fc-current-school-year-label {
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--text-main);
-  min-width: 120px;
-  text-align: center;
-  letter-spacing: -0.02em;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-/* WRAPPER OPTIMISÉ POUR LE SCROLL */
-#planningTable-wrapper {
-  max-height: 80vh;
-  overflow-x: auto;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch; /* Scroll fluide sur iOS */
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: white;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-  position: relative;
+.fc-minimal-balance-card strong {
+  font-size: 0.85rem;
 }
-
-/* Scrollbar personnalisée pour qu'elle soit toujours visible */
-#planningTable-wrapper::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
-}
-#planningTable-wrapper::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-#planningTable-wrapper::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-#planningTable-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-#planningTable {
-  width: 100%;
-  min-width: 1000px;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-/* Sticky Header */
-#planningTable thead {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--bg-header);
-}
-#planningTable thead th {
-  position: sticky;
-  top: 0;
-  background: var(--bg-header);
-  border-bottom: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
-  padding: 6px;
-  font-size: 0.75rem;
-  color: var(--text-main);
-  z-index: 20;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
-}
-
-/* Hauteurs */
-#planningTable thead tr:nth-child(1) th {
-  top: 0;
-  height: 32px;
-}
-#planningTable thead tr:nth-child(2) th {
-  top: 32px;
-  height: 28px;
-  z-index: 19;
-}
-#planningTable thead tr:nth-child(3) th {
-  top: 60px;
-  height: 26px;
-  z-index: 19;
-  border-bottom: 2px solid var(--border-color);
-}
-
-/* Couleurs Headers */
-.col-alex.header-group {
-  background: var(--bg-alex) !important;
+.fc-minimal-balance-card strong.alex {
   color: var(--text-alex);
 }
-.col-laia.header-group {
-  background: var(--bg-laia) !important;
+.fc-minimal-balance-card strong.laia {
   color: var(--text-laia);
 }
 
-/* Corps */
-#planningTable tbody td {
-  border-right: 1px solid #f1f5f9;
-  border-bottom: 1px solid #f1f5f9;
-  height: 36px;
-  padding: 0 4px;
-  text-align: center;
-  font-size: 0.85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  cursor: pointer;
-  position: relative;
+.fc-minimal-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-/* Couleurs Cellules */
+.fc-min-chip {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  border: 1px solid #cbd5e1;
+}
+
+.fc-min-chip .type {
+  font-weight: 700;
+  color: #64748b;
+  margin-right: 6px;
+}
+
+.fc-min-chip .val {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.fc-used-badge {
+  margin-left: 6px;
+  background: #fee2e2;
+  color: #ef4444;
+  padding: 1px 5px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: bold;
+}
+
+/* =========================================================
+   5. STYLES DES ÉVÉNEMENTS (Couleurs & Icônes)
+   ========================================================= */
 .fc-day--school-holiday {
-  background: var(--c-school-holiday);
+  background: var(--c-school-holiday) !important;
 }
 .fc-day--public-holiday {
-  background: var(--c-public-holiday);
+  background: var(--c-public-holiday) !important;
   font-weight: 700;
 }
 .fc-day--off-carole {
-  background: var(--c-off-carole);
+  background: var(--c-off-carole) !important;
 }
 .fc-day--extra-off-carole {
-  background: var(--c-extra-off);
+  background: var(--c-extra-off) !important;
 }
 .fc-day--selected {
   background: var(--c-selected) !important;
@@ -8106,7 +8298,6 @@ try {
   z-index: 5;
 }
 
-/* Icones */
 .fc-day--centre::after {
   content: "🏫";
   position: absolute;
@@ -8134,7 +8325,143 @@ try {
   font-size: 12px;
 }
 
-/* Colonnes */
+/* Superpositions de congés sur vacances scolaires */
+.fc-day--off-carole.fc-day--school-holiday,
+.fc-day--extra-off-carole.fc-day--school-holiday {
+  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
+}
+.fc-day--centre.fc-day--school-holiday,
+.fc-day--avis.fc-day--school-holiday {
+  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
+}
+
+/* =========================================================
+   6. PLANNING HEBDOMADAIRE (Desktop Uniquement)
+   ========================================================= */
+.fc-week-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fc-week-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.fc-week-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 4px 12px;
+  border-radius: 50px;
+}
+
+#fc-current-school-year-label {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  min-width: 120px;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+#planningTable-wrapper {
+  max-height: 80vh;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+#planningTable-wrapper::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+#planningTable-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+#planningTable-wrapper::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+#planningTable-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+#planningTable {
+  width: 100%;
+  min-width: 1000px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#planningTable thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-header);
+}
+#planningTable thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  padding: 6px;
+  font-size: 0.75rem;
+  color: var(--text-main);
+  z-index: 20;
+}
+
+#planningTable thead tr:nth-child(1) th {
+  height: 32px;
+}
+#planningTable thead tr:nth-child(2) th {
+  top: 32px;
+  height: 28px;
+  z-index: 19;
+}
+#planningTable thead tr:nth-child(3) th {
+  top: 60px;
+  height: 26px;
+  z-index: 19;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.col-alex.header-group {
+  background: var(--bg-alex) !important;
+  color: var(--text-alex);
+}
+.col-laia.header-group {
+  background: var(--bg-laia) !important;
+  color: var(--text-laia);
+}
+
+#planningTable tbody td {
+  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  height: 36px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
 .col-alex-av,
 .col-laia-av {
   background: #f8fafc;
@@ -8147,16 +8474,24 @@ try {
 .col-laia-sub {
   background: var(--bg-laia);
 }
+
 .col-month {
-  width: 50px;
+  box-sizing: border-box !important;
+  width: 54px !important;
+  min-width: 54px !important;
+  max-width: 54px !important;
   background: white;
   font-weight: 600;
   border-right: 2px solid var(--border-color) !important;
 }
-.col-day {
+
+th.col-day,
+td.col-day {
   width: auto !important;
+  min-width: 35px !important;
   border-right: 2px solid var(--border-color) !important;
 }
+
 th.col-total,
 td.col-total,
 th.col-alex-sub,
@@ -8166,16 +8501,8 @@ td.col-laia-sub {
   width: 32px !important;
   min-width: 32px !important;
   max-width: 32px !important;
-  box-sizing: border-box;
-  padding: 0 2px !important; /* On réduit le padding pour que les chiffres respirent */
+  padding: 0 2px !important;
   overflow: hidden;
-}
-
-th.col-day,
-td.col-day {
-  width: auto !important;
-  min-width: 35px !important;
-  border-right: 2px solid var(--border-color) !important;
 }
 
 .rotated-text span {
@@ -8186,161 +8513,49 @@ td.col-day {
   color: var(--text-muted);
 }
 
-/* --- 4. CALENDRIER MENSUEL --- */
-.fc-month-calendar-wrapper {
-  background: white;
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 32px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+#planningTable tbody td.col-sticky-mois {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 15 !important;
+  background: white !important;
+}
+#planningTable tbody td.col-sticky-sem {
+  position: sticky !important;
+  left: 54px !important;
+  z-index: 14 !important;
+  background: white !important;
+  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1);
+}
+#planningTable thead tr th.col-sticky-mois {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 30 !important;
+  background: var(--bg-header) !important;
+}
+#planningTable thead tr th.col-sticky-sem {
+  position: sticky !important;
+  top: 0 !important;
+  left: 54px !important;
+  z-index: 29 !important;
+  background: var(--bg-header) !important;
+  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1);
 }
 
-.fc-month-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.fc-nav-controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  order: 2;
-}
-.fc-nav-button {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--border-color);
-  background: white;
-  color: var(--text-main);
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-.fc-nav-button:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
-}
-
-#fc-current-month-year {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-main);
-  text-transform: capitalize;
-  min-width: 180px;
-  text-align: center;
-  letter-spacing: -0.02em;
-}
-
-.fc-view-controls {
-  display: inline-flex;
-  background: #e2e8f0;
-  padding: 4px;
-  border-radius: 8px;
-  gap: 0;
-  order: 1;
-}
-.fc-view-button {
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.fc-view-button:hover {
-  color: var(--text-main);
-}
-.fc-view-button--active {
-  background: white;
-  color: var(--primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  font-weight: 700;
-}
-
-.fc-month-calendar {
-  width: 100%;
-  display: block;
-  overflow-x: auto;
-}
-.fc-month-table {
-  width: 100%;
-  min-width: 500px;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-.fc-month-table th {
-  background: #f8fafc;
-  padding: 10px;
-  border: 1px solid var(--border-color);
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.fc-month-table td {
-  border: 1px solid var(--border-color);
-  height: 80px;
-  vertical-align: top;
-  padding: 6px;
-  position: relative;
-  cursor: pointer;
-}
-.fc-day--other-month {
-  background: #fcfcfc;
-}
-
-.fc-two-months-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  width: 100%;
-  overflow-x: auto;
-}
-.fc-year-container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  width: 100%;
-}
-.fc-month-container,
-.fc-year-month {
-  background: white;
-}
-.fc-month-title,
-.fc-year-month-title {
-  text-align: center;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--primary);
-  text-transform: capitalize;
-}
-
-/* --- 5. NOUVELLE SECTION BASSE (CARTES) --- */
+/* =========================================================
+   7. PANNEAUX DU BAS (Légendes & Récapitulatif)
+   ========================================================= */
 .pf-section--bottom-panels {
   margin-top: 40px;
 }
+
 .fc-bottom-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 24px;
   align-items: start;
 }
+
 .pf-card {
   background: white;
   border: 1px solid var(--border-color);
@@ -8355,6 +8570,7 @@ td.col-day {
   gap: 8px;
   justify-content: flex-start;
 }
+
 .pf-legend-item {
   display: inline-flex;
   align-items: center;
@@ -8366,6 +8582,7 @@ td.col-day {
   border-radius: 6px;
   color: var(--text-muted);
 }
+
 .pf-legend-color {
   width: 16px;
   height: 16px;
@@ -8377,6 +8594,7 @@ td.col-day {
   line-height: 1;
 }
 
+/* Légendes Spécifiques */
 .fc-legend-school-holiday {
   background: var(--c-school-holiday);
 }
@@ -8408,42 +8626,19 @@ td.col-day {
   border: none;
 }
 
-.fc-summary-vertical {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-.fc-summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 4px;
-  border-bottom: 1px solid #f1f5f9;
-}
-.fc-summary-item:last-child {
-  border-bottom: none;
-}
-.fc-summary-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.fc-summary-value {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-main);
-}
-
+/* Récapitulatif */
 .fc-summary-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
 }
+
 .fc-summary-controls {
   display: flex;
   gap: 8px;
 }
+
 .fc-summ-select {
   background: white;
   border: 1px solid var(--border-color);
@@ -8455,11 +8650,173 @@ td.col-day {
   outline: none;
   height: 24px;
 }
+
 .fc-summ-select:hover {
   border-color: var(--primary);
 }
 
-/* --- 6. MODALE VACANCES --- */
+.fc-summary-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fc-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fc-summary-item:last-child {
+  border-bottom: none;
+}
+
+.fc-summary-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.fc-summary-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* =========================================================
+   8. MENU CONTEXTUEL (Clic case) & MODALE VACANCES
+   ========================================================= */
+
+/* Menu Contextuel */
+.fc-selection-menu {
+  position: absolute;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  padding: 10px 12px;
+  min-width: 220px;
+  display: none;
+  animation: menuPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+}
+
+@keyframes menuPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.fc-menu-section {
+  padding: 6px 0;
+  border-bottom: 1px dashed #cbd5e1;
+}
+.fc-menu-section:first-child {
+  padding-top: 0;
+}
+.fc-menu-section:last-child {
+  border: none;
+  padding-bottom: 0;
+}
+
+.fc-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.fc-menu-section strong {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0 !important;
+}
+.fc-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.fc-menu-btn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.fc-menu-btn:hover {
+  background: #f8fafc;
+  border-color: #3b82f6;
+  color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.15);
+}
+
+.fc-menu-clear-icon {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.fc-menu-clear-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.fc-menu-clear-icon:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.fc-menu-leaves-table table {
+  width: 100%;
+  border-spacing: 2px;
+  border-collapse: separate;
+}
+.fc-menu-leaves-table th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  padding-bottom: 2px;
+  text-align: center;
+}
+.fc-menu-leaves-table td {
+  padding: 0;
+}
+.fc-th-inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* Modale Vacances */
 .fc-modal-overlay {
   position: fixed;
   top: 0;
@@ -8564,197 +8921,18 @@ td.col-day {
   }
 }
 
-/* --- MENU CONTEXTUEL COMPACT --- */
-.fc-selection-menu {
-  position: absolute;
-  z-index: 9999;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  border-radius: 16px;
-  padding: 10px 12px;
-  min-width: 220px;
-  display: none;
-  animation: menuPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform-origin: top center;
-}
-
-@keyframes menuPopIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.fc-menu-section {
-  padding: 6px 0;
-  border-bottom: 1px dashed #cbd5e1;
-}
-.fc-menu-section:first-child {
-  padding-top: 0;
-}
-.fc-menu-section:last-child {
-  border: none;
-  padding-bottom: 0;
-}
-.fc-menu-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-.fc-menu-section strong {
-  display: block;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 700;
-  color: #64748b;
-  margin-bottom: 0 !important;
-}
-.fc-menu-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-}
-.fc-menu-btn {
-  background: white;
-  border: 1px solid #e2e8f0;
-  color: #1e293b;
-  padding: 6px 8px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  width: 100%;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-.fc-menu-btn:hover {
-  background: #f8fafc;
-  border-color: #3b82f6;
-  color: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.15);
-}
-.fc-menu-clear-icon {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-.fc-menu-clear-icon svg {
-  width: 14px;
-  height: 14px;
-}
-.fc-menu-clear-icon:hover {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.fc-menu-leaves-table table {
-  width: 100%;
-  border-spacing: 2px;
-  border-collapse: separate;
-}
-.fc-menu-leaves-table th {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #64748b;
-  padding-bottom: 2px;
-  text-align: center;
-}
-.fc-menu-leaves-table td {
-  padding: 0;
-}
-.fc-th-inline {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-/* --- SUPERPOSITION : GARDE/CONGÉS + VACANCES SCOLAIRES --- */
-.fc-day--off-carole.fc-day--school-holiday {
-  background: var(--c-off-carole) !important;
-  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
-}
-.fc-day--extra-off-carole.fc-day--school-holiday {
-  background: var(--c-extra-off) !important;
-  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
-}
-.fc-day--centre.fc-day--school-holiday,
-.fc-day--avis.fc-day--school-holiday {
-  box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
-}
-
 /* =========================================================
-   8. FIXATION DES COLONNES (STICKY) POUR SCROLL FLUIDE
+   9. MEDIA QUERIES (Tablettes & Mobiles)
    ========================================================= */
 
-.col-month {
-  box-sizing: border-box !important;
-  width: 54px !important;
-  min-width: 54px !important;
-  max-width: 54px !important;
+@media (max-width: 1000px) {
+  .fc-three-months-container {
+    grid-template-columns: 1fr;
+  }
 }
-
-#planningTable tbody td.col-sticky-mois {
-  position: -webkit-sticky !important;
-  position: sticky !important;
-  left: 0 !important;
-  z-index: 15 !important;
-  background: white !important;
-}
-
-#planningTable tbody td.col-sticky-sem {
-  position: -webkit-sticky !important;
-  position: sticky !important;
-  left: 54px !important;
-  z-index: 14 !important;
-  background: white !important;
-  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1); /* Ombre renforcée pour montrer le scroll */
-}
-
-#planningTable thead tr th.col-sticky-mois {
-  position: -webkit-sticky !important;
-  position: sticky !important;
-  top: 0 !important;
-  left: 0 !important;
-  z-index: 30 !important;
-  background: var(--bg-header) !important;
-}
-
-#planningTable thead tr th.col-sticky-sem {
-  position: -webkit-sticky !important;
-  position: sticky !important;
-  top: 0 !important;
-  left: 54px !important;
-  z-index: 29 !important;
-  background: var(--bg-header) !important;
-  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1); /* Ombre renforcée */
-}
-
-/* =========================================================
-   9. OPTIMISATIONS MOBILES STRICTES (max-width: 768px)
-   ========================================================= */
 
 @media (max-width: 768px) {
-  /* 1. PLEIN ÉCRAN POUR GAGNER DE L'ESPACE */
+  /* Espacements Globaux */
   .pf-family-calendar .pf-container {
     padding: 0 !important;
   }
@@ -8762,16 +8940,16 @@ td.col-day {
     padding-top: 10px;
   }
 
-  /* 2. EN-TÊTES ET BOUTONS GLOBAUX (Empilement propre) */
+  /* En-tête Global */
   .fc-header-row {
     flex-direction: column;
     align-items: stretch;
     gap: 15px;
-    padding: 0 10px; /* On remet un peu de padding juste pour les textes */
+    padding: 0 10px;
   }
   .fc-header-row > div {
     display: flex;
-    flex-direction: column; /* Les boutons s'empilent */
+    flex-direction: column;
     width: 100%;
     gap: 10px;
   }
@@ -8780,73 +8958,63 @@ td.col-day {
     width: 100%;
   }
 
-  /* 3. CONTRÔLES DU CALENDRIER MENSUEL */
-  .fc-month-header {
-    flex-direction: column;
-    gap: 15px;
-    align-items: stretch;
-  }
-  .fc-view-controls {
-    width: 100%;
-    display: flex;
-    order: 1;
-  }
-  .fc-view-button {
-    flex: 1; /* Les onglets 1 Mois / 2 Mois se partagent l'espace */
-    text-align: center;
-    padding: 8px 4px;
-    font-size: 0.8rem;
-  }
-  #fc-current-month-year {
-    order: 2;
-  }
-  .fc-nav-controls {
-    width: 100%;
-    justify-content: space-between; /* Les flèches de chaque côté */
-    order: 3;
-  }
-
-  /* 4. CONTRÔLES DU PLANNING HEBDO */
-  .fc-week-header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0 10px;
-  }
-  .fc-week-nav-controls {
-    justify-content: space-between;
-  }
-
-  /* 5. LE GRAND TABLEAU (Suppression des bordures extérieures) */
+  /* Cacher le planning hebdo complet sur mobile */
+  .fc-week-header,
   #planningTable-wrapper {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    margin-bottom: 0;
-    max-height: 75vh; /* Ajusté pour laisser voir un peu le bas */
+    display: none !important;
   }
 
-  /* Ajustements pour que les colonnes figées (Mois + Semaine) ne prennent pas tout l'écran */
-  .col-month {
-    width: 40px !important;
-    min-width: 40px !important;
-    max-width: 40px !important;
-    font-size: 0.75rem; /* On réduit le texte "Avril" etc. */
-  }
-  #planningTable tbody td.col-sticky-sem {
-    left: 40px !important; /* Adapté à la nouvelle largeur de la 1ère colonne */
-  }
-  #planningTable thead tr th.col-sticky-sem {
-    left: 40px !important;
+  /* Boîte et Grille du Mois */
+  .fc-month-calendar-wrapper {
+    padding: 16px !important;
+    margin-bottom: 20px !important;
+    overflow: hidden;
   }
 
-  /* 6. PANNEAUX DU BAS (Légendes et Résumés) */
+  .fc-month-table {
+    min-width: 100% !important;
+    width: 100% !important;
+    table-layout: fixed;
+    border-collapse: collapse !important;
+  }
+
+  .fc-month-table td {
+    height: 46px !important;
+    padding: 2px !important;
+    font-size: 0.75rem !important;
+    background: transparent !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  .fc-month-table th {
+    padding: 6px 4px !important;
+    font-size: 0.7rem !important;
+    background: var(--bg-header) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+
+  /* Micro-icônes événements */
+  .fc-day--centre::after {
+    font-size: 8px !important;
+    top: 1px;
+    right: 1px;
+  }
+  .fc-day--avis::after {
+    width: 8px !important;
+    height: 8px !important;
+    top: 1px;
+    right: 1px;
+  }
+  .fc-pep-sick-emoji {
+    font-size: 8px !important;
+    bottom: 1px;
+    right: 1px;
+  }
+
+  /* Panneaux inférieurs */
   .fc-bottom-grid {
     grid-template-columns: 1fr;
     padding: 0 10px;
-  }
-  .fc-two-months-container,
-  .fc-year-container {
-    grid-template-columns: 1fr;
   }
   .fc-summary-header {
     flex-direction: column;
@@ -8858,7 +9026,7 @@ td.col-day {
     justify-content: space-between;
   }
 
-  /* 7. MODALE BOTTOM SHEET (SÉCURITÉ Z-INDEX) */
+  /* Menu Bottom Sheet (Tactile) */
   .fc-selection-menu {
     position: fixed !important;
     top: auto !important;
@@ -8873,9 +9041,8 @@ td.col-day {
     animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     max-height: 85vh;
     overflow-y: auto;
-    z-index: 999999 !important; /* Doit passer AU-DESSUS des colonnes figées du tableau ! */
+    z-index: 999999 !important;
   }
-
   @keyframes slideUpSheet {
     to {
       transform: translateY(0);
@@ -8891,28 +9058,9 @@ td.col-day {
     border-radius: 10px;
     margin: 0 auto 15px auto;
   }
-
   .fc-menu-btn {
     padding: 12px 10px;
     font-size: 0.95rem;
-  }
-
-  /* Réduction des icônes pour le tableau hyper dense */
-  .fc-day--centre::after {
-    font-size: 9px !important;
-    top: 1px !important;
-    right: 1px !important;
-  }
-  .fc-day--avis::after {
-    width: 10px !important;
-    height: 10px !important;
-    top: 1px !important;
-    right: 1px !important;
-  }
-  .fc-pep-sick-emoji {
-    font-size: 9px !important;
-    bottom: 1px !important;
-    right: 1px !important;
   }
 }
 
@@ -9613,61 +9761,153 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
-
-      const lang = window.I18N_LANG || "fr-FR"; // Assure-toi d'avoir cette variable ou utilise une déduction
+      const lang = window.I18N_LANG || "fr-FR";
       const titleEl = document.querySelector("#fc-current-month-year");
+
       if (titleEl) {
-        if (this.viewMode === "year") {
-          titleEl.textContent = `${tr("fc_school_year")} ${this.currentSchoolYearStart} – ${this.currentSchoolYearStart + 1}`;
-        } else if (this.viewMode === "2months") {
-          const nextM = new Date(y, m + 1, 1);
-          const m1 = new Intl.DateTimeFormat(lang, { month: "long" }).format(
+        if (this.viewMode === "3months") {
+          const nextM2 = new Date(y, m + 2, 1);
+          const m1 = new Intl.DateTimeFormat(lang, { month: "short" }).format(
             this.currentMonth,
           );
           const m2 = new Intl.DateTimeFormat(lang, {
-            month: "long",
+            month: "short",
+            year: "numeric",
+          }).format(nextM2);
+          titleEl.textContent = `${m1} - ${m2}`;
+          this.renderThreeMonthsView();
+        } else if (this.viewMode === "2months") {
+          const nextM = new Date(y, m + 1, 1);
+          const m1 = new Intl.DateTimeFormat(lang, { month: "short" }).format(
+            this.currentMonth,
+          );
+          const m2 = new Intl.DateTimeFormat(lang, {
+            month: "short",
             year: "numeric",
           }).format(nextM);
           titleEl.textContent = `${m1} - ${m2}`;
+          this.renderTwoMonthsView();
         } else {
           titleEl.textContent = new Intl.DateTimeFormat(lang, {
             month: "long",
             year: "numeric",
           }).format(this.currentMonth);
+          this.monthCalendar.innerHTML = this.generateMonthHTML(y, m);
         }
       }
 
-      if (this.viewMode === "year") {
-        this.renderYearView();
-        return;
-      }
-      if (this.viewMode === "2months") {
-        this.renderTwoMonthsView();
-        return;
-      }
-      this.monthCalendar.innerHTML = this.generateMonthHTML(y, m);
+      this.renderMonthBalances();
+      this.syncSummaryWithMonth();
     }
 
     renderTwoMonthsView() {
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
       const nextDate = new Date(y, m + 1, 1);
+      const lang = window.I18N_LANG || "fr-FR";
+
       let html = `<div class="fc-two-months-container">`;
-      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(this.currentMonth)}</div>${this.generateMonthHTML(y, m)}</div>`;
-      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(nextDate)}</div>${this.generateMonthHTML(nextDate.getFullYear(), nextDate.getMonth())}</div>`;
+      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(this.currentMonth)}</div>${this.generateMonthHTML(y, m)}</div>`;
+      html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(nextDate)}</div>${this.generateMonthHTML(nextDate.getFullYear(), nextDate.getMonth())}</div>`;
+      html += `</div>`;
+
+      this.monthCalendar.innerHTML = html;
+    }
+
+    renderThreeMonthsView() {
+      const y = this.currentMonth.getFullYear();
+      const m = this.currentMonth.getMonth();
+      const d1 = this.currentMonth;
+      const d2 = new Date(y, m + 1, 1);
+      const d3 = new Date(y, m + 2, 1);
+
+      let html = `<div class="fc-three-months-container">`;
+      [d1, d2, d3].forEach((d) => {
+        html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(d)}</div>${this.generateMonthHTML(d.getFullYear(), d.getMonth())}</div>`;
+      });
       html += `</div>`;
       this.monthCalendar.innerHTML = html;
     }
 
-    renderYearView() {
-      const startYear = this.currentSchoolYearStart;
-      let html = '<div class="fc-year-container">';
-      for (let i = 8; i < 12; i++)
-        html += `<div class="fc-year-month"><div class="fc-year-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(new Date(startYear, i))}</div>${this.generateMonthHTML(startYear, i)}</div>`;
-      for (let i = 0; i < 8; i++)
-        html += `<div class="fc-year-month"><div class="fc-year-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(new Date(startYear + 1, i))}</div>${this.generateMonthHTML(startYear + 1, i)}</div>`;
-      html += "</div>";
-      this.monthCalendar.innerHTML = html;
+    renderMonthBalances() {
+      const container = document.getElementById("fc-month-balances");
+      if (!container) return;
+
+      // 1. Déterminer les mois affichés selon la vue
+      const monthsToDisplay = [];
+      const y = this.currentMonth.getFullYear();
+      const m = this.currentMonth.getMonth();
+
+      let numMonths = 1;
+      if (this.viewMode === "2months") numMonths = 2;
+      if (this.viewMode === "3months") numMonths = 3;
+
+      for (let i = 0; i < numMonths; i++) {
+        const d = new Date(y, m + i, 1);
+        monthsToDisplay.push(
+          `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+        );
+      }
+
+      container.style.display = "flex";
+      let html = "";
+
+      // 2. Calcul dynamique pour Alex et Laia
+      [FAMILY.ALEX, FAMILY.LAIA].forEach((person) => {
+        html += `<div class="fc-minimal-balance-card">
+                  <strong class="${person.prefix}">${person.prefix.toUpperCase()}</strong>
+                  <div class="fc-minimal-chips">`;
+
+        ["CP", "JRA", "JA"].forEach((type) => {
+          // Solde de départ = celui du PREMIER mois affiché
+          const startInfo =
+            this.monthlyLeaveBalances[person.id]?.[type]?.[monthsToDisplay[0]];
+          const startBal = startInfo ? startInfo.availableAtMonthStart : 0;
+
+          // Jours posés = Somme sur TOUS les mois affichés
+          let totalUsed = 0;
+          monthsToDisplay.forEach((ym) => {
+            const info = this.monthlyLeaveBalances[person.id]?.[type]?.[ym];
+            if (info) totalUsed += info.usedInMonth;
+          });
+
+          // Solde de fin (théorique) à la fin de la période
+          const endBal = Math.max(0, startBal - totalUsed);
+          const fmt = (n) =>
+            n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "0";
+
+          // Petit badge rouge uniquement s'il y a des congés posés
+          const usedHtml =
+            totalUsed > 0
+              ? `<span class="fc-used-badge" title="Posé sur la période">-${fmt(totalUsed)}</span>`
+              : "";
+
+          html += `<div class="fc-min-chip" title="Solde de départ: ${fmt(startBal)}">
+                      <span class="type">${type}</span>
+                      <span class="val" title="Restant">${fmt(endBal)}</span>
+                      ${usedHtml}
+                   </div>`;
+        });
+        html += `</div></div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    syncSummaryWithMonth() {
+      const typeSelect = document.getElementById("summType");
+      const valueSelect = document.getElementById("summValue");
+
+      if (typeSelect && valueSelect) {
+        // Le récap se synchronise avec le PREMIER mois affiché de la période
+        const ym = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, "0")}`;
+
+        if (typeSelect.value !== "month") {
+          typeSelect.value = "month";
+          typeSelect.dispatchEvent(new Event("change"));
+        }
+        valueSelect.value = ym;
+        this.updateGlobalSummary();
+      }
     }
 
     generateMonthHTML(year, month) {
@@ -14694,7 +14934,7 @@ if ($holiday_id > 0 && !empty($location_name)) {
                     $dur  = !empty($_POST['items']['duration'][$i]) ? (int)$_POST['items']['duration'][$i] : 1;
 
                     // Ajout de $is_return à la fin
-                    $stmt->execute([$holiday_id, $cat, $name ?: 'Dépense', $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur, $is_return]);
+                    $stmt->execute([$holiday_id, $cat, $name ?: tr('hdl_default_exp_name'), $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur, $is_return]);
                     $validItemsCount++;
                 }
             }
@@ -15253,8 +15493,9 @@ if ($selectedYear !== 'all') {
 $sql = "
     SELECT h.*, 
            (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE(SUM(hi.amount), 0)) as total_cost,
-           (SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) as real_expenses_sum,
-           SUM(CASE WHEN hi.is_paid = 1 THEN hi.amount ELSE 0 END) as items_paid_sum
+           ((SELECT COALESCE(SUM(ABS(amount)), 0) FROM pf_expenses WHERE holiday_id = h.id) + 
+            (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND is_paid = 1)) as total_paid,
+           (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved
     FROM pf_holidays h
     LEFT JOIN pf_holidays_items hi ON h.id = hi.holiday_id
     $whereSQL
