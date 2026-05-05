@@ -517,7 +517,7 @@ return [
     'gift_col_party'         => 'Festa',
     'gift_debtor'            => 'Deutor',
     'gift_creditor'          => 'Creditor',
-    'gift_liquidations'      => 'Liquidacions',
+    'gift_liquidations'      => 'Tricount',
     'gift_no_debt'           => 'Cap deute pendent.',
     'gift_owes'              => 'ha de pagar',
     'gift_to'                => 'a',
@@ -532,4 +532,9 @@ return [
     'gift_modal_price'       => 'Preu (€)',
     'gift_modal_link'        => 'Enllaç (opcional)',
     'gift_confirm_delete'    => 'Vols eliminar aquest regal?',
+    'gift_filter_all_children'   => 'Tots els nens',
+    'gift_filter_all_adults'     => 'Tots els adults',
+    'gift_empty_state_no_gifts'  => 'Cap regal de moment.',
+    'gift_empty_state_no_filter' => 'Cap regal correspon al filtre.',
+    'gift_view_matrix'           => 'Veure la matriu detallada',
 ];
