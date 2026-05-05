@@ -578,7 +578,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div class="form-group" id="blockInputFrais" style="margin-bottom:15px; display:none;">
                 <label class="pf-label"><?= tr('bud_fixed_charge') ?></label>
                 <select name="budget_item_id" id="fraisSelect" class="pf-input" disabled>
-                <option value=""><?= tr('hdl_select_beneficiary') ?></option>
+                <option value=""><?= tr('bud_select_beneficiary') ?></option>
                     <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
@@ -586,7 +586,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
                 <label class="pf-label"><?= tr('bud_expected_income') ?></label>
                 <select name="budget_item_id" id="incomeSelect" class="pf-input" disabled>
-                    <option value=""><?= tr('hdl_select_beneficiary') ?>    </option>
+                    <option value=""><?= tr('bud_select_beneficiary') ?>    </option>
                     <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
@@ -622,23 +622,22 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 <div id="importCsvModal" class="pf-modal" style="display: <?= $showPreview ? 'flex' : 'none' ?>;">
     <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?? 'Importer un fichier CSV' ?></h3>
-            <button type="button" onclick="<?= $showPreview ? "window.location.href='?tab=suivi&m=$viewM&y=$viewY';" : "closeSuiviModal('importCsvModal');" ?>" class="pf-modal-close" style="font-size:1.8rem; background:none; border:none; cursor:pointer; color:#64748b; padding:0; line-height:1;">&times;</button>
+            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?></h3>
+            <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
 
         <?php if (!$showPreview): ?>
-            <form method="POST" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:20px;">
+            <form method="POST" enctype="multipart/form-data">
                 <div class="import-dropzone">
                     <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
-                    <label class="pf-label" style="font-size: 1rem; color: #1e293b; margin-bottom: 10px;"><?= tr('bud_csv_file') ?? 'Sélectionnez le fichier de votre banque' ?></label>
-                    <input type="file" name="csv_file" accept=".csv" class="pf-input" style="max-width: 300px; margin: 0 auto; display: block;" required>
+                    <label class="pf-label"><?= tr('bud_csv_file') ?></label>
+                    <input type="file" name="csv_file" accept=".csv" class="pf-input" style="max-width: 300px; margin: 10px auto; display: block;" required>
                 </div>
-                <div class="modal-footer" style="margin-top:0; border-top:none;">
+                <div class="modal-footer">
                     <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
-                    <button type="submit" class="pf-btn"><?= tr('bud_preview') ?? 'Prévisualiser' ?></button>
+                    <button type="submit" class="pf-btn"><?= tr('bud_preview') ?></button>
                 </div>
             </form>
-
         <?php else: ?>
             <form method="POST" id="formMapping">
                 <input type="hidden" name="action" value="save_import">
@@ -828,10 +827,10 @@ async function deleteExpense(id) {
 
     try {
         await pachaFetch("budget.php?tab=suivi", { method: "POST", body: formData });
-        showToast("Dépense supprimée !"); // 
+        showToast(tr('bud_toast_deleted')); // 
         setTimeout(() => window.location.reload(), 800);
     } catch (err) {
-        showToast("Erreur lors de la suppression", "error");
+        showToast(tr('error_occured'), "error");
     }
 }
 

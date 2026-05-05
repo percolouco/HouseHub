@@ -139,24 +139,24 @@ function getTranslatedMonthName($dateString) {
     </div>
 
     <div>
-        <div class="prev-section-header">
-            <div style="display:flex; gap:10px; align-items:center;">
-                <h2><?= tr('bud_prev_budget_alloc') ?></h2>
-                <div class="nav-group">
-                    <a href="?tab=budget_prev&focus_date=<?= $prevMonthLink ?>" class="btn-nav">◀</a>
-                    <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav"><?= tr('bud_prev_today') ?></a>
-                    <a href="?tab=budget_prev&focus_date=<?= $nextMonthLink ?>" class="btn-nav">▶</a>
-                </div>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button class="pf-btn btn-secondary" onclick="duplicateMonth()">
-                    🔁 <?= tr('bud_sav_add_one_month') ?>
-                </button>
-                <button class="pf-btn" onclick="document.getElementById('addCatModal').style.display='flex'; document.body.classList.add('no-scroll');">
-                    ＋ <?= tr('bud_prev_new_line') ?>
-                </button>
-            </div>
+        <div class="prev-section-header" style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+    <div style="display:flex; gap:10px; align-items:center;">
+        <h2 style="margin:0; font-size:1.3rem;"><?= tr('bud_prev_budget_alloc') ?></h2>
+        <div class="nav-group" style="display:flex; gap:5px;">
+            <a href="?tab=budget_prev&focus_date=<?= $prevMonthLink ?>" class="btn-nav">◀</a>
+            <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav"><?= tr('bud_prev_today') ?></a>
+            <a href="?tab=budget_prev&focus_date=<?= $nextMonthLink ?>" class="btn-nav">▶</a>
         </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button type="button" class="pf-btn btn-secondary" onclick="duplicateMonth()">
+            🔁 <?= tr('bud_sav_add_one_month') ?>
+        </button>
+        <button type="button" class="pf-btn" onclick="document.getElementById('addCatModal').style.display='flex'; document.body.classList.add('no-scroll');">
+            ＋ <?= tr('bud_prev_new_line') ?>
+        </button>
+    </div>
+</div>
 
         <div class="prev-timeline-wrapper">
             <table class="prev-alloc-table">

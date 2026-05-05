@@ -599,6 +599,11 @@ input[type="number"] {
     overflow-x: auto;
     white-space: nowrap;
   }
+  .pf-btn {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+  }
   .form-row {
     grid-template-columns: 1fr;
   }
@@ -662,6 +667,19 @@ input[type="number"] {
 .prev-input.bold-blue {
   color: #0284c7;
   font-weight: 700;
+}
+
+.prev-section-header,
+.view-header,
+.budget-view > div[style*="justify-content: space-between"] {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  float: none !important; /* On annule tout float résiduel */
+  position: relative !important; /* On s'assure qu'il n'est pas en absolute */
+  width: 100% !important;
+  gap: 15px !important;
 }
 
 .prev-salary-table {
@@ -1008,6 +1026,11 @@ th.col-laia {
   }
   .budget-view > div[style*="display:grid"] > div {
     padding: 12px 10px !important;
+  }
+  .budget-view
+    > div[style*="justify-content: space-between"]:not(.view-header) {
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
 
   /* 4. EN-TÊTES EPARGNE (Titre isolé, boutons 50/50 en dessous) */
