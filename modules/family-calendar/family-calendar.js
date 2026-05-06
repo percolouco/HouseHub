@@ -96,7 +96,8 @@ document.addEventListener("DOMContentLoaded", () => {
         now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
       this.modalSelectedYear = this.currentSchoolYearStart;
 
-      this.setupModalUI(); // Prépare le selecteur d'année dans la modale
+      this.setupModalUI();
+      this.initSmartSelectors();
       await this.refreshAllData();
       this.updateSchoolYearLabel();
 
@@ -130,6 +131,40 @@ document.addEventListener("DOMContentLoaded", () => {
             this.renderModalHolidays();
           });
       }
+    }
+
+    initSmartSelectors() {
+      const selectMonth = document.getElementById("fc-select-month");
+      const selectYear = document.getElementById("fc-select-year");
+      if (!selectMonth || !selectYear) return;
+
+      const lang = window.appLang || "fr-FR";
+
+      // 1. Remplir les mois en tenant compte de la langue locale
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(2000, i, 1);
+        const monthName = new Intl.DateTimeFormat(lang, {
+          month: "long",
+        }).format(d);
+        selectMonth.add(new Option(monthName, i));
+      }
+
+      // 2. Remplir les années (de l'année actuelle -2 à +5)
+      const currentY = new Date().getFullYear();
+      for (let y = currentY - 2; y <= currentY + 5; y++) {
+        selectYear.add(new Option(y, y));
+      }
+
+      // 3. Écouteurs d'événements pour le rechargement en direct
+      const handleChange = () => {
+        const m = parseInt(selectMonth.value);
+        const y = parseInt(selectYear.value);
+        this.currentMonth = new Date(y, m, 1);
+        this.renderMonthCalendar();
+      };
+
+      selectMonth.addEventListener("change", handleChange);
+      selectYear.addEventListener("change", handleChange);
     }
 
     async refreshAllData() {
@@ -714,37 +749,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
-      const lang = window.I18N_LANG || "fr-FR";
-      const titleEl = document.querySelector("#fc-current-month-year");
 
-      if (titleEl) {
+      const selectMonth = document.getElementById("fc-select-month");
+      const selectYear = document.getElementById("fc-select-year");
+      // On masque définitivement le suffixe encombrant
+      const suffixEl = document.getElementById("fc-multi-month-suffix");
+
+      if (selectMonth && selectYear) {
+        selectMonth.value = m;
+        selectYear.value = y;
+        if (suffixEl) suffixEl.style.display = "none";
+
         if (this.viewMode === "3months") {
-          const nextM2 = new Date(y, m + 2, 1);
-          const m1 = new Intl.DateTimeFormat(lang, { month: "short" }).format(
-            this.currentMonth,
-          );
-          const m2 = new Intl.DateTimeFormat(lang, {
-            month: "short",
-            year: "numeric",
-          }).format(nextM2);
-          titleEl.textContent = `${m1} - ${m2}`;
           this.renderThreeMonthsView();
         } else if (this.viewMode === "2months") {
-          const nextM = new Date(y, m + 1, 1);
-          const m1 = new Intl.DateTimeFormat(lang, { month: "short" }).format(
-            this.currentMonth,
-          );
-          const m2 = new Intl.DateTimeFormat(lang, {
-            month: "short",
-            year: "numeric",
-          }).format(nextM);
-          titleEl.textContent = `${m1} - ${m2}`;
           this.renderTwoMonthsView();
         } else {
-          titleEl.textContent = new Intl.DateTimeFormat(lang, {
-            month: "long",
-            year: "numeric",
-          }).format(this.currentMonth);
           this.monthCalendar.innerHTML = this.generateMonthHTML(y, m);
         }
       }
