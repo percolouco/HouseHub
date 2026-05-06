@@ -36,7 +36,7 @@ require __DIR__ . '/header.php';
         <div class="pf-modal-content">
             <div class="pf-modal-header">
                 <h3 class="pf-modal-title"><?= tr('fc_modal_holidays_title') ?></h3>
-                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
+                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('open'); document.body.classList.remove('no-scroll');">&times;</button>
             </div>
             <div class="pf-modal-body" style="padding:0;">
                 <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
@@ -59,7 +59,7 @@ require __DIR__ . '/header.php';
         <div class="pf-modal-content">
             <div class="pf-modal-header">
                 <h3 class="pf-modal-title">📸 <?= tr('fc_modal_snap_title') ?></h3>
-                <button type="button" id="btnCloseSnapshot" class="pf-modal-close" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
+                <button type="button" id="btnCloseSnapshot" class="pf-modal-close" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');">&times;</button>
             </div>
             <div class="pf-modal-body">
                 <form id="formSnapshot">
@@ -96,7 +96,7 @@ require __DIR__ . '/header.php';
                 </form>
             </div>
             <div class="pf-modal-footer">
-                <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
+                <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
                 <button type="submit" form="formSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
             </div>
         </div>
