@@ -156,9 +156,10 @@ body.no-scroll {
 .pf-mobile-menu {
   position: fixed;
   top: 0;
-  right: -300px; /* Caché à l'extérieur de l'écran à droite */
+  right: -300px;
   width: 280px;
-  height: 100vh;
+  height: 100vh; /* Fallback (sécurité) */
+  height: 100dvh;
   background: var(--bg-panel);
   box-shadow: -4px 0 25px rgba(0, 0, 0, 0.15);
   z-index: 999;
@@ -192,6 +193,7 @@ body.no-scroll {
 
 .pf-mobile-menu-body {
   padding: 20px;
+  padding-bottom: 40px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -219,7 +221,7 @@ body.no-scroll {
 .pf-mobile-logout {
   color: var(--danger);
   background: #fef2f2;
-  margin-top: 15px;
+  margin-top: 10px;
 }
 
 /* === MAIN CONTENT & TYPOGRAPHY === */
