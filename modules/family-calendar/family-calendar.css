@@ -474,10 +474,6 @@ td.col-laia-sub {
   z-index: 15 !important;
   background: white !important;
   padding: 0 !important;
-  border: none !important;
-  box-shadow:
-    inset 1px 0 0 var(--pf-border),
-    inset 0 1px 0 var(--pf-border) !important;
 }
 
 #planningTable tbody td.col-sticky-mois .fc-sticky-mois-label {
