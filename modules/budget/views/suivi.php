@@ -601,10 +601,11 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 
 <div id="snapshotModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width:350px;">
-        <div class="pf-modal-header">
-            <h3 class="pf-modal-title">🏦 <?= tr('bud_update_balance') ?></h3>
-            <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-modal-close">&times;</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;">🏦 <?= tr('bud_update_balance') ?></h3>
+            <button type="button" onclick="closeSuiviModal('snapshotModal')" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
         </div>
+        
         <div class="pf-modal-body">
             <form id="snapshotForm" method="POST">
                 <input type="hidden" name="action" value="save_snapshot">
@@ -616,9 +617,10 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                 </div>
             </form>
         </div>
-        <div class="pf-modal-footer">
-            <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn pf-btn-secondary"><?= tr('btn_cancel') ?></button>
-            <button type="submit" form="snapshotForm" class="pf-btn pf-btn-primary"><?= tr('btn_save') ?></button>
+        
+        <div class="modal-footer">
+            <button type="button" onclick="closeSuiviModal('snapshotModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+            <button type="submit" form="snapshotForm" class="pf-btn"><?= tr('btn_save') ?></button>
         </div>
     </div>
 </div>
@@ -728,7 +730,9 @@ window.I18N = {
     'bud_confirm_delete': <?= json_encode(tr('bud_confirm_delete')) ?>,
     'bud_to_define_js': <?= json_encode(tr('bud_to_define_js')) ?>,
     'error_occured': <?= json_encode(tr('error_occured')) ?>,
-    'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>
+    'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>,
+    'btn_cancel': <?= json_encode(tr('btn_cancel')) ?>,
+    'btn_delete': <?= json_encode(tr('btn_delete')) ?>,
 };
 
 const activeViewMonth = '<?= substr($viewMonthDate, 0, 7) ?>';

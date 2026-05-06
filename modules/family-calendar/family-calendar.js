@@ -105,14 +105,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Modifie dynamiquement le titre de la modale pour y insérer le selecteur d'année
     setupModalUI() {
-      const headerH2 = document.querySelector(".fc-modal-header h2");
-      if (headerH2 && !document.getElementById("holidayYearSelect")) {
-        headerH2.innerHTML = `${tr("fc_modal_holidays_title")} 
-          <select id="holidayYearSelect" style="margin-left:15px; font-size:1rem; padding:4px; border-radius:4px; border:1px solid #cbd5e1;">
-            <option value="${this.currentSchoolYearStart - 1}">${this.currentSchoolYearStart - 1} - ${this.currentSchoolYearStart}</option>
-            <option value="${this.currentSchoolYearStart}" selected>${this.currentSchoolYearStart} - ${this.currentSchoolYearStart + 1}</option>
-            <option value="${this.currentSchoolYearStart + 1}">${this.currentSchoolYearStart + 1} - ${this.currentSchoolYearStart + 2}</option>
-            <option value="${this.currentSchoolYearStart + 2}">${this.currentSchoolYearStart + 2} - ${this.currentSchoolYearStart + 3}</option>
+      const headerTitle = document.querySelector(
+        "#modalHolidays .pf-modal-title",
+      );
+
+      if (headerTitle && !document.getElementById("holidayYearSelect")) {
+        let options = "";
+        const currentY = new Date().getFullYear();
+        // On affiche de N-2 à N+3 pour avoir un bel historique/futur
+        for (let y = currentY - 2; y <= currentY + 3; y++) {
+          const selected = y === this.currentSchoolYearStart ? "selected" : "";
+          options += `<option value="${y}" ${selected}>${y} - ${y + 1}</option>`;
+        }
+
+        headerTitle.innerHTML = `🏖️ ${tr("fc_modal_holidays_title")} 
+          <select id="holidayYearSelect" class="pf-input" style="width:auto; display:inline-block; margin-left:10px; padding:4px 10px; height:auto;">
+            ${options}
           </select>`;
 
         document
@@ -202,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderModalHolidays() {
       if (!this.schoolHolidaysTableBody) return;
 
-      // Filtrer les événements de type VACANCES_SCOLAIRES pour l'année scolaire sélectionnée
+      // On utilise bien l'année de la modale, indépendamment du planning de fond
       const startDate = `${this.modalSelectedYear}-09-01`;
       const endDate = `${this.modalSelectedYear + 1}-08-31`;
 
@@ -213,61 +221,50 @@ document.addEventListener("DOMContentLoaded", () => {
           e.date <= endDate,
       );
 
-      // S'il n'y a pas de vacances en base pour cette année, on affiche le bouton "Générer"
       if (yearHolidays.length === 0) {
         this.schoolHolidaysTableBody.innerHTML = `
           <tr>
             <td colspan="3" style="text-align:center; padding: 30px;">
-              <p style="color:#64748b; margin-bottom:15px;">Les vacances de cette année ne sont pas encore enregistrées.</p>
-              <button id="btnFetchGovHolidays" class="pf-btn">Importer depuis l'API Gouvernement</button>
+              <p style="color:#64748b; margin-bottom:15px;">${tr("fc_err_no_data_gov")}</p>
+              <button id="btnFetchGovHolidays" class="pf-btn">${tr("btn_import")}</button>
             </td>
           </tr>
         `;
-
         document
           .getElementById("btnFetchGovHolidays")
-          .addEventListener("click", (e) => {
-            e.target.innerText = "Téléchargement en cours...";
+          ?.addEventListener("click", (e) => {
+            e.target.innerText = "...";
             e.target.disabled = true;
             this.fetchAndSaveGovHolidays(this.modalSelectedYear);
           });
         return;
       }
 
-      // 1. Tri chronologique strict des jours
       yearHolidays.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-      // 2. Regroupement par blocs de jours consécutifs
       const blocks = [];
       let currentBlock = null;
 
       yearHolidays.forEach((e) => {
-        const d = new Date(e.date + "T00:00:00"); // Force locale
-
+        const d = new Date(e.date + "T00:00:00");
         if (!currentBlock) {
           currentBlock = { start: d, end: d };
           blocks.push(currentBlock);
         } else {
-          // Calcul de l'écart en jours entre la date actuelle et la fin du bloc en cours
-          const diffTime = d.getTime() - currentBlock.end.getTime();
-          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-          // Si l'écart est minime (<= 4 jours, pour absorber un éventuel week-end non stocké)
-          // on considère qu'on est toujours dans la même période de vacances.
+          const diffDays = Math.round(
+            (d.getTime() - currentBlock.end.getTime()) / (1000 * 60 * 60 * 24),
+          );
           if (diffDays <= 4) {
             currentBlock.end = d;
           } else {
-            // Sinon, l'écart est grand : c'est une NOUVELLE période de vacances
             currentBlock = { start: d, end: d };
             blocks.push(currentBlock);
           }
         }
       });
 
-      // 3. Rendu HTML et déduction des noms
       let html = "";
       blocks.forEach((block) => {
-        // Déduction intelligente du nom selon le mois de départ ET la durée
         const m = block.start.getMonth() + 1;
         const durationDays =
           Math.round(
@@ -276,26 +273,19 @@ document.addEventListener("DOMContentLoaded", () => {
           ) + 1;
 
         let name = tr("leg_school_holidays");
-
-        if (m === 10 || m === 11) {
-          name = tr("vac_toussaint");
-        } else if (m === 12 || m === 1) {
-          name = tr("vac_noel");
-        } else if (m === 2 || m === 3) {
-          name = tr("vac_hiver");
-        } else if (m === 4 || (m === 5 && durationDays > 6)) {
+        if (m === 10 || m === 11) name = tr("vac_toussaint");
+        else if (m === 12 || m === 1) name = tr("vac_noel");
+        else if (m === 2 || m === 3) name = tr("vac_hiver");
+        else if (m === 4 || (m === 5 && durationDays > 6))
           name = tr("vac_printemps");
-        } else if (m === 5 && durationDays <= 6) {
-          name = tr("vac_ascension");
-        } else if (m === 7 || m === 8) {
-          name = tr("vac_ete");
-        }
+        else if (m === 5 && durationDays <= 6) name = tr("vac_ascension");
+        else if (m === 7 || m === 8) name = tr("vac_ete");
 
         html += `
           <tr>
             <td><strong>${name}</strong></td>
-            <td>${block.start.toLocaleDateString("fr-FR")}</td>
-            <td>${block.end.toLocaleDateString("fr-FR")}</td>
+            <td>${block.start.toLocaleDateString(window.appLang || "fr-FR")}</td>
+            <td>${block.end.toLocaleDateString(window.appLang || "fr-FR")}</td>
           </tr>
         `;
       });
@@ -1101,7 +1091,7 @@ document.addEventListener("DOMContentLoaded", () => {
          <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_off_carole")}</span><span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} ${tr("fc_unit_days")}</span></div>
          <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_extra_off")}</span><span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} ${tr("fc_unit_days")}</span></div>
          <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_pep_sick")}</span><span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} ${tr("fc_unit_days")}</span></div>
-         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_presence")} Pep</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} ${tr("fc_unit_days")}</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_presence")}</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} ${tr("fc_unit_days")}</span></div>
        `;
     }
 
@@ -1187,6 +1177,35 @@ document.addEventListener("DOMContentLoaded", () => {
           passive: false,
         });
         document.addEventListener("touchend", (e) => this.handleTouchEnd(e));
+      }
+      const scrollWrapper = document.getElementById("planningTable-wrapper");
+      if (scrollWrapper) {
+        scrollWrapper.addEventListener("scroll", async () => {
+          // Bloquer si on est déjà en train de charger
+          if (this._isAutoLoading) return;
+
+          // Détection du bas (On descend dans le temps : passage à l'année suivante)
+          // On met une tolérance de 5px pour les calculs de pixels décimaux
+          if (
+            scrollWrapper.scrollTop + scrollWrapper.clientHeight >=
+            scrollWrapper.scrollHeight - 5
+          ) {
+            this._isAutoLoading = true;
+            await this.changeSchoolYear(1);
+            // On replace le scroll tout en haut pour la continuité visuelle
+            scrollWrapper.scrollTop = 5;
+            setTimeout(() => (this._isAutoLoading = false), 500);
+          }
+          // Détection du haut (On remonte le temps : passage à l'année précédente)
+          else if (scrollWrapper.scrollTop === 0) {
+            this._isAutoLoading = true;
+            await this.changeSchoolYear(-1);
+            // On replace le scroll tout en bas pour la continuité visuelle
+            scrollWrapper.scrollTop =
+              scrollWrapper.scrollHeight - scrollWrapper.clientHeight - 5;
+            setTimeout(() => (this._isAutoLoading = false), 500);
+          }
+        });
       }
 
       // --- GESTION MODALE VACANCES SCOLAIRES ---

@@ -134,7 +134,7 @@ return [
     'fc_err_fetch_gov'          => 'Error en la connexió amb l’API governamental.',
     'fc_err_no_data_gov'        => 'No s’han trobat dades a l’API del govern per a aquest any.',
     'fc_err_action'             => 'Error en l’acció: ',
-    'leg_presence_pep'          => 'Presència Pep',
+    'leg_presence'              => 'Presència Pep',
     
     'leg_school_holidays'       => 'Vacances Escolars',
     'leg_public_holiday'        => 'Festiu',
@@ -143,7 +143,6 @@ return [
     'leg_centre'                => 'Casal',
     'leg_avis'                  => 'Avís',
     'leg_pep_sick'              => 'Pep Malalt',
-    'leg_presence'              => 'Presència',
     
     'vac_toussaint'             => 'Vacances de Tots Sants',
     'vac_noel'                  => 'Vacances de Nadal',

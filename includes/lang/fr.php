@@ -137,7 +137,7 @@ return [
     'fc_err_fetch_gov'          => 'Erreur lors de la connexion à l’API gouvernementale.',
     'fc_err_no_data_gov'        => 'Aucune donnée trouvée sur l’API du gouvernement pour cette année.',
     'fc_err_action'             => 'Erreur lors de l’action : ',
-    'leg_presence_pep'          => 'Présence Pep',
+    'leg_presence'              => 'Présence Pep',
     
     'leg_school_holidays'       => 'Vacances Scolaires',
     'leg_public_holiday'        => 'Férié',
@@ -146,7 +146,6 @@ return [
     'leg_centre'                => 'Centre',
     'leg_avis'                  => 'Avis',
     'leg_pep_sick'              => 'Pep Malade',
-    'leg_presence'              => 'Présence',
     
     'vac_toussaint'             => 'Vacances de la Toussaint',
     'vac_noel'                  => 'Vacances de Noël',

@@ -2,11 +2,17 @@
 
 :root {
   /* Couleurs sémantiques Calendrier */
-  --c-school-holiday: #e5d9f2;
-  --c-public-holiday: #e2e8f0; /* Plus marqué que l'original */
-  --c-off-carole: #ffedd5;
+  --c-school-holiday: #ede9fe;
+  --c-public-holiday: repeating-linear-gradient(
+    45deg,
+    #f8fafc,
+    #f8fafc 8px,
+    #f1f5f9 8px,
+    #f1f5f9 16px
+  );
+  --c-off-carole: #fef3c7;
   --c-extra-off: #fee2e2;
-  --c-selected: #bfdbfe;
+  --c-selected: #dbeafe;
 
   /* Thèmes Parents (Sync Budget) */
   --bg-alex: #ecfeff;
@@ -575,7 +581,6 @@ td.col-laia-sub {
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 .fc-legend-school-holiday {
   background: var(--c-school-holiday);
