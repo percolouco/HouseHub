@@ -1,6 +1,6 @@
 # 🦙 Source Code PachaFamily
 
-> *Généré le 2026-05-05 16:41:29*
+> *Généré le 2026-05-06 13:00:43*
 
 ### 📄 Fichier : `budget.php`
 ```php
@@ -136,7 +136,7 @@ require __DIR__ . '/header.php';
         <div class="pf-modal-content">
             <div class="pf-modal-header">
                 <h3 class="pf-modal-title"><?= tr('fc_modal_holidays_title') ?></h3>
-                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
+                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('open'); document.body.classList.remove('no-scroll');">&times;</button>
             </div>
             <div class="pf-modal-body" style="padding:0;">
                 <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
@@ -159,7 +159,7 @@ require __DIR__ . '/header.php';
         <div class="pf-modal-content">
             <div class="pf-modal-header">
                 <h3 class="pf-modal-title">📸 <?= tr('fc_modal_snap_title') ?></h3>
-                <button type="button" id="btnCloseSnapshot" class="pf-modal-close" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');">&times;</button>
+                <button type="button" id="btnCloseSnapshot" class="pf-modal-close" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');">&times;</button>
             </div>
             <div class="pf-modal-body">
                 <form id="formSnapshot">
@@ -196,7 +196,7 @@ require __DIR__ . '/header.php';
                 </form>
             </div>
             <div class="pf-modal-footer">
-                <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('is-open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
+                <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
                 <button type="submit" form="formSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
             </div>
         </div>
@@ -329,7 +329,7 @@ window.I18N = {
     'leg_pep_sick': "<?= tr('leg_pep_sick') ?>",
     'leg_off_carole': "<?= tr('leg_off_carole') ?>",
     'leg_extra_off': "<?= tr('leg_extra_off') ?>",
-    'leg_presence Pep': "<?= tr('leg_presence Pep') ?>",
+    'leg_presence': "<?= tr('leg_presence') ?>",
     'fc_menu_kids_leaves': "<?= tr('fc_menu_kids_leaves') ?>",
     'fc_clear': "<?= tr('fc_clear') ?>",
     'fc_unit_days': "<?= tr('fc_unit_days') ?>",
@@ -444,37 +444,21 @@ echo $report;
 require __DIR__ . '/includes/auth.php';
 require_login('/login.php');
 require __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/i18n.php'; // Toujours s'assurer que tr() est dispo
+require_once __DIR__ . '/includes/i18n.php';
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-// --- 1. CONFIGURATION & DONNÉES ---
-
+// --- 1. CONFIGURATION ---
 $year       = (int)date('Y');
 $pageTitle  = tr('gift_page_title');
 $activePage = "gift-list";
 $bodyClass  = "pf-gift-list";
 $pageCss    = "/modules/gift-list/gift-list.css";
 
-// Personnes
+$children = ['Pol', 'Pep', 'Elna', 'Bru', 'Guim'];
 $baseAdults = ['Laia', 'Laura', 'Avi Iaia'];
-$children   = ['Pol', 'Pep', 'Elna', 'Bru', 'Guim'];
-
-// Configuration des Vues
-$VIEWS = [
-    'nadal'       => ['TIO', 'NOEL', 'ROIS'],
-    'anniversary' => ['ANNIV', 'SANT'],
-];
-
-// Vue courante
-$currentView = strtolower($_GET['view'] ?? ($_SESSION['gift_view'] ?? 'nadal'));
-if (!isset($VIEWS[$currentView])) $currentView = 'nadal';
-$_SESSION['gift_view'] = $currentView;
-
-$allowedOccasions = $VIEWS[$currentView];
-
-// Logique spécifique : Adultes supplémentaires pour Anniversaires
 $extraAdults = ['Pauline', 'Papy JC', 'Mamy Caro'];
+
 $adultsByChildForAnniv = [
     'Pol'  => array_merge($baseAdults, $extraAdults),
     'Pep'  => array_merge($baseAdults, $extraAdults),
@@ -483,63 +467,56 @@ $adultsByChildForAnniv = [
     'Guim' => $baseAdults,
 ];
 
-// Labels & Icônes (Utilisation des clés de traduction pour l'affichage)
+$VIEWS = [
+    'nadal'       => ['TIO', 'NOEL', 'ROIS'],
+    'anniversary' => ['ANNIV', 'SANT'],
+];
+
+$currentView = strtolower($_GET['view'] ?? ($_SESSION['gift_view'] ?? 'nadal'));
+if (!isset($VIEWS[$currentView])) $currentView = 'nadal';
+$_SESSION['gift_view'] = $currentView;
+$allowedOccasions = $VIEWS[$currentView];
+
 $allOccasionLabels = [
-    'TIO'   => tr('gift_occ_tio'),
-    'NOEL'  => tr('gift_occ_noel'),
-    'ROIS'  => tr('gift_occ_rois'),
-    'ANNIV' => tr('gift_occ_anniv'),
-    'SANT'  => tr('gift_occ_sant'),
+    'TIO' => tr('gift_occ_tio'), 'NOEL' => tr('gift_occ_noel'), 'ROIS' => tr('gift_occ_rois'),
+    'ANNIV' => tr('gift_occ_anniv'), 'SANT' => tr('gift_occ_sant')
 ];
-
 $occasionIcons = [
-    'TIO'   => '/modules/gift-list/assets/img/tio.png',
-    'NOEL'  => '/modules/gift-list/assets/img/santa.png',
-    'ROIS'  => '/modules/gift-list/assets/img/reis.png',
-    'ANNIV' => '/modules/gift-list/assets/img/corona.png',
-    'SANT'  => '/modules/gift-list/assets/img/sant.png',
+    'TIO' => '/modules/gift-list/assets/img/tio.png', 'NOEL' => '/modules/gift-list/assets/img/santa.png',
+    'ROIS' => '/modules/gift-list/assets/img/reis.png', 'ANNIV' => '/modules/gift-list/assets/img/corona.png',
+    'SANT' => '/modules/gift-list/assets/img/sant.png'
 ];
 
-$tableGifts = 'pf_gifts';
-
-// --- 2. RÉCUPÉRATION DES DONNÉES ---
-
+// --- 2. DONNÉES ---
 $inMarks = implode(',', array_fill(0, count($allowedOccasions), '?'));
-$sql = "SELECT * FROM {$tableGifts} WHERE year = ? AND occasion IN ($inMarks) ORDER BY adult_name, child_name, occasion, created_at";
+// Tri: Par Fête, puis Enfant, puis Adulte
+$sql = "SELECT * FROM pf_gifts WHERE year = ? AND occasion IN ($inMarks) ORDER BY occasion ASC, child_name ASC, adult_name ASC";
 $stmt = $pdo->prepare($sql);
-$params = array_merge([$year], $allowedOccasions);
-$stmt->execute($params);
-$gifts = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+$stmt->execute(array_merge([$year], $allowedOccasions));
+$gifts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$byOccasion = [];
-foreach ($gifts as $gift) {
-    $byOccasion[$gift['occasion']][$gift['child_name']][$gift['adult_name']][] = $gift;
+$data = []; 
+$adultsInView = [];
+
+foreach ($gifts as $g) {
+    $data[$g['occasion']][$g['child_name']]['gifts'][] = $g;
+    $data[$g['occasion']][$g['child_name']]['totals'][$g['adult_name']] = ($data[$g['occasion']][$g['child_name']]['totals'][$g['adult_name']] ?? 0) + $g['amount'];
+    $adultsInView[$g['adult_name']] = true;
 }
+$allAdultsList = array_keys($adultsInView); sort($allAdultsList);
 
-$occasionsToShow = array_values(array_intersect(array_keys($allOccasionLabels), $allowedOccasions));
-
-// --- 3. CALCUL TRICOUNT ---
-
-$people = $baseAdults;
-$adultsInDb = array_column($gifts, 'adult_name');
-$payersInDb = array_column($gifts, 'payer_name');
-$people = array_values(array_unique(array_merge($people, $adultsInDb, $payersInDb)));
+// --- 3. TRICOUNT ---
+$people = array_values(array_unique(array_merge($baseAdults, array_column($gifts, 'adult_name'), array_column($gifts, 'payer_name'))));
 $people = array_filter($people);
-
 $matrix = [];
-foreach ($people as $p1) {
-    foreach ($people as $p2) $matrix[$p1][$p2] = 0.0;
-}
+foreach ($people as $p1) { foreach ($people as $p2) $matrix[$p1][$p2] = 0.0; }
 
 foreach ($gifts as $g) {
     $adult = $g['adult_name'];
     $payer = $g['payer_name'] ?? $g['adult_name'];
     $amt   = (float)$g['amount'];
-    
     if ($amt > 0 && $adult && $payer && $adult !== $payer) {
-        if (isset($matrix[$adult][$payer])) {
-            $matrix[$adult][$payer] += $amt;
-        }
+        $matrix[$adult][$payer] += $amt;
     }
 }
 
@@ -547,425 +524,452 @@ $settlements = [];
 $countPeople = count($people);
 for ($i = 0; $i < $countPeople; $i++) {
     for ($j = $i + 1; $j < $countPeople; $j++) {
-        $a = $people[$i];
-        $b = $people[$j];
+        $a = $people[$i]; $b = $people[$j];
         $net = $matrix[$a][$b] - $matrix[$b][$a];
-        
-        if ($net > 0.01) {
-            $settlements[] = ['from' => $a, 'to' => $b, 'amount' => $net];
-        } elseif ($net < -0.01) {
-            $settlements[] = ['from' => $b, 'to' => $a, 'amount' => -$net];
-        }
+        if ($net > 0.01) { $settlements[] = ['from' => $a, 'to' => $b, 'amount' => $net]; } 
+        elseif ($net < -0.01) { $settlements[] = ['from' => $b, 'to' => $a, 'amount' => -$net]; }
     }
 }
 
-// --- 4. DÉBUT DU RENDU HTML ---
 require __DIR__ . '/header.php';
 ?>
 
 <div class="pf-container cl-view-<?= htmlspecialchars($currentView) ?>">
     
     <div class="cl-titlebar">
-        <h1><?= sprintf(tr('gift_main_title'), htmlspecialchars($year)) ?></h1>
-        <div class="cl-view-switch" aria-label="<?= tr('gift_aria_change_view') ?>">
+        <h1>🎁 <?= sprintf(tr('gift_main_title'), $year) ?></h1>
+        <div class="cl-view-switch">
             <a href="?view=nadal" class="cl-view-btn <?= $currentView === 'nadal' ? 'is-active' : '' ?>"><?= tr('gift_view_nadal') ?></a>
             <a href="?view=anniversary" class="cl-view-btn <?= $currentView === 'anniversary' ? 'is-active' : '' ?>"><?= tr('gift_view_anniv') ?></a>
         </div>
     </div>
 
-    <section class="pf-section pf-section--panel">
-        <h2><?= tr('gift_view_by_party') ?></h2>
+    <div class="pf-filter-bar">
+        <span style="font-size:1.2rem;">🔍</span>
+        
+        <div class="pf-multi-select" id="ms-child">
+            <div class="pf-ms-trigger" onclick="toggleMS('ms-child-list', this)">
+                👦 <span id="ms-child-label"><?= tr('gift_filter_all_children') ?></span>
+            </div>
+            <div class="pf-ms-dropdown" id="ms-child-list">
+                <label class="pf-ms-option is-all">
+                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'child')"> 
+                    <?= tr('gift_filter_all_children') ?>
+                </label>
+                <?php foreach($children as $c): ?>
+                    <label class="pf-ms-option"><input type="checkbox" value="<?= htmlspecialchars($c) ?>" onchange="handleMSChange(this, 'child')"> <?= htmlspecialchars($c) ?></label>
+                <?php endforeach; ?>
+            </div>
+        </div>
 
-        <?php if (empty($gifts)): ?>
-            <p class="cl-legend"><?= sprintf(tr('gift_no_gifts'), htmlspecialchars($year)) ?></p>
-        <?php endif; ?>
+        <div class="pf-multi-select" id="ms-adult">
+            <div class="pf-ms-trigger" onclick="toggleMS('ms-adult-list', this)">
+                👤 <span id="ms-adult-label"><?= tr('gift_filter_all_adults') ?></span>
+            </div>
+            <div class="pf-ms-dropdown" id="ms-adult-list">
+                <label class="pf-ms-option is-all">
+                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'adult')"> 
+                    <?= tr('gift_filter_all_adults') ?>
+                </label>
+                <?php foreach($allAdultsList as $a): ?>
+                    <label class="pf-ms-option"><input type="checkbox" value="<?= htmlspecialchars($a) ?>" onchange="handleMSChange(this, 'adult')"> <?= htmlspecialchars($a) ?></label>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
 
-        <?php foreach ($occasionsToShow as $occCode): ?>
-            <div class="cl-occasion-block">
-                <h3 class="cl-occasion-title">
-                    <?php if (!empty($occasionIcons[$occCode])): ?>
-                        <img class="cl-occasion-icon" src="<?= htmlspecialchars($occasionIcons[$occCode]) ?>" alt="" aria-hidden="true">
+    <section class="pf-section">
+        <?php foreach ($allowedOccasions as $occCode): ?>
+            <div class="js-occ-section">
+                <h2 class="cl-occasion-title">
+                    <?php if(!empty($occasionIcons[$occCode])): ?><img src="<?= $occasionIcons[$occCode] ?>" class="cl-occasion-icon"><?php endif; ?>
+                    <?= $allOccasionLabels[$occCode] ?>
+                </h2>
+
+                <?php foreach ($children as $child): 
+                    $childData = $data[$occCode][$child] ?? ['gifts' => [], 'totals' => []];
+                    $adultsForThisChild = ($currentView === 'anniversary' && in_array($child, ['Pol', 'Pep'])) ? array_merge($baseAdults, $extraAdults) : $baseAdults;
+                ?>
+                <div class="pf-child-section js-child" data-name="<?= htmlspecialchars($child) ?>">
+                    <div class="pf-child-header">
+                        <h3>👦 <?= htmlspecialchars($child) ?></h3>
+                        <button class="pf-btn pf-btn-small btn-add-gift" 
+                                data-child="<?= htmlspecialchars($child) ?>" 
+                                data-occ="<?= htmlspecialchars($occCode) ?>" 
+                                data-adults="<?= htmlspecialchars(json_encode(array_values($adultsForThisChild))) ?>">
+                            ＋ <?= tr('gift_add_gift') ?>
+                        </button>
+                    </div>
+
+                    <div class="pf-child-totals-bar">
+                        <?php foreach ($childData['totals'] as $adult => $tot): ?>
+                            <span class="pf-summary-pill js-pill-adult" data-adult="<?= htmlspecialchars($adult) ?>">👤 <?= htmlspecialchars($adult) ?> : <strong><?= number_format($tot, 2, ',', '') ?> €</strong></span>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <?php if (empty($childData['gifts'])): ?>
+                        <p class="js-empty-state" style="color:var(--text-muted); font-size:0.9rem; font-style:italic; margin:0;"><?= tr('gift_empty_state_no_gifts') ?></p>
+                    <?php else: ?>
+                        <p class="js-empty-state" style="color:var(--text-muted); font-size:0.9rem; font-style:italic; display:none; margin:0;"><?= tr('gift_empty_state_no_filter') ?></p>
+                        <div class="pf-gift-feed">
+                            <?php foreach ($childData['gifts'] as $g): ?>
+                            <div class="pf-gift-card-compact js-gift-card" data-adult="<?= htmlspecialchars($g['adult_name']) ?>">
+                                <div>
+                                    <h4 class="pf-gift-title">
+                                        <?= htmlspecialchars($g['gift_description']) ?> 
+                                        <?php if($g['product_link']): ?><a href="<?= htmlspecialchars($g['product_link']) ?>" target="_blank" class="pf-gift-link">🔗</a><?php endif; ?>
+                                    </h4>
+                                    <span class="pf-pill-adult">👤 <?= htmlspecialchars($g['adult_name']) ?></span>
+                                    <?php if($g['payer_name'] && $g['payer_name'] !== $g['adult_name']): ?>
+                                        <div class="pf-gift-payer"><?= sprintf(tr('gift_paid_by'), htmlspecialchars($g['payer_name'])) ?></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="pf-gift-footer">
+                                    <span class="pf-gift-price"><?= number_format($g['amount'], 2, ',', ' ') ?> €</span>
+                                    <div class="pf-gift-actions">
+                                        <button class="btn-icon-action edit btn-edit-gift" data-gift="<?= htmlspecialchars(json_encode($g)) ?>">✏️</button>
+                                        <button class="btn-icon-action delete btn-delete-gift" data-id="<?= $g['id'] ?>">🗑️</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
                     <?php endif; ?>
-                    <?= htmlspecialchars($allOccasionLabels[$occCode] ?? $occCode) ?>
-                </h3>
-
-                <div class="cl-occasion-children-tables">
-                    <?php foreach ($children as $childName): ?>
-                        <?php
-                            $adultsForChild = ($currentView === 'anniversary')
-                                ? ($adultsByChildForAnniv[$childName] ?? $baseAdults)
-                                : $baseAdults;
-
-                            $lists  = [];
-                            $totals = [];
-                            foreach ($adultsForChild as $adultName) {
-                                $lists[$adultName]  = $byOccasion[$occCode][$childName][$adultName] ?? [];
-                                $totals[$adultName] = array_sum(array_column($lists[$adultName], 'amount'));
-                            }
-                            
-                            $counts = array_map('count', $lists);
-                            $maxRowsChild = !empty($counts) ? max($counts) : 0;
-                        ?>
-                        
-                        <table class="cl-child-table child-<?= strtolower($childName) ?>">
-                            <colgroup>
-                                <?php foreach ($adultsForChild as $_): ?>
-                                    <col class="cl-col" />
-                                <?php endforeach; ?>
-                            </colgroup>
-
-                            <caption>
-                                <?= htmlspecialchars($childName) ?>
-                                <button type="button" class="cl-child-add-btn" title="<?= tr('gift_add_gift') ?>"
-                                    data-year="<?= $year ?>"
-                                    data-child="<?= htmlspecialchars($childName) ?>"
-                                    data-occasion="<?= htmlspecialchars($occCode) ?>"
-                                    data-adults="<?= htmlspecialchars(json_encode(array_values($adultsForChild)), ENT_QUOTES) ?>">
-                                    +
-                                </button>
-                            </caption>
-
-                            <thead>
-                                <tr>
-                                    <?php foreach ($adultsForChild as $adultName): ?>
-                                        <th>
-                                            <div class="cl-th-inner">
-                                                <span class="cl-th-label"><?= htmlspecialchars($adultName) ?></span>
-                                                <span class="cl-summary-adult-total"><?= number_format($totals[$adultName], 0, ',', ' ') ?> €</span>
-                                            </div>
-                                        </th>
-                                    <?php endforeach; ?>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                <?php if ($maxRowsChild === 0): ?>
-                                    <tr>
-                                        <?php foreach ($adultsForChild as $_): ?>
-                                            <td><span class="cl-empty">—</span></td>
-                                        <?php endforeach; ?>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php for ($i = 0; $i < $maxRowsChild; $i++): ?>
-                                        <tr>
-                                            <?php foreach ($adultsForChild as $adultName): ?>
-                                                <?php $gift = $lists[$adultName][$i] ?? null; ?>
-                                                <td>
-                                                    <?php if ($gift): ?>
-                                                        <?php
-                                                            $giftId = (int)$gift['id'];
-                                                            $desc   = htmlspecialchars($gift['gift_description']);
-                                                            $amt    = (float)$gift['amount'];
-                                                            $plink  = trim($gift['product_link'] ?? '');
-                                                            $payer  = $gift['payer_name'] ?? $gift['adult_name'];
-                                                        ?>
-                                                        <div class="cl-gift-item">
-                                                            <div class="cl-gift-line">
-                                                                <?php if ($plink !== ''): ?>
-                                                                    <a href="<?= htmlspecialchars($plink) ?>" target="_blank" rel="noopener noreferrer" class="cl-gift-link"><?= $desc ?></a>
-                                                                <?php else: ?>
-                                                                    <span class="cl-gift-desc"><?= $desc ?></span>
-                                                                <?php endif; ?>
-                                                                
-                                                                <div class="cl-gift-right">
-                                                                    <span class="cl-gift-amount">(<?= number_format($amt, 0, ',', ' ') ?> €)</span>
-                                                                    <span class="cl-gift-actions">
-                                                                        <button type="button" class="cl-gift-action-btn cl-gift-edit" aria-label="<?= tr('edit') ?>"
-                                                                            data-id="<?= $giftId ?>"
-                                                                            data-year="<?= $year ?>"
-                                                                            data-child="<?= htmlspecialchars($childName) ?>"
-                                                                            data-occasion="<?= htmlspecialchars($occCode) ?>"
-                                                                            data-adult="<?= htmlspecialchars($gift['adult_name']) ?>"
-                                                                            data-payer="<?= htmlspecialchars($payer) ?>"
-                                                                            data-desc="<?= htmlspecialchars($gift['gift_description']) ?>"
-                                                                            data-amount="<?= htmlspecialchars($gift['amount']) ?>"
-                                                                            data-link="<?= htmlspecialchars($gift['product_link'] ?? '') ?>">
-                                                                            ✎
-                                                                        </button>
-                                                                        <button type="button" class="cl-gift-action-btn cl-gift-delete" aria-label="<?= tr('delete') ?>" data-id="<?= $giftId ?>">
-                                                                            ×
-                                                                        </button>
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            <?php if (!empty($payer) && $payer !== $gift['adult_name']): ?>
-                                                                <small style="color:#b91c1c; font-style:italic; display:block; font-size:0.75em;">(<?= sprintf(tr('gift_paid_by'), htmlspecialchars($payer)) ?>)</small>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <span class="cl-empty">—</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            <?php endforeach; ?>
-                                        </tr>
-                                    <?php endfor; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    <?php endforeach; ?>
                 </div>
+                <?php endforeach; ?>
             </div>
         <?php endforeach; ?>
     </section>
 
-    <section class="pf-section pf-section--panel">
-        <h2><?= tr('gift_summary_title') ?></h2>
-        <?php
-            $stmtSum = $pdo->prepare("SELECT adult_name, child_name, occasion, SUM(amount) AS total FROM {$tableGifts} WHERE year = ? AND occasion IN ($inMarks) GROUP BY adult_name, child_name, occasion ORDER BY adult_name, child_name, occasion");
-            $stmtSum->execute($params);
-            $sums = $stmtSum->fetchAll(PDO::FETCH_ASSOC);
-        ?>
-        <div class="cl-budget-wrapper">
-            <table class="pf-table pf-table--compact">
-                <thead>
-                    <tr><th><?= tr('gift_col_adult') ?></th><th><?= tr('gift_col_child') ?></th><th><?= tr('gift_col_party') ?></th><th>Total</th></tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($sums as $row): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($row['adult_name']) ?></td>
-                            <td><?= htmlspecialchars($row['child_name']) ?></td>
-                            <td><?= htmlspecialchars($allOccasionLabels[$row['occasion']] ?? $row['occasion']) ?></td>
-                            <td><?= number_format($row['total'], 0, ',', ' ') ?> €</td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="pf-section pf-section--panel">
-        <h2>Tricount</h2>
-        <div class="cl-budget-wrapper">
-            <table class="pf-table pf-table--compact cl-debt-matrix">
-                <thead>
-                    <tr>
-                        <th class="cl-matrix-corner"><span><?= tr('gift_debtor') ?> ↓</span><span><?= tr('gift_creditor') ?> →</span></th>
-                        <?php foreach ($people as $p): ?><th><?= htmlspecialchars($p) ?></th><?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($people as $debtor): ?>
-                        <tr>
-                            <th><?= htmlspecialchars($debtor) ?></th>
-                            <?php foreach ($people as $creditor): ?>
-                                <?php
-                                    $val = $matrix[$debtor][$creditor] ?? 0;
-                                    $isDiag = ($debtor === $creditor);
-                                    $cls = $isDiag ? 'cl-mtx-diag' : ($val > 0 ? 'cl-mtx-owe' : 'cl-mtx-empty');
-                                    $display = $isDiag || $val == 0 ? '—' : number_format($val, 0, ',', ' ') . ' €';
-                                ?>
-                                <td class="<?= $cls ?>"><?= $display ?></td>
-                            <?php endforeach; ?>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <h3 style="margin-top:16px; font-size:1.1rem; color:#374151;"><?= tr('gift_liquidations') ?></h3>
+    <section class="pf-section pf-section--panel" style="background:#f8fafc; border:1px solid var(--border-light); margin-top:40px;">
+        <h2 style="margin-top:0; color:var(--text-main); font-size:1.3rem;">⚖️ <?= tr('gift_liquidations') ?? 'Bilan & Remboursements' ?></h2>
+        
         <?php if (empty($settlements)): ?>
-            <p class="cl-legend"><?= tr('gift_no_debt') ?></p>
+            <p style="color:var(--success); font-weight:700; margin-bottom:0;">✅ <?= tr('gift_no_debt') ?></p>
         <?php else: ?>
-            <ul class="hol-list">
+            <ul class="pf-tricount-list">
                 <?php foreach ($settlements as $s): ?>
-                    <li><strong><?= htmlspecialchars($s['from']) ?></strong> <?= tr('gift_owes') ?> <strong><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong> <?= tr('gift_to') ?> <?= htmlspecialchars($s['to']) ?></li>
+                    <li class="pf-tricount-item">
+                        <span><strong><?= htmlspecialchars($s['from']) ?></strong> <?= tr('gift_owes') ?> à <?= htmlspecialchars($s['to']) ?></span>
+                        <strong style="color:var(--danger);"><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong>
+                    </li>
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
-    </section>
 
-    <section class="pf-section pf-section--panel">
-        <h2><?= tr('gift_detailed_list') ?></h2>
-        <div class="cl-detail-wrapper">
-            <table class="pf-table pf-table--compact">
-                <thead>
-                    <tr><th><?= tr('gift_col_adult') ?></th><th><?= tr('gift_col_child') ?></th><th><?= tr('gift_col_party') ?></th><th><?= tr('gift_col_gift') ?></th><th>€</th><th><?= tr('gift_col_link') ?></th></tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($gifts as $g): ?>
+        <details style="margin-top:20px; background:white; padding:12px; border-radius:8px; border:1px solid #cbd5e1;">
+            <summary style="cursor:pointer; font-weight:600; color:var(--text-muted); outline:none;"><?= tr('gift_view_matrix') ?></summary>
+            <div style="overflow-x:auto; margin-top:15px;">
+                <table class="pf-table pf-table--compact cl-debt-matrix">
+                    <thead>
                         <tr>
-                            <td><?= htmlspecialchars($g['adult_name']) ?></td>
-                            <td><?= htmlspecialchars($g['child_name']) ?></td>
-                            <td><?= htmlspecialchars($allOccasionLabels[$g['occasion']] ?? $g['occasion']) ?></td>
-                            <td><?= htmlspecialchars($g['gift_description']) ?></td>
-                            <td><?= number_format($g['amount'], 0, ',', ' ') ?></td>
-                            <td>
-                                <?php if (!empty($g['product_link'])): ?>
-                                    <a href="<?= htmlspecialchars($g['product_link']) ?>" target="_blank">🔗</a>
-                                <?php endif; ?>
-                            </td>
+                            <th style="position:sticky; left:0; background:#f8fafc; z-index:2; border-right:2px solid #e2e8f0;"><?= tr('gift_debtor') ?> \ <?= tr('gift_creditor') ?></th>
+                            <?php foreach ($people as $p): ?><th><?= htmlspecialchars($p) ?></th><?php endforeach; ?>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($people as $debtor): ?>
+                            <tr>
+                                <th style="position:sticky; left:0; background:white; z-index:2; border-right:2px solid #e2e8f0;"><?= htmlspecialchars($debtor) ?></th>
+                                <?php foreach ($people as $creditor): 
+                                    $val = $matrix[$debtor][$creditor] ?? 0;
+                                    $display = ($debtor === $creditor) || $val == 0 ? '—' : number_format($val, 2, ',', ' ') . ' €';
+                                ?>
+                                    <td style="<?= $val > 0 ? 'color:var(--danger); font-weight:700; background:#fef2f2;' : 'color:var(--text-muted);' ?>"><?= $display ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </details>
     </section>
 </div>
 
-<script>
-// Pont de traduction JS
-window.I18N = {
-    ...window.I18N,
-    'gift_modal_title_add': "<?= tr('gift_modal_title_add') ?>",
-    'gift_modal_title_edit': "<?= tr('gift_modal_title_edit') ?>",
-    'gift_confirm_delete': "<?= tr('gift_confirm_delete') ?>"
-};
-
-document.addEventListener('DOMContentLoaded', function () {
-    const modal = document.getElementById('cl-gift-modal');
-    const backdrop = modal ? modal.querySelector('.cl-modal-backdrop') : null;
-    const cancelBtn = modal ? modal.querySelector('.clm-cancel') : null;
-
-    function toggleModal(show) {
-        if (!modal) return;
-        modal.classList.toggle('cl-open', show);
-        if(show) document.body.classList.add('no-scroll');
-        else document.body.classList.remove('no-scroll');
-    }
-
-    function populateSelects(adults) {
-        const selects = [document.getElementById('clm-adult'), document.getElementById('clm-payer')];
-        selects.forEach(sel => {
-            if (!sel) return;
-            sel.innerHTML = '';
-            adults.forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                sel.appendChild(opt);
-            });
-        });
-    }
-
-    // --- BOUTON AJOUT (+) ---
-    document.querySelectorAll('.cl-child-add-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const d = btn.dataset;
-            let adults = [];
-            try { adults = JSON.parse(d.adults || '[]'); } catch(e) {}
-
-            populateSelects(adults);
+<div id="pf-gift-modal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width: 500px; width: 95%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 id="modalTitle" class="pf-modal-title" style="margin:0; border:none; padding:0;">Cadeau</h3>
+            <button type="button" class="btn-modal-close" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--text-muted); line-height:1;">&times;</button>
+        </div>
+        
+        <form method="post" action="/modules/gift-list/save-gift.php" id="giftForm">
+            <input type="hidden" name="year" value="<?= $year ?>">
+            <input type="hidden" name="child_name" id="modalChild">
+            <input type="hidden" name="occasion" id="modalOccasion">
+            <input type="hidden" name="action" id="modalAction">
+            <input type="hidden" name="gift_id" id="modalGiftId">
             
-            document.getElementById('clm-action').value = 'create';
-            document.getElementById('clm-id').value = '';
-            document.getElementById('clm-year').value = d.year;
-            document.getElementById('clm-child').value = d.child;
-            document.getElementById('clm-occasion').value = d.occasion;
+            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_col_adult') ?></label><select name="adult_name" id="modalAdult" class="pf-input" required></select></div>
+            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_payer') ?></label><select name="payer_name" id="modalPayer" class="pf-input" required></select></div>
+            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_gift_name') ?></label><input type="text" name="gift_description" id="modalDesc" class="pf-input" required></div>
+            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_price') ?></label><input type="number" step="0.01" name="amount" id="modalAmount" class="pf-input"></div>
+            <div class="pf-form-group" style="margin-bottom:25px;"><label class="pf-label"><?= tr('gift_modal_link') ?></label><input type="url" name="product_link" id="modalLink" class="pf-input"></div>
             
-            document.getElementById('clm-gift').value = '';
-            document.getElementById('clm-amount').value = '';
-            document.getElementById('clm-link').value = '';
-
-            document.getElementById('cl-modal-title').textContent = tr('gift_modal_title_add').replace('%s', d.child);
-            toggleModal(true);
-        });
-    });
-
-    // --- BOUTON ÉDITION (Crayon) ---
-    document.body.addEventListener('click', (e) => {
-        const btn = e.target.closest('.cl-gift-edit');
-        if (!btn) return;
-
-        const d = btn.dataset;
-        const adultSelect = document.getElementById('clm-adult');
-        const payerSelect = document.getElementById('clm-payer');
-        
-        [adultSelect, payerSelect].forEach(sel => {
-            const val = (sel === adultSelect) ? d.adult : (d.payer || d.adult);
-            if (!Array.from(sel.options).some(o => o.value === val)) {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = val;
-                sel.appendChild(opt);
-            }
-            sel.value = val;
-        });
-
-        document.getElementById('clm-action').value = 'update';
-        document.getElementById('clm-id').value = d.id;
-        document.getElementById('clm-year').value = d.year;
-        document.getElementById('clm-child').value = d.child;
-        document.getElementById('clm-occasion').value = d.occasion;
-        
-        document.getElementById('clm-gift').value = d.desc;
-        document.getElementById('clm-amount').value = d.amount;
-        document.getElementById('clm-link').value = d.link;
-
-        document.getElementById('cl-modal-title').textContent = tr('gift_modal_title_edit');
-        toggleModal(true);
-    });
-
-    // --- SUPPRESSION ---
-    document.body.addEventListener('click', (e) => {
-        const btn = e.target.closest('.cl-gift-delete');
-        if (!btn) return;
-        
-        if (confirm(tr('gift_confirm_delete'))) {
-            const form = document.getElementById('cl-delete-form');
-            document.getElementById('cld-id').value = btn.dataset.id;
-            form.submit();
-        }
-    });
-
-    // Fermeture
-    if(cancelBtn) cancelBtn.addEventListener('click', () => toggleModal(false));
-    if(backdrop) backdrop.addEventListener('click', () => toggleModal(false));
-    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') toggleModal(false); });
-});
-</script>
-
-<div id="cl-gift-modal" class="cl-modal" aria-hidden="true">
-    <div class="cl-modal-backdrop"></div>
-    <div class="cl-modal-dialog pf-modal-content" role="dialog" aria-modal="true" aria-labelledby="cl-modal-title">
-        <form method="post" action="/modules/gift-list/save-gift.php" class="cl-modal-form">
-            <h3 id="cl-modal-title" style="margin-top:0;"><?= tr('gift_col_gift') ?></h3>
-
-            <input type="hidden" name="year" id="clm-year">
-            <input type="hidden" name="child_name" id="clm-child">
-            <input type="hidden" name="occasion" id="clm-occasion">
-            <input type="hidden" name="action" id="clm-action">
-            <input type="hidden" name="gift_id" id="clm-id">
-
-            <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label"><?= tr('gift_col_adult') ?></label>
-                <select name="adult_name" id="clm-adult" class="pf-input" required></select>
-            </div>
-
-            <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label"><?= tr('gift_modal_payer') ?></label>
-                <select name="payer_name" id="clm-payer" class="pf-input" required></select>
-            </div>
-
-            <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label"><?= tr('gift_modal_gift_name') ?></label>
-                <input type="text" name="gift_description" id="clm-gift" class="pf-input" placeholder="<?= tr('gift_modal_ph_name') ?>" required>
-            </div>
-
-            <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label"><?= tr('gift_modal_price') ?></label>
-                <input type="number" name="amount" id="clm-amount" class="pf-input" placeholder="49.99" step="0.01" min="0">
-            </div>
-
-            <div class="form-group" style="margin-bottom:25px;">
-                <label class="pf-label"><?= tr('gift_modal_link') ?></label>
-                <input type="url" name="product_link" id="clm-link" class="pf-input" placeholder="https://...">
-            </div>
-
             <div class="modal-footer" style="padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" class="clm-cancel pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
-                <button type="submit" class="clm-ok pf-btn"><?= tr('btn_save') ?></button>
+                <button type="button" class="pf-btn btn-secondary btn-modal-close"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
 </div>
 
-<form id="cl-delete-form" method="post" action="/modules/gift-list/save-gift.php" style="display:none">
-    <input type="hidden" name="year" value="<?= $year ?>">
-    <input type="hidden" name="action" value="delete">
-    <input type="hidden" name="gift_id" id="cld-id" value="">
-</form>
+<script>
+// ==========================================
+// 1. GESTION DU COMPOSANT MULTI-SELECT VANILLA
+// ==========================================
+
+function toggleMS(listId, triggerEl) {
+    document.querySelectorAll('.pf-ms-dropdown').forEach(el => { if (el.id !== listId) el.classList.remove('open'); });
+    document.querySelectorAll('.pf-ms-trigger').forEach(el => { if (el !== triggerEl) el.classList.remove('active'); });
+    const list = document.getElementById(listId);
+    if (list) list.classList.toggle('open');
+    if (triggerEl) triggerEl.classList.toggle('active');
+}
+
+document.addEventListener('click', e => {
+    if (!e.target.closest('.pf-multi-select')) {
+        document.querySelectorAll('.pf-ms-dropdown').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.pf-ms-trigger').forEach(el => el.classList.remove('active'));
+    }
+});
+
+function handleMSChange(cb, type) {
+    const container = document.getElementById('ms-' + type + '-list');
+    if (!container) return;
+    
+    if (cb.value === 'all' && cb.checked) {
+        container.querySelectorAll('input[type="checkbox"]:not([value="all"])').forEach(i => i.checked = false);
+    } else if (cb.checked) {
+        const allCb = container.querySelector('input[value="all"]');
+        if (allCb) allCb.checked = false;
+    } else {
+        const checkedSpecifics = container.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])');
+        if (checkedSpecifics.length === 0) {
+            const allCb = container.querySelector('input[value="all"]');
+            if (allCb) allCb.checked = true;
+        }
+    }
+    
+    const checkedSpecifics = container.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])');
+    const labelEl = document.getElementById('ms-' + type + '-label');
+    
+    if (labelEl) {
+        if (checkedSpecifics.length === 0) {
+            let defaultText = 'Tous';
+            if (window.I18N) {
+                if (type === 'child' && window.I18N['gift_filter_all_children']) defaultText = window.I18N['gift_filter_all_children'];
+                if (type === 'adult' && window.I18N['gift_filter_all_adults']) defaultText = window.I18N['gift_filter_all_adults'];
+            }
+            labelEl.innerText = defaultText;
+        } else if (checkedSpecifics.length === 1) {
+            labelEl.innerText = checkedSpecifics[0].value;
+        } else {
+            labelEl.innerText = checkedSpecifics.length + ' sélections';
+        }
+    }
+    applyGiftFilters();
+}
+
+function applyGiftFilters() {
+    const cList = document.getElementById('ms-child-list');
+    const aList = document.getElementById('ms-adult-list');
+    if (!cList || !aList) return;
+    
+    const allChildCb = cList.querySelector('input[value="all"]');
+    const cAll = allChildCb ? allChildCb.checked : true;
+    const cVals = Array.from(cList.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])')).map(i => i.value);
+    
+    const allAdultCb = aList.querySelector('input[value="all"]');
+    const aAll = allAdultCb ? allAdultCb.checked : true;
+    const aVals = Array.from(aList.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])')).map(i => i.value);
+
+    document.querySelectorAll('.js-occ-section').forEach(occSec => {
+        let occHasVisible = false;
+        
+        occSec.querySelectorAll('.js-child').forEach(childSec => {
+            const cName = childSec.getAttribute('data-name'); 
+            const matchChild = cAll || (cVals.indexOf(cName) !== -1);
+            let childHasVisibleCard = false;
+            
+            if (matchChild) {
+                childSec.querySelectorAll('.js-gift-card').forEach(card => {
+                    const aName = card.getAttribute('data-adult');
+                    const matchAdult = aAll || (aVals.indexOf(aName) !== -1);
+                    card.style.display = matchAdult ? 'flex' : 'none';
+                    if (matchAdult) childHasVisibleCard = true;
+                });
+                
+                childSec.querySelectorAll('.js-pill-adult').forEach(pill => {
+                    const aName = pill.getAttribute('data-adult');
+                    const matchAdult = aAll || (aVals.indexOf(aName) !== -1);
+                    pill.style.opacity = matchAdult ? '1' : '0.2';
+                });
+                
+                const empty = childSec.querySelector('.js-empty-state');
+                if (empty) empty.style.display = childHasVisibleCard ? 'none' : 'block';
+                
+                childSec.style.display = 'block';
+                occHasVisible = true;
+            } else {
+                childSec.style.display = 'none';
+            }
+        });
+        
+        occSec.style.display = occHasVisible ? 'block' : 'none';
+    });
+}
+
+// ==========================================
+// 3. LOGIQUE DE LA MODALE & DELEGATION JS
+// ==========================================
+
+const modal = document.getElementById('pf-gift-modal');
+const adultSelect = document.getElementById('modalAdult');
+const payerSelect = document.getElementById('modalPayer');
+
+// Synchronisation automatique : Adulte -> Payeur
+if (adultSelect && payerSelect) {
+    adultSelect.addEventListener('change', function() {
+        let exists = false;
+        for(let i = 0; i < payerSelect.options.length; i++) {
+            if(payerSelect.options[i].value === this.value) exists = true;
+        }
+        if (exists) payerSelect.value = this.value;
+    });
+}
+
+function populateSelects(adults) {
+    if (!adultSelect || !payerSelect) return;
+    adultSelect.innerHTML = '';
+    payerSelect.innerHTML = '';
+    adults.forEach(name => {
+        adultSelect.appendChild(new Option(name, name));
+        payerSelect.appendChild(new Option(name, name));
+    });
+}
+
+// L'écouteur d'événements global pour tous les boutons !
+document.body.addEventListener('click', async function(e) {
+    
+    // --- 1. BOUTON FERMER MODALE ---
+    if (e.target.closest('.btn-modal-close')) {
+        if (modal) {
+            modal.classList.remove('open');
+            document.body.classList.remove('no-scroll');
+        }
+        return;
+    }
+
+    // --- 2. BOUTON AJOUTER (+) ---
+    const btnAdd = e.target.closest('.btn-add-gift');
+    if (btnAdd) {
+        const childName = btnAdd.dataset.child;
+        const occCode = btnAdd.dataset.occ;
+        const adultsList = JSON.parse(btnAdd.dataset.adults || '[]');
+
+        document.getElementById('modalAction').value = 'create'; 
+        document.getElementById('modalGiftId').value = '';
+        document.getElementById('modalChild').value = childName; 
+        document.getElementById('modalOccasion').value = occCode;
+        document.getElementById('modalDesc').value = ''; 
+        document.getElementById('modalAmount').value = '';
+        document.getElementById('modalLink').value = '';
+        
+        populateSelects(adultsList);
+        
+        if (adultSelect && payerSelect) {
+            if (adultsList.indexOf('Laia') !== -1) {
+                adultSelect.value = 'Laia'; payerSelect.value = 'Laia';
+            } else if (adultsList.length > 0) {
+                adultSelect.value = adultsList[0]; payerSelect.value = adultsList[0];
+            }
+        }
+
+        const titleStr = window.I18N && window.I18N['gift_modal_title_add'] ? window.I18N['gift_modal_title_add'] : 'Ajouter pour %s';
+        document.getElementById('modalTitle').textContent = titleStr.replace('%s', childName);
+        
+        if (modal) { modal.classList.add('open'); document.body.classList.add('no-scroll'); }
+        return;
+    }
+
+    // --- 3. BOUTON MODIFIER (CRAYON) ---
+    const btnEdit = e.target.closest('.btn-edit-gift');
+    if (btnEdit) {
+        const data = JSON.parse(btnEdit.dataset.gift || '{}');
+
+        document.getElementById('modalAction').value = 'update'; 
+        document.getElementById('modalGiftId').value = data.id;
+        document.getElementById('modalChild').value = data.child_name; 
+        document.getElementById('modalOccasion').value = data.occasion;
+        document.getElementById('modalDesc').value = data.gift_description; 
+        document.getElementById('modalAmount').value = data.amount;
+        document.getElementById('modalLink').value = data.product_link;
+
+        const payerVal = data.payer_name || data.adult_name;
+        if (adultSelect && payerSelect) {
+            let adultExists = false, payerExists = false;
+            for(let i=0; i<adultSelect.options.length; i++) { if(adultSelect.options[i].value === data.adult_name) adultExists = true; }
+            for(let i=0; i<payerSelect.options.length; i++) { if(payerSelect.options[i].value === payerVal) payerExists = true; }
+            
+            if (!adultExists) adultSelect.appendChild(new Option(data.adult_name, data.adult_name));
+            if (!payerExists) payerSelect.appendChild(new Option(payerVal, payerVal));
+            
+            adultSelect.value = data.adult_name;
+            payerSelect.value = payerVal;
+        }
+        
+        document.getElementById('modalTitle').textContent = window.I18N && window.I18N['gift_modal_title_edit'] ? window.I18N['gift_modal_title_edit'] : 'Modifier le cadeau';
+        
+        if (modal) { modal.classList.add('open'); document.body.classList.add('no-scroll'); }
+        return;
+    }
+
+    // --- 4. BOUTON SUPPRIMER (POUBELLE) ---
+    const btnDel = e.target.closest('.btn-delete-gift');
+    if (btnDel) {
+        const giftId = btnDel.dataset.id;
+        const msg = window.I18N && window.I18N['gift_confirm_delete'] ? window.I18N['gift_confirm_delete'] : 'Supprimer ce cadeau ?';
+        if (!confirm(msg)) return;
+        
+        const fd = new FormData();
+        fd.append('action', 'delete');
+        fd.append('gift_id', giftId);
+        
+        try {
+            await fetch('/modules/gift-list/save-gift.php', { method: 'POST', body: fd });
+            window.location.reload();
+        } catch(err) {
+            console.error(err);
+        }
+        return;
+    }
+});
+
+// ==========================================
+// 4. SOUMISSION AJAX DU FORMULAIRE
+// ==========================================
+
+const giftForm = document.getElementById('giftForm');
+if (giftForm) {
+    giftForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        const oldText = btn.innerText;
+        btn.innerText = '...'; 
+        btn.disabled = true;
+
+        try {
+            await fetch(e.target.getAttribute('action'), { method: 'POST', body: new FormData(e.target) });
+            window.location.reload();
+        } catch(err) {
+            console.error(err);
+            btn.innerText = oldText; 
+            btn.disabled = false;
+        }
+    });
+}
+</script>
 
 <?php require __DIR__ . '/footer.php'; ?>
 ```
@@ -1424,19 +1428,16 @@ p {
 
   /* 📱 BOTTOM SHEET MODALES MOBILE */
   .pf-modal {
-    align-items: flex-end !important;
-    padding: 0;
+    align-items: center !important; /* On remet au centre */
+    padding: 20px;
   }
   .pf-modal-content {
     width: 100% !important;
     max-width: none !important;
-    border-radius: 24px 24px 0 0 !important;
-    padding: 24px 20px !important;
-    padding-bottom: env(safe-area-inset-bottom, 30px) !important;
-    transform: translateY(100%);
-    animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-    max-height: 92vh;
-    margin: 0 !important;
+    border-radius: 20px !important; /* On garde les arrondis partout */
+    transform: none !important;
+    animation: pfModalPop 0.3s ease !important; /* On remet l'animation desktop */
+    margin: auto !important;
   }
   .pf-modal-content::before {
     content: "";
@@ -1460,6 +1461,99 @@ p {
       transform: translateY(0);
     }
   }
+}
+
+/* === BOUTONS D'ACTION ICÔNES UNIVERSELS (Édition / Suppression) === */
+.btn-icon-action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+.btn-icon-action.edit {
+  color: var(--primary);
+}
+.btn-icon-action.edit:hover {
+  background: #eff6ff; /* Fond bleu très clair au survol */
+}
+.btn-icon-action.delete {
+  color: var(--danger);
+}
+.btn-icon-action.delete:hover {
+  background: #fef2f2; /* Fond rouge très clair au survol */
+}
+
+/* === 13. PAGE DE CONNEXION (LOGIN) === */
+.pf-login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 200px);
+  padding: 20px;
+}
+
+.pf-login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+}
+
+.pf-login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.pf-login-header .pf-login-icon {
+  width: 60px; /* Tu peux ajuster cette valeur selon le rendu voulu */
+  height: auto;
+  margin-bottom: 15px;
+  border-radius: 12px; /* Optionnel : ajoute un léger arrondi si ton favicon est carré */
+}
+
+.pf-login-header h1 {
+  font-size: 1.8rem;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.pf-login-header p {
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.pf-login-error {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #fca5a5;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.pf-btn-block {
+  width: 100%;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 14px;
+  font-size: 1.05rem;
 }
 
 ```
@@ -1879,7 +1973,7 @@ return [
     'tests_copy_report' => 'Copiar l\'informe',
     'tests_waiting' => 'Esperant l\'inici...',
     'tests_report_copied' => 'Informe copiat al porta-retalls!',
-
+    'tests_live_preview'  => 'Previsualització en viu',
     // ==========================================
     // GLOBAL & NAVIGATION
     // ==========================================
@@ -1936,6 +2030,7 @@ return [
     'btn_logout'                => 'Tancar sessió',
     'error_missing_fields'      => 'Camps obligatoris.',
     'error_invalid_credentials' => 'Identificadors incorrectes.',
+    'login_subtitle'      => 'Si us plau, identifiqueu-vos per continuar',
 
     // ==========================================
     // ACCUEIL / INDEX
@@ -1995,6 +2090,11 @@ return [
     'fc_menu_carole'            => 'Permisos Carole',
     'fc_clear'                  => 'Esborrar',
     'fc_menu_kids_leaves'       => 'Permisos nens',
+    'fc_err_save_snap'          => 'Error en desar el correctiu.',
+    'fc_err_fetch_gov'          => 'Error en la connexió amb l’API governamental.',
+    'fc_err_no_data_gov'        => 'No s’han trobat dades a l’API del govern per a aquest any.',
+    'fc_err_action'             => 'Error en l’acció: ',
+    'leg_presence'              => 'Presència Pep',
     
     'leg_school_holidays'       => 'Vacances Escolars',
     'leg_public_holiday'        => 'Festiu',
@@ -2003,7 +2103,6 @@ return [
     'leg_centre'                => 'Casal',
     'leg_avis'                  => 'Avís',
     'leg_pep_sick'              => 'Pep Malalt',
-    'leg_presence'              => 'Presència',
     
     'vac_toussaint'             => 'Vacances de Tots Sants',
     'vac_noel'                  => 'Vacances de Nadal',
@@ -2383,7 +2482,7 @@ return [
     'gift_col_party'         => 'Festa',
     'gift_debtor'            => 'Deutor',
     'gift_creditor'          => 'Creditor',
-    'gift_liquidations'      => 'Liquidacions',
+    'gift_liquidations'      => 'Tricount',
     'gift_no_debt'           => 'Cap deute pendent.',
     'gift_owes'              => 'ha de pagar',
     'gift_to'                => 'a',
@@ -2398,6 +2497,11 @@ return [
     'gift_modal_price'       => 'Preu (€)',
     'gift_modal_link'        => 'Enllaç (opcional)',
     'gift_confirm_delete'    => 'Vols eliminar aquest regal?',
+    'gift_filter_all_children'   => 'Tots els nens',
+    'gift_filter_all_adults'     => 'Tots els adults',
+    'gift_empty_state_no_gifts'  => 'Cap regal de moment.',
+    'gift_empty_state_no_filter' => 'Cap regal correspon al filtre.',
+    'gift_view_matrix'           => 'Veure la matriu detallada',
 ];
 ```
 
@@ -2420,6 +2524,7 @@ return [
     'tests_copy_report' => 'Copier le rapport',
     'tests_waiting' => 'En attente du lancement...',
     'tests_report_copied' => 'Rapport copié dans le presse-papier !',
+    'tests_live_preview'  => 'Aperçu en direct',
 
 
     // ==========================================
@@ -2479,6 +2584,7 @@ return [
     'btn_logout'                => 'Déconnexion',
     'error_missing_fields'      => 'Champs obligatoires.',
     'error_invalid_credentials' => 'Identifiants incorrects.',
+    'login_subtitle'      => 'Veuillez vous identifier pour continuer',
 
     // ==========================================
     // ACCUEIL / INDEX
@@ -2538,6 +2644,11 @@ return [
     'fc_menu_carole'            => 'Congés Carole',
     'fc_clear'                  => 'Effacer',
     'fc_menu_kids_leaves'       => 'Congés Enfants',
+    'fc_err_save_snap'          => 'Erreur lors de la sauvegarde du correctif.',
+    'fc_err_fetch_gov'          => 'Erreur lors de la connexion à l’API gouvernementale.',
+    'fc_err_no_data_gov'        => 'Aucune donnée trouvée sur l’API du gouvernement pour cette année.',
+    'fc_err_action'             => 'Erreur lors de l’action : ',
+    'leg_presence'              => 'Présence Pep',
     
     'leg_school_holidays'       => 'Vacances Scolaires',
     'leg_public_holiday'        => 'Férié',
@@ -2546,7 +2657,6 @@ return [
     'leg_centre'                => 'Centre',
     'leg_avis'                  => 'Avis',
     'leg_pep_sick'              => 'Pep Malade',
-    'leg_presence'              => 'Présence',
     
     'vac_toussaint'             => 'Vacances de la Toussaint',
     'vac_noel'                  => 'Vacances de Noël',
@@ -2908,7 +3018,7 @@ return [
     'gift_page_title'        => 'PachaFamily - Liste de cadeaux',
     'gift_occ_tio'           => 'Tió',
     'gift_occ_noel'          => 'Noël',
-    'gift_occ_rois'          => 'Rois',
+    'gift_occ_rois'          => 'Rois mages',
     'gift_occ_anniv'         => 'Anniversaire',
     'gift_occ_sant'          => 'Saint',
     'gift_main_title'        => 'Liste de cadeaux %s',
@@ -2925,7 +3035,7 @@ return [
     'gift_col_party'         => 'Fête',
     'gift_debtor'            => 'Débiteur',
     'gift_creditor'          => 'Créancier',
-    'gift_liquidations'      => 'Liquidations',
+    'gift_liquidations'      => 'Tricount',
     'gift_no_debt'           => 'Aucune dette en cours.',
     'gift_owes'              => 'doit',
     'gift_to'                => 'à',
@@ -2940,6 +3050,11 @@ return [
     'gift_modal_price'       => 'Prix (€)',
     'gift_modal_link'        => 'Lien (optionnel)',
     'gift_confirm_delete'    => 'Voulez-vous vraiment supprimer ce cadeau ?',
+    'gift_filter_all_children'   => 'Tous les enfants',
+    'gift_filter_all_adults'     => 'Tous les adultes',
+    'gift_empty_state_no_gifts'  => 'Aucun cadeau pour le moment.',
+    'gift_empty_state_no_filter' => 'Aucun cadeau ne correspond au filtre.',
+    'gift_view_matrix'           => 'Voir la matrice détaillée',
 ];
 ```
 
@@ -3078,27 +3193,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require __DIR__ . '/header.php';
 ?>
 
-<div class="pf-login-container">
-  <h1 style="text-align:center; font-size:1.8rem;"><?= tr('login_header') ?></h1>
-  
-  <?php if ($error): ?>
-    <div class="pf-error"><?= htmlspecialchars($error) ?></div>
-  <?php endif; ?>
+<div class="pf-container pf-login-wrapper">
+    <div class="pf-login-card">
+        
+        <div class="pf-login-header">
+          <img src="/favicon.png" alt="PachaFamily Logo" class="pf-login-icon">
+          <h1><?= tr('login_header') ?></h1>
+          <p><?= tr('login_subtitle') ?></p>
+      </div>
+        
+        <?php if ($error): ?>
+            <div class="pf-login-error">
+                <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
 
-  <form method="post" action="/login.php<?= isset($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : '' ?>">
-    <div class="pf-form-group">
-      <label for="username"><?= tr('label_username') ?></label>
-      <input type="text" id="username" name="username" required autofocus placeholder="<?= tr('placeholder_username') ?>">
+        <form method="post" action="/login.php<?= isset($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : '' ?>">
+            <div class="pf-form-group">
+                <label class="pf-label" for="username"><?= tr('label_username') ?></label>
+                <input type="text" id="username" name="username" class="pf-input" required autofocus placeholder="<?= tr('placeholder_username') ?>">
+            </div>
+
+            <div class="pf-form-group">
+                <label class="pf-label" for="password"><?= tr('label_password') ?></label>
+                <input type="password" id="password" name="password" class="pf-input" required placeholder="••••••">
+            </div>
+
+            <button type="submit" class="pf-btn pf-btn-block">
+                <?= tr('btn_login_submit') ?>
+            </button>
+        </form>
+        
     </div>
-
-    <div class="pf-form-group">
-      <label for="password"><?= tr('label_password') ?></label>
-      <input type="password" id="password" name="password" required placeholder="••••••">
-    </div>
-
-    <button type="submit" class="pf-btn"><?= tr('btn_login_submit') ?></button>
-  </form>
 </div>
+
+<?php require __DIR__ . '/footer.php'; ?>
+
+<?php require __DIR__ . '/footer.php'; ?>
 
 <?php require __DIR__ . '/footer.php'; ?>
 ```
@@ -3708,34 +3839,6 @@ tr:hover .row-actions {
   opacity: 1;
   pointer-events: auto !important;
 }
-.btn-icon-action {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.2s;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-}
-.btn-icon-action.edit {
-  color: #3b82f6;
-}
-.btn-icon-action.edit:hover {
-  background: #eff6ff;
-}
-.btn-icon-action.delete {
-  color: #ef4444;
-}
-.btn-icon-action.delete:hover {
-  background: #fef2f2;
-}
 
 /* --- 8. RÉCAPITULATIF VIREMENTS --- */
 .recap-wrapper {
@@ -3844,6 +3947,26 @@ th.col-laia {
   flex-direction: column;
   overflow: hidden;
   position: relative;
+}
+
+.cat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px; /* Padding interne à l'encart coloré */
+  width: 100%;
+}
+
+.cat-card-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.cat-card-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 2px;
 }
 .btn-add-item {
   background: rgba(255, 255, 255, 0.6);
@@ -4064,6 +4187,9 @@ body.sum-mode-active .sum-target {
   .budget-view > div[style*="display:grid"] > div {
     padding: 12px 10px !important;
   }
+  .budget-view .categories-grid > .cat-card {
+    padding: 0 !important;
+  }
   .budget-view
     > div[style*="justify-content: space-between"]:not(.view-header) {
     flex-direction: column !important;
@@ -4168,15 +4294,7 @@ body.sum-mode-active .sum-target {
     justify-content: flex-start;
     width: auto !important;
   }
-  .btn-icon-action {
-    font-size: 1.1rem !important;
-    padding: 4px !important;
-    width: 20px !important;
-    height: 20px !important;
-    background: #f1f5f9 !important;
-    border-radius: 6px;
-    margin-right: 2px;
-  }
+
   .col-sticky,
   .sticky-col {
     min-width: 120px !important;
@@ -4213,6 +4331,10 @@ body.sum-mode-active .sum-target {
     transform: none;
     right: auto;
     top: auto;
+  }
+
+  .cat-card-header {
+    padding: 12px 10px; /* Plus serré sur mobile */
   }
 }
 
@@ -5034,8 +5156,7 @@ function getTranslatedMonthName($dateString) {
 
                             <button type="button" 
                                     onclick="deleteCategory(<?= $cat['id'] ?>)" 
-                                    class="btn-icon-action delete" title="<?= tr('delete') ?>">
-                            &times;
+                                    class="btn-icon-action delete" title="<?= tr('delete') ?>">🗑️
                             </button>
                         </div>
                     </td>
@@ -6418,8 +6539,8 @@ $totalRevenus = 0;
 
                     <td style="padding:15px; text-align:right;">
                         <div class="action-buttons" style="display:flex; gap:5px; justify-content:flex-end;">
-                            <button class="btn-icon" onclick='editRecapItem(<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>)' title="<?= tr('edit') ?>" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">✏️</button>
-                            <button class="btn-icon" onclick="deleteRecapItem(<?= $item['id'] ?>)" title="<?= tr('delete') ?>" style="background:none; border:none; cursor:pointer; font-size:1.1rem; filter:grayscale(1); transition:0.2s;">🗑️</button>
+                            <button class="btn-icon-action edit" onclick='editRecapItem(<?= htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8') ?>)' title="<?= tr('edit') ?>">✏️</button>
+                            <button class="btn-icon-action delete" onclick="deleteRecapItem(<?= $item['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
                         </div>
                     </td>
                 </tr>
@@ -7150,10 +7271,10 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
     <div class="categories-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:24px;">
         <?php foreach ($categoriesConfig as $key => $conf): ?>
         <div class="cat-card" <?= $isClosed ? 'style="opacity:0.8;"' : '' ?>>
-            <div style="background:<?= $conf['color'] ?>15; padding:15px; border-bottom:1px solid <?= $conf['color'] ?>30; display:flex; justify-content:space-between; align-items:center;">
-                <div>
+            <div class="cat-card-header" style="background:<?= $conf['color'] ?>15; border-bottom:1px solid <?= $conf['color'] ?>30;">
+                <div class="cat-card-title-group">
                     <h3 style="margin:0; font-size:1rem; color:<?= $conf['color'] ?>;"><?= $conf['label'] ?></h3>
-                    <div style="font-size:0.85rem; color:#64748b; font-weight:600; margin-top:2px;">
+                    <div class="cat-card-subtitle">
                         <?php $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']); echo $logic['text']; ?>
                     </div>
                 </div>
@@ -7182,9 +7303,10 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                                 <?= $exp['amount'] > 0 ? '+' : '-' ?><?= number_format(abs($exp['amount']), 2) ?>
                             </td>
                             <?php if (!$isClosed): ?>
-                                <td style="width:60px; padding-right:10px; text-align:right; white-space:nowrap;">
-                                    <button onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' style="background:none; border:none; cursor:pointer; font-size:1rem; margin-right:8px;">✏️</button>
-                                    <button class="btn-icon-action btn-safe-click delete" onclick="deleteExpense(<?= $exp['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>                                </td>
+                                <td style="width:70px; padding-right:10px; text-align:right; white-space:nowrap;">
+                                    <button class="btn-icon-action edit" onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' title="<?= tr('edit') ?>">✏️</button>
+                                    <button class="btn-icon-action delete btn-safe-click" onclick="deleteExpense(<?= $exp['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
+                                </td>
                             <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
@@ -7300,7 +7422,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
     </div>
 </div>
 
-<div id="importCsvModal" class="pf-modal" style="display: <?= $showPreview ? 'flex' : 'none' ?>;">
+<div id="importCsvModal" class="pf-modal <?= $showPreview ? 'open' : '' ?>">
     <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?></h3>
@@ -7410,8 +7532,8 @@ window.I18N = {
 
 const activeViewMonth = '<?= substr($viewMonthDate, 0, 7) ?>';
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
-function openSuiviModal(id) { document.getElementById(id).classList.add('is-open'); document.body.classList.add('no-scroll'); }
-function closeSuiviModal(id) { document.getElementById(id).classList.remove('is-open'); document.body.classList.remove('no-scroll');}
+function openSuiviModal(id) { document.getElementById(id).classList.add('open'); document.body.classList.add('no-scroll'); }
+function closeSuiviModal(id) { document.getElementById(id).classList.remove('open'); document.body.classList.remove('no-scroll');}
 
 const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
 
@@ -7730,15 +7852,24 @@ try {
 /* modules/family-calendar/family-calendar.css */
 
 :root {
+  /* Couleurs sémantiques Calendrier */
   --c-school-holiday: #e5d9f2;
-  --c-public-holiday: #e0e0e0;
+  --c-public-holiday: #e2e8f0; /* Plus marqué que l'original */
   --c-off-carole: #ffedd5;
   --c-extra-off: #fee2e2;
   --c-selected: #bfdbfe;
-  --bg-alex: #f0fdfa;
-  --text-alex: #0f766e;
+
+  /* Thèmes Parents (Sync Budget) */
+  --bg-alex: #ecfeff;
+  --text-alex: #0891b2;
   --bg-laia: #fffbeb;
-  --text-laia: #b45309;
+  --text-laia: #d97706;
+
+  /* Rappel des variables Global Design System pour cohérence */
+  --pf-primary: #3b82f6;
+  --pf-border: #e2e8f0;
+  --pf-bg-lighter: #f8fafc;
+  --pf-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .pf-family-calendar .pf-main {
@@ -7756,29 +7887,31 @@ try {
 .pf-btn-icon-text {
   background: white;
   border: 1px solid var(--pf-border);
-  border-radius: 20px;
-  padding: 8px 16px;
+  border-radius: 50px;
+  padding: 10px 20px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  color: #475569;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--pf-shadow-sm);
 }
 .pf-btn-icon-text:hover {
   border-color: var(--pf-primary);
   color: var(--pf-primary);
-  background: #f0f9ff;
+  background: #f8fafc;
   transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 /* Calendrier Mensuel */
 .fc-month-calendar-wrapper {
   background: white;
   border: 1px solid var(--pf-border);
-  border-radius: var(--pf-radius-lg);
+  border-radius: 16px;
   padding: 24px;
   margin-bottom: 32px;
   box-shadow: var(--pf-shadow-sm);
@@ -7797,15 +7930,16 @@ try {
 }
 .fc-month-nav-row h3 {
   margin: 0 !important;
-  font-size: 1.4rem !important;
+  font-size: 1.5rem !important;
   font-weight: 800 !important;
+  color: #0f172a;
   text-transform: capitalize !important;
   text-align: center !important;
   flex-grow: 1 !important;
 }
 .fc-nav-button {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 1px solid var(--pf-border);
   background: white;
@@ -7813,20 +7947,22 @@ try {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  transition: 0.2s;
+  font-size: 20px;
+  transition: all 0.2s;
+  color: #64748b;
 }
 .fc-nav-button:hover {
   border-color: var(--pf-primary);
   color: var(--pf-primary);
+  background: #eff6ff;
 }
 
 .fc-view-controls {
   display: flex !important;
   width: 100% !important;
-  background: #e2e8f0 !important;
+  background: #f1f5f9 !important;
   padding: 4px !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
 }
 .fc-view-button {
   flex: 1 !important;
@@ -7842,9 +7978,9 @@ try {
   transition: 0.2s;
 }
 .fc-view-button--active {
-  background: white;
-  color: var(--pf-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: white !important;
+  color: var(--pf-primary) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
   font-weight: 700;
 }
 
@@ -7857,7 +7993,21 @@ try {
   min-width: 100% !important;
   width: 100% !important;
   table-layout: fixed;
-  border-collapse: collapse !important;
+  border-collapse: separate !important;
+  border-spacing: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--pf-border) !important;
+}
+.fc-month-table th {
+  padding: 10px !important;
+  font-size: 0.8rem !important;
+  background: #f8fafc !important;
+  color: #64748b !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--pf-border) !important;
+  border-right: 1px solid var(--pf-border) !important;
 }
 .fc-month-table td {
   height: 80px;
@@ -7866,15 +8016,12 @@ try {
   vertical-align: top;
   position: relative;
   cursor: pointer;
-  border: 1px solid var(--pf-border) !important;
+  border-right: 1px solid var(--pf-border) !important;
+  border-bottom: 1px solid var(--pf-border) !important;
+  transition: background 0.1s;
 }
-.fc-month-table th {
-  padding: 10px !important;
-  font-size: 0.8rem !important;
-  background: var(--pf-bg-lighter) !important;
-  color: var(--pf-text-muted);
-  text-transform: uppercase;
-  border: 1px solid var(--pf-border) !important;
+.fc-month-table td:hover:not(.fc-day--other-month) {
+  background: #f1f5f9;
 }
 .fc-day--other-month {
   background: #fcfcfc !important;
@@ -7921,7 +8068,8 @@ try {
   background: white;
   padding: 8px 16px;
   border-radius: 50px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--pf-border);
+  box-shadow: var(--pf-shadow-sm);
 }
 .fc-minimal-balance-card strong.alex {
   color: var(--text-alex);
@@ -7937,11 +8085,12 @@ try {
 .fc-min-chip {
   display: flex;
   align-items: center;
-  background: var(--pf-bg-page);
+  background: white;
   border-radius: 20px;
   padding: 3px 10px;
   font-size: 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--pf-border);
+  font-weight: 600;
 }
 .fc-min-chip .type {
   font-weight: 700;
@@ -8062,10 +8211,11 @@ try {
   max-height: 80vh;
   overflow: auto;
   border: 1px solid var(--pf-border);
-  border-radius: 12px;
+  border-radius: 16px;
   background: white;
   box-shadow: var(--pf-shadow-sm);
   position: relative;
+  margin-bottom: 24px;
 }
 #planningTable {
   width: 100%;
@@ -8073,27 +8223,59 @@ try {
   border-collapse: separate;
   border-spacing: 0;
 }
+
+/* =========================================================
+   HARMONISATION DES BORDURES ET HEADERS STICKY (1px strict)
+   ========================================================= */
+#planningTable thead tr {
+  height: 30px; /* On fixe la hauteur pour un calcul parfait */
+}
 #planningTable thead th {
   position: sticky;
-  top: 0;
-  background: var(--pf-bg-lighter);
-  border-bottom: 1px solid var(--pf-border);
-  border-right: 1px solid var(--pf-border);
+  background: #f8fafc !important;
+  border: none !important; /* On supprime les bordures natives */
+
+  /* On utilise UNIQUEMENT des ombres internes pour simuler 1px de bordure sans doublement */
+  box-shadow:
+    inset 0 -1px 0 var(--pf-border),
+    inset -1px 0 0 var(--pf-border) !important;
+
   padding: 6px;
   font-size: 0.75rem;
   z-index: 20;
+  color: #475569;
+  background-clip: padding-box;
 }
-.col-alex.header-group {
+#planningTable thead tr:nth-child(1) th {
+  top: 0;
+  z-index: 22; /* Au premier plan */
+}
+#planningTable thead tr:nth-child(2) th {
+  top: 30px; /* Exactement la hauteur de la ligne 1 */
+  z-index: 21;
+}
+#planningTable thead tr:nth-child(3) th {
+  top: 60px; /* Ligne 1 + Ligne 2 */
+  z-index: 20;
+}
+
+.col-alex.header-group,
+.col-alex-sub {
   background: var(--bg-alex) !important;
-  color: var(--text-alex);
+  color: var(--text-alex) !important;
 }
-.col-laia.header-group {
+.col-laia.header-group,
+.col-laia-sub {
   background: var(--bg-laia) !important;
-  color: var(--text-laia);
+  color: var(--text-laia) !important;
 }
+
+/* Cellules standards du corps */
 #planningTable tbody td {
-  border-right: 1px solid var(--pf-bg-lighter);
-  border-bottom: 1px solid var(--pf-bg-lighter);
+  position: relative;
+  border: none !important; /* Reset de sécurité */
+  border-right: 1px solid var(--pf-border) !important;
+  border-bottom: 1px solid var(--pf-border) !important;
   height: 36px;
   padding: 0 4px;
   text-align: center;
@@ -8101,23 +8283,19 @@ try {
   white-space: nowrap;
   cursor: pointer;
 }
-.col-alex-sub {
-  background: var(--bg-alex);
-}
-.col-laia-sub {
-  background: var(--bg-laia);
-}
+
+/* Dimensions des colonnes */
 .col-month {
   width: 54px !important;
   min-width: 54px !important;
   max-width: 54px !important;
   background: white;
-  border-right: 2px solid var(--pf-border) !important;
+  text-align: center;
+  vertical-align: middle;
 }
 th.col-day,
 td.col-day {
   min-width: 35px !important;
-  border-right: 2px solid var(--pf-border) !important;
 }
 th.col-total,
 td.col-total,
@@ -8129,39 +8307,77 @@ td.col-laia-sub {
   min-width: 32px !important;
   max-width: 32px !important;
 }
+
 .rotated-text span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: 0.7rem;
   color: var(--pf-text-muted);
 }
+
+/* =========================================================
+   GESTION DES COLONNES STICKY (Mois & Semaine)
+   ========================================================= */
+
 #planningTable tbody td.col-sticky-mois {
   position: sticky !important;
   left: 0 !important;
   z-index: 15 !important;
   background: white !important;
+  padding: 0 !important;
 }
+
+#planningTable tbody td.col-sticky-mois .fc-sticky-mois-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  writing-mode: vertical-rl;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+/* 2. Sticky Semaine (Body) */
 #planningTable tbody td.col-sticky-sem {
   position: sticky !important;
   left: 54px !important;
   z-index: 14 !important;
   background: white !important;
+  /* Ombre portée pour délimiter la zone sticky du reste du tableau */
   box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1);
 }
+
+/* 3. Sticky Mois (Header) */
 #planningTable thead tr th.col-sticky-mois {
   position: sticky !important;
   top: 0 !important;
   left: 0 !important;
   z-index: 30 !important;
   background: var(--pf-bg-lighter) !important;
+  /* Les bordures sont gérées par le box-shadow général du thead th */
 }
+
+/* 4. Sticky Semaine (Header) */
 #planningTable thead tr th.col-sticky-sem {
   position: sticky !important;
   top: 0 !important;
   left: 54px !important;
   z-index: 29 !important;
   background: var(--pf-bg-lighter) !important;
-  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1);
+  /* Ombre interne (bordures) + Ombre portée (effet sticky) */
+  box-shadow:
+    inset 0 -1px 0 var(--pf-border),
+    inset -1px 0 0 var(--pf-border),
+    4px 0 6px -2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Rétablissement horizontal pour les headers mois et semaine */
+#planningTable thead th.col-month,
+#planningTable tbody td.col-sticky-sem {
+  writing-mode: horizontal-tb;
+  transform: none;
+  padding: 6px !important;
+  text-align: center;
 }
 
 /* Panneaux bas & Légendes */
@@ -8171,6 +8387,24 @@ td.col-laia-sub {
   gap: 24px;
   align-items: start;
 }
+
+/* Nouvelles bordures style "Budget" pour les conteneurs */
+.pf-card {
+  background: white;
+  border: 1px solid var(--pf-border);
+  border-radius: 16px;
+  box-shadow: var(--pf-shadow-sm);
+  padding: 24px;
+}
+.pf-card-title {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 1.25rem;
+  color: #0f172a;
+  border-bottom: 1px solid var(--pf-border);
+  padding-bottom: 12px;
+}
+
 .pf-legend-grid {
   display: flex;
   flex-wrap: wrap;
@@ -8181,14 +8415,17 @@ td.col-laia-sub {
   align-items: center;
   gap: 6px;
   font-size: 0.75rem;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  background: #f8fafc;
   border: 1px solid var(--pf-border);
-  border-radius: 6px;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #475569;
 }
 .pf-legend-color {
   width: 16px;
   height: 16px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 .fc-legend-school-holiday {
   background: var(--c-school-holiday);
@@ -8214,33 +8451,41 @@ td.col-laia-sub {
   background-size: contain;
   border: none;
 }
+
 .fc-summary-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--pf-border);
 }
 .fc-summ-select {
   border: 1px solid var(--pf-border);
   border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 0.75rem;
-  height: 24px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  height: auto;
+  background: #f8fafc;
 }
 .fc-summary-item {
   display: flex;
   justify-content: space-between;
   padding: 12px 4px;
-  border-bottom: 1px solid var(--pf-bg-lighter);
+  border-bottom: 1px solid var(--pf-border); /* Ligne de séparation visible */
+}
+.fc-summary-item:last-child {
+  border-bottom: none;
 }
 .fc-summary-label {
   font-size: 0.85rem;
-  color: var(--pf-text-muted);
-  font-weight: 500;
+  color: #64748b;
+  font-weight: 600;
 }
 .fc-summary-value {
   font-size: 1rem;
   font-weight: 700;
+  color: #0f172a;
 }
 
 /* Menu Contextuel Tactile */
@@ -8347,20 +8592,52 @@ td.col-laia-sub {
   font-size: 0.85rem;
 }
 .fc-holidays-table th {
-  background: var(--pf-bg-page);
+  background: #f8fafc;
   padding: 12px 16px;
   text-align: left;
   font-weight: 600;
   position: sticky;
   top: 0;
-  border-bottom: 1px solid var(--pf-border);
+  border-bottom: 2px solid var(--pf-border);
 }
 .fc-holidays-table td {
   padding: 10px 16px;
-  border-bottom: 1px solid var(--pf-bg-lighter);
+  border-bottom: 1px solid var(--pf-border);
 }
 .fc-holidays-table tr:nth-child(even) {
   background: #fafafa;
+}
+
+/* ===  MODALES : Alignement du Header et de la Croix === */
+.pf-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--pf-border);
+  padding-bottom: 15px;
+}
+
+.pf-modal-header .pf-modal-title {
+  margin: 0;
+  padding: 0;
+  border-bottom: none; /* On annule la bordure par défaut du global.css pour la déléguer au header */
+  flex-grow: 1;
+}
+
+.pf-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #94a3b8;
+  padding: 0 0 0 15px;
+  transition: color 0.2s;
+}
+
+.pf-modal-close:hover {
+  color: #ef4444; /* Devient rouge au survol */
 }
 
 /* Mobile */
@@ -8396,7 +8673,7 @@ td.col-laia-sub {
   }
   .fc-bottom-grid {
     grid-template-columns: 1fr;
-    padding: 0 10px;
+    padding: 10px;
   }
   .fc-selection-menu {
     position: fixed !important;
@@ -8528,6 +8805,8 @@ document.addEventListener("DOMContentLoaded", () => {
       this.setupModalUI(); // Prépare le selecteur d'année dans la modale
       await this.refreshAllData();
       this.updateSchoolYearLabel();
+
+      setTimeout(() => this.scrollToCurrentMonth(), 100);
     }
 
     // Modifie dynamiquement le titre de la modale pour y insérer le selecteur d'année
@@ -9019,6 +9298,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       this.weeks.forEach((w, idx) => {
         const tr = document.createElement("tr");
+        tr.setAttribute("data-month", w.monthKey);
         if (idx === 0 || this.weeks[idx - 1].monthKey !== w.monthKey)
           tr.classList.add("fc-month-first-week-row");
         if (
@@ -9031,7 +9311,7 @@ document.addEventListener("DOMContentLoaded", () => {
           processedMonths[w.monthKey] = true;
           const td = document.createElement("td");
           td.className = "col-month col-sticky-mois";
-          td.textContent = w.monthName;
+          td.innerHTML = `<span class="fc-sticky-mois-label">${w.monthName}</span>`;
           td.rowSpan = monthSpans[w.monthKey];
           tr.appendChild(td);
         }
@@ -9115,6 +9395,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         this.planningBody.appendChild(tr);
       });
+    }
+
+    // --- Auto-scroll vers le mois en cours ---
+    scrollToCurrentMonth() {
+      const wrapper = document.getElementById("planningTable-wrapper");
+      const thead = document.querySelector("#planningTable thead");
+      if (!wrapper || !thead) return;
+
+      const now = new Date();
+      // Construit la clé au format "YYYY-MM"
+      const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+      // Cherche la TOUTE PREMIÈRE ligne qui correspond à ce mois
+      const targetRow = document.querySelector(
+        `#planningTable tbody tr[data-month="${currentYm}"]`,
+      );
+
+      if (targetRow) {
+        // On donne 50ms au navigateur pour finir son rendu graphique avant de calculer les hauteurs
+        setTimeout(() => {
+          const scrollPos = targetRow.offsetTop - thead.offsetHeight;
+          wrapper.scrollTo({
+            top: scrollPos > 0 ? scrollPos : 0,
+            behavior: "smooth",
+          });
+        }, 50);
+      }
     }
 
     renderMonthCalendar() {
@@ -9500,7 +9807,7 @@ document.addEventListener("DOMContentLoaded", () => {
          <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_off_carole")}</span><span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} ${tr("fc_unit_days")}</span></div>
          <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_extra_off")}</span><span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} ${tr("fc_unit_days")}</span></div>
          <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_pep_sick")}</span><span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} ${tr("fc_unit_days")}</span></div>
-         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_presence")} Pep</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} ${tr("fc_unit_days")}</span></div>
+         <div class="fc-summary-item"><span class="fc-summary-label">${tr("leg_presence")}</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} ${tr("fc_unit_days")}</span></div>
        `;
     }
 
@@ -9595,23 +9902,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (btnOpen && modal) {
         btnOpen.addEventListener("click", () => {
-          modal.style.display = "flex";
-          // Remet l'année par défaut sur l'année actuellement affichée dans le calendrier
+          modal.classList.add("open"); // Utilisation propre de la classe CSS
+          document.body.classList.add("no-scroll");
+
           const yearSelect = document.getElementById("holidayYearSelect");
           if (yearSelect) yearSelect.value = this.currentSchoolYearStart;
           this.modalSelectedYear = this.currentSchoolYearStart;
           this.renderModalHolidays();
         });
       }
-      if (btnClose && modal)
-        btnClose.addEventListener(
-          "click",
-          () => (modal.style.display = "none"),
-        );
-      if (modal)
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) modal.style.display = "none";
+      if (btnClose && modal) {
+        btnClose.addEventListener("click", () => {
+          modal.classList.remove("open");
+          document.body.classList.remove("no-scroll");
         });
+      }
+      if (modal) {
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) {
+            modal.classList.remove("open");
+            document.body.classList.remove("no-scroll");
+          }
+        });
+      }
 
       // --- GESTION MODALE CORRECTIF DES SOLDES (SNAPSHOTS) ---
       const btnSnap = document.getElementById("btnOpenSnapshotModal");
@@ -9620,10 +9933,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const formSnap = document.getElementById("formSnapshot");
 
       if (btnSnap && modalSnap) {
-        modalSnap.classList.add("is-open");
         btnSnap.addEventListener("click", () => {
-          modalSnap.classList.add("is-open"); // Utilise flex au lieu de block pour le centrage
+          modalSnap.classList.add("open"); // On ouvre la modale correctement
           document.body.classList.add("no-scroll");
+
           // Pré-remplir la date avec le 1er jour du mois en cours
           const today = new Date();
           const y = today.getFullYear();
@@ -9634,21 +9947,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (btnCloseSnap && modalSnap) {
-        btnCloseSnap.addEventListener(
-          "click",
-          () => (modalSnap.style.display = "none"),
-        );
+        btnCloseSnap.addEventListener("click", () => {
+          modalSnap.classList.remove("open");
+          document.body.classList.remove("no-scroll");
+        });
       }
 
       if (modalSnap) {
         modalSnap.addEventListener("click", (e) => {
-          if (e.target === modalSnap) modalSnap.style.display = "none";
+          if (e.target === modalSnap) {
+            modalSnap.classList.remove("open");
+            document.body.classList.remove("no-scroll");
+          }
         });
       }
 
       if (formSnap) {
         formSnap.addEventListener("submit", async (e) => {
-          e.preventDefault(); // Empêche le rechargement de la page
+          e.preventDefault();
 
           const payload = {
             person_id: document.getElementById("snapPerson").value,
@@ -9658,16 +9974,15 @@ document.addEventListener("DOMContentLoaded", () => {
           };
 
           try {
-            // On envoie à la nouvelle API
             await this.postApi(
               "/modules/family-calendar/includes/api/save-leave-snapshot.php",
               payload,
             );
 
-            modalSnap.style.display = "none";
-            formSnap.reset(); // On vide le formulaire
+            modalSnap.classList.remove("open"); // Fermeture propre
+            document.body.classList.remove("no-scroll");
+            formSnap.reset();
 
-            // On rafraîchit tout le calendrier pour appliquer le nouveau solde immédiatement
             await this.refreshAllData();
           } catch (error) {
             alert("Erreur lors de la sauvegarde du correctif.");
@@ -10736,311 +11051,379 @@ try {
 
 .pf-gift-list h1 {
   font-size: 1.6rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
+  color: var(--text-main);
 }
+
 .cl-titlebar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--pf-border);
+  gap: 15px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 15px;
 }
+
 .cl-view-switch {
   display: flex;
   background: white;
   padding: 4px;
   border-radius: 8px;
-  border: 1px solid var(--pf-border);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
 }
+
 .cl-view-btn {
   padding: 6px 16px;
   border-radius: 6px;
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--pf-text-muted);
+  color: var(--text-muted);
+  transition: 0.2s;
 }
+
 .cl-view-btn.is-active {
   background: #334155;
   color: white;
 }
 
-.cl-occasion-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 16px;
+/* === FILTRES STICKY === */
+.pf-filter-bar {
   display: flex;
-  align-items: center;
   gap: 10px;
-  text-transform: uppercase;
-  border-bottom: 2px solid var(--pf-border);
-  padding-bottom: 8px;
+  align-items: center;
+  margin-bottom: 24px;
+  position: sticky;
+  top: 64px;
+  z-index: 50;
+  flex-wrap: wrap;
 }
 
-/* Grilles intelligentes */
-.cl-occasion-children-tables {
-  display: grid;
-  gap: 20px;
-  align-items: start;
-}
-.cl-view-nadal .cl-occasion-children-tables {
-  grid-template-columns: repeat(3, 1fr);
-}
-.cl-view-anniversary .cl-occasion-children-tables {
-  grid-template-columns: repeat(6, 1fr);
-}
-.cl-view-anniversary .child-pol,
-.cl-view-anniversary .child-pep {
-  grid-column: span 3;
-}
-.cl-view-anniversary .child-elna,
-.cl-view-anniversary .child-bru,
-.cl-view-anniversary .child-guim {
-  grid-column: span 2;
-}
-
-/* Tableaux par enfant */
-.cl-child-table {
-  background: white;
-  box-shadow: var(--pf-shadow-sm);
-  border-radius: 0 0 var(--pf-radius-md) var(--pf-radius-md);
-  border: 1px solid var(--pf-border);
-  border-top: none;
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-.cl-child-table caption {
-  padding: 10px 16px;
-  text-align: left;
-  font-weight: 700;
-  font-size: 1.1rem;
-  border-radius: var(--pf-radius-md) var(--pf-radius-md) 0 0;
-  border: 1px solid var(--pf-border);
-  border-bottom: 2px solid;
-  position: relative;
-}
-
-.cl-child-add-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+.pf-filter-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.4s;
-}
-.cl-child-add-btn:hover {
-  background: white;
-  transform: translateY(-50%) rotate(90deg) scale(1.1);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  gap: 6px;
 }
 
-/* Thèmes Enfants */
-.child-pol {
-  border-color: #bcd3ff;
-}
-.child-pol caption {
-  background: #eaf2ff;
-  color: #1e3a8a;
-  border-bottom-color: #93c5fd;
-}
-.child-pol thead th {
-  background: #f5f9ff;
-}
-.child-pep {
-  border-color: #b9e3b9;
-}
-.child-pep caption {
-  background: #eaf7ea;
-  color: #14532d;
-  border-bottom-color: #86efac;
-}
-.child-pep thead th {
-  background: #f6fdf6;
-}
-.child-elna {
-  border-color: #f3bfd7;
-}
-.child-elna caption {
-  background: #fdeaf3;
-  color: #831843;
-  border-bottom-color: #f9a8d4;
-}
-.child-elna thead th {
-  background: #fff5f9;
-}
-.child-bru {
-  border-color: #ffd0a8;
-}
-.child-bru caption {
-  background: #fff3e6;
-  color: #7c2d12;
-  border-bottom-color: #fdba74;
-}
-.child-bru thead th {
-  background: #fffaf5;
-}
-.child-guim {
-  border-color: #d3c6ff;
-}
-.child-guim caption {
-  background: #f0eaff;
-  color: #4c1d95;
-  border-bottom-color: #c4b5fd;
-}
-.child-guim thead th {
-  background: #fbf9ff;
-}
-
-/* Table interne */
-.cl-child-table thead th {
-  padding: 8px;
-  font-size: 0.75rem;
-  color: var(--pf-text-muted);
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--pf-border);
-  border-right: 1px solid var(--pf-border);
-}
-.cl-child-table tbody td {
-  padding: 8px;
-  border-bottom: 1px solid var(--pf-bg-lighter);
-  border-right: 1px solid var(--pf-bg-lighter);
+.pf-filter-select {
+  padding: 6px 12px;
+  border-radius: 20px; /* Forme de pillule */
+  border: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
   font-size: 0.85rem;
-}
-.cl-summary-adult-total {
-  font-size: 0.7rem;
-  color: var(--pf-primary);
-  background: rgba(37, 99, 235, 0.1);
-  padding: 1px 4px;
-  border-radius: 4px;
+  font-weight: 600;
+  color: var(--text-main);
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  width: auto; /* Empêche de prendre toute la largeur */
+  appearance: none; /* Nettoie la flèche système... */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  /* ...pour mettre une flèche personnalisée plus discrète */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 28px; /* Place pour la flèche */
 }
 
-/* Actions Cadeaux au Survol */
-.cl-gift-line {
+.pf-filter-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* === SECTIONS ENFANTS === */
+.pf-child-section {
+  margin-bottom: 30px;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+.pf-child-header {
   display: flex;
   justify-content: space-between;
-  position: relative;
-  min-height: 20px;
-}
-.cl-gift-desc {
-  font-size: 0.85rem;
-  font-weight: 500;
-  word-break: break-word;
-  flex: 1;
-}
-.cl-gift-amount {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--pf-success);
-  background: #ecfdf5;
-  padding: 1px 4px;
-  border-radius: 4px;
-  transition: 0.2s;
-  opacity: 1;
-}
-.cl-gift-actions {
-  display: flex;
-  gap: 4px;
-  position: absolute;
-  right: 0;
-  top: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: 0.2s;
-}
-.cl-gift-line:hover .cl-gift-amount {
-  opacity: 0;
-}
-.cl-gift-line:hover .cl-gift-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-.cl-gift-action-btn {
-  background: var(--pf-bg-lighter);
-  border: 1px solid var(--pf-border);
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.2s;
+  margin-bottom: 15px;
 }
-.cl-gift-action-btn:hover {
-  background: white;
-  border-color: var(--pf-text-main);
+.pf-child-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--text-main);
 }
 
-/* Matrice Tricount */
-.cl-budget-wrapper {
+/* === BARRE DES TOTAUX (PILLS) === */
+.pf-child-totals-bar {
+  display: flex;
+  gap: 8px;
   overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #f1f5f9;
+  scrollbar-width: none; /* Firefox */
+}
+.pf-child-totals-bar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+.pf-summary-pill {
+  white-space: nowrap;
+  background: #f8fafc;
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  transition: opacity 0.2s;
+}
+
+/* === FEED DES CARTES CADEAUX === */
+.pf-gift-feed {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.pf-gift-card-compact {
   background: white;
-  border-radius: var(--pf-radius-md);
-  box-shadow: var(--pf-shadow-sm);
-  border: 1px solid var(--pf-border);
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+  position: relative;
+  transition: 0.2s;
+  display: flex;
+  flex-direction: column;
+  min-height: 100px;
+}
+.pf-gift-card-compact:hover {
+  border-color: #cbd5e1;
+  box-shadow: var(--shadow-md);
+}
+.pf-gift-title {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.pf-gift-link {
+  text-decoration: none;
+  margin-left: 4px;
+}
+.pf-gift-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+}
+.pf-gift-price {
+  font-weight: 800;
+  color: var(--success);
+  font-size: 1rem;
+}
+.pf-gift-badges-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.pf-pill-adult {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.pf-pill-occ {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.pf-gift-payer {
+  font-size: 0.7rem;
+  color: #ef4444;
+  font-weight: 600;
+  font-style: italic;
+  margin-top: 5px;
+}
+.pf-gift-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* === TRICOUNT / LIQUIDATIONS === */
+.pf-tricount-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.pf-tricount-item {
+  background: white;
+  padding: 12px 15px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
 }
 .cl-debt-matrix th:first-child,
 .cl-debt-matrix td:first-child {
   position: sticky;
   left: 0;
-  background: var(--pf-bg-page);
+  background: var(--bg-page);
   z-index: 2;
-  border-right: 2px solid var(--pf-border);
-}
-.cl-mtx-owe {
-  color: var(--pf-danger);
-  background: #fef2f2;
-  font-weight: 700;
+  border-right: 2px solid var(--border-light);
 }
 
-@media (max-width: 1000px) {
-  .cl-view-nadal .cl-occasion-children-tables,
-  .cl-view-anniversary .cl-occasion-children-tables {
-    grid-template-columns: 1fr;
+/* Icônes des fêtes (Tió, Noël, etc.) plus petites et bien alignées */
+.cl-occasion-icon {
+  width: 20px; /* Réduit pour être discret */
+  height: 20px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.cl-occasion-title {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Espace réduit entre l'icône et le texte */
+}
+
+@media (max-width: 768px) {
+  .pf-child-section {
+    padding: 15px;
   }
-  .cl-child-table {
-    display: block;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
+  .pf-filter-bar {
+    padding: 0 5px;
   }
-  .cl-child-table caption {
-    position: sticky;
-    left: 0;
-    z-index: 5;
+  .pf-filter-label {
+    display: none;
   }
-  .cl-child-table th,
-  .cl-child-table td {
-    min-width: 180px;
-    scroll-snap-align: start;
+  .pf-gift-feed {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pf-gift-title {
+    font-size: 0.85rem;
+  }
+  .pf-gift-price {
+    font-size: 0.9rem;
   }
 }
-@media (hover: none) {
-  .cl-gift-line {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 400px) {
+  .pf-gift-feed {
+    grid-template-columns: 1fr;
   }
-  .cl-gift-amount {
-    opacity: 1 !important;
-    margin-bottom: 6px;
+}
+/* === COMPOSANT MULTI-SELECT VANILLA === */
+.pf-multi-select {
+  position: relative;
+  display: inline-block;
+}
+
+/* Le bouton déclencheur (réutilise le style des filtres) */
+.pf-ms-trigger {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-light);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.pf-ms-trigger:hover {
+  border-color: #cbd5e1;
+}
+.pf-ms-trigger.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* Le menu déroulant */
+.pf-ms-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  min-width: 200px;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.pf-ms-dropdown.open {
+  display: flex;
+  animation: popDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Les options (checkboxes) */
+.pf-ms-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text-main);
+  transition: 0.2s;
+}
+.pf-ms-option:hover {
+  background: #f8fafc;
+}
+.pf-ms-option input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+}
+.pf-ms-option.is-all {
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-radius: 6px 6px 0 0;
+}
+
+@keyframes popDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
   }
-  .cl-gift-actions {
-    position: relative;
-    opacity: 1 !important;
-    pointer-events: auto !important;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -11172,42 +11555,84 @@ exit;
 ```css
 /* modules/holidays/holidays.css */
 
+/* --- 1. VARIABLES & BASE --- */
+
+/* Bloque le défilement de la page en arrière-plan */
+body.no-scroll {
+  overflow: hidden !important;
+}
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg-page: #f1f5f9;
+  --bg-card: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+
+  --radius-l: 16px;
+  --radius-m: 10px;
+  --radius-s: 6px;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-hover:
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
 .pf-holidays {
+  background-color: var(--bg-page);
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--text-main);
   padding-bottom: 50px;
 }
+
+/* --- 2. EN-TÊTE (Refonte Responsive) --- */
 .pf-holidays__titlebar {
+  background: transparent;
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid var(--pf-border);
-  padding-bottom: 1rem;
-  flex-wrap: wrap;
 }
+
 .hol-title-group {
   display: flex;
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  flex: 1;
+  flex: 1; /* Prend l'espace disponible */
 }
+
 .hol-main-title {
   font-size: 1.8rem;
   font-weight: 800;
+  color: #0f172a;
   margin: 0;
 }
+
 .hol-filters-row {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
+
 .hol-year-select {
-  width: auto !important;
+  width: auto !important; /* Force la largeur au contenu sur PC */
   padding: 6px 12px;
   font-weight: bold;
+  cursor: pointer;
 }
+
 .hol-badge-left-to-pay {
   background: #fff1f2;
   color: #be123c;
@@ -11217,278 +11642,853 @@ exit;
   border: 1px solid #fecdd3;
   font-size: 0.9rem;
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-/* Boutons d'actions */
-.hol-map-toggle {
-  background: white;
-  color: #0f766e;
-  border: 1px solid #ccfbf1;
+.hol-badge-amount {
+  font-size: 1rem;
+}
+
+.hol-actions-group {
+  flex-shrink: 0;
+}
+
+/* --- 3. BOUTONS --- */
+.hol-add-btn,
+.hol-map-toggle,
+.pf-btn {
+  border: none;
   border-radius: 50px;
   padding: 10px 20px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
-  box-shadow: var(--pf-shadow-sm);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+}
+
+.hol-add-btn,
+.pf-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+.hol-add-btn:hover,
+.pf-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.hol-map-toggle {
+  background: white;
+  color: #0f766e;
+  border: 1px solid #ccfbf1;
 }
 .hol-map-toggle:hover {
   background: #f0fdfa;
   color: #0d9488;
   border-color: #99f6e4;
 }
-.btn-add-item {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.4s;
-}
-.btn-add-item:hover {
+
+.pf-btn.btn-secondary {
   background: white;
-  color: var(--pf-primary);
-  transform: rotate(90deg) scale(1.1);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-  border-color: currentColor;
+  color: var(--text-muted);
+  border: 1px solid #cbd5e1;
+  box-shadow: none;
+}
+.pf-btn.btn-secondary:hover {
+  background: #f8fafc;
+  color: var(--text-main);
 }
 
-/* Cartes Vacances */
+/* Petit bouton + pour les colonnes */
+.btn-icon-small {
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-icon-small:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  transform: scale(1.05);
+}
+
+/* --- 4. CARTES --- */
 .hol-ideas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 24px;
   margin-bottom: 40px;
 }
+
 .hol-idea-card {
-  background: var(--pf-bg-card);
-  border-radius: var(--pf-radius-lg);
-  box-shadow: var(--pf-shadow-md);
+  background: var(--bg-card);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-md);
   padding: 20px;
   display: flex;
   flex-direction: column;
-  transition: 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
   border: 1px solid transparent;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
+
 .hol-idea-card:hover {
   transform: translateY(-5px);
-  box-shadow: var(--pf-shadow-lg);
-  border-color: var(--pf-border);
+  box-shadow: var(--shadow-hover);
+  border-color: #e2e8f0;
 }
+
 .hol-idea-card__head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
 }
+
 .hol-idea-card h3 {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
+  color: var(--text-main);
   line-height: 1.3;
 }
+
 .hol-idea-meta {
   font-size: 0.9rem;
-  color: var(--pf-text-muted);
+  color: var(--text-muted);
   margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* Barres progression */
-.hol-progress-bar {
-  width: 100%;
-  height: 12px;
-  background: var(--pf-border);
-  border-radius: 6px;
-  margin-bottom: 10px;
-  display: flex;
-  overflow: hidden;
-}
-.hol-progress-paid {
-  background: var(--pf-success);
-}
-.hol-progress-saved {
-  background: var(--pf-primary);
-}
-.hol-progress-labels {
-  display: flex;
-  justify-content: space-between;
+.hol-notes {
   font-size: 0.85rem;
-}
-.hol-label-paid {
-  color: var(--pf-success);
-  font-weight: 600;
-}
-.hol-label-saved {
-  color: var(--pf-primary);
-  font-weight: 600;
-}
-.hol-label-left {
-  color: var(--pf-danger);
-  font-weight: 700;
+  color: #64748b;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  font-style: italic;
 }
 
-/* Statuts */
+/* --- 5. UTILITAIRES STATUTS --- */
 .bg-green-100 {
-  background: #dcfce7;
+  background-color: #dcfce7;
+}
+.text-green-800 {
   color: #166534;
 }
 .bg-blue-100 {
-  background: #dbeafe;
+  background-color: #dbeafe;
+}
+.text-blue-800 {
   color: #1e40af;
 }
 .bg-yellow-50 {
-  background: #fefce8;
+  background-color: #fefce8;
+}
+.text-yellow-800 {
   color: #854d0e;
 }
 .bg-gray-100 {
-  background: #f3f4f6;
+  background-color: #f3f4f6;
+}
+.text-gray-600 {
   color: #4b5563;
 }
 
-/* Détail Voyage - Colonnes et Checklist */
-.hol-columns-wrapper {
+/* --- 6. MODALE & FORMULAIRE (Refonte Centrage & Largeur) --- */
+.pf-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  align-items: center; /* Centrage Vertical */
+  justify-content: center; /* Centrage Horizontal */
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+}
+.pf-modal.open {
+  display: flex;
+}
+
+.pf-modal-content {
+  position: relative;
+  background: white;
+  width: 95%; /* Responsive */
+  max-width: 1100px; /* Largeur augmentée pour 3 colonnes */
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  margin: auto; /* Sécurité centrage */
+}
+
+/* Cas spécifique modale carte */
+.hol-dialog--map {
+  width: 95vw;
+  height: 90vh;
+  max-width: 1400px;
+  padding: 0;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inputs généraux */
+.pf-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.pf-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-m);
+  font-size: 1rem;
+  background: #ffffff; /* Fond blanc forcé */
+  color: var(--text-main);
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.pf-input:focus {
+  background: white;
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* --- 7. SECTIONS DE DÉTAILS (Transport/Hotel/Activité) --- */
+.hol-columns-wrapper {
+  display: flex; /* Flexbox */
+  flex-direction: column; /* Alignement vertical (les uns sous les autres) */
+  gap: 24px; /* Espace entre les blocs */
   width: 100%;
 }
+
 .hol-col {
-  background: var(--pf-bg-page);
+  background: #f8fafc;
   padding: 20px;
-  border-radius: var(--pf-radius-md);
-  border: 1px solid var(--pf-border);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  width: 100%; /* Prend toute la largeur disponible */
+  box-sizing: border-box; /* Empêche le padding de casser la largeur */
 }
+
 .hol-col-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between; /* Titre à gauche, bouton à droite */
   align-items: center;
-  border-bottom: 1px solid var(--pf-border);
+  border-bottom: 1px solid #e2e8f0;
   padding-bottom: 8px;
   margin-bottom: 12px;
 }
+
 .hol-col-header h4 {
   margin: 0;
   font-size: 1rem;
   text-transform: uppercase;
   font-weight: 700;
+  /* On retire les bordures/marges de l'ancien h4 car c'est le header qui gère */
+  border: none;
+  padding: 0;
 }
+
+/* Le bouton "+" style Gift List */
+.btn-add-item {
+  /* Style de base */
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  /* Forme et Taille */
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+
+  /* Texte */
+  font-size: 18px;
+  line-height: 1;
+
+  /* Flex pour centrer le + */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  /* Animation fluide "Cubic Bezier" copiée de gift-list */
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-add-item:hover {
+  background: white;
+  color: var(--primary); /* On ajoute la couleur primaire au survol */
+
+  /* L'effet de rotation et d'agrandissement */
+  transform: rotate(90deg) scale(1.1);
+
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  border-color: currentColor;
+}
+
+/* --- 8. ITEMS DYNAMIQUES (Inputs optimisés) --- */
 .savings-line-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 8px; /* Espace réduit */
   margin-bottom: 10px;
   background: white;
   padding: 8px;
   border-radius: 8px;
-  border: 1px solid var(--pf-bg-lighter);
+  border: 1px solid #f1f5f9;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
+
+/* Champ NOM : prend toute la place */
 .savings-line-item input[type="text"] {
   flex-grow: 1;
   min-width: 120px;
   padding: 6px 10px;
+  font-size: 0.9rem;
 }
+
+/* Champ PRIX : compact */
 .savings-line-item input[type="number"] {
   width: 120px !important;
   padding: 6px 8px !important;
   text-align: right;
   font-weight: 600;
-  color: var(--pf-success);
+  color: #059669;
 }
+
+/* Checkbox Payé */
 .savings-line-item label {
   display: flex;
   align-items: center;
   font-size: 0.75rem;
-  color: var(--pf-text-muted);
+  color: #64748b;
   gap: 4px;
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* Bouton Supprimer (Croix) */
 .btn-remove {
   width: 28px;
   height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
-  color: var(--pf-danger);
+  color: #ef4444;
   border: none;
   border-radius: 4px;
   font-size: 1.2rem;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  line-height: 1;
+  transition: background 0.2s;
 }
 .btn-remove:hover {
   background: #fef2f2;
   color: #b91c1c;
 }
 
-/* Détail Voyage - Grille & Timeline */
+/* --- 9. FOOTER MODALE --- */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* --- 10. MOBILE --- */
+@media (max-width: 768px) {
+  .pf-holidays__titlebar {
+    flex-direction: column;
+    align-items: stretch; /* Étire les éléments de haut en bas */
+    gap: 15px;
+  }
+  .hol-title-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  .hol-filters-row {
+    justify-content: space-between; /* Écarte l'année et le badge */
+    width: 100%;
+  }
+  .hol-badge-left-to-pay {
+    flex: 1;
+    justify-content: center; /* Centre le texte dans le badge */
+    font-size: 0.8rem; /* Un peu plus petit sur mobile */
+  }
+
+  /* On empile proprement les boutons d'action */
+  .hol-title-actions {
+    width: 100%;
+    flex-direction: column; /* Essentiel pour que les boutons width: 100% ne s'écrasent pas */
+    gap: 10px;
+  }
+  .hol-actions-group .hol-add-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 1rem;
+  }
+  .hol-add-btn,
+  .hol-map-toggle {
+    width: 100%;
+    justify-content: center; /* Centre le texte et l'icône */
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hol-columns-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modale 100% écran avec scroll natif fluide */
+  .pf-modal-content {
+    padding: 16px;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Adaptation des lignes de budget sur mobile pour éviter qu'elles ne soient compressées */
+  .savings-line-item {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .savings-line-item input[type="text"] {
+    min-width: 100%; /* Le nom de la dépense prend toute la ligne */
+  }
+  .savings-line-item input[type="number"] {
+    flex-grow: 1; /* Le prix s'ajuste sur la 2ème ligne */
+  }
+
+  .hol-date-weather-wrapper {
+    gap: 6px;
+  }
+
+  .hol-cp-header {
+    align-items: flex-start;
+    flex-direction: column; /* On passe le titre et le prix l'un sous l'autre si besoin */
+  }
+
+  .hol-cp-info-group {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .hol-cp-title {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.4;
+    word-break: break-word;
+    padding-top: 2px;
+  }
+
+  .hol-cp-actions-group {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+}
+
+/* --- 11. CALENDRIER & DATES (Force Light Theme) --- */
+input[type="date"] {
+  color-scheme: light; /* Force le popup blanc */
+  background-color: #ffffff;
+  color: #1e293b;
+}
+
+/* Cible spécifique pour l'icône calendrier (Chrome/Edge/Safari) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  filter: invert(0);
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   12. PAGE DE DÉTAIL DU VOYAGE (detail.php)
+   ========================================================================== */
+
+/* Structure principale de la page détail */
+.pf-holidays-detail {
+  padding-top: 10px;
+}
+
+/* En-tête de la page détail */
+.hol-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.hol-detail-title-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.hol-detail-title-group h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text-main);
+}
+
+.hol-badge-status {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+/* Bloc Résumé Financier */
+.hol-summary-card {
+  background: white;
+  padding: 20px;
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.hol-summary-grid {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.hol-summary-item {
+  min-width: 150px;
+}
+
+.hol-summary-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.hol-summary-value {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 1.1rem;
+}
+
+.hol-summary-value.total {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #0f172a;
+}
+
+/* Grille principale : Carte + Timeline */
 .hol-layout-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
   align-items: stretch;
 }
+
+/* Panneaux (Carte et Timeline) */
 .hol-panel {
   background: white;
-  border-radius: var(--pf-radius-lg);
-  box-shadow: var(--pf-shadow-sm);
-  border: 1px solid var(--pf-border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   height: 600px;
   overflow: hidden;
 }
+
 .hol-panel-header {
   padding: 15px 20px;
-  border-bottom: 1px solid var(--pf-border);
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--pf-bg-page);
+  background: #f8fafc;
 }
+
+.hol-panel-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
 .hol-panel-body {
   padding: 15px;
   overflow-y: auto;
   flex: 1;
 }
+
+/* Styles des Checkpoints (Timeline) */
 .hol-checkpoint {
-  border: 1px solid var(--pf-border);
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   margin-bottom: 15px;
+  overflow: hidden;
   background: white;
 }
+
 .hol-cp-header {
-  background: var(--pf-bg-page);
+  background: #f8fafc;
   padding: 12px 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--pf-border);
+  border-bottom: 1px solid #e2e8f0;
   gap: 12px;
 }
+
+.hol-cp-info-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
 .hol-cp-title {
+  color: #0f172a;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.hol-cp-title:hover {
+  color: var(--primary);
+}
+
+.hol-cp-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.hol-cp-total {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.hol-cp-body {
+  padding: 10px 15px;
+}
+
+.hol-expense-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+  border-bottom: 1px dashed #f1f5f9;
+  padding-bottom: 5px;
+}
+
+.hol-expense-line:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.hol-notes-panel {
+  padding: 15px;
+  border-top: 1px solid #e2e8f0;
+  background: #fffbeb;
+  flex-shrink: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* --- RESPONSIVE DETAIL PAGE --- */
+@media (max-width: 992px) {
+  .hol-layout-grid {
+    grid-template-columns: 1fr; /* Sur tablette/mobile, la carte et la liste s'empilent */
+  }
+
+  .hol-panel {
+    height: 500px; /* On réduit un peu la hauteur pour que ce soit agréable sur mobile */
+  }
+
+  .hol-summary-grid {
+    flex-direction: column; /* Les infos financières s'empilent */
+  }
+
+  .hol-summary-item {
+    text-align: left !important; /* On annule l'alignement à droite du total */
+  }
+}
+
+/* ==========================================================================
+   13. BARRE DE PROGRESSION & FINANCES
+   ========================================================================== */
+.hol-progress-bar {
+  width: 100%;
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  display: flex;
+  overflow: hidden;
+}
+.hol-progress-paid {
+  background: #10b981;
+}
+.hol-progress-saved {
+  background: #3b82f6;
+}
+
+.hol-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+.hol-label-paid {
+  color: #10b981;
+  font-weight: 600;
+}
+.hol-label-saved {
+  color: #3b82f6;
+  font-weight: 600;
+}
+.hol-label-left {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   14. LÉGENDE DE LA CARTE
+   ========================================================================== */
+.hol-panel-header-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+.hol-map-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.hol-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.hol-legend-color {
+  display: inline-block;
+  width: 12px;
+  height: 4px;
+  border-radius: 2px;
+}
+.hol-legend-color.aller {
+  background: #3b82f6;
+}
+.hol-legend-color.interm {
+  background: #8b5cf6;
+}
+.hol-legend-color.retour {
+  background: transparent;
+  height: 0;
+  border-bottom: 3px dashed #f97316;
+  border-radius: 0;
+}
+
+/* ==========================================================================
+   15. LIGNES DE DÉPENSES (Timeline & Modale JS)
+   ========================================================================== */
 .hol-expense-wrapper {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed var(--pf-bg-lighter);
   margin-bottom: 8px;
+  border-bottom: 1px dashed #f1f5f9;
+  padding-bottom: 8px;
 }
+.hol-expense-wrapper:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 .hol-expense-main {
   display: flex;
   justify-content: space-between;
@@ -11500,43 +12500,57 @@ exit;
   font-weight: 500;
 }
 .hol-expense-amount {
+  color: var(--text-main);
   font-weight: bold;
 }
 .status-paid {
-  color: var(--pf-success);
+  color: #10b981;
   margin-left: 5px;
 }
 .status-pending {
-  color: var(--pf-warning);
+  color: #f59e0b;
   margin-left: 5px;
 }
 
-/* Modale Map Exception */
-.hol-dialog--map {
-  width: 95vw;
-  height: 90vh;
-  max-width: 1400px;
-  padding: 0;
+.hol-expense-note {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  padding-left: 24px;
+  word-break: break-all;
 }
-#tripMap {
-  touch-action: none;
-  z-index: 1;
+.hol-expense-link {
+  color: #3b82f6;
+  text-decoration: none;
 }
-.hol-checkpoint-draggable {
-  -webkit-user-drag: none;
-  user-select: none;
+.hol-expense-link:hover {
+  text-decoration: underline;
 }
 
-/* Modale Formulaire Ligne Rapide */
+.hol-empty-step {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 5px 0;
+}
+
+/* Boutons de petite taille */
+.pf-btn-small {
+  padding: 6px 14px !important;
+  font-size: 0.85rem !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+}
+
+/* Modale JS d'ajout de dépense */
 .hol-form-row {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px;
-  background: var(--pf-bg-page);
+  background: #f8fafc;
   border-radius: 8px;
-  border: 1px solid var(--pf-border);
-  margin-bottom: 10px;
+  border: 1px solid #e2e8f0;
 }
 .hol-form-inner {
   display: flex;
@@ -11548,6 +12562,7 @@ exit;
   width: 50px;
   padding: 8px 4px;
   font-size: 1.2rem;
+  cursor: pointer;
 }
 .hol-form-text {
   flex: 2;
@@ -11566,10 +12581,17 @@ exit;
   cursor: pointer;
   width: 55px;
 }
+.hol-form-paid-text {
+  font-size: 0.75rem;
+  margin-left: 4px;
+  font-weight: bold;
+  color: #64748b;
+}
 .hol-form-notes-input {
   font-size: 0.8rem;
   padding: 6px 8px;
   border-style: dashed;
+  color: #475569;
   width: calc(100% - 58px);
   margin-left: 58px;
 }
@@ -11578,15 +12600,35 @@ exit;
   height: 28px;
   border: none;
   background: #fee2e2;
-  color: var(--pf-danger);
+  color: #ef4444;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: 0.2s;
+}
+.btn-remove-expense:hover {
+  background: #fca5a5;
+  color: #b91c1c;
 }
 
-/* Planning Drag & Drop */
+/* ==========================================================================
+   16. PLANNING DRAG & DROP (CARNET DE VOYAGE)
+   ========================================================================== */
+/* Simplification de la sous-ligne du formulaire d'édition */
+.hol-form-subrow {
+  display: flex;
+  margin-top: 6px;
+  padding-left: 58px;
+}
+.hol-form-notes-full {
+  margin: 0 !important;
+  width: 100%;
+}
+
+/* Layout du Planning Interactif */
 .hol-planning-layout {
   display: flex;
   gap: 20px;
@@ -11594,119 +12636,7 @@ exit;
   align-items: stretch;
   overflow: hidden;
 }
-.hol-unmapped-zone {
-  width: 250px;
-  background: var(--pf-bg-page);
-  padding: 15px;
-  border-radius: 12px;
-  border: 2px dashed var(--pf-border);
-  overflow-y: auto;
-}
-.hol-calendar-zone {
-  flex: 1;
-  display: flex;
-  gap: 15px;
-  overflow: auto;
-  padding-bottom: 10px;
-  position: relative;
-}
-.hol-day-column {
-  min-width: 220px;
-  flex: 1;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid var(--pf-border);
-}
-.hol-calendar-day-header {
-  text-align: center;
-  padding: 12px 10px;
-  background: var(--pf-bg-page);
-  border-bottom: 2px solid var(--pf-border);
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-.hol-time-slot {
-  height: 75px;
-  border-bottom: 1px solid var(--pf-bg-lighter);
-  position: relative;
-  box-sizing: border-box;
-}
-.hol-time-slot.drag-over {
-  background: #e0f2fe;
-}
-.hol-slot-label {
-  position: absolute;
-  top: 2px;
-  right: 5px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--pf-text-muted);
-}
-.hol-drag-item {
-  background: white;
-  padding: 6px 8px;
-  border-radius: 6px;
-  box-shadow: var(--pf-shadow-sm);
-  cursor: grab;
-  font-size: 0.85rem;
-  border: 1px solid var(--pf-border);
-  border-left: 4px solid var(--pf-primary);
-  z-index: 10;
-  overflow: hidden;
-}
-.hol-calendar-zone .hol-drag-item {
-  position: absolute;
-  top: 1px;
-  left: 45px;
-  right: 5px;
-  height: calc(75px * var(--duration) - 2px);
-}
-.hol-drag-item.cat-accommodation {
-  border-left-color: #8b5cf6;
-}
-.hol-drag-item.cat-transport {
-  border-left-color: var(--pf-success);
-}
-.hol-item-duration-controls {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 4px;
-}
-.hol-dur-btn {
-  background: var(--pf-bg-lighter);
-  border: none;
-  border-radius: 4px;
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-/* Météo */
-.pf-weather-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--pf-bg-page);
-  border: 1px solid var(--pf-border);
-  padding: 1px 6px;
-  border-radius: 6px;
-  color: #475569;
-  font-weight: 600;
-  font-size: 0.7rem;
-}
-
-/* Mobile */
-@media (max-width: 992px) {
-  .hol-layout-grid {
-    grid-template-columns: 1fr;
-  }
-  .hol-panel {
-    height: 500px;
-  }
+@media (max-width: 768px) {
   .hol-planning-layout {
     flex-direction: column;
     height: 75vh;
@@ -11718,39 +12648,267 @@ exit;
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
-  }
-}
-@media (max-width: 768px) {
-  .pf-holidays__titlebar,
-  .hol-title-group {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 15px;
-  }
-  .hol-filters-row {
-    justify-content: space-between;
-    width: 100%;
-  }
-  .hol-actions-group .hol-add-btn {
-    width: 100%;
-    justify-content: center;
-  }
-  .savings-line-item {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .savings-line-item input[type="text"] {
-    min-width: 100%;
-  }
-  .hol-cp-header {
-    flex-direction: column;
     align-items: flex-start;
   }
-  .hol-cp-actions-group {
-    width: 100%;
-    justify-content: flex-end;
-    margin-top: 8px;
+  .hol-calendar-zone {
+    flex: 1;
   }
+}
+
+/* Zone des activités non planifiées */
+.hol-unmapped-zone {
+  width: 250px;
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 12px;
+  border: 2px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+.hol-unmapped-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+/* Grille du calendrier */
+.hol-calendar-zone {
+  flex: 1;
+  display: flex;
+  gap: 15px;
+  overflow: auto; /* Gère à la fois gauche/droite ET haut/bas */
+  padding-bottom: 10px;
+  position: relative;
+}
+.hol-calendar-zone::-webkit-scrollbar,
+.hol-unmapped-zone::-webkit-scrollbar {
+  height: 10px;
+}
+.hol-calendar-zone::-webkit-scrollbar-track,
+.hol-unmapped-zone::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+.hol-calendar-zone::-webkit-scrollbar-thumb,
+.hol-unmapped-zone::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+.hol-calendar-zone::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.hol-calendar-zone .hol-drag-item {
+  position: absolute;
+  top: 1px;
+  left: 45px;
+  right: 5px;
+  height: calc(75px * var(--duration) - 2px);
+}
+/* Dans la boîte d'attente : Position normale */
+.hol-unmapped-zone .hol-drag-item {
+  position: relative;
+  min-width: 150px;
+  height: auto;
+}
+
+/* Mode "Tap-to-Move" pour Mobile */
+.hol-drag-item.selected-for-move {
+  border-color: #f59e0b;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+}
+
+/* Boutons Durée */
+.hol-item-duration-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 2px;
+  border: none;
+  background: rgba(255, 255, 255, 0.4); /* Léger fond pour se détacher */
+  border-radius: 4px;
+}
+
+.hol-day-column {
+  min-width: 220px;
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: max-content; /* Laisse la colonne grandir jusqu'à 22h */
+  overflow: visible;
+}
+
+.hol-calendar-day-header {
+  text-align: center;
+  padding: 12px 10px;
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+  position: sticky;
+  top: 0; /* Garde la date toujours visible en haut ! */
+  z-index: 20;
+}
+
+/* Les créneaux horaires (Drop Zones) */
+.hol-time-slots-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.hol-time-slot {
+  height: 75px;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+  transition: background 0.2s;
+  box-sizing: border-box;
+}
+
+.hol-time-slot.drag-over {
+  background: #e0f2fe; /* Surbrillance quand on survole avec une activité */
+}
+.hol-slot-label {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+/* L'Activité (Élément draggable) */
+.hol-drag-item {
+  background: white;
+  padding: 6px 8px;
+  border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  cursor: grab;
+  font-size: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--primary);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  overflow: hidden;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+.hol-drag-item:active {
+  cursor: grabbing;
+}
+.hol-drag-item.cat-accommodation {
+  border-left-color: #8b5cf6;
+}
+.hol-drag-item.cat-transport {
+  border-left-color: #10b981;
+}
+
+.hol-drag-title {
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.2;
+}
+.hol-drag-note {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Élargir la modale de planning */
+#planningModal .pf-modal-content {
+  max-width: 1100px !important;
+  width: 95%;
+}
+
+.hol-dur-btn {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 4px;
+  width: 18px;
+  height: 18px; /* Plus petit */
+  cursor: pointer;
+  font-weight: bold;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+.hol-dur-btn:hover {
+  background: #e2e8f0;
+}
+.hol-dur-text {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.highlight-step {
+  transition:
+    box-shadow 0.3s,
+    transform 0.3s;
+  box-shadow: 0 0 0 3px var(--primary);
+  transform: scale(1.02);
+}
+
+/* Style du badge météo injecté par le JS */
+.hol-weather-info {
+  display: inline-flex;
+}
+
+.pf-weather-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc; /* Slate 50 */
+  border: 1px solid #e2e8f0; /* Slate 200 */
+  padding: 1px 6px;
+  border-radius: 6px;
+  color: #475569; /* Slate 600 */
+  font-weight: 600;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.pf-weather-icon {
+  font-size: 0.9rem;
+}
+
+/* Conteneur Date + Météo */
+.hol-date-weather-wrapper {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: normal;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap; /* Le secret pour le responsive ! */
+}
+
+/* On s'assure que le texte de la date ne se coupe pas au milieu d'un mot */
+.hol-step-dates {
+  white-space: nowrap;
+}
+.leaflet-container img.leaflet-tile {
+  pointer-events: none !important;
+  user-select: none !important;
+  -moz-user-select: none !important;
+}
+#tripMap {
+  touch-action: none;
 }
 
 ```
@@ -11952,8 +13110,8 @@ function addItem(category, name = "", amount = "", isPaid = 0) {
             <input type="hidden" name="items[paid][]" value="${isPaid}">
             <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">${tr("hdl_paid")}</span>
         </label>
-        <button type="button" onclick="this.parentElement.remove()" title="${tr("btn_delete")}" style="width: 28px; height: 28px; border: none; background: #fee2e2; color: #ef4444; border-radius: 6px; cursor: pointer; font-weight: bold; display:flex; align-items:center; justify-content:center;">
-            &times;
+        <button type="button" onclick="this.parentElement.remove()" class="btn-icon-action delete" title="${tr("btn_delete")}">
+            🗑️
         </button>
     `;
 
@@ -12365,8 +13523,7 @@ function addCpExpenseLine(
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
                 <span class="hol-form-paid-text">${tr("hdl_paid")}</span>
             </label>
-            <button type="button" class="btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">&times;</button>
-        </div>
+          <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>        </div>
         <div class="hol-form-subrow">
             <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("hdl_ph_notes")}" value="${notes}">
         </div>
