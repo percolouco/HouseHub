@@ -940,7 +940,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const iso = this.getLocalIsoDate(dateObj);
+        const todayIso = this.getLocalIsoDate(new Date()); // Date du jour
+
         let cls = "fc-month-day";
+        if (iso === todayIso) cls += " fc-day--today"; // On applique la classe !
         const dayEvts = this.events.filter((e) => e.date === iso);
 
         if (dayEvts.some((e) => e.type === "VACANCES_SCOLAIRES"))
@@ -958,7 +961,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (dayEvts.some((e) => e.type === "AVIS")) cls += " fc-day--avis";
         }
 
-        let content = `<div style="position:relative; height:100%;">${dayCounter}`;
+        let content = `<div style="position:relative; height:100%;"><span class="fc-day-number">${dayCounter}</span>`;
         if (dayEvts.some((e) => e.type === "PEP_SICK"))
           content += `<span style="position:absolute; bottom:2px; right:2px;">🤒</span>`;
         const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
@@ -1357,6 +1360,66 @@ document.addEventListener("DOMContentLoaded", () => {
           this.currentMonth.setMonth(this.currentMonth.getMonth() + 1);
           this.renderMonthCalendar();
         });
+      // --- BOUTON AUJOURD'HUI ---
+      document.getElementById("fc-today-btn")?.addEventListener("click", () => {
+        this.currentMonth = new Date();
+        this.currentMonth.setDate(1); // Force au 1er du mois pour éviter les bugs de fins de mois
+        this.renderMonthCalendar();
+      });
+
+      // --- GESTION DU SWIPE MENSUEL (MOBILE) ---
+      if (this.monthCalendar) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        // On écoute le début du toucher
+        this.monthCalendar.addEventListener(
+          "touchstart",
+          (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+          },
+          { passive: true },
+        );
+
+        // On écoute la fin du toucher
+        this.monthCalendar.addEventListener(
+          "touchend",
+          (e) => {
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+
+            // Détection d'un swipe horizontal (on exclut les swipes verticaux de défilement)
+            // Seuil de 50px pour éviter les déclenchements par erreur
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+              const numMonths =
+                this.viewMode === "2months"
+                  ? 2
+                  : this.viewMode === "3months"
+                    ? 3
+                    : 1;
+
+              if (deltaX < 0) {
+                // Swipe vers la GAUCHE = Aller dans le FUTUR (Mois suivants)
+                this.currentMonth.setMonth(
+                  this.currentMonth.getMonth() + numMonths,
+                );
+              } else {
+                // Swipe vers la DROITE = Revenir dans le PASSÉ (Mois précédents)
+                this.currentMonth.setMonth(
+                  this.currentMonth.getMonth() - numMonths,
+                );
+              }
+
+              this.renderMonthCalendar(); // Rafraîchit l'UI
+            }
+          },
+          { passive: true },
+        );
+      }
       document
         .getElementById("fc-prev-school-year")
         ?.addEventListener("click", () => this.changeSchoolYear(-1));
@@ -1466,16 +1529,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
       this._currentBulkInfo = { dates };
 
+      // --- 🔍 DÉTECTION DES ÉVÉNEMENTS & CONGÉS EXISTANTS ---
+      const activeEvents = new Set();
+      this.events.forEach((e) => {
+        if (dates.includes(e.date)) activeEvents.add(e.type);
+      });
+
+      const activeLeaves = { 2: new Set(), 3: new Set() };
+      this.leaves.forEach((l) => {
+        if (dates.includes(l.leave_date)) {
+          if (activeLeaves[l.person_id])
+            activeLeaves[l.person_id].add(l.leave_type);
+        }
+      });
+
+      // Petites fonctions utilitaires pour gérer l'UI du bouton
+      const getBtnClass = (type, personId = null) => {
+        let isActive = personId
+          ? activeLeaves[personId] && activeLeaves[personId].has(type)
+          : activeEvents.has(type);
+        return isActive ? "fc-menu-btn--active" : "";
+      };
+      const getBtnIcon = (type, personId = null) => {
+        let isActive = personId
+          ? activeLeaves[personId] && activeLeaves[personId].has(type)
+          : activeEvents.has(type);
+        return isActive ? "✓ " : "";
+      };
+
       // Gestion de la date affichée (Singulier/Pluriel)
       const dateLabel =
         dates.length > 1
           ? `${dates.length} ${tr("fc_unit_days")}`
           : new Date(dates[0]).toLocaleDateString(window.I18N_LANG || "fr-FR");
 
-      // Icône SVG Poubelle (Uniformisée)
+      // Icône SVG Poubelle
       const trashSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
 
-      // Fonction utilitaire interne pour les en-têtes de section avec suppression
       const buildHeader = (title, action, cat) => `
         <div class="fc-menu-header">
           <strong>${title}</strong>
@@ -1483,36 +1573,35 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
-      // 1. En-tête du menu (Date ou nombre de jours)
       let html = `<div class="fc-menu-section" style="border-bottom: none; padding-bottom: 0;">
                     <strong style="font-size:0.85rem; color:var(--text-main); margin-bottom: 4px;">${dateLabel}</strong>
                   </div>`;
 
-      // 2. Section Carole (Congés)
+      // 2. Section Carole
       html += `<div class="fc-menu-section">
                  ${buildHeader(tr("fc_menu_carole"), "clear-type", "CONGE")}
                  <div class="fc-menu-grid">
-                   <button class="fc-menu-btn" data-action="add" data-type="OFF_CAROLE" data-person="Carole">${tr("btn_off")}</button>
-                   <button class="fc-menu-btn" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">${tr("btn_extra")}</button>
+                   <button class="fc-menu-btn ${getBtnClass("OFF_CAROLE")}" data-action="add" data-type="OFF_CAROLE" data-person="Carole">${getBtnIcon("OFF_CAROLE")}${tr("btn_off")}</button>
+                   <button class="fc-menu-btn ${getBtnClass("EXTRA_OFF_CAROLE")}" data-action="add" data-type="EXTRA_OFF_CAROLE" data-person="Carole">${getBtnIcon("EXTRA_OFF_CAROLE")}${tr("btn_extra")}</button>
                  </div>
                </div>`;
 
-      // 3. Section Garde (Centre / Avis)
+      // 3. Section Garde
       html += `<div class="fc-menu-section">
                  ${buildHeader(tr("leg_centre"), "clear-type", "GARDE")}
                  <div class="fc-menu-grid">
-                   <button class="fc-menu-btn" data-action="add" data-type="CENTRE">${tr("leg_centre")}</button>
-                   <button class="fc-menu-btn" data-action="add" data-type="AVIS">${tr("leg_avis")}</button>
+                   <button class="fc-menu-btn ${getBtnClass("CENTRE")}" data-action="add" data-type="CENTRE">${getBtnIcon("CENTRE")}${tr("leg_centre")}</button>
+                   <button class="fc-menu-btn ${getBtnClass("AVIS")}" data-action="add" data-type="AVIS">${getBtnIcon("AVIS")}${tr("leg_avis")}</button>
                  </div>
                </div>`;
 
-      // 4. Section Pep (Maladie)
+      // 4. Section Pep
       html += `<div class="fc-menu-section">
                  ${buildHeader("Pep", "clear-type", "PEP")}
-                 <button class="fc-menu-btn" data-action="add" data-type="PEP_SICK" style="width:100%">${tr("leg_pep_sick")} 🤒</button>
+                 <button class="fc-menu-btn ${getBtnClass("PEP_SICK")}" data-action="add" data-type="PEP_SICK" style="width:100%">${getBtnIcon("PEP_SICK")}${tr("leg_pep_sick")} 🤒</button>
                </div>`;
 
-      // 5. Section Enfants (Alex & Laia)
+      // 5. Section Enfants
       html += `<div class="fc-menu-section">
                  ${buildHeader(tr("fc_menu_kids_leaves"), null, null)}
                  <div class="fc-menu-leaves-table">
@@ -1521,14 +1610,12 @@ document.addEventListener("DOMContentLoaded", () => {
                        <tr>
                          <th>
                             <div class="fc-th-inline">
-                              Alex
-                              <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="2" title="${tr("fc_clear")} Alex">${trashSvg}</button>
+                              Alex <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="2" title="${tr("fc_clear")} Alex">${trashSvg}</button>
                             </div>
                          </th>
                          <th>
                             <div class="fc-th-inline">
-                              Laia
-                              <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="3" title="${tr("fc_clear")} Laia">${trashSvg}</button>
+                              Laia <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="3" title="${tr("fc_clear")} Laia">${trashSvg}</button>
                             </div>
                          </th>
                        </tr>
@@ -1537,8 +1624,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       ["CP", "JRA", "JA"].forEach((t) => {
         html += `<tr>
-                   <td><button class="fc-menu-btn" data-action="add-leave" data-pid="2" data-type="${t}">${t}</button></td>
-                   <td><button class="fc-menu-btn" data-action="add-leave" data-pid="3" data-type="${t}">${t}</button></td>
+                   <td><button class="fc-menu-btn ${getBtnClass(t, 2)}" data-action="add-leave" data-pid="2" data-type="${t}">${getBtnIcon(t, 2)}${t}</button></td>
+                   <td><button class="fc-menu-btn ${getBtnClass(t, 3)}" data-action="add-leave" data-pid="3" data-type="${t}">${getBtnIcon(t, 3)}${t}</button></td>
                  </tr>`;
       });
 

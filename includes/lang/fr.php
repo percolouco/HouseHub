@@ -137,8 +137,10 @@ return [
     'fc_err_fetch_gov'          => 'Erreur lors de la connexion à l’API gouvernementale.',
     'fc_err_no_data_gov'        => 'Aucune donnée trouvée sur l’API du gouvernement pour cette année.',
     'fc_err_action'             => 'Erreur lors de l’action : ',
+    'fc_today_short'            => 'Auj.',
+    'fc_today_title'            => "Aujourd'hui",
+
     'leg_presence'              => 'Présence Pep',
-    
     'leg_school_holidays'       => 'Vacances Scolaires',
     'leg_public_holiday'        => 'Férié',
     'leg_off_carole'            => 'Off Carole',
