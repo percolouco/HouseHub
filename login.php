@@ -45,11 +45,11 @@ require __DIR__ . '/header.php';
 <div class="pf-container pf-login-wrapper">
     <div class="pf-login-card">
         
-        <div class="pf-login-header">
-          <img src="/favicon.png" alt="PachaFamily Logo" class="pf-login-icon">
-          <h1><?= tr('login_header') ?></h1>
-          <p><?= tr('login_subtitle') ?></p>
-      </div>
+        <header class="pf-login-header">
+            <img src="/favicon.png" alt="PachaFamily Logo" class="pf-login-icon">
+            <h1><?= tr('login_header') ?></h1>
+            <p><?= tr('login_subtitle') ?></p>
+        </header>
         
         <?php if ($error): ?>
             <div class="pf-login-error">
@@ -60,12 +60,15 @@ require __DIR__ . '/header.php';
         <form method="post" action="/login.php<?= isset($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : '' ?>">
             <div class="pf-form-group">
                 <label class="pf-label" for="username"><?= tr('label_username') ?></label>
-                <input type="text" id="username" name="username" class="pf-input" required autofocus placeholder="<?= tr('placeholder_username') ?>">
+                <input type="text" id="username" name="username" class="pf-input" 
+                       required autofocus placeholder="<?= tr('placeholder_username') ?>"
+                       autocomplete="username" autocapitalize="none">
             </div>
 
             <div class="pf-form-group">
                 <label class="pf-label" for="password"><?= tr('label_password') ?></label>
-                <input type="password" id="password" name="password" class="pf-input" required placeholder="••••••">
+                <input type="password" id="password" name="password" class="pf-input" 
+                       required placeholder="••••••" autocomplete="current-password">
             </div>
 
             <button type="submit" class="pf-btn pf-btn-block">
@@ -75,9 +78,5 @@ require __DIR__ . '/header.php';
         
     </div>
 </div>
-
-<?php require __DIR__ . '/footer.php'; ?>
-
-<?php require __DIR__ . '/footer.php'; ?>
 
 <?php require __DIR__ . '/footer.php'; ?>

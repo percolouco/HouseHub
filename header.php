@@ -77,14 +77,23 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   </header>
 
   <?php if (isset($_SESSION['user'])): ?>
-  <div class="pf-mobile-menu">
-    <a href="/index.php" class="pf-mobile-nav-link"><?= tr('menu_home') ?></a>
-    <a href="/family-calendar.php" class="pf-mobile-nav-link"><?= tr('menu_calendar') ?></a>
-    <a href="/budget.php" class="pf-mobile-nav-link"><?= tr('menu_budget') ?></a>
-    <a href="/holidays.php" class="pf-mobile-nav-link"><?= tr('menu_holidays') ?></a>
-    <a href="/gift-list.php" class="pf-mobile-nav-link"><?= tr('menu_gifts') ?></a>
-    <hr style="width: 80%; border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-    <a href="/logout.php" class="pf-mobile-nav-link pf-mobile-logout"><?= tr('btn_logout') ?></a>
+  <div class="pf-mobile-overlay" id="mobileOverlay"></div>
+  
+  <div class="pf-mobile-menu" id="mobileMenu">
+    <div class="pf-mobile-menu-header">
+        <span class="pf-logo">PachaFamily</span>
+        <button class="pf-mobile-close-btn" id="closeMobileMenu">&times;</button>
+    </div>
+    
+    <div class="pf-mobile-menu-body">
+        <a href="/index.php" class="pf-mobile-nav-link">🏠 <?= tr('menu_home') ?></a>
+        <a href="/family-calendar.php" class="pf-mobile-nav-link">📅 <?= tr('menu_calendar') ?></a>
+        <a href="/budget.php" class="pf-mobile-nav-link">💰 <?= tr('menu_budget') ?></a>
+        <a href="/holidays.php" class="pf-mobile-nav-link">🏖️ <?= tr('menu_holidays') ?></a>
+        <a href="/gift-list.php" class="pf-mobile-nav-link">🎁 <?= tr('menu_gifts') ?></a>
+        
+        <a href="/logout.php" class="pf-mobile-nav-link pf-mobile-logout" style="margin-top: auto;">🚪 <?= tr('btn_logout') ?></a>
+    </div>
   </div>
   <?php endif; ?>
 
@@ -107,18 +116,31 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         return window.I18N[key] || key;
     }
 
-    // Gestion du menu mobile
+    // Gestion du menu mobile (Off-Canvas Sidebar)
     <?php if (isset($_SESSION['user'])): ?>
     document.addEventListener('DOMContentLoaded', () => {
         const burgerBtn = document.querySelector('.pf-burger-btn');
-        const mobileMenu = document.querySelector('.pf-mobile-menu');
+        const mobileMenu = document.getElementById('mobileMenu');
+        const overlay = document.getElementById('mobileOverlay');
+        const closeBtn = document.getElementById('closeMobileMenu');
         
-        if(burgerBtn && mobileMenu) {
-            burgerBtn.addEventListener('click', () => {
-                const isOpen = mobileMenu.classList.toggle('is-open');
-                burgerBtn.textContent = isOpen ? '✕' : '☰';
-                document.body.classList.toggle('no-scroll', isOpen);
-            });
+        function openMenu() {
+            mobileMenu.classList.add('is-open');
+            overlay.classList.add('is-visible');
+            document.body.classList.add('no-scroll');
+        }
+
+        function closeMenu() {
+            mobileMenu.classList.remove('is-open');
+            overlay.classList.remove('is-visible');
+            document.body.classList.remove('no-scroll');
+        }
+
+        if(burgerBtn && mobileMenu && overlay && closeBtn) {
+            burgerBtn.addEventListener('click', openMenu);
+            closeBtn.addEventListener('click', closeMenu);
+            // Fermer le menu si on clique en dehors (sur l'overlay sombre)
+            overlay.addEventListener('click', closeMenu);
         }
     });
     <?php endif; ?>

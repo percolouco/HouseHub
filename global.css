@@ -137,23 +137,89 @@ body.no-scroll {
   color: var(--text-main);
 }
 
-.pf-mobile-menu {
+/* === MENU MOBILE (Sidebar "Off-Canvas") === */
+.pf-mobile-overlay {
   display: none;
   position: fixed;
-  top: 64px;
-  left: 0;
-  right: 0;
-  height: calc(100vh - 64px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  background: white;
-  padding: 20px;
-  flex-direction: column;
-  gap: 16px;
-  z-index: 99;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 998;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
-.pf-mobile-menu.is-open {
+.pf-mobile-overlay.is-visible {
+  display: block;
+  opacity: 1;
+}
+
+.pf-mobile-menu {
+  position: fixed;
+  top: 0;
+  right: -300px; /* Caché à l'extérieur de l'écran à droite */
+  width: 280px;
+  height: 100vh;
+  background: var(--bg-panel);
+  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.pf-mobile-menu.is-open {
+  right: 0; /* Le menu glisse dans l'écran */
+}
+
+.pf-mobile-menu-header {
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-page);
+}
+
+.pf-mobile-close-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pf-mobile-menu-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.pf-mobile-nav-link {
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text-main);
+  padding: 14px 16px; /* Plus large pour le tactile */
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.2s;
+}
+
+.pf-mobile-nav-link:active {
+  background: #f1f5f9;
+}
+
+.pf-mobile-logout {
+  color: var(--danger);
+  background: #fef2f2;
+  margin-top: 15px;
 }
 
 /* === MAIN CONTENT & TYPOGRAPHY === */
@@ -574,4 +640,32 @@ p {
   margin-top: 10px;
   padding: 14px;
   font-size: 1.05rem;
+}
+
+/* --- Optimisation Login Mobile --- */
+@media (max-width: 480px) {
+  .pf-login-wrapper {
+    padding: 0;
+    align-items: flex-start; /* Aligné en haut pour laisser de la place au clavier */
+    background: var(--bg-panel);
+  }
+
+  .pf-login-card {
+    border-radius: 0; /* Supprime les arrondis pour un look plein écran */
+    border: none;
+    box-shadow: none;
+    padding: 60px 24px;
+    min-height: 100vh;
+  }
+}
+
+/* ⚠️ IMPORTANT : Éviter le zoom auto sur iOS */
+.pf-login-card .pf-input {
+  font-size: 16px; /* En dessous de 16px, Safari iOS zoome automatiquement sur le champ */
+  padding: 14px; /* Zone de clic plus large pour les doigts */
+}
+
+.pf-btn-block {
+  padding: 16px; /* Bouton plus haut pour un appui facile au pouce */
+  font-size: 1.1rem;
 }
