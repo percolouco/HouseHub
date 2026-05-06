@@ -469,13 +469,25 @@ td.col-laia-sub {
    ========================================================= */
 
 #planningTable tbody td.col-sticky-mois {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 15 !important;
+  background: white !important;
+  padding: 0 !important;
   border: none !important;
   box-shadow:
     inset 1px 0 0 var(--pf-border),
     inset 0 1px 0 var(--pf-border) !important;
+}
+
+#planningTable tbody td.col-sticky-mois .fc-sticky-mois-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  writing-mode: vertical-rl;
   letter-spacing: 1px;
+  text-align: center;
 }
 
 /* 2. Sticky Semaine (Body) */

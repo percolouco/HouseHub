@@ -605,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
           processedMonths[w.monthKey] = true;
           const td = document.createElement("td");
           td.className = "col-month col-sticky-mois";
-          td.textContent = w.monthName;
+          td.innerHTML = `<span class="fc-sticky-mois-label">${w.monthName}</span>`;
           td.rowSpan = monthSpans[w.monthKey];
           tr.appendChild(td);
         }
