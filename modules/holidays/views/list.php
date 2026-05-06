@@ -113,6 +113,7 @@ window.I18N = {
     'hdl_js_missing_dates_title': "<?= tr('hdl_js_missing_dates_title') ?>",
     'hdl_js_missing_dates_msg': "<?= tr('hdl_js_missing_dates_msg') ?>",
     'hdl_modal_title': "<?= tr('hdl_modal_title') ?>",
+    'hdl_paid': "<?= tr('hdl_paid') ?>",
     'hdl_quick_edit_title': "<?= tr('hdl_quick_edit_title') ?>"
 };
 
