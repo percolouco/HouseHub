@@ -134,8 +134,10 @@ return [
     'fc_err_fetch_gov'          => 'Error en la connexió amb l’API governamental.',
     'fc_err_no_data_gov'        => 'No s’han trobat dades a l’API del govern per a aquest any.',
     'fc_err_action'             => 'Error en l’acció: ',
+    'fc_today_short'            => 'Avui',
+    'fc_today_title'            => 'Anar a avui',
+
     'leg_presence'              => 'Presència Pep',
-    
     'leg_school_holidays'       => 'Vacances Escolars',
     'leg_public_holiday'        => 'Festiu',
     'leg_off_carole'            => 'Off Carole',

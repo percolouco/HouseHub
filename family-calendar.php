@@ -121,9 +121,10 @@ require __DIR__ . '/header.php';
           </div>
           
           <div class="fc-view-controls">
+            <button id="fc-today-btn" class="fc-today-button" title="<?= tr('fc_today_title') ?>"><?= tr('fc_today_short') ?></button>            <div class="fc-view-divider"></div>
             <button class="fc-view-button fc-view-button--active" data-view="1month"><?= tr('fc_view_1m') ?></button>
             <button class="fc-view-button" data-view="2months"><?= tr('fc_view_2m') ?></button>
-            <button class="fc-view-button" data-view="3months">3 Mois</button>
+            <button class="fc-view-button" data-view="3months"><?= tr('fc_view_3m') ?></button>
           </div>
 
         </div>
