@@ -39,23 +39,41 @@ try {
         $id = $pdo->lastInsertId();
     }
 
-    // GESTION DES ITEMS GLOBAUX (On ne supprime QUE les items qui n'ont pas de lieu défini !)
-    $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND (location_name IS NULL OR location_name = '')")->execute([$id]);
-    
+    // GESTION INTELLIGENTE DES ITEMS
     if (!empty($_POST['items']['name'])) {
-        $stmtItem = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid) VALUES (?, ?, ?, ?, ?)");
-        
         $count = count($_POST['items']['name']);
+        // On prépare une requête qui met à jour si l'ID existe, sinon insère
+        $stmtItem = $pdo->prepare("
+            INSERT INTO pf_holidays_items (id, holiday_id, category, name, amount, is_paid, location_name) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                category = VALUES(category),
+                name = VALUES(name),
+                amount = VALUES(amount),
+                is_paid = VALUES(is_paid)
+        ");
+        
+        $keepIds = [];
         for ($i = 0; $i < $count; $i++) {
-            // Utilisation de "?? ''" pour sécuriser si la donnée n'est pas envoyée
-            $cat = $_POST['items']['cat'][$i] ?? '';
+            $itemId = !empty($_POST['items']['id'][$i]) ? (int)$_POST['items']['id'][$i] : null;
+            $cat = $_POST['items']['cat'][$i] ?? 'activity';
             $name = trim($_POST['items']['name'][$i] ?? '');
             $amount = floatval($_POST['items']['amount'][$i] ?? 0);
-            $paid = isset($_POST['items']['paid'][$i]) ? $_POST['items']['paid'][$i] : 0;
+            $paid = (int)($_POST['items']['paid'][$i] ?? 0);
+            $loc = !empty($_POST['items']['location'][$i]) ? $_POST['items']['location'][$i] : null;
 
             if (!empty($name)) {
-                $stmtItem->execute([$id, $cat, $name, $amount, $paid]);
+                $stmtItem->execute([$itemId, $id, $cat, $name, $amount, $paid, $loc]);
+                $keepIds[] = $itemId ?: $pdo->lastInsertId();
             }
+        }
+
+        // Nettoyage : On supprime les items qui ont été retirés de la modale
+        // (Attention : uniquement ceux du voyage actuel qui ne sont plus dans la liste envoyée)
+        if (!empty($keepIds)) {
+            $placeholders = implode(',', array_fill(0, count($keepIds), '?'));
+            $sqlDel = "DELETE FROM pf_holidays_items WHERE holiday_id = ? AND id NOT IN ($placeholders)";
+            $pdo->prepare($sqlDel)->execute(array_merge([$id], $keepIds));
         }
     }
 

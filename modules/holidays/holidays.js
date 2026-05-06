@@ -115,87 +115,80 @@ function closeHolidayModal() {
 function editHoliday(data) {
   const h = data.main;
   const modal = document.getElementById("holidayModal");
+  if (!modal) return;
 
-  if (!modal) {
-    alert(tr("err_modal_missing"));
-    return;
-  }
+  openHolidayModal("edit");
 
-  document.body.appendChild(modal);
+  document.getElementById("inp_id").value = h.id;
+  document.getElementById("inp_title").value = h.title;
+  document.getElementById("inp_status").value = h.status;
+  document.getElementById("inp_period").value = h.period_hint || "";
+  document.getElementById("inp_start").value = h.start_date || "";
+  document.getElementById("inp_end").value = h.end_date || "";
+  document.getElementById("inp_food").value =
+    h.budget_food > 0 ? h.budget_food : "";
+  document.getElementById("inp_extra").value =
+    h.budget_extra > 0 ? h.budget_extra : "";
+  document.getElementById("inp_notes").value = h.notes || "";
 
-  if (typeof openHolidayModal === "function") {
-    openHolidayModal("edit");
-  }
+  document.getElementById("list_transport").innerHTML = "";
+  document.getElementById("list_accommodation").innerHTML = "";
+  document.getElementById("list_activity").innerHTML = "";
 
-  modal.classList.add("open");
-  modal.style.setProperty("display", "flex", "important");
-  modal.style.setProperty("z-index", "999999", "important");
-  document.body.classList.add("no-scroll");
-
-  try {
-    document.getElementById("inp_id").value = h.id;
-    document.getElementById("inp_title").value = h.title;
-    document.getElementById("inp_status").value = h.status;
-    document.getElementById("inp_period").value = h.period_hint || "";
-    document.getElementById("inp_start").value = h.start_date || "";
-    document.getElementById("inp_end").value = h.end_date || "";
-
-    document.getElementById("inp_food").value =
-      h.budget_food > 0 ? h.budget_food : "";
-    document.getElementById("inp_extra").value =
-      h.budget_extra > 0 ? h.budget_extra : "";
-    document.getElementById("inp_notes").value = h.notes || "";
-  } catch (err) {
-    console.error("Erreur champs textes :", err);
-  }
-
-  try {
-    document.getElementById("list_transport").innerHTML = "";
-    document.getElementById("list_accommodation").innerHTML = "";
-    document.getElementById("list_activity").innerHTML = "";
-
-    if (data.items && data.items.length > 0) {
-      data.items.forEach((item) => {
-        if (
-          typeof addItem === "function" &&
-          item.name !== "PF_TECHNICAL_POINT"
-        ) {
-          addItem(item.category, item.name, item.amount, item.is_paid);
-        }
-      });
-    }
-  } catch (err) {
-    console.error("Erreur listes :", err);
+  if (data.items) {
+    data.items.forEach((item) => {
+      if (item.name !== "PF_TECHNICAL_POINT") {
+        // On passe maintenant l'ID et le lieu à addItem
+        addItem(
+          item.category,
+          item.name,
+          item.amount,
+          item.is_paid,
+          item.id,
+          item.location_name || "",
+        );
+      }
+    });
   }
 }
 
 // --- 2. GESTION DES LISTES DYNAMIQUES DANS LA MODALE ---
 
-function addItem(category, name = "", amount = "", isPaid = 0) {
+function addItem(
+  category,
+  name = "",
+  amount = "",
+  isPaid = 0,
+  id = "",
+  location = "",
+) {
   const container = document.getElementById("list_" + category);
   const div = document.createElement("div");
-
-  div.style.display = "flex";
-  div.style.gap = "8px";
-  div.style.alignItems = "center";
+  div.className = "savings-line-item"; // Utilisation de ta classe existante
   div.style.marginBottom = "10px";
 
   const checkedAttr = isPaid == 1 ? "checked" : "";
+  // Optimisation : Affichage du badge d'étape si existant
+  const locationBadge = location
+    ? `<span style="font-size:0.65rem; background:#e2e8f0; padding:2px 6px; border-radius:4px; margin-right:5px; color:#64748b; font-weight:bold;">📍 ${location}</span>`
+    : "";
 
   div.innerHTML = `
+        <input type="hidden" name="items[id][]" value="${id}">
         <input type="hidden" name="items[cat][]" value="${category}">
-        <input type="text" name="items[name][]" class="pf-input" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}" style="flex: 2; padding: 8px; font-size:0.9rem;" required>
-        <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width: 80px; text-align: right; padding: 8px; font-size:0.9rem;">
+        <input type="hidden" name="items[location][]" value="${location}">
+        <div style="flex: 2; display:flex; flex-direction:column; gap:4px;">
+            ${locationBadge}
+            <input type="text" name="items[name][]" class="pf-input" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}" style="padding: 8px; font-size:0.9rem;" required>
+        </div>
+        <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width: 90px; text-align: right; padding: 8px; font-size:0.9rem;">
         <label title="${tr("hdl_paid")}" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
             <input type="checkbox" ${checkedAttr} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
             <input type="hidden" name="items[paid][]" value="${isPaid}">
             <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">${tr("hdl_paid")}</span>
         </label>
-        <button type="button" onclick="this.parentElement.remove()" class="btn-icon-action delete" title="${tr("btn_delete")}">
-            🗑️
-        </button>
+        <button type="button" onclick="this.parentElement.remove()" class="btn-icon-action delete" title="${tr("btn_delete")}">🗑️</button>
     `;
-
   container.appendChild(div);
 }
 
