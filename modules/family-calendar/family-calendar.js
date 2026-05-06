@@ -1166,23 +1166,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (btnOpen && modal) {
         btnOpen.addEventListener("click", () => {
-          modal.style.display = "flex";
-          // Remet l'année par défaut sur l'année actuellement affichée dans le calendrier
+          modal.classList.add("open"); // Utilisation propre de la classe CSS
+          document.body.classList.add("no-scroll");
+
           const yearSelect = document.getElementById("holidayYearSelect");
           if (yearSelect) yearSelect.value = this.currentSchoolYearStart;
           this.modalSelectedYear = this.currentSchoolYearStart;
           this.renderModalHolidays();
         });
       }
-      if (btnClose && modal)
-        btnClose.addEventListener(
-          "click",
-          () => (modal.style.display = "none"),
-        );
-      if (modal)
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) modal.style.display = "none";
+      if (btnClose && modal) {
+        btnClose.addEventListener("click", () => {
+          modal.classList.remove("open");
+          document.body.classList.remove("no-scroll");
         });
+      }
+      if (modal) {
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) {
+            modal.classList.remove("open");
+            document.body.classList.remove("no-scroll");
+          }
+        });
+      }
 
       // --- GESTION MODALE CORRECTIF DES SOLDES (SNAPSHOTS) ---
       const btnSnap = document.getElementById("btnOpenSnapshotModal");
@@ -1191,10 +1197,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const formSnap = document.getElementById("formSnapshot");
 
       if (btnSnap && modalSnap) {
-        modalSnap.classList.add("is-open");
         btnSnap.addEventListener("click", () => {
-          modalSnap.classList.add("is-open"); // Utilise flex au lieu de block pour le centrage
+          modalSnap.classList.add("open"); // On ouvre la modale correctement
           document.body.classList.add("no-scroll");
+
           // Pré-remplir la date avec le 1er jour du mois en cours
           const today = new Date();
           const y = today.getFullYear();
@@ -1205,21 +1211,24 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (btnCloseSnap && modalSnap) {
-        btnCloseSnap.addEventListener(
-          "click",
-          () => (modalSnap.style.display = "none"),
-        );
+        btnCloseSnap.addEventListener("click", () => {
+          modalSnap.classList.remove("open");
+          document.body.classList.remove("no-scroll");
+        });
       }
 
       if (modalSnap) {
         modalSnap.addEventListener("click", (e) => {
-          if (e.target === modalSnap) modalSnap.style.display = "none";
+          if (e.target === modalSnap) {
+            modalSnap.classList.remove("open");
+            document.body.classList.remove("no-scroll");
+          }
         });
       }
 
       if (formSnap) {
         formSnap.addEventListener("submit", async (e) => {
-          e.preventDefault(); // Empêche le rechargement de la page
+          e.preventDefault();
 
           const payload = {
             person_id: document.getElementById("snapPerson").value,
@@ -1229,16 +1238,15 @@ document.addEventListener("DOMContentLoaded", () => {
           };
 
           try {
-            // On envoie à la nouvelle API
             await this.postApi(
               "/modules/family-calendar/includes/api/save-leave-snapshot.php",
               payload,
             );
 
-            modalSnap.style.display = "none";
-            formSnap.reset(); // On vide le formulaire
+            modalSnap.classList.remove("open"); // Fermeture propre
+            document.body.classList.remove("no-scroll");
+            formSnap.reset();
 
-            // On rafraîchit tout le calendrier pour appliquer le nouveau solde immédiatement
             await this.refreshAllData();
           } catch (error) {
             alert("Erreur lors de la sauvegarde du correctif.");
