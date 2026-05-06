@@ -795,6 +795,45 @@ td.col-laia-sub {
   color: #ef4444; /* Devient rouge au survol */
 }
 
+/* =========================================================
+   SMART DATE SELECTOR (Comportement natif calqué sur .pf-input)
+   ========================================================= */
+.fc-smart-select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+
+  font-family: inherit;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+
+  /* Padding standard */
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: capitalize;
+  box-shadow: var(--pf-shadow-sm);
+}
+
+.fc-smart-select:hover {
+  border-color: #94a3b8;
+}
+
+.fc-smart-select:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+@media (max-width: 768px) {
+  .fc-smart-select {
+    font-size: 1rem;
+    padding: 6px 8px;
+  }
+}
+
 /* Mobile */
 @media (max-width: 768px) {
   .pf-family-calendar .pf-container {

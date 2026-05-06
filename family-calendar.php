@@ -110,7 +110,13 @@ require __DIR__ . '/header.php';
           
           <div class="fc-month-nav-row">
             <button id="fc-prev-month" class="fc-nav-button">‹</button>
-            <h3 id="fc-current-month-year"></h3>
+            
+            <div id="fc-smart-date-selector" style="display:flex; align-items:center; justify-content:center; flex-grow:1; gap:6px;">
+                <select id="fc-select-month" class="fc-smart-select"></select>
+                <select id="fc-select-year" class="fc-smart-select"></select>
+                <span id="fc-multi-month-suffix" style="display:none; font-size:1.3rem; font-weight:800; color:#0f172a; margin-left:4px;"></span>
+            </div>
+
             <button id="fc-next-month" class="fc-nav-button">›</button>
           </div>
           
