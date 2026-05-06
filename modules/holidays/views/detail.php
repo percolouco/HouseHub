@@ -391,6 +391,8 @@ window.I18N = {
     'hdl_ph_notes': "<?= tr('hdl_ph_notes') ?>",
     'hdl_btn_add_step': "<?= tr('hdl_btn_add_step') ?>",
     'hdl_quick_edit_title': "<?= tr('hdl_quick_edit_title') ?>",
+    'hdl_paid': "<?= tr('hdl_paid') ?>",
+
     
     // --- NOUVELLES CLÉS MÉTÉO ICI ---
     'weather_sunny': "<?= tr('weather_sunny') ?>",
