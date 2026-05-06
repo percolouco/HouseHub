@@ -13,6 +13,7 @@ return [
     'tests_copy_report' => 'Copier le rapport',
     'tests_waiting' => 'En attente du lancement...',
     'tests_report_copied' => 'Rapport copié dans le presse-papier !',
+    'tests_live_preview'  => 'Aperçu en direct',
 
 
     // ==========================================
@@ -72,6 +73,7 @@ return [
     'btn_logout'                => 'Déconnexion',
     'error_missing_fields'      => 'Champs obligatoires.',
     'error_invalid_credentials' => 'Identifiants incorrects.',
+    'login_subtitle'      => 'Veuillez vous identifier pour continuer',
 
     // ==========================================
     // ACCUEIL / INDEX
@@ -131,6 +133,11 @@ return [
     'fc_menu_carole'            => 'Congés Carole',
     'fc_clear'                  => 'Effacer',
     'fc_menu_kids_leaves'       => 'Congés Enfants',
+    'fc_err_save_snap'          => 'Erreur lors de la sauvegarde du correctif.',
+    'fc_err_fetch_gov'          => 'Erreur lors de la connexion à l’API gouvernementale.',
+    'fc_err_no_data_gov'        => 'Aucune donnée trouvée sur l’API du gouvernement pour cette année.',
+    'fc_err_action'             => 'Erreur lors de l’action : ',
+    'leg_presence_pep'          => 'Présence Pep',
     
     'leg_school_holidays'       => 'Vacances Scolaires',
     'leg_public_holiday'        => 'Férié',

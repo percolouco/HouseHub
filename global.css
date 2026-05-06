@@ -512,3 +512,66 @@ p {
 .btn-icon-action.delete:hover {
   background: #fef2f2; /* Fond rouge très clair au survol */
 }
+
+/* === 13. PAGE DE CONNEXION (LOGIN) === */
+.pf-login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 200px);
+  padding: 20px;
+}
+
+.pf-login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+}
+
+.pf-login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.pf-login-header .pf-login-icon {
+  width: 60px; /* Tu peux ajuster cette valeur selon le rendu voulu */
+  height: auto;
+  margin-bottom: 15px;
+  border-radius: 12px; /* Optionnel : ajoute un léger arrondi si ton favicon est carré */
+}
+
+.pf-login-header h1 {
+  font-size: 1.8rem;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.pf-login-header p {
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.pf-login-error {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #fca5a5;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.pf-btn-block {
+  width: 100%;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 14px;
+  font-size: 1.05rem;
+}

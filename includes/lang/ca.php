@@ -13,7 +13,7 @@ return [
     'tests_copy_report' => 'Copiar l\'informe',
     'tests_waiting' => 'Esperant l\'inici...',
     'tests_report_copied' => 'Informe copiat al porta-retalls!',
-
+    'tests_live_preview'  => 'Previsualització en viu',
     // ==========================================
     // GLOBAL & NAVIGATION
     // ==========================================
@@ -70,6 +70,7 @@ return [
     'btn_logout'                => 'Tancar sessió',
     'error_missing_fields'      => 'Camps obligatoris.',
     'error_invalid_credentials' => 'Identificadors incorrectes.',
+    'login_subtitle'      => 'Si us plau, identifiqueu-vos per continuar',
 
     // ==========================================
     // ACCUEIL / INDEX
@@ -129,6 +130,11 @@ return [
     'fc_menu_carole'            => 'Permisos Carole',
     'fc_clear'                  => 'Esborrar',
     'fc_menu_kids_leaves'       => 'Permisos nens',
+    'fc_err_save_snap'          => 'Error en desar el correctiu.',
+    'fc_err_fetch_gov'          => 'Error en la connexió amb l’API governamental.',
+    'fc_err_no_data_gov'        => 'No s’han trobat dades a l’API del govern per a aquest any.',
+    'fc_err_action'             => 'Error en l’acció: ',
+    'leg_presence_pep'          => 'Presència Pep',
     
     'leg_school_holidays'       => 'Vacances Escolars',
     'leg_public_holiday'        => 'Festiu',

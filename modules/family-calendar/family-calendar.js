@@ -99,6 +99,8 @@ document.addEventListener("DOMContentLoaded", () => {
       this.setupModalUI(); // Prépare le selecteur d'année dans la modale
       await this.refreshAllData();
       this.updateSchoolYearLabel();
+
+      setTimeout(() => this.scrollToCurrentMonth(), 100);
     }
 
     // Modifie dynamiquement le titre de la modale pour y insérer le selecteur d'année
@@ -590,6 +592,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       this.weeks.forEach((w, idx) => {
         const tr = document.createElement("tr");
+        tr.setAttribute("data-month", w.monthKey);
         if (idx === 0 || this.weeks[idx - 1].monthKey !== w.monthKey)
           tr.classList.add("fc-month-first-week-row");
         if (
@@ -686,6 +689,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         this.planningBody.appendChild(tr);
       });
+    }
+
+    // --- Auto-scroll vers le mois en cours ---
+    scrollToCurrentMonth() {
+      const wrapper = document.getElementById("planningTable-wrapper");
+      const thead = document.querySelector("#planningTable thead");
+      if (!wrapper || !thead) return;
+
+      const now = new Date();
+      // Construit la clé au format "YYYY-MM"
+      const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+      // Cherche la TOUTE PREMIÈRE ligne qui correspond à ce mois
+      const targetRow = document.querySelector(
+        `#planningTable tbody tr[data-month="${currentYm}"]`,
+      );
+
+      if (targetRow) {
+        // On donne 50ms au navigateur pour finir son rendu graphique avant de calculer les hauteurs
+        setTimeout(() => {
+          const scrollPos = targetRow.offsetTop - thead.offsetHeight;
+          wrapper.scrollTo({
+            top: scrollPos > 0 ? scrollPos : 0,
+            behavior: "smooth",
+          });
+        }, 50);
+      }
     }
 
     renderMonthCalendar() {
