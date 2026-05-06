@@ -167,6 +167,7 @@ body.no-scroll {
   display: flex;
   flex-direction: column;
   padding: 0;
+  color: var(--text-main);
 }
 
 .pf-mobile-menu.is-open {
@@ -222,6 +223,21 @@ body.no-scroll {
   color: var(--danger);
   background: #fef2f2;
   margin-top: 10px;
+}
+
+.pf-mobile-menu-header .pf-logo,
+body.pf-home .pf-mobile-menu-header .pf-logo {
+  color: var(--primary);
+}
+
+/* Force la croix en gris, MÊME sur la page d'accueil */
+.pf-mobile-close-btn,
+body.pf-home .pf-mobile-close-btn {
+  color: var(--text-muted);
+}
+
+.pf-mobile-close-btn:hover {
+  color: var(--danger); /* Touche de rouge au survol */
 }
 
 /* === MAIN CONTENT & TYPOGRAPHY === */
