@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   family_id     INT DEFAULT NULL,
   is_admin      TINYINT(1) DEFAULT 0,
   is_active     TINYINT(1) DEFAULT 1,
+  lang          VARCHAR(5) DEFAULT 'fr',
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (family_id) REFERENCES families(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
