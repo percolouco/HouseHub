@@ -190,7 +190,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   background: rgba(0,0,0,0.7); backdrop-filter: blur(2px);
   align-items: center; justify-content: center; padding: 1rem;
 }
-.modal-backdrop.open { display: flex; }
+.modal-backdrop.show { display: flex; }
 .modal {
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius-lg); width: 100%; max-width: 640px;
@@ -359,3 +359,26 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   .navbar { padding: 0 1rem; gap: 1rem; }
   .vehicles-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Sous-nav Garage ── */
+.garage-subnav {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 0;
+}
+.garage-subnav .nav-link {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: #64748b;
+  transition: all .15s;
+}
+.garage-subnav .nav-link:hover { background: #f1f5f9; color: #1e293b; }
+.garage-subnav .nav-link.active { background: #2563eb; color: #fff; border-color: #2563eb; }

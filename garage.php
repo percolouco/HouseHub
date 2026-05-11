@@ -12,6 +12,13 @@ require __DIR__ . '/header.php';
 
 <div id="toasts" class="toast-container"></div>
 
+<!-- Sous-navigation interne Garage -->
+<nav class="garage-subnav">
+  <button class="nav-link active" data-page="dashboard">📊 <?= tr('garage_stat_vehicles') !== 'Véhicules' ? 'Dashboard' : 'Dashboard' ?></button>
+  <button class="nav-link" data-page="vehicles">🚗 <?= tr('garage_vehicles_title') ?></button>
+  <button class="nav-link" data-page="parts">🔩 <?= tr('garage_all_parts') ?></button>
+</nav>
+
 <div id="page-dashboard" class="page active">
   <div class="container">
     <div class="stats-grid">
