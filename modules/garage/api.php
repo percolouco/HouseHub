@@ -74,6 +74,12 @@ if ($action === 'vehicles') {
 if ($action === 'maintenances') {
     $vid = $_GET['vehicle_id'] ?? null;
     if ($method === 'GET') {
+        $id = $_GET['id'] ?? null;
+        if ($id) {
+            $stmt = $pdo->prepare("SELECT m.*, v.name as vehicle_name, v.license_plate, v.current_km FROM pf_maintenances m JOIN pf_vehicles v ON v.id = m.vehicle_id WHERE m.id = ?");
+            $stmt->execute([$id]); $m = $stmt->fetch(); if (!$m) gErr('Entretien introuvable', 404);
+            gOk($m);
+        }
         if ($vid) {
             $stmt = $pdo->prepare("SELECT m.*, GROUP_CONCAT(p.name SEPARATOR ', ') as parts_names, COUNT(p.id) as parts_count, COALESCE(SUM(p.price*p.quantity),0) as parts_cost FROM pf_maintenances m LEFT JOIN pf_parts p ON p.maintenance_id = m.id WHERE m.vehicle_id = ? GROUP BY m.id ORDER BY m.date DESC, m.created_at DESC");
             $stmt->execute([$vid]); gOk($stmt->fetchAll());
@@ -85,7 +91,7 @@ if ($action === 'maintenances') {
         $photo = handleUpload('invoice_photo', $UPLOAD_DIR); $d = $_POST ?: gBody();
         if (!($d['vehicle_id'] ?? null)) gErr('vehicle_id manquant');
         $stmt = $pdo->prepare("INSERT INTO pf_maintenances (vehicle_id,type,description,date,km,cost,mechanic,garage_name,next_km,next_date,invoice_photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$d['vehicle_id'], $d['type']??'', $d['description']??null, $d['date']??date('Y-m-d'), $d['km']??null, $d['cost']??0, $d['mechanic']??null, $d['garage']??null, $d['next_km']??null, $d['next_date']??null, $photo, $d['notes']??null]);
+        $stmt->execute([$d['vehicle_id'], $d['type']??'', $d['description']??null, $d['date']??date('Y-m-d'), $d['km']??null, $d['cost']??0, $d['mechanic']??null, $d['garage_name']??null, $d['next_km']??null, $d['next_date']??null, $photo, $d['notes']??null]);
         $mid = $pdo->lastInsertId();
         if (!empty($d['km'])) { $pdo->prepare("UPDATE pf_vehicles SET current_km = GREATEST(current_km, ?), updated_at = NOW() WHERE id = ?")->execute([$d['km'], $d['vehicle_id']]); }
         gOk(['id' => $mid]);
@@ -115,6 +121,8 @@ if ($action === 'maintenances') {
 if ($action === 'parts') {
     if ($method === 'GET') {
         $vid = $_GET['vehicle_id'] ?? null; $mid = $_GET['maintenance_id'] ?? null;
+        $id = $_GET['id'] ?? null;
+        if ($id) { $stmt = $pdo->prepare("SELECT * FROM pf_parts WHERE id = ?"); $stmt->execute([$id]); $p = $stmt->fetch(); if (!$p) gErr('Pièce introuvable', 404); gOk($p); }
         if ($mid) { $stmt = $pdo->prepare("SELECT * FROM pf_parts WHERE maintenance_id = ? ORDER BY created_at DESC"); $stmt->execute([$mid]); gOk($stmt->fetchAll()); }
         if ($vid) { $stmt = $pdo->prepare("SELECT p.*, m.type as maintenance_type, m.date as maintenance_date FROM pf_parts p LEFT JOIN pf_maintenances m ON m.id = p.maintenance_id WHERE p.vehicle_id = ? ORDER BY p.created_at DESC"); $stmt->execute([$vid]); gOk($stmt->fetchAll()); }
         $stmt = $pdo->query("SELECT p.*, v.name as vehicle_name, m.type as maintenance_type, m.date as maintenance_date FROM pf_parts p LEFT JOIN pf_vehicles v ON v.id = p.vehicle_id LEFT JOIN pf_maintenances m ON m.id = p.maintenance_id ORDER BY p.created_at DESC");
