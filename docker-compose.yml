@@ -29,12 +29,12 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootchangeme}
-      MYSQL_DATABASE: ${DB_NAME:-househub}
+      MYSQL_DATABASE: househub_meta
       MYSQL_USER: ${DB_USER:-househub}
       MYSQL_PASSWORD: ${DB_PASS:-changeme}
     volumes:
       - househub_db_data:/var/lib/mysql
-      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
     networks:
       - househub_net
     healthcheck:
