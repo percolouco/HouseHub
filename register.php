@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Le mot de passe doit faire au moins 6 caractères.";
     } elseif ($password !== $password2) {
         $error = "Les mots de passe ne correspondent pas.";
-    } elseif (!preg_match('/^[a-zA-Z0-9_.-]{3,50}$/', $username)) {
+    } elseif (!preg_match('/^[\p{L}0-9_.-]{3,50}$/u', $username)) {
         $error = "Nom d'utilisateur invalide (3-50 car., lettres/chiffres/._-)";
     } else {
         // Vérifier que l'username n'existe pas
