@@ -88,6 +88,8 @@ return [
     'mod_gifts_desc'     => "Planifiqueu els regals per a cada infant, per Nadal i els aniversaris.",
     'mod_budget_name'    => 'Pressupost',
     'mod_budget_desc'    => 'Seguiment de despeses fixes, ingressos i balanç del compte familiar.',
+    'mod_garage_name'    => 'Garatge',
+    'mod_garage_desc'    => 'Seguiu el manteniment dels vostres vehicles, les peces i els costos.',
     'cta_open'           => 'Obrir',
     'cta_explore'        => 'Explorar',
     'cta_view_lists'     => 'Veure les llistes',
