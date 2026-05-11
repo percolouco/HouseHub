@@ -14,10 +14,23 @@ require __DIR__ . '/header.php';
 
 <!-- Sous-navigation interne Garage -->
 <nav class="garage-subnav">
-  <button class="nav-link active" data-page="dashboard">📊 <?= tr('garage_stat_vehicles') !== 'Véhicules' ? 'Dashboard' : 'Dashboard' ?></button>
+  <button class="nav-link active" data-page="dashboard">📊 Dashboard</button>
   <button class="nav-link" data-page="vehicles">🚗 <?= tr('garage_vehicles_title') ?></button>
+  <button class="nav-link" data-page="maintenances-all">🔧 <?= tr('garage_maintenances') ?></button>
   <button class="nav-link" data-page="parts">🔩 <?= tr('garage_all_parts') ?></button>
 </nav>
+
+<div id="page-maintenances-all" class="page">
+  <div class="container">
+    <div class="card-header" style="margin-bottom:1rem">
+      <div>
+        <h1 style="font-size:1.2rem;font-weight:700">🔧 <?= tr('garage_maintenances') ?></h1>
+        <p style="color:var(--muted);font-size:.85rem"><span id="all-maint-count">0</span> <?= tr('garage_maintenances') ?> · Total : <span id="all-maint-total">--</span></p>
+      </div>
+    </div>
+    <div id="all-maintenances-list"></div>
+  </div>
+</div>
 
 <div id="page-dashboard" class="page active">
   <div class="container">
