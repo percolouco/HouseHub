@@ -316,3 +316,51 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   .garage-subnav { padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
   .garage-subnav .nav-link { white-space: nowrap; }
 }
+
+/* ══ DARK MODE — Garage module ══════════════════════════════════ */
+[data-theme="dark"] { --muted: #8b949e; --fg: #e6edf3; }
+[data-theme="dark"] .garage-subnav                { background: var(--bg-panel); border-color: var(--border-light); }
+[data-theme="dark"] .garage-subnav .nav-link      { color: var(--text-muted); }
+[data-theme="dark"] .garage-subnav .nav-link:hover { background: rgba(255,255,255,.06); color: var(--text-main); }
+[data-theme="dark"] .garage-subnav .nav-link.active { background: rgba(59,130,246,.15); color: var(--primary); border-color: rgba(59,130,246,.3); }
+[data-theme="dark"] .card,
+[data-theme="dark"] .vehicle-detail-header        { background: var(--bg-panel); border-color: var(--border-light); }
+[data-theme="dark"] .stat-pill                    { background: var(--bg-panel); border-color: var(--border-light); }
+[data-theme="dark"] .stat-pill .label             { color: var(--text-muted); }
+[data-theme="dark"] .vehicle-card                 { background: var(--bg-panel); border-color: var(--border-light); }
+[data-theme="dark"] .vehicle-card:hover           { border-color: var(--primary); }
+[data-theme="dark"] .vehicle-card-img             { background: #1c2128; }
+[data-theme="dark"] .vehicle-card-footer          { background: #1c2128; border-color: var(--border-light); }
+[data-theme="dark"] .vehicle-card-title           { color: var(--text-main); }
+[data-theme="dark"] .vehicle-card-sub             { color: var(--text-muted); }
+[data-theme="dark"] .vehicle-detail-img           { background: #1c2128; }
+[data-theme="dark"] .vehicle-meta h2              { color: var(--text-main); }
+[data-theme="dark"] .meta-item .v                 { color: var(--text-main); }
+[data-theme="dark"] .card-title, [data-theme="dark"] .modal-title { color: var(--text-main); }
+[data-theme="dark"] .table-wrap                   { border-color: var(--border-light); }
+[data-theme="dark"] .table-wrap table th          { background: #1c2128; color: var(--text-muted); border-color: var(--border-light); }
+[data-theme="dark"] .table-wrap table td          { border-color: rgba(48,54,61,.4); color: var(--text-main); }
+[data-theme="dark"] .table-wrap table tr:hover td { background: rgba(255,255,255,.03); }
+[data-theme="dark"] .tabs                         { border-color: var(--border-light); }
+[data-theme="dark"] .tab-btn                      { color: var(--text-muted); }
+[data-theme="dark"] .tab-btn:hover                { color: var(--text-main); }
+[data-theme="dark"] .form-label                   { color: var(--text-muted); }
+[data-theme="dark"] .form-control                 { background: #1c2128; border-color: var(--border-light); color: var(--text-main); }
+[data-theme="dark"] .form-control::placeholder    { color: #484f58; }
+[data-theme="dark"] select.form-control option    { background: #1c2128; }
+[data-theme="dark"] .modal                        { background: var(--bg-panel); border-color: var(--border-light); }
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer                 { border-color: var(--border-light); }
+[data-theme="dark"] .modal-close:hover            { background: rgba(255,255,255,.06); }
+[data-theme="dark"] .btn-secondary                { background: #1c2128; border-color: var(--border-light); color: var(--text-main); }
+[data-theme="dark"] .btn-secondary:hover          { background: rgba(255,255,255,.06); }
+[data-theme="dark"] .btn-danger                   { background: #1c2128; border-color: rgba(239,68,68,.4); }
+[data-theme="dark"] .btn-danger:hover             { background: rgba(239,68,68,.08); }
+[data-theme="dark"] .badge-gray                   { background: rgba(139,148,158,.15); color: var(--text-muted); }
+[data-theme="dark"] .toast                        { background: var(--bg-panel); border-color: var(--border-light); color: var(--text-main); }
+[data-theme="dark"] .part-thumb                   { border-color: var(--border-light); }
+[data-theme="dark"] .scroll-list                  { background: #1c2128; border-color: var(--border-light); }
+[data-theme="dark"] .scroll-list-item             { border-color: rgba(48,54,61,.5); }
+[data-theme="dark"] .scroll-list-item:hover       { background: rgba(255,255,255,.04); }
+[data-theme="dark"] .item-name                    { color: var(--text-main); }
+[data-theme="dark"] #inline-part-form             { background: #1c2128 !important; border-color: var(--border-light) !important; }
