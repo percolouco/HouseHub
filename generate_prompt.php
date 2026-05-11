@@ -1,9 +1,9 @@
 <?php
-// generate_prompt.php - Script pour extraire le code de PachaFamily
+// generate_prompt.php - Script pour extraire le code de HouseHub
 // À lancer via le navigateur (http://localhost:8082/generate_prompt.php) ou en ligne de commande.
 
 $rootDir = __DIR__;
-$outputFile = $rootDir . '/pachafamily_source.md';
+$outputFile = $rootDir . '/househub_source.md';
 
 // Dossiers à ignorer (pour ne pas polluer le cerveau de l'IA avec des choses inutiles)
 $ignoredDirs = ['.git', '.devtools', '.gitea', 'assets'];
@@ -11,7 +11,7 @@ $ignoredDirs = ['.git', '.devtools', '.gitea', 'assets'];
 // Extensions autorisées (on ne veut que du code, pas d'images)
 $allowedExtensions = ['php', 'css', 'js', 'html', 'sh'];
 
-$output = "# 🦙 Source Code PachaFamily\n\n";
+$output = "# 🦙 Source Code HouseHub\n\n";
 $output .= "> *Généré le " . date('Y-m-d H:i:s') . "*\n\n";
 
 $iterator = new RecursiveIteratorIterator(
@@ -65,8 +65,8 @@ file_put_contents($outputFile, $output);
 
 echo "<div style='font-family:sans-serif; padding:20px; background:#f0fdf4; color:#16a34a; border-radius:8px; border:1px solid #bbf7d0;'>";
 echo "<h2>✅ Succès !</h2>";
-echo "<p>Le fichier <strong>pachafamily_source.md</strong> a été généré à la racine de ton projet.</p>";
+echo "<p>Le fichier <strong>househub_source.md</strong> a été généré à la racine de ton projet.</p>";
 echo "<p><strong>$fileCount fichiers</strong> de code ont été fusionnés.</p>";
-echo "<p><em>Tu peux maintenant donner ce fichier à ta Gem PachaFamily !</em></p>";
+echo "<p><em>Tu peux maintenant donner ce fichier à ta Gem HouseHub !</em></p>";
 echo "</div>";
 ?>

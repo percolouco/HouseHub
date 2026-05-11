@@ -13,7 +13,7 @@ function getLangUrl($newLang) {
     return '?' . http_build_query($params);
 }
 
-$pageTitle = $pageTitle ?? "PachaFamily";
+$pageTitle = $pageTitle ?? "HouseHub";
 $activePage = $activePage ?? "";
 $currentLang = $_SESSION['app_lang'] ?? 'fr';
 ?>
@@ -40,7 +40,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
 <body class="<?= htmlspecialchars($bodyClass ?? '') ?>">
 
   <header class="pf-header">
-    <a href="/index.php" class="pf-logo">PachaFamily</a>
+    <a href="/index.php" class="pf-logo">HouseHub</a>
 
     <?php if (isset($_SESSION['user'])): ?>
     <nav class="pf-nav">
@@ -81,7 +81,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   
   <div class="pf-mobile-menu" id="mobileMenu">
     <div class="pf-mobile-menu-header">
-        <span class="pf-logo">PachaFamily</span>
+        <span class="pf-logo">HouseHub</span>
         <button class="pf-mobile-close-btn" id="closeMobileMenu">&times;</button>
     </div>
     

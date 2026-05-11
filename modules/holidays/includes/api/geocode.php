@@ -75,7 +75,7 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_TIMEOUT        => 10,
-    CURLOPT_USERAGENT      => 'PachaFamily-Holidays/1.0',
+    CURLOPT_USERAGENT      => 'HouseHub-Holidays/1.0',
     CURLOPT_SSL_VERIFYPEER => false,
     CURLOPT_SSL_VERIFYHOST => false
 ]);

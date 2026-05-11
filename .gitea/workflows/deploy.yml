@@ -17,4 +17,4 @@ jobs:
           username: ${{ secrets.FTP_USERNAME_PERCOLOUCO }}
           password: ${{ secrets.FTP_PASSWORD_PERCOLOUCO }}
           local-dir: ./
-          server-dir: /www/pachafamily/ # ← Production reste ici
+          server-dir: /www/househub/ # ← Production reste ici

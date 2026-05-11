@@ -46,7 +46,7 @@ require __DIR__ . '/header.php';
     <div class="pf-login-card">
         
         <header class="pf-login-header">
-            <img src="/favicon.png" alt="PachaFamily Logo" class="pf-login-icon">
+            <img src="/favicon.png" alt="HouseHub Logo" class="pf-login-icon">
             <h1><?= tr('login_header') ?></h1>
             <p><?= tr('login_subtitle') ?></p>
         </header>

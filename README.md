@@ -1,8 +1,8 @@
-🦙 PachaFamily OS
+🦙 HouseHub OS
 Système de gestion familiale sur-mesure : Budget, Calendrier, Voyages et Cadeaux.
 
 📝 Présentation du projet
-PachaFamily est une application web privée conçue pour centraliser l'organisation de la tribu. Elle repose sur une stack légère (PHP natif / Vanilla JS) pour garantir rapidité et portabilité, avec un support complet de l'internationalisation (FR/CA).
+HouseHub est une application web privée conçue pour centraliser l'organisation de la tribu. Elle repose sur une stack légère (PHP natif / Vanilla JS) pour garantir rapidité et portabilité, avec un support complet de l'internationalisation (FR/CA).
 
 🛠️ Fonctionnalités Principales
 💰 Module Budget
