@@ -409,6 +409,7 @@ return [
     'bud_ph_keywords'           => 'e.g. NETFLIX, PRIME VIDEO (comma-separated)',
     'bud_help_keywords'         => 'If a monthly expense contains this word, the line will switch to "Validated".',
     'bud_label_day'             => 'Day (1-31)',
+    'bud_cat_income'            => 'Savings',
     'bud_cat_expense'           => 'Expense (Cost)',
     'bud_label_frequency'       => 'Frequency',
     'bud_label_amount_type'     => 'Amount type',
