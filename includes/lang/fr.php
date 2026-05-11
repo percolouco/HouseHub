@@ -425,6 +425,7 @@ return [
     'bud_ph_keywords'           => 'Ex: NETFLIX, PRIME VIDEO (séparés par virgule)',
     'bud_help_keywords'         => 'Si une dépense du mois contient ce mot, la ligne passera en "Validé".',
     'bud_label_day'             => 'Jour (1-31)',
+    'bud_cat_income'            => 'Épargne',
     'bud_cat_expense'           => 'Dépense (Frais)',
     'bud_label_frequency'       => 'Fréquence',
     'bud_label_amount_type'     => 'Type de montant',

@@ -423,6 +423,7 @@ return [
     'bud_ph_keywords'           => 'Ex: NETFLIX, PRIME VIDEO (separades per coma)',
     'bud_help_keywords'         => 'Si una despesa del mes conté aquesta paraula, la línia passarà a "Validat".',
     'bud_label_day'             => 'Dia (1-31)',
+    'bud_cat_income'            => 'Estalvi',
     'bud_cat_expense'           => 'Despesa',
     'bud_label_frequency'       => 'Freqüència',
     'bud_label_amount_type'     => 'Tipus d\'import',
