@@ -14,6 +14,16 @@ $success = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if ($action === 'set_lang') {
+        $lang = $_POST['lang'] ?? 'fr';
+        if (in_array($lang, ['fr', 'ca', 'en'])) {
+            $_SESSION['app_lang'] = $lang;
+            $meta_pdo->prepare("UPDATE users SET lang = ? WHERE id = ?")
+                     ->execute([$lang, $user_id]);
+            $success = "Language updated.";
+        }
+    }
+
     if ($action === 'update_profile') {
         $display_name = trim($_POST['display_name'] ?? '');
         if (!$display_name) {
@@ -97,6 +107,25 @@ require __DIR__ . '/header.php';
   <?php if ($error): ?>
     <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:24px;color:#991b1b">✗ <?= htmlspecialchars($error) ?></div>
   <?php endif; ?>
+
+  <!-- ── Langue ─────────────────────────────────────────────────────────── -->
+  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px">🌐 Langue / Language</h2>
+    <form method="post" style="display:flex;gap:10px;flex-wrap:wrap">
+      <input type="hidden" name="action" value="set_lang">
+      <?php
+        $langs = ['fr' => '🇫🇷 Français', 'en' => '🇬🇧 English', 'ca' => '🏴 Català'];
+        $currentLang = $_SESSION['app_lang'] ?? 'fr';
+        foreach ($langs as $code => $label):
+      ?>
+      <button type="submit" name="lang" value="<?= $code ?>"
+        class="pf-btn <?= $currentLang === $code ? '' : 'btn-secondary' ?>"
+        style="<?= $currentLang === $code ? 'pointer-events:none' : '' ?>">
+        <?= $label ?>
+      </button>
+      <?php endforeach; ?>
+    </form>
+  </section>
 
   <!-- ── Profil ──────────────────────────────────────────────────────────── -->
   <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
