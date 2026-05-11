@@ -36,7 +36,6 @@ services:
       MYSQL_PASSWORD: ${DB_PASS:-changeme}
     volumes:
       - househub_db_data:/var/lib/mysql
-      - househub_uploads:/uploads
       - ./docker/init:/docker-entrypoint-initdb.d:ro
     networks:
       - househub_net
