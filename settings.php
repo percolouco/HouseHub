@@ -114,7 +114,7 @@ require __DIR__ . '/header.php';
     <form method="post" style="display:flex;gap:10px;flex-wrap:wrap">
       <input type="hidden" name="action" value="set_lang">
       <?php
-        $langs = ['fr' => '🇫🇷 Français', 'en' => '🇬🇧 English', 'ca' => '🏴 Català'];
+        $langs = ['fr' => '🇫🇷 Français', 'en' => '🇬🇧 English', 'ca' => '🏴󠁥󠁳󠁣󠁴󠁿 Català'];
         $currentLang = $_SESSION['app_lang'] ?? 'fr';
         foreach ($langs as $code => $label):
       ?>
