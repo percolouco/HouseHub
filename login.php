@@ -1,7 +1,7 @@
 <?php
 session_start();
-require __DIR__ . '/includes/db.php';
-require_once __DIR__ . '/includes/i18n.php'; // Toujours s'assurer que tr() est dispo
+require_once __DIR__ . '/includes/i18n.php';
+require_once __DIR__ . '/includes/meta_db.php';
 
 $pageTitle = tr('login_title');
 $activePage = "login";
@@ -20,16 +20,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$username || !$password) {
         $error = tr('error_missing_fields');
     } else {
-        $stmt = $pdo->prepare("SELECT id, username, password_hash, display_name FROM pf_users WHERE username = ?");
+        $stmt = $meta_pdo->prepare("
+            SELECT u.id, u.username, u.password_hash, u.display_name, u.family_id, f.db_name
+            FROM users u
+            LEFT JOIN families f ON f.id = u.family_id
+            WHERE u.username = ?
+        ");
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
             $_SESSION['user'] = [
-                'id' => (int)$user['id'],
-                'username' => $user['username'],
+                'id'           => (int)$user['id'],
+                'username'     => $user['username'],
                 'display_name' => $user['display_name'],
+                'family_id'    => (int)$user['family_id'],
             ];
+            $_SESSION['family_db'] = $user['db_name'];
             $redirectTo = $_GET['redirect'] ?? '/index.php';
             header('Location: ' . $redirectTo);
             exit;
@@ -75,7 +82,11 @@ require __DIR__ . '/header.php';
                 <?= tr('btn_login_submit') ?>
             </button>
         </form>
-        
+
+        <p style="text-align:center;margin-top:20px;font-size:0.9rem;color:#64748b">
+          Pas encore de compte ? <a href="/register.php" style="color:var(--primary)">Créer un espace</a>
+        </p>
+
     </div>
 </div>
 
