@@ -49,8 +49,17 @@ if ($action === 'vehicles') {
     }
     if ($method === 'PUT') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant'); $d = gBody();
+        $int_fields = ['year','current_km']; $float_fields = ['purchase_price'];
         $fields = ['name','brand','model','year','license_plate','vin','fuel_type','color','purchase_date','purchase_price','current_km','notes'];
-        $sets = array_map(fn($f) => "$f = ?", $fields); $vals = array_map(fn($f) => $d[$f] ?? null, $fields); $vals[] = $id;
+        $sets = array_map(fn($f) => "$f = ?", $fields);
+        $vals = array_map(function($f) use ($d, $int_fields, $float_fields) {
+            $v = $d[$f] ?? null;
+            if ($v === '' || $v === null) return null;
+            if (in_array($f, $int_fields)) return (int)$v;
+            if (in_array($f, $float_fields)) return (float)$v;
+            return $v;
+        }, $fields);
+        $vals[] = $id;
         $pdo->prepare("UPDATE pf_vehicles SET " . implode(', ', $sets) . ", updated_at = NOW() WHERE id = ?")->execute($vals);
         gOk(['updated' => true]);
     }
@@ -83,8 +92,17 @@ if ($action === 'maintenances') {
     }
     if ($method === 'PUT') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant'); $d = gBody();
+        $int_f = ['km','next_km']; $float_f = ['cost'];
         $fields = ['type','description','date','km','cost','mechanic','garage_name','next_km','next_date','notes'];
-        $sets = array_map(fn($f) => "$f = ?", $fields); $vals = array_map(fn($f) => $d[$f] ?? null, $fields); $vals[] = $id;
+        $sets = array_map(fn($f) => "$f = ?", $fields);
+        $vals = array_map(function($f) use ($d, $int_f, $float_f) {
+            $v = $d[$f] ?? null;
+            if ($v === '' || $v === null) return null;
+            if (in_array($f, $int_f)) return (int)$v;
+            if (in_array($f, $float_f)) return (float)$v;
+            return $v;
+        }, $fields);
+        $vals[] = $id;
         $pdo->prepare("UPDATE pf_maintenances SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals); gOk(['updated' => true]);
     }
     if ($method === 'DELETE') {
@@ -110,8 +128,17 @@ if ($action === 'parts') {
     }
     if ($method === 'PUT') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant'); $d = gBody();
+        $int_f = ['quantity']; $float_f = ['price'];
         $fields = ['brand','reference','name','category','price','quantity','unit','supplier','purchase_date','notes'];
-        $sets = array_map(fn($f) => "$f = ?", $fields); $vals = array_map(fn($f) => $d[$f] ?? null, $fields); $vals[] = $id;
+        $sets = array_map(fn($f) => "$f = ?", $fields);
+        $vals = array_map(function($f) use ($d, $int_f, $float_f) {
+            $v = $d[$f] ?? null;
+            if ($v === '' || $v === null) return null;
+            if (in_array($f, $int_f)) return (int)$v;
+            if (in_array($f, $float_f)) return (float)$v;
+            return $v;
+        }, $fields);
+        $vals[] = $id;
         $pdo->prepare("UPDATE pf_parts SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals); gOk(['updated' => true]);
     }
     if ($method === 'DELETE') {
