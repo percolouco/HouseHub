@@ -89,6 +89,8 @@ return [
     'mod_gifts_desc'     => 'Plan gifts for each child, for Christmas and birthdays.',
     'mod_budget_name'    => 'Budget',
     'mod_budget_desc'    => 'Track fixed expenses, income and family account balance.',
+    'mod_garage_name'    => 'Garage',
+    'mod_garage_desc'    => 'Track vehicle maintenance, parts used and costs.',
     'cta_open'           => 'Open',
     'cta_explore'        => 'Explore',
     'cta_view_lists'     => 'View lists',

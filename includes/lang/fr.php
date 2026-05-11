@@ -91,6 +91,8 @@ return [
     'mod_gifts_desc'     => 'Planifiez les cadeaux pour chaque enfant, pour Noël et les anniversaires.',
     'mod_budget_name'    => 'Budget',
     'mod_budget_desc'    => 'Suivi des dépenses fixes, revenus et équilibre du compte familial.',
+    'mod_garage_name'    => 'Garage',
+    'mod_garage_desc'    => 'Suivez l\'entretien de vos véhicules, les pièces utilisées et les coûts.',
     'cta_open'           => 'Ouvrir',
     'cta_explore'        => 'Explorer',
     'cta_view_lists'     => 'Voir les listes',

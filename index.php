@@ -34,43 +34,53 @@ require __DIR__ . '/header.php';
   <section class="pf-section">
     <h2 style="color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6);"><?= tr('home_modules_title') ?></h2>
 
+    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','garage']; ?>
     <div class="pf-modules-grid">
-      
+
+      <?php if (in_array('calendar', $mods)): ?>
       <a href="/family-calendar.php" class="pf-module-card">
         <div class="pf-card-icon">📅</div>
         <h3 class="pf-card-title"><?= tr('mod_calendar_name') ?></h3>
-        <div class="pf-card-desc">
-          <?= tr('mod_calendar_desc') ?>
-        </div>
+        <div class="pf-card-desc"><?= tr('mod_calendar_desc') ?></div>
         <span class="pf-card-cta"><?= tr('cta_open') ?></span>
       </a>
+      <?php endif; ?>
 
-      <a href="/holidays.php" class="pf-module-card">
-        <div class="pf-card-icon">🏖️</div>
-        <h3 class="pf-card-title"><?= tr('mod_holidays_name') ?></h3>
-        <div class="pf-card-desc">
-          <?= tr('mod_holidays_desc') ?>
-        </div>
-        <span class="pf-card-cta"><?= tr('cta_explore') ?></span>
-      </a>
-
-      <a href="/gift-list.php" class="pf-module-card">
-        <div class="pf-card-icon">🎁</div>
-        <h3 class="pf-card-title"><?= tr('mod_gifts_name') ?></h3>
-        <div class="pf-card-desc">
-          <?= tr('mod_gifts_desc') ?>
-        </div>
-        <span class="pf-card-cta"><?= tr('cta_view_lists') ?></span>
-      </a>
-
+      <?php if (in_array('budget', $mods)): ?>
       <a href="/budget.php" class="pf-module-card">
         <div class="pf-card-icon">💰</div>
         <h3 class="pf-card-title"><?= tr('mod_budget_name') ?></h3>
-        <div class="pf-card-desc">
-            <?= tr('mod_budget_desc') ?>
-        </div>
+        <div class="pf-card-desc"><?= tr('mod_budget_desc') ?></div>
         <span class="pf-card-cta"><?= tr('cta_manage') ?></span>
       </a>
+      <?php endif; ?>
+
+      <?php if (in_array('holidays', $mods)): ?>
+      <a href="/holidays.php" class="pf-module-card">
+        <div class="pf-card-icon">🏖️</div>
+        <h3 class="pf-card-title"><?= tr('mod_holidays_name') ?></h3>
+        <div class="pf-card-desc"><?= tr('mod_holidays_desc') ?></div>
+        <span class="pf-card-cta"><?= tr('cta_explore') ?></span>
+      </a>
+      <?php endif; ?>
+
+      <?php if (in_array('gifts', $mods)): ?>
+      <a href="/gift-list.php" class="pf-module-card">
+        <div class="pf-card-icon">🎁</div>
+        <h3 class="pf-card-title"><?= tr('mod_gifts_name') ?></h3>
+        <div class="pf-card-desc"><?= tr('mod_gifts_desc') ?></div>
+        <span class="pf-card-cta"><?= tr('cta_view_lists') ?></span>
+      </a>
+      <?php endif; ?>
+
+      <?php if (in_array('garage', $mods)): ?>
+      <a href="/garage.php" class="pf-module-card">
+        <div class="pf-card-icon">🚗</div>
+        <h3 class="pf-card-title"><?= tr('mod_garage_name') ?></h3>
+        <div class="pf-card-desc"><?= tr('mod_garage_desc') ?></div>
+        <span class="pf-card-cta"><?= tr('cta_open') ?></span>
+      </a>
+      <?php endif; ?>
 
     </div>
   </section>
