@@ -26,6 +26,7 @@ function navigate(page,params={}){
   else if(page==='vehicles')loadVehicles();
   else if(page==='vehicle')loadVehicleDetail(params.id);
   else if(page==='parts')loadParts();
+  else if(page==='maintenances-all')loadAllMaintenances();
 }
 
 // API
@@ -204,21 +205,37 @@ async function loadParts(){
     $('#all-parts-total').textContent=fmtPrice(total);
     $('#all-parts-count').textContent=list.length;
     if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">\ud83d\udd29</div><p>Aucune pi\u00e8ce</p></div>';return;}
-    el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Photo</th><th>Nom</th><th>V\u00e9hicule</th><th>Marque</th><th>R\u00e9f\u00e9rence</th><th>Cat\u00e9gorie</th><th>Prix unit.</th><th>Qt\u00e9</th><th>Total</th><th>Entretien</th><th></th></tr></thead><tbody>'+
-      list.map(p=>'<tr>'+
-        '<td>'+(p.photo?'<img class="part-thumb" src="'+UPLOADS+p.photo+'" alt="">':'--')+'</td>'+
-        '<td><strong>'+p.name+'</strong></td>'+
-        '<td>'+(p.vehicle_name?'<span class="badge badge-blue">'+p.vehicle_name+'</span>':'--')+'</td>'+
-        '<td>'+(p.brand||'--')+'</td>'+
-        '<td><code style="font-size:.75rem;color:var(--muted)">'+(p.reference||'--')+'</code></td>'+
-        '<td><span class="badge badge-gray">'+p.category+'</span></td>'+
-        '<td>'+fmtPrice(p.price)+'</td>'+
-        '<td>'+p.quantity+' '+p.unit+'</td>'+
-        '<td><strong>'+fmtPrice(parseFloat(p.price||0)*parseInt(p.quantity||1))+'</strong></td>'+
-        '<td>'+(p.maintenance_type?p.maintenance_type+' ('+fmtDate(p.maintenance_date)+')':'--')+'</td>'+
-        '<td><button class="btn btn-danger btn-sm btn-icon" onclick="deletePart('+p.id+')" title="Supprimer">\ud83d\uddd1\ufe0f</button></td>'+
-      '</tr>').join('')+
-    '</tbody></table></div>';
+    // Grouper par v\u00e9hicule
+    const byVehicle={};
+    list.forEach(p=>{
+      const key=p.vehicle_name||'Sans v\u00e9hicule';
+      if(!byVehicle[key])byVehicle[key]=[];
+      byVehicle[key].push(p);
+    });
+    let html='';
+    for(const[vname,parts] of Object.entries(byVehicle)){
+      const vtotal=parts.reduce((s,p)=>s+parseFloat(p.price||0)*parseInt(p.quantity||1),0);
+      html+='<div style="margin-bottom:2rem">'+
+        '<div class="card-header" style="margin-bottom:.5rem">'+
+          '<h3 style="font-size:1rem;font-weight:700">\ud83d\ude97 '+escHtml(vname)+'</h3>'+
+          '<span style="margin-left:auto;color:var(--muted);font-size:.85rem">'+parts.length+' pi\u00e8ces \u00b7 '+fmtPrice(vtotal)+'</span>'+
+        '</div>'+
+        '<div class="table-wrap"><table><thead><tr><th>Photo</th><th>Nom</th><th>Marque</th><th>R\u00e9f\u00e9rence</th><th>Cat\u00e9gorie</th><th>Prix unit.</th><th>Qt\u00e9</th><th>Total</th><th>Entretien</th><th></th></tr></thead><tbody>'+
+        parts.map(p=>'<tr>'+
+          '<td>'+(p.photo?'<img class="part-thumb" src="'+UPLOADS+p.photo+'" alt="">':'--')+'</td>'+
+          '<td><strong>'+escHtml(p.name)+'</strong></td>'+
+          '<td>'+(p.brand||'--')+'</td>'+
+          '<td><code style="font-size:.75rem;color:var(--muted)">'+(p.reference||'--')+'</code></td>'+
+          '<td><span class="badge badge-gray">'+p.category+'</span></td>'+
+          '<td>'+fmtPrice(p.price)+'</td>'+
+          '<td>'+p.quantity+' '+p.unit+'</td>'+
+          '<td><strong>'+fmtPrice(parseFloat(p.price||0)*parseInt(p.quantity||1))+'</strong></td>'+
+          '<td>'+(p.maintenance_type?p.maintenance_type+' ('+fmtDate(p.maintenance_date)+')':'--')+'</td>'+
+          '<td><button class="btn btn-danger btn-sm btn-icon" onclick="deletePart('+p.id+')" title="Supprimer">\ud83d\uddd1\ufe0f</button></td>'+
+        '</tr>').join('')+
+        '</tbody></table></div></div>';
+    }
+    el.innerHTML=html;
   }catch(e){toast(e.message,'error');}
 }
 
@@ -360,6 +377,48 @@ function previewPhoto(inputId,previewId){
   reader.onload=e=>{const img=document.getElementById(previewId);img.src=e.target.result;img.style.display='block';};
   reader.readAsDataURL(file);
 }
+
+// ALL MAINTENANCES
+async function loadAllMaintenances(){
+  try{
+    // Récupérer tous les véhicules puis leurs maintenances
+    const vehicles=await api('vehicles');
+    const el=$('#all-maintenances-list');
+    if(!vehicles.length){el.innerHTML='<div class="empty-state"><div class="icon">🔧</div><p>Aucun véhicule</p></div>';return;}
+    let totalAll=0, countAll=0;
+    let html='';
+    for(const v of vehicles){
+      const mlist=await api('maintenances',undefined,null,'&vehicle_id='+v.id);
+      if(!mlist.length)continue;
+      const total=mlist.reduce((s,m)=>s+parseFloat(m.cost||0)+parseFloat(m.parts_cost||0),0);
+      totalAll+=total; countAll+=mlist.length;
+      html+='<div style="margin-bottom:2rem">'+
+        '<div class="card-header" style="margin-bottom:.5rem">'+
+          '<h3 style="font-size:1rem;font-weight:700">🚗 '+v.name+'</h3>'+
+          (v.license_plate?'<span class="plate">'+v.license_plate+'</span>':'')+
+          '<span style="margin-left:auto;color:var(--muted);font-size:.85rem">'+mlist.length+' entretiens · '+fmtPrice(total)+'</span>'+
+        '</div>'+
+        '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Km</th><th>Coût M.O.</th><th>Pièces</th><th>Total</th><th>Mécanicien</th><th></th></tr></thead><tbody>'+
+        mlist.map(m=>'<tr>'+
+          '<td>'+fmtDate(m.date)+'</td>'+
+          '<td><span class="badge badge-gray">'+m.type+'</span></td>'+
+          '<td>'+escHtml(m.description||'--')+'</td>'+
+          '<td>'+(m.km?fmt(m.km)+' km':'--')+'</td>'+
+          '<td>'+fmtPrice(m.cost)+'</td>'+
+          '<td>'+(m.parts_count>0?m.parts_count+' ('+fmtPrice(m.parts_cost)+')':'--')+'</td>'+
+          '<td><strong>'+fmtPrice(parseFloat(m.cost||0)+parseFloat(m.parts_cost||0))+'</strong></td>'+
+          '<td>'+(m.mechanic||'--')+'</td>'+
+          '<td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteMaintenance('+m.id+')" title="Supprimer">🗑️</button></td>'+
+        '</tr>').join('')+
+        '</tbody></table></div></div>';
+    }
+    $('#all-maint-count').textContent=countAll;
+    $('#all-maint-total').textContent=fmtPrice(totalAll);
+    el.innerHTML=html||'<div class="empty-state"><div class="icon">🔧</div><p>Aucun entretien</p></div>';
+  }catch(e){console.error(e);}
+}
+
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
 // INIT
 document.addEventListener('DOMContentLoaded',()=>{
