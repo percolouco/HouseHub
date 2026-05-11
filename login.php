@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = tr('error_missing_fields');
     } else {
         $stmt = $meta_pdo->prepare("
-            SELECT u.id, u.username, u.password_hash, u.display_name, u.family_id, u.is_admin, u.is_active, u.lang, f.db_name, f.is_active as family_active
+            SELECT u.id, u.username, u.password_hash, u.display_name, u.family_id, u.is_admin, u.is_active, u.lang,
+                   f.db_name, f.is_active as family_active, f.enabled_modules
             FROM users u
             LEFT JOIN families f ON f.id = u.family_id
             WHERE u.username = ?
@@ -42,8 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'family_id'    => (int)$user['family_id'],
                     'is_admin'     => (bool)$user['is_admin'],
                 ];
-                $_SESSION['family_db'] = $user['db_name'];
-                $_SESSION['app_lang']  = $user['lang'] ?? 'fr';
+                $_SESSION['family_db']       = $user['db_name'];
+                $_SESSION['app_lang']        = $user['lang'] ?? 'fr';
+                $_SESSION['enabled_modules'] = json_decode($user['enabled_modules'] ?? '["calendar","budget","holidays","gifts"]', true);
                 $redirectTo = $_GET['redirect'] ?? '/index.php';
                 header('Location: ' . $redirectTo);
                 exit;

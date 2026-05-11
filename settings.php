@@ -14,6 +14,16 @@ $success = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if ($action === 'set_modules' && $family_id) {
+        $all = ['calendar', 'budget', 'holidays', 'gifts'];
+        $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
+        if (empty($enabled)) $enabled = $all; // sécurité : garder au moins tous les modules
+        $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
+                 ->execute([json_encode($enabled), $family_id]);
+        $_SESSION['enabled_modules'] = $enabled;
+        $success = "Modules mis à jour.";
+    }
+
     if ($action === 'set_lang') {
         $lang = $_POST['lang'] ?? 'fr';
         if (in_array($lang, ['fr', 'ca', 'en'])) {
@@ -134,6 +144,38 @@ require __DIR__ . '/header.php';
       <?php endforeach; ?>
     </form>
   </section>
+
+  <!-- ── Modules ────────────────────────────────────────────────────────── -->
+  <?php if ($family_id): ?>
+  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:6px">🧩 Modules actifs</h2>
+    <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px">Choisissez les modules visibles dans la navigation (partagé avec tous les membres de l'espace).</p>
+    <?php
+      $enabledMods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts'];
+      $allModules = [
+          'calendar' => ['icon' => '📅', 'label' => tr('menu_calendar')],
+          'budget'   => ['icon' => '💰', 'label' => tr('menu_budget')],
+          'holidays' => ['icon' => '🏖️', 'label' => tr('menu_holidays')],
+          'gifts'    => ['icon' => '🎁', 'label' => tr('menu_gifts')],
+      ];
+    ?>
+    <form method="post">
+      <input type="hidden" name="action" value="set_modules">
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+        <?php foreach ($allModules as $key => $mod): $active = in_array($key, $enabledMods); ?>
+        <label style="display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid <?= $active ? '#2563eb' : '#e2e8f0' ?>;border-radius:10px;cursor:pointer;background:<?= $active ? '#eff6ff' : '#f8fafc' ?>;transition:all .15s">
+          <input type="checkbox" name="mod_<?= $key ?>" <?= $active ? 'checked' : '' ?>
+            style="width:18px;height:18px;accent-color:#2563eb;cursor:pointer"
+            onchange="this.closest('label').style.borderColor=this.checked?'#2563eb':'#e2e8f0';this.closest('label').style.background=this.checked?'#eff6ff':'#f8fafc'">
+          <span style="font-size:1.3rem"><?= $mod['icon'] ?></span>
+          <span style="font-weight:600;font-size:0.95rem"><?= $mod['label'] ?></span>
+        </label>
+        <?php endforeach; ?>
+      </div>
+      <button type="submit" class="pf-btn">Enregistrer</button>
+    </form>
+  </section>
+  <?php endif; ?>
 
   <!-- ── Profil ──────────────────────────────────────────────────────────── -->
   <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">

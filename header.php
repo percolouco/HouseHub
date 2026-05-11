@@ -43,12 +43,13 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     <a href="/index.php" class="pf-logo">HouseHub</a>
 
     <?php if (isset($_SESSION['user'])): ?>
+    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts']; ?>
     <nav class="pf-nav">
       <a href="/index.php" class="pf-nav-link <?= $activePage === 'home' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_home') ?></a>
-      <a href="/family-calendar.php" class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_calendar') ?></a>
-      <a href="/budget.php" class="pf-nav-link <?= $activePage === 'budget' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_budget') ?></a>
-      <a href="/holidays.php" class="pf-nav-link <?= $activePage === 'holidays' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_holidays') ?></a>
-      <a href="/gift-list.php" class="pf-nav-link <?= $activePage === 'gift-list' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_gifts') ?></a>
+      <?php if (in_array('calendar',  $mods)): ?><a href="/family-calendar.php" class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_calendar') ?></a><?php endif; ?>
+      <?php if (in_array('budget',    $mods)): ?><a href="/budget.php" class="pf-nav-link <?= $activePage === 'budget' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_budget') ?></a><?php endif; ?>
+      <?php if (in_array('holidays',  $mods)): ?><a href="/holidays.php" class="pf-nav-link <?= $activePage === 'holidays' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_holidays') ?></a><?php endif; ?>
+      <?php if (in_array('gifts',     $mods)): ?><a href="/gift-list.php" class="pf-nav-link <?= $activePage === 'gift-list' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_gifts') ?></a><?php endif; ?>
     </nav>
     <?php endif; ?>
 
@@ -86,9 +87,9 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     <div class="pf-mobile-menu-body">
         <a href="/index.php" class="pf-mobile-nav-link">🏠 <?= tr('menu_home') ?></a>
         <a href="/family-calendar.php" class="pf-mobile-nav-link">📅 <?= tr('menu_calendar') ?></a>
-        <a href="/budget.php" class="pf-mobile-nav-link">💰 <?= tr('menu_budget') ?></a>
-        <a href="/holidays.php" class="pf-mobile-nav-link">🏖️ <?= tr('menu_holidays') ?></a>
-        <a href="/gift-list.php" class="pf-mobile-nav-link">🎁 <?= tr('menu_gifts') ?></a>
+        <?php if (in_array('budget',   $mods)): ?><a href="/budget.php" class="pf-mobile-nav-link">💰 <?= tr('menu_budget') ?></a><?php endif; ?>
+        <?php if (in_array('holidays', $mods)): ?><a href="/holidays.php" class="pf-mobile-nav-link">🏖️ <?= tr('menu_holidays') ?></a><?php endif; ?>
+        <?php if (in_array('gifts',    $mods)): ?><a href="/gift-list.php" class="pf-mobile-nav-link">🎁 <?= tr('menu_gifts') ?></a><?php endif; ?>
         <a href="/settings.php" class="pf-mobile-nav-link">⚙️ Paramètres</a>
         <?php if (!empty($_SESSION['user']['is_admin'])): ?>
         <a href="/admin/" class="pf-mobile-nav-link" style="color:#2563eb">🛡️ Admin</a>
