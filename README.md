@@ -20,9 +20,32 @@ docker compose up -d --build
 # https://househub.nas.percolouco.com
 ```
 
-La base de données est **initialisée automatiquement** depuis `schema.sql` au premier démarrage.
+La base de données meta (`househub_meta`) et les permissions sont **initialisées automatiquement** au premier démarrage via `docker/init/00-setup.sql`.
 
-Compte par défaut : `admin` / `password` → **à changer immédiatement** dans la table `pf_users`.
+Aucun compte par défaut — le premier utilisateur s'inscrit via `/register.php` et choisit de créer un espace familial.
+
+## 👥 Gestion multi-tenant
+
+HouseHub supporte plusieurs familles indépendantes sur la même instance :
+
+| URL | Description |
+|-----|-------------|
+| `/register.php` | Créer un compte + nouvel espace, ou rejoindre un espace existant via code |
+| `/login.php` | Connexion |
+| `/settings.php` | Paramètres du compte : profil, mot de passe, code d'invitation, membres |
+| `/admin/` | Panneau d'administration (admin uniquement) |
+
+### Inviter quelqu'un dans son espace
+1. Aller sur `/settings.php` → copier le code d'invitation
+2. La personne va sur `/register.php` → onglet "Rejoindre" → coller le code
+3. Les deux comptes partagent le même environnement de données
+
+### Rôle admin
+Le premier utilisateur inscrit doit être promu admin manuellement :
+```sql
+UPDATE househub_meta.users SET is_admin = 1 WHERE username = 'ton_username';
+```
+L'admin peut ensuite promouvoir/désactiver d'autres utilisateurs depuis `/admin/`.
 
 ---
 

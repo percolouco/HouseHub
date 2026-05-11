@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = tr('error_missing_fields');
     } else {
         $stmt = $meta_pdo->prepare("
-            SELECT u.id, u.username, u.password_hash, u.display_name, u.family_id, f.db_name
+            SELECT u.id, u.username, u.password_hash, u.display_name, u.family_id, u.is_admin, u.is_active, f.db_name, f.is_active as family_active
             FROM users u
             LEFT JOIN families f ON f.id = u.family_id
             WHERE u.username = ?
@@ -30,16 +30,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
-            $_SESSION['user'] = [
-                'id'           => (int)$user['id'],
-                'username'     => $user['username'],
-                'display_name' => $user['display_name'],
-                'family_id'    => (int)$user['family_id'],
-            ];
-            $_SESSION['family_db'] = $user['db_name'];
-            $redirectTo = $_GET['redirect'] ?? '/index.php';
-            header('Location: ' . $redirectTo);
-            exit;
+            if (!$user['is_active']) {
+                $error = "Compte désactivé. Contactez l'administrateur.";
+            } elseif ($user['family_id'] && !$user['family_active']) {
+                $error = "Espace familial désactivé. Contactez l'administrateur.";
+            } else {
+                $_SESSION['user'] = [
+                    'id'           => (int)$user['id'],
+                    'username'     => $user['username'],
+                    'display_name' => $user['display_name'],
+                    'family_id'    => (int)$user['family_id'],
+                    'is_admin'     => (bool)$user['is_admin'],
+                ];
+                $_SESSION['family_db'] = $user['db_name'];
+                $redirectTo = $_GET['redirect'] ?? '/index.php';
+                header('Location: ' . $redirectTo);
+                exit;
+            }
         } else {
             $error = tr('error_invalid_credentials');
         }
