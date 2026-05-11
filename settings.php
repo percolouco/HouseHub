@@ -114,11 +114,14 @@ require __DIR__ . '/header.php';
     <form method="post" style="display:flex;gap:10px;flex-wrap:wrap">
       <input type="hidden" name="action" value="set_lang">
       <?php
-        $senyera = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 12" width="20" height="13" style="vertical-align:middle;border-radius:2px;margin-right:5px"><rect width="18" height="12" fill="#FCDD09"/><rect y="1.33" width="18" height="1.33" fill="#DA121A"/><rect y="4" width="18" height="1.33" fill="#DA121A"/><rect y="6.67" width="18" height="1.33" fill="#DA121A"/><rect y="9.33" width="18" height="1.33" fill="#DA121A"/></svg>';
+        $s = 'style="vertical-align:middle;border-radius:2px;margin-right:5px"';
+        $fr_flag = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 12" width="20" height="13" '.$s.'><rect width="6" height="12" fill="#002395"/><rect x="6" width="6" height="12" fill="#fff"/><rect x="12" width="6" height="12" fill="#ED2939"/></svg>';
+        $en_flag = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30" width="20" height="13" '.$s.'><rect width="60" height="30" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 V30 M0,15 H60" stroke="#fff" stroke-width="10"/><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" stroke-width="6"/></svg>';
+        $senyera  = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 12" width="20" height="13" '.$s.'><rect width="18" height="12" fill="#FCDD09"/><rect y="1.33" width="18" height="1.33" fill="#DA121A"/><rect y="4" width="18" height="1.33" fill="#DA121A"/><rect y="6.67" width="18" height="1.33" fill="#DA121A"/><rect y="9.33" width="18" height="1.33" fill="#DA121A"/></svg>';
         $langs = [
-            'fr' => ['flag' => '🇫🇷', 'label' => 'Français'],
-            'en' => ['flag' => '🇬🇧', 'label' => 'English'],
-            'ca' => ['flag' => $senyera, 'label' => 'Català'],
+            'fr' => ['flag' => $fr_flag, 'label' => 'Français'],
+            'en' => ['flag' => $en_flag, 'label' => 'English'],
+            'ca' => ['flag' => $senyera,  'label' => 'Català'],
         ];
         $currentLang = $_SESSION['app_lang'] ?? 'fr';
         foreach ($langs as $code => $lang):
