@@ -12,6 +12,8 @@ services:
       DB_NAME: ${DB_NAME:-househub}
       DB_USER: ${DB_USER:-househub}
       DB_PASS: ${DB_PASS:-changeme}
+    volumes:
+      - househub_uploads:/uploads
     networks:
       - househub_net
       - proxy
@@ -34,6 +36,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASS:-changeme}
     volumes:
       - househub_db_data:/var/lib/mysql
+      - househub_uploads:/uploads
       - ./docker/init:/docker-entrypoint-initdb.d:ro
     networks:
       - househub_net
@@ -45,6 +48,7 @@ services:
 
 volumes:
   househub_db_data:
+  househub_uploads:
 
 networks:
   househub_net:

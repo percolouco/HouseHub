@@ -1,5 +1,5 @@
 🦙 HouseHub OS
-Système de gestion familiale sur-mesure : Budget, Calendrier, Voyages et Cadeaux.
+Système de gestion familiale sur-mesure : Budget, Calendrier, Voyages, Cadeaux et Garage.
 
 ## 🚀 Déploiement (Docker)
 
@@ -32,8 +32,9 @@ HouseHub supporte plusieurs familles indépendantes sur la même instance :
 |-----|-------------|
 | `/register.php` | Créer un compte + nouvel espace, ou rejoindre un espace existant via code |
 | `/login.php` | Connexion |
-| `/settings.php` | Paramètres du compte : profil, mot de passe, code d'invitation, membres |
+| `/settings.php` | Paramètres : profil, mot de passe, langue, modules actifs, code d'invitation |
 | `/admin/` | Panneau d'administration (admin uniquement) |
+| `/garage.php` | Module Garage — véhicules, entretiens, pièces |
 
 ### Inviter quelqu'un dans son espace
 1. Aller sur `/settings.php` → copier le code d'invitation
@@ -46,6 +47,18 @@ Le premier utilisateur inscrit doit être promu admin manuellement :
 UPDATE househub_meta.users SET is_admin = 1 WHERE username = 'ton_username';
 ```
 L'admin peut ensuite promouvoir/désactiver d'autres utilisateurs depuis `/admin/`.
+
+## 🧩 Modules
+
+| Module | Route | Description |
+|--------|-------|-------------|
+| Calendrier | `/family-calendar.php` | Congés, modes de garde, planning hebdo |
+| Budget | `/budget.php` | Suivi mensuel, prévisionnel, épargne |
+| Voyages | `/holidays.php` | Roadtrips, cartographie, météo |
+| Cadeaux | `/gift-list.php` | Noël, anniversaires, Tricount |
+| Garage | `/garage.php` | Véhicules, entretiens, pièces détachées |
+
+Les modules sont activables/désactivables par famille depuis `/settings.php`.
 
 ---
 

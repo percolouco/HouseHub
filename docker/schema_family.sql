@@ -235,3 +235,61 @@ VALUES (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/ig
 -- Personnes (IDs fixes correspondant aux constantes dans config.php)
 INSERT IGNORE INTO pf_people (id, name) VALUES (2, 'Alex');
 INSERT IGNORE INTO pf_people (id, name) VALUES (3, 'Laia');
+
+-- ─── Garage Manager ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_vehicles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  brand VARCHAR(100) NOT NULL,
+  model VARCHAR(100) NOT NULL,
+  year INT DEFAULT NULL,
+  license_plate VARCHAR(50) DEFAULT NULL,
+  vin VARCHAR(100) DEFAULT NULL,
+  fuel_type VARCHAR(50) DEFAULT 'Essence',
+  color VARCHAR(50) DEFAULT NULL,
+  purchase_date DATE DEFAULT NULL,
+  purchase_price DECIMAL(10,2) DEFAULT NULL,
+  current_km INT DEFAULT 0,
+  photo VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_maintenances (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT NOT NULL,
+  type VARCHAR(100) NOT NULL,
+  description TEXT DEFAULT NULL,
+  date DATE NOT NULL,
+  km INT DEFAULT NULL,
+  cost DECIMAL(10,2) DEFAULT 0,
+  mechanic VARCHAR(100) DEFAULT NULL,
+  garage_name VARCHAR(100) DEFAULT NULL,
+  next_km INT DEFAULT NULL,
+  next_date DATE DEFAULT NULL,
+  invoice_photo VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_parts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT DEFAULT NULL,
+  maintenance_id INT DEFAULT NULL,
+  brand VARCHAR(100) DEFAULT NULL,
+  reference VARCHAR(100) DEFAULT NULL,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(100) DEFAULT 'Autre',
+  price DECIMAL(10,2) DEFAULT 0,
+  quantity INT DEFAULT 1,
+  unit VARCHAR(50) DEFAULT 'pièce',
+  supplier VARCHAR(100) DEFAULT NULL,
+  purchase_date DATE DEFAULT NULL,
+  photo VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE SET NULL,
+  FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
