@@ -1,0 +1,52 @@
+services:
+
+  househub:
+    build: .
+    container_name: househub
+    restart: unless-stopped
+    depends_on:
+      househub-db:
+        condition: service_healthy
+    environment:
+      DB_HOST: househub-db
+      DB_NAME: ${DB_NAME:-househub}
+      DB_USER: ${DB_USER:-househub}
+      DB_PASS: ${DB_PASS:-changeme}
+    networks:
+      - househub_net
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.househub.rule=Host(`househub.nas.percolouco.com`)"
+      - "traefik.http.routers.househub.entrypoints=websecure"
+      - "traefik.http.routers.househub.tls=true"
+      - "traefik.http.routers.househub.tls.certresolver=letsencrypt"
+      - "traefik.http.services.househub.loadbalancer.server.port=80"
+
+  househub-db:
+    image: mariadb:11
+    container_name: househub-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootchangeme}
+      MYSQL_DATABASE: ${DB_NAME:-househub}
+      MYSQL_USER: ${DB_USER:-househub}
+      MYSQL_PASSWORD: ${DB_PASS:-changeme}
+    volumes:
+      - househub_db_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    networks:
+      - househub_net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  househub_db_data:
+
+networks:
+  househub_net:
+  proxy:
+    external: true

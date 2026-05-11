@@ -1,6 +1,31 @@
 🦙 HouseHub OS
 Système de gestion familiale sur-mesure : Budget, Calendrier, Voyages et Cadeaux.
 
+## 🚀 Déploiement (Docker)
+
+**Prérequis** : Docker, Docker Compose, Traefik sur le réseau `proxy`.
+
+```bash
+# 1. Cloner le repo
+git clone http://<gitea>/perco/HouseHub.git && cd HouseHub
+
+# 2. Créer le fichier d'environnement
+cp .env.example .env
+# Éditer .env pour changer les mots de passe
+
+# 3. Lancer
+docker compose up -d --build
+
+# 4. Accéder à l'app
+# https://househub.nas.percolouco.com
+```
+
+La base de données est **initialisée automatiquement** depuis `schema.sql` au premier démarrage.
+
+Compte par défaut : `admin` / `password` → **à changer immédiatement** dans la table `pf_users`.
+
+---
+
 📝 Présentation du projet
 HouseHub est une application web privée conçue pour centraliser l'organisation de la tribu. Elle repose sur une stack légère (PHP natif / Vanilla JS) pour garantir rapidité et portabilité, avec un support complet de l'internationalisation (FR/CA).
 
