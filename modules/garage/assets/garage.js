@@ -466,10 +466,11 @@ function openEditVehicle(id){
   api('vehicles','GET',null,'&id='+id).then(v=>{
     $('#form-vehicle-id').value=v.id;
     $('#modal-vehicle-title').textContent='Modifier le véhicule';
-    ['name','brand','model','year','license_plate','vin','fuel_type','color','purchase_date','purchase_price','current_km','notes'].forEach(f=>{
+    ['name','brand','model','year','license_plate','vin','color','purchase_date','purchase_price','current_km','notes'].forEach(f=>{
       const el=$('#vehicle-'+f.replace(/_/g,'-'));
       if(el)el.value=v[f]??'';
     });
+    setSelectVal('vehicle-fuel-type', v.fuel_type);
     if(v.photo){$('#vehicle-photo-preview').src=UPLOADS+v.photo;$('#vehicle-photo-preview').style.display='block';}
     else{$('#vehicle-photo-preview').style.display='none';}
     openModal('modal-vehicle');
@@ -508,12 +509,18 @@ function openAddMaintenance(){
   $('#maintenance-date').value=new Date().toISOString().slice(0,10);
   openModal('modal-maintenance');
 }
+function setSelectVal(elId, val){
+  const el=document.getElementById(elId); if(!el||val==null)return;
+  el.value=val;
+  if(el.value!==String(val)&&val!==''){const o=new Option(val,val);el.add(o);el.value=val;}
+}
 function openEditMaintenance(id){
   api('maintenances','GET',null,'&id='+id).then(m=>{
     $('#form-maintenance-id').value=m.id;
     $('#maintenance-vehicle-id').value=m.vehicle_id;
     $('#modal-maintenance-title').textContent="Modifier l'entretien";
-    const map={type:'maintenance-type',description:'maintenance-description',date:'maintenance-date',
+    setSelectVal('maintenance-type', m.type);
+    const map={description:'maintenance-description',date:'maintenance-date',
       km:'maintenance-km',cost:'maintenance-cost',mechanic:'maintenance-mechanic',
       garage_name:'maintenance-garage',next_date:'maintenance-next-date',next_km:'maintenance-next-km',notes:'maintenance-notes'};
     for(const[k,elId] of Object.entries(map)){const el=document.getElementById(elId);if(el)el.value=m[k]??'';}
@@ -558,8 +565,9 @@ function openEditPart(id){
     $('#part-vehicle-id').value=p.vehicle_id||'';
     $('#part-maintenance-id').value=p.maintenance_id||'';
     $('#modal-part-title').textContent='Modifier la pièce';
-    const map={name:'part-name',category:'part-category',brand:'part-brand',reference:'part-reference',price:'part-price',quantity:'part-quantity',notes:'part-notes'};
+    const map={name:'part-name',brand:'part-brand',reference:'part-reference',price:'part-price',quantity:'part-quantity',notes:'part-notes'};
     for(const[k,elId] of Object.entries(map)){const el=document.getElementById(elId);if(el)el.value=p[k]??'';}
+    setSelectVal('part-category', p.category);
     const ht=document.getElementById('part-prix-ht');if(ht)ht.checked=false;
     const prev=document.getElementById('part-ttc-preview');if(prev)prev.style.display='none';
     if(p.photo){$('#part-photo-preview').src=UPLOADS+p.photo;$('#part-photo-preview').style.display='block';}

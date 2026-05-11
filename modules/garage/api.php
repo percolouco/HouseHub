@@ -109,6 +109,8 @@ if ($action === 'maintenances') {
     }
     if ($method === 'PUT') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant'); $d = gBody();
+        if (empty($d['type'])) gErr('Le type est requis');
+        if (empty($d['date'])) gErr('La date est requise');
         $int_f = ['km','next_km']; $float_f = ['cost'];
         $fields = ['type','description','date','km','cost','mechanic','garage_name','next_km','next_date','notes'];
         $sets = array_map(fn($f) => "$f = ?", $fields);
