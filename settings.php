@@ -17,11 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'set_modules' && $family_id) {
         $all = ['calendar', 'budget', 'holidays', 'gifts'];
         $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
-        if (empty($enabled)) $enabled = $all; // sécurité : garder au moins tous les modules
-        $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
-                 ->execute([json_encode($enabled), $family_id]);
-        $_SESSION['enabled_modules'] = $enabled;
-        $success = "Modules mis à jour.";
+        if (empty($enabled)) {
+            $error = "Vous devez garder au moins un module actif.";
+        } else {
+            $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
+                     ->execute([json_encode($enabled), $family_id]);
+            $_SESSION['enabled_modules'] = $enabled;
+            $success = "Modules mis à jour.";
+        }
     }
 
     if ($action === 'set_lang') {
