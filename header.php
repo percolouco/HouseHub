@@ -56,7 +56,11 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     <?php endif; ?>
 
     <div class="pf-header-right">
-      <button class="theme-toggle" id="theme-toggle" title="Mode sombre / clair" onclick="toggleTheme()">🌙</button>
+      <button class="theme-switch" id="theme-toggle" onclick="toggleTheme()" title="Thème sombre / clair" aria-label="Basculer le thème">
+        <span class="ts-sun" aria-hidden="true">☀️</span>
+        <span class="ts-track"><span class="ts-thumb"></span></span>
+        <span class="ts-moon" aria-hidden="true">🌙</span>
+      </button>
 
       <?php if (isset($_SESSION['user'])): ?>
         <div class="pf-desktop-actions" style="display: flex; align-items: center; gap: 10px; border-left: 1px solid #cbd5e1; padding-left: 15px;">
@@ -121,19 +125,12 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         return window.I18N[key] || key;
     }
 
-    // Thème clair/sombre
+    // Thème clair/sombre — état visuel géré entièrement par CSS via [data-theme="dark"]
     function toggleTheme(){
-      const html=document.documentElement;
-      const dark=html.getAttribute('data-theme')==='dark';
-      html.setAttribute('data-theme',dark?'light':'dark');
+      const dark=document.documentElement.getAttribute('data-theme')==='dark';
+      document.documentElement.setAttribute('data-theme',dark?'light':'dark');
       localStorage.setItem('hh-theme',dark?'light':'dark');
-      const btn=document.getElementById('theme-toggle');
-      if(btn)btn.textContent=dark?'🌙':'☀️';
     }
-    document.addEventListener('DOMContentLoaded',function(){
-      const btn=document.getElementById('theme-toggle');
-      if(btn)btn.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';
-    });
 
     // Gestion du menu mobile (Off-Canvas Sidebar)
     <?php if (isset($_SESSION['user'])): ?>

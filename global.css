@@ -739,13 +739,28 @@ p {
 [data-theme="dark"] .btn-icon-action.edit:hover   { background: rgba(59,130,246,.15); }
 [data-theme="dark"] .btn-icon-action.delete:hover { background: rgba(239,68,68,.1); }
 
-/* Toggle thème */
-.theme-toggle {
-  background: none; border: 1px solid var(--border-light);
-  border-radius: 8px; cursor: pointer; font-size: 1rem; line-height: 1;
-  padding: .28rem .45rem; color: var(--text-muted);
-  transition: background .15s, color .15s;
+/* ─── Pill toggle thème ────────────────────────────────────── */
+.theme-switch {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: none; cursor: pointer;
+  padding: 3px 5px; border-radius: 8px; transition: background .15s;
 }
-.theme-toggle:hover { background: #f1f5f9; color: var(--text-main); }
-[data-theme="dark"] .theme-toggle { color: var(--text-muted); }
-[data-theme="dark"] .theme-toggle:hover { background: rgba(255,255,255,.08); color: var(--text-main); }
+.theme-switch:hover { background: #f1f5f9; }
+[data-theme="dark"] .theme-switch:hover { background: rgba(255,255,255,.08); }
+.ts-sun, .ts-moon { font-size: .85rem; line-height: 1; transition: opacity .2s; user-select: none; }
+[data-theme="dark"] .ts-sun { opacity: .3; }
+                    .ts-moon { opacity: .3; }
+[data-theme="dark"] .ts-moon { opacity: 1; }
+.ts-track {
+  position: relative; width: 36px; height: 20px;
+  background: #cbd5e1; border-radius: 999px;
+  flex-shrink: 0; transition: background .25s;
+}
+[data-theme="dark"] .ts-track { background: #2563eb; }
+.ts-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+}
+[data-theme="dark"] .ts-thumb { transform: translateX(16px); }
