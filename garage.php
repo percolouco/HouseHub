@@ -96,7 +96,7 @@ require __DIR__ . '/header.php';
       <!-- Formulaire inline ajout pièce -->
       <div id="inline-part-form" style="display:none;background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:1.25rem 1.5rem">
         <p style="font-size:.8rem;font-weight:600;color:#64748b;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em">🔄 Réutiliser une pièce connue</p>
-        <div id="known-parts-list" style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem"></div>
+        <div id="known-parts-list"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
           <div class="form-group"><label class="form-label">Nom *</label><input class="form-control" id="ipart-name" placeholder="Filtre à huile"></div>
           <div class="form-group"><label class="form-label">Référence</label><input class="form-control" id="ipart-reference" placeholder="Ex: 06A115561B" style="font-family:monospace"></div>
