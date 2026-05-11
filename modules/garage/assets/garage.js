@@ -300,21 +300,32 @@ async function loadKnownParts(vehicleId){
     const parts=await api('parts','GET',null,'&vehicle_id='+vehicleId);
     const el=document.getElementById('known-parts-list');
     if(!el)return;
-    if(!parts.length){el.innerHTML='<span style="color:var(--muted);font-size:.8rem">Aucune pièce connue</span>';return;}
+    if(!parts.length){el.innerHTML='<p style="color:var(--muted);font-size:.8rem;margin-bottom:.75rem">Aucune pièce connue pour ce véhicule</p>';return;}
     const seen=new Set();
-    const unique=parts.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;}).slice(0,15);
-    el.innerHTML=unique.map(p=>
-      '<button class="badge badge-gray" style="cursor:pointer;border:none;padding:.3rem .6rem;font-size:.78rem" '+
-      'data-name="'+escHtml(p.name)+'" data-brand="'+escHtml(p.brand||'')+'" data-ref="'+escHtml(p.reference||'')+'" data-price="'+p.price+'">'+escHtml(p.name)+'</button>'
-    ).join('');
-    $$('button[data-name]',el).forEach(btn=>btn.addEventListener('click',()=>{
-      const n=document.getElementById('ipart-name');const b=document.getElementById('ipart-brand');
-      const r=document.getElementById('ipart-reference');const pr=document.getElementById('ipart-price');
-      if(n)n.value=btn.dataset.name;
-      if(b)b.value=btn.dataset.brand;
-      if(r)r.value=btn.dataset.ref;
-      if(pr){pr.value=btn.dataset.price;updateIPriceTTC();}
-    }));
+    const unique=parts.filter(p=>{if(seen.has(p.name))return false;seen.add(p.name);return true;});
+    const wrap=document.createElement('div');
+    wrap.className='scroll-list';
+    unique.forEach((p,i)=>{
+      const lbl=document.createElement('label');
+      lbl.className='scroll-list-item';
+      lbl.innerHTML=
+        '<input type="radio" name="_prefill" value="'+i+'" style="width:auto;background:none;border:none;padding:0;accent-color:var(--primary)">'+
+        '<span class="item-name">'+escHtml(p.name)+'</span>'+
+        (p.reference?'<span class="item-ref">'+escHtml(p.reference)+'</span>':'')+
+        (p.brand?'<span class="item-brand">'+escHtml(p.brand)+'</span>':'')+
+        '<span class="item-price">'+fmtPrice(p.price)+'</span>';
+      lbl.querySelector('input').addEventListener('change',()=>{
+        const n=document.getElementById('ipart-name');const b=document.getElementById('ipart-brand');
+        const r=document.getElementById('ipart-reference');const pr=document.getElementById('ipart-price');
+        if(n)n.value=p.name;
+        if(b)b.value=p.brand||'';
+        if(r)r.value=p.reference||'';
+        if(pr){pr.value=p.price;updateIPriceTTC();}
+      });
+      wrap.appendChild(lbl);
+    });
+    el.innerHTML='';
+    el.appendChild(wrap);
   }catch(e){}
 }
 

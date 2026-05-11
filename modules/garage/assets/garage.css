@@ -283,6 +283,26 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .toast.warning { border-left-color: var(--warning); }
 @keyframes toastIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 
+/* ─── SCROLL LIST (pièces connues) ──────────────────────────────────────────── */
+.scroll-list {
+  max-height: 160px; overflow-y: auto;
+  border: 1px solid var(--border-light); border-radius: 8px;
+  background: #fff; margin-bottom: 1rem;
+}
+.scroll-list-item {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .45rem .75rem; cursor: pointer;
+  border-bottom: 1px solid #f1f5f9; transition: background .12s;
+  user-select: none;
+}
+.scroll-list-item:last-child { border-bottom: none; }
+.scroll-list-item:hover { background: #f8fafc; }
+.scroll-list-item input[type="radio"] { flex-shrink: 0; }
+.item-name  { flex: 1; font-size: .875rem; font-weight: 500; color: var(--text-main); }
+.item-ref   { font-size: .72rem; font-family: monospace; color: var(--text-muted); }
+.item-brand { font-size: .75rem; color: var(--text-muted); }
+.item-price { font-size: .875rem; font-weight: 600; color: var(--primary); white-space: nowrap; }
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .container { padding: 1rem; }
