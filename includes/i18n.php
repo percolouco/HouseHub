@@ -4,8 +4,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 1. Changement de langue si l'utilisateur a cliqué sur un drapeau (?lang=ca ou ?lang=fr)
-if (isset($_GET['lang']) && in_array($_GET['lang'], ['fr', 'ca'])) {
+// 1. Changement de langue si l'utilisateur a cliqué sur un drapeau
+if (isset($_GET['lang']) && in_array($_GET['lang'], ['fr', 'ca', 'en'])) {
     $_SESSION['app_lang'] = $_GET['lang'];
 }
 

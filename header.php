@@ -58,6 +58,8 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
           <a href="<?= getLangUrl('fr') ?>" style="text-decoration:none; font-weight:bold; font-size:1rem; color: <?= $currentLang === 'fr' ? '#2563eb' : '#94a3b8' ?>;" title="Français">FR</a>
           <span style="color: #cbd5e1;">|</span>
           <a href="<?= getLangUrl('ca') ?>" style="text-decoration:none; font-weight:bold; font-size:1rem; color: <?= $currentLang === 'ca' ? '#f59e0b' : '#94a3b8' ?>;" title="Català">CA</a>
+          <span style="color: #cbd5e1;">|</span>
+          <a href="<?= getLangUrl('en') ?>" style="text-decoration:none; font-weight:bold; font-size:1rem; color: <?= $currentLang === 'en' ? '#16a34a' : '#94a3b8' ?>;" title="English">EN</a>
       </div>
 
       <?php if (isset($_SESSION['user'])): ?>
