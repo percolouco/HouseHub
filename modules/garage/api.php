@@ -6,6 +6,12 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
 
+set_exception_handler(function(\Throwable $e) {
+    if (!headers_sent()) { header('Content-Type: application/json'); http_response_code(500); }
+    echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+    exit;
+});
+
 require_once dirname(__DIR__, 2) . '/includes/db.php';
 
 $UPLOAD_DIR = '/uploads/garage/';
@@ -14,7 +20,12 @@ if (!is_dir($UPLOAD_DIR)) { @mkdir($UPLOAD_DIR, 0755, true); }
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
-function gOk($d)  { echo json_encode(['ok' => true,  'data' => $d]); exit; }
+function gOk($d) {
+    $flags = JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
+    $json = json_encode(['ok' => true, 'data' => $d], $flags);
+    if ($json === false) { http_response_code(500); echo json_encode(['ok' => false, 'error' => 'Erreur encodage JSON : ' . json_last_error_msg()]); exit; }
+    echo $json; exit;
+}
 function gErr($m, $c = 400) { http_response_code($c); echo json_encode(['ok' => false, 'error' => $m]); exit; }
 function gBody()  { return json_decode(file_get_contents('php://input'), true) ?? []; }
 
