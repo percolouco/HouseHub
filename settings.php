@@ -114,14 +114,19 @@ require __DIR__ . '/header.php';
     <form method="post" style="display:flex;gap:10px;flex-wrap:wrap">
       <input type="hidden" name="action" value="set_lang">
       <?php
-        $langs = ['fr' => '🇫🇷 Français', 'en' => '🇬🇧 English', 'ca' => '🏴󠁥󠁳󠁣󠁴󠁿 Català'];
+        $senyera = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 12" width="20" height="13" style="vertical-align:middle;border-radius:2px;margin-right:5px"><rect width="18" height="12" fill="#FCDD09"/><rect y="1.33" width="18" height="1.33" fill="#DA121A"/><rect y="4" width="18" height="1.33" fill="#DA121A"/><rect y="6.67" width="18" height="1.33" fill="#DA121A"/><rect y="9.33" width="18" height="1.33" fill="#DA121A"/></svg>';
+        $langs = [
+            'fr' => ['flag' => '🇫🇷', 'label' => 'Français'],
+            'en' => ['flag' => '🇬🇧', 'label' => 'English'],
+            'ca' => ['flag' => $senyera, 'label' => 'Català'],
+        ];
         $currentLang = $_SESSION['app_lang'] ?? 'fr';
-        foreach ($langs as $code => $label):
+        foreach ($langs as $code => $lang):
       ?>
       <button type="submit" name="lang" value="<?= $code ?>"
         class="pf-btn <?= $currentLang === $code ? '' : 'btn-secondary' ?>"
         style="<?= $currentLang === $code ? 'pointer-events:none' : '' ?>">
-        <?= $label ?>
+        <?= $lang['flag'] ?> <?= $lang['label'] ?>
       </button>
       <?php endforeach; ?>
     </form>
