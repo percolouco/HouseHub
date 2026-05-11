@@ -35,6 +35,7 @@ try {
     );
     $pdo->exec("SET collation_connection = utf8mb4_general_ci");
 } catch (\PDOException $e) {
-    die("Erreur connexion BDD famille : " . $e->getMessage());
+    if (!headers_sent()) { header('Content-Type: application/json'); http_response_code(500); }
+    die(json_encode(['ok' => false, 'error' => 'Erreur BDD : ' . $e->getMessage()]));
 }
 ?>
