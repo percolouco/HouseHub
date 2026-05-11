@@ -62,9 +62,12 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
 
       <?php if (isset($_SESSION['user'])): ?>
         <div class="pf-desktop-actions" style="display: flex; align-items: center; gap: 10px; border-left: 1px solid #cbd5e1; padding-left: 15px;">
-          <div class="pf-user-badge">
-            <?= htmlspecialchars($_SESSION['user']['display_name'] ?? $_SESSION['user']['username']) ?>
-          </div>
+          <a href="/settings.php" class="pf-user-badge" style="text-decoration:none;color:inherit" title="Paramètres">
+            ⚙️ <?= htmlspecialchars($_SESSION['user']['display_name'] ?? $_SESSION['user']['username']) ?>
+          </a>
+          <?php if (!empty($_SESSION['user']['is_admin'])): ?>
+            <a href="/admin/" class="pf-nav-link" style="font-size:0.85rem;color:#2563eb" title="Admin">Admin</a>
+          <?php endif; ?>
           <a href="/logout.php" class="pf-logout-btn"><?= tr('btn_logout') ?></a>
         </div>
         
@@ -91,7 +94,10 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         <a href="/budget.php" class="pf-mobile-nav-link">💰 <?= tr('menu_budget') ?></a>
         <a href="/holidays.php" class="pf-mobile-nav-link">🏖️ <?= tr('menu_holidays') ?></a>
         <a href="/gift-list.php" class="pf-mobile-nav-link">🎁 <?= tr('menu_gifts') ?></a>
-        
+        <a href="/settings.php" class="pf-mobile-nav-link">⚙️ Paramètres</a>
+        <?php if (!empty($_SESSION['user']['is_admin'])): ?>
+        <a href="/admin/" class="pf-mobile-nav-link" style="color:#2563eb">🛡️ Admin</a>
+        <?php endif; ?>
         <a href="/logout.php" class="pf-mobile-nav-link pf-mobile-logout" style="margin-top: auto;">🚪 <?= tr('btn_logout') ?></a>
     </div>
   </div>
