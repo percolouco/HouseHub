@@ -29,6 +29,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   <?php if (!empty($pageCss)): ?>
     <link rel="stylesheet" href="<?= htmlspecialchars($pageCss) ?>">
   <?php endif; ?>
+  <link rel="stylesheet" href="/dark-mode.css">
   <script>(function(){const t=localStorage.getItem('hh-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
   <style>
     /* Patch CSS pour la zone droite de l'en-tête (Desktop / Mobile) */
