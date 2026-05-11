@@ -1,5 +1,5 @@
 /**
- * PachaFamily - Test Engine 🦙
+ * HouseHub - Test Engine 🦙
  * Moteur de tests automatisés (E2E) - Version Anti-Flakiness & QA Exhaustive
  */
 

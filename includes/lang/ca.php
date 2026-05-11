@@ -59,7 +59,7 @@ return [
     // ==========================================
     // AUTHENTIFICATION / LOGIN
     // ==========================================
-    'login_title'               => 'Connexió - PachaFamily',
+    'login_title'               => 'Connexió - HouseHub',
     'login_header'              => 'Connexió',
     'label_username'            => "Nom d'usuari",
     'label_password'            => 'Contrasenya',
@@ -75,8 +75,8 @@ return [
     // ==========================================
     // ACCUEIL / INDEX
     // ==========================================
-    'home_title'         => 'PachaFamily - Inici',
-    'home_welcome'       => 'Benvinguts a PachaFamily',
+    'home_title'         => 'HouseHub - Inici',
+    'home_welcome'       => 'Benvinguts a HouseHub',
     'home_subtitle'      => "Centre de control de l'organització familiar.",
     'home_logged_as'     => 'Connectat com a',
     'home_modules_title' => 'Mòduls',
@@ -96,7 +96,7 @@ return [
     // ==========================================
     // FAMILY CALENDAR
     // ==========================================
-    'fc_page_title'             => 'PachaFamily - Calendari',
+    'fc_page_title'             => 'HouseHub - Calendari',
     'fc_main_header'            => 'Calendari Familiar',
     'fc_btn_correct_balances'   => 'Corregir els saldos',
     'fc_btn_school_holidays'    => 'Vacances escolars',
@@ -161,8 +161,8 @@ return [
     // ==========================================
     // HOLIDAYS (VOYAGES)
     // ==========================================
-    'hdl_title_list'            => 'PachaFamily - Les meves vacances',
-    'hdl_title_detail'          => 'PachaFamily - Detall del viatge',
+    'hdl_title_list'            => 'HouseHub - Les meves vacances',
+    'hdl_title_detail'          => 'HouseHub - Detall del viatge',
     'hdl_main_title'            => 'Les meves vacances',
     'hdl_filter_all'            => 'Mostrar-ho tot',
     'hdl_filter_year'           => 'Any',
@@ -306,7 +306,7 @@ return [
     // ==========================================
     // BUDGET (GLOBAL & CATEGORIES)
     // ==========================================
-    'budget_page_title'         => 'PachaFamily - Pressupost',
+    'budget_page_title'         => 'HouseHub - Pressupost',
     'budget_main_header'        => 'Gestió del Pressupost',
     'budget_tab_tracking'       => 'Seguiment Mensual',
     'budget_tab_prev'           => 'Pressupost 2026',
@@ -504,7 +504,7 @@ return [
     // ==========================================
     // CADEAUX (GIFTS)
     // ==========================================
-    'gift_page_title'        => 'PachaFamily - Llista de regals',
+    'gift_page_title'        => 'HouseHub - Llista de regals',
     'gift_occ_tio'           => 'Tió',
     'gift_occ_noel'          => 'Nadal',
     'gift_occ_rois'          => 'Reis',

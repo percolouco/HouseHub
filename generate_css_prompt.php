@@ -1,6 +1,6 @@
 <?php
 /**
- * PachaFamily - CSS Auditor 🦙
+ * HouseHub - CSS Auditor 🦙
  * Génère un rapport complet de tous les styles (fichiers, balises, inline)
  */
 
@@ -8,7 +8,7 @@ header('Content-Type: text/plain; charset=utf-8');
 
 $root = __DIR__;
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
-$report = "=== 🦙 RAPPORT CSS COMPLET PACHAFAMILY ===\n";
+$report = "=== 🦙 RAPPORT CSS COMPLET HOUSEHUB ===\n";
 $report .= "Généré le : " . date('Y-m-d H:i:s') . "\n\n";
 
 foreach ($iterator as $file) {

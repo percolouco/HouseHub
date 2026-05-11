@@ -62,7 +62,7 @@ return [
     // ==========================================
     // AUTHENTIFICATION / LOGIN
     // ==========================================
-    'login_title'               => 'Connexion - PachaFamily',
+    'login_title'               => 'Connexion - HouseHub',
     'login_header'              => 'Connexion',
     'label_username'            => 'Identifiant',
     'label_password'            => 'Mot de passe',
@@ -78,8 +78,8 @@ return [
     // ==========================================
     // ACCUEIL / INDEX
     // ==========================================
-    'home_title'         => 'PachaFamily - Accueil',
-    'home_welcome'       => 'Bienvenue sur PachaFamily',
+    'home_title'         => 'HouseHub - Accueil',
+    'home_welcome'       => 'Bienvenue sur HouseHub',
     'home_subtitle'      => "Centre de contrôle de l'organisation familiale.",
     'home_logged_as'     => 'Connecté en tant que',
     'home_modules_title' => 'Modules',
@@ -99,7 +99,7 @@ return [
     // ==========================================
     // FAMILY CALENDAR
     // ==========================================
-    'fc_page_title'             => 'PachaFamily - Calendrier',
+    'fc_page_title'             => 'HouseHub - Calendrier',
     'fc_main_header'            => 'Calendrier Familial',
     'fc_btn_correct_balances'   => 'Corriger les soldes',
     'fc_btn_school_holidays'    => 'Vacances scolaires',
@@ -164,8 +164,8 @@ return [
     // ==========================================
     // HOLIDAYS (VOYAGES)
     // ==========================================
-    'hdl_title_list'            => 'PachaFamily - Mes Vacances',
-    'hdl_title_detail'          => 'PachaFamily - Détail du voyage',
+    'hdl_title_list'            => 'HouseHub - Mes Vacances',
+    'hdl_title_detail'          => 'HouseHub - Détail du voyage',
     'hdl_main_title'            => 'Mes Vacances',
     'hdl_filter_all'            => 'Tout afficher',
     'hdl_filter_year'           => 'Année',
@@ -309,7 +309,7 @@ return [
     // ==========================================
     // BUDGET (GLOBAL & CATEGORIES)
     // ==========================================
-    'budget_page_title'         => 'PachaFamily - Budget',
+    'budget_page_title'         => 'HouseHub - Budget',
     'budget_main_header'        => 'Gestion du Budget',
     'budget_tab_tracking'       => 'Suivi Mensuel',
     'budget_tab_prev'           => 'Budget 2026',
@@ -506,7 +506,7 @@ return [
     // ==========================================
     // CADEAUX (GIFTS)
     // ==========================================
-    'gift_page_title'        => 'PachaFamily - Liste de cadeaux',
+    'gift_page_title'        => 'HouseHub - Liste de cadeaux',
     'gift_occ_tio'           => 'Tió',
     'gift_occ_noel'          => 'Noël',
     'gift_occ_rois'          => 'Rois mages',

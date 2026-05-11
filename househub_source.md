@@ -1,4 +1,4 @@
-# 🦙 Source Code PachaFamily
+# 🦙 Source Code HouseHub
 
 > *Généré le 2026-05-06 17:19:12*
 
@@ -359,7 +359,7 @@ window.I18N = {
 
   <footer class="pf-footer">
     <div class="pf-container">
-      <small>&copy; <?php echo date('Y'); ?> PachaFamily</small>
+      <small>&copy; <?php echo date('Y'); ?> HouseHub</small>
     </div>
   </footer>
   </div> <!-- FERMETURE pf-page -->
@@ -375,7 +375,7 @@ window.I18N = {
 ```php
 <?php
 /**
- * PachaFamily - CSS Auditor 🦙
+ * HouseHub - CSS Auditor 🦙
  * Génère un rapport complet de tous les styles (fichiers, balises, inline)
  */
 
@@ -383,7 +383,7 @@ header('Content-Type: text/plain; charset=utf-8');
 
 $root = __DIR__;
 $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
-$report = "=== 🦙 RAPPORT CSS COMPLET PACHAFAMILY ===\n";
+$report = "=== 🦙 RAPPORT CSS COMPLET HOUSEHUB ===\n";
 $report .= "Généré le : " . date('Y-m-d H:i:s') . "\n\n";
 
 foreach ($iterator as $file) {
@@ -1577,7 +1577,7 @@ function getLangUrl($newLang) {
     return '?' . http_build_query($params);
 }
 
-$pageTitle = $pageTitle ?? "PachaFamily";
+$pageTitle = $pageTitle ?? "HouseHub";
 $activePage = $activePage ?? "";
 $currentLang = $_SESSION['app_lang'] ?? 'fr';
 ?>
@@ -1604,7 +1604,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
 <body class="<?= htmlspecialchars($bodyClass ?? '') ?>">
 
   <header class="pf-header">
-    <a href="/index.php" class="pf-logo">PachaFamily</a>
+    <a href="/index.php" class="pf-logo">HouseHub</a>
 
     <?php if (isset($_SESSION['user'])): ?>
     <nav class="pf-nav">
@@ -1848,7 +1848,7 @@ function require_login(?string $loginPage = '/login.php'): void
 ### 📄 Fichier : `includes/config.php`
 ```php
 <?php
-// PachaFamily Config - Version sans erreur
+// HouseHub Config - Version sans erreur
 if (!defined('ID_ALEX')) {
     define('ID_ALEX', 2);
     define('ID_LAIA', 3);
@@ -2019,7 +2019,7 @@ return [
     // ==========================================
     // AUTHENTIFICATION / LOGIN
     // ==========================================
-    'login_title'               => 'Connexió - PachaFamily',
+    'login_title'               => 'Connexió - HouseHub',
     'login_header'              => 'Connexió',
     'label_username'            => "Nom d'usuari",
     'label_password'            => 'Contrasenya',
@@ -2035,8 +2035,8 @@ return [
     // ==========================================
     // ACCUEIL / INDEX
     // ==========================================
-    'home_title'         => 'PachaFamily - Inici',
-    'home_welcome'       => 'Benvinguts a PachaFamily',
+    'home_title'         => 'HouseHub - Inici',
+    'home_welcome'       => 'Benvinguts a HouseHub',
     'home_subtitle'      => "Centre de control de l'organització familiar.",
     'home_logged_as'     => 'Connectat com a',
     'home_modules_title' => 'Mòduls',
@@ -2056,7 +2056,7 @@ return [
     // ==========================================
     // FAMILY CALENDAR
     // ==========================================
-    'fc_page_title'             => 'PachaFamily - Calendari',
+    'fc_page_title'             => 'HouseHub - Calendari',
     'fc_main_header'            => 'Calendari Familiar',
     'fc_btn_correct_balances'   => 'Corregir els saldos',
     'fc_btn_school_holidays'    => 'Vacances escolars',
@@ -2119,8 +2119,8 @@ return [
     // ==========================================
     // HOLIDAYS (VOYAGES)
     // ==========================================
-    'hdl_title_list'            => 'PachaFamily - Les meves vacances',
-    'hdl_title_detail'          => 'PachaFamily - Detall del viatge',
+    'hdl_title_list'            => 'HouseHub - Les meves vacances',
+    'hdl_title_detail'          => 'HouseHub - Detall del viatge',
     'hdl_main_title'            => 'Les meves vacances',
     'hdl_filter_all'            => 'Mostrar-ho tot',
     'hdl_filter_year'           => 'Any',
@@ -2264,7 +2264,7 @@ return [
     // ==========================================
     // BUDGET (GLOBAL & CATEGORIES)
     // ==========================================
-    'budget_page_title'         => 'PachaFamily - Pressupost',
+    'budget_page_title'         => 'HouseHub - Pressupost',
     'budget_main_header'        => 'Gestió del Pressupost',
     'budget_tab_tracking'       => 'Seguiment Mensual',
     'budget_tab_prev'           => 'Pressupost 2026',
@@ -2462,7 +2462,7 @@ return [
     // ==========================================
     // CADEAUX (GIFTS)
     // ==========================================
-    'gift_page_title'        => 'PachaFamily - Llista de regals',
+    'gift_page_title'        => 'HouseHub - Llista de regals',
     'gift_occ_tio'           => 'Tió',
     'gift_occ_noel'          => 'Nadal',
     'gift_occ_rois'          => 'Reis',
@@ -2573,7 +2573,7 @@ return [
     // ==========================================
     // AUTHENTIFICATION / LOGIN
     // ==========================================
-    'login_title'               => 'Connexion - PachaFamily',
+    'login_title'               => 'Connexion - HouseHub',
     'login_header'              => 'Connexion',
     'label_username'            => 'Identifiant',
     'label_password'            => 'Mot de passe',
@@ -2589,8 +2589,8 @@ return [
     // ==========================================
     // ACCUEIL / INDEX
     // ==========================================
-    'home_title'         => 'PachaFamily - Accueil',
-    'home_welcome'       => 'Bienvenue sur PachaFamily',
+    'home_title'         => 'HouseHub - Accueil',
+    'home_welcome'       => 'Bienvenue sur HouseHub',
     'home_subtitle'      => "Centre de contrôle de l'organisation familiale.",
     'home_logged_as'     => 'Connecté en tant que',
     'home_modules_title' => 'Modules',
@@ -2610,7 +2610,7 @@ return [
     // ==========================================
     // FAMILY CALENDAR
     // ==========================================
-    'fc_page_title'             => 'PachaFamily - Calendrier',
+    'fc_page_title'             => 'HouseHub - Calendrier',
     'fc_main_header'            => 'Calendrier Familial',
     'fc_btn_correct_balances'   => 'Corriger les soldes',
     'fc_btn_school_holidays'    => 'Vacances scolaires',
@@ -2673,8 +2673,8 @@ return [
     // ==========================================
     // HOLIDAYS (VOYAGES)
     // ==========================================
-    'hdl_title_list'            => 'PachaFamily - Mes Vacances',
-    'hdl_title_detail'          => 'PachaFamily - Détail du voyage',
+    'hdl_title_list'            => 'HouseHub - Mes Vacances',
+    'hdl_title_detail'          => 'HouseHub - Détail du voyage',
     'hdl_main_title'            => 'Mes Vacances',
     'hdl_filter_all'            => 'Tout afficher',
     'hdl_filter_year'           => 'Année',
@@ -2818,7 +2818,7 @@ return [
     // ==========================================
     // BUDGET (GLOBAL & CATEGORIES)
     // ==========================================
-    'budget_page_title'         => 'PachaFamily - Budget',
+    'budget_page_title'         => 'HouseHub - Budget',
     'budget_main_header'        => 'Gestion du Budget',
     'budget_tab_tracking'       => 'Suivi Mensuel',
     'budget_tab_prev'           => 'Budget 2026',
@@ -3015,7 +3015,7 @@ return [
     // ==========================================
     // CADEAUX (GIFTS)
     // ==========================================
-    'gift_page_title'        => 'PachaFamily - Liste de cadeaux',
+    'gift_page_title'        => 'HouseHub - Liste de cadeaux',
     'gift_occ_tio'           => 'Tió',
     'gift_occ_noel'          => 'Noël',
     'gift_occ_rois'          => 'Rois mages',
@@ -3197,7 +3197,7 @@ require __DIR__ . '/header.php';
     <div class="pf-login-card">
         
         <div class="pf-login-header">
-          <img src="/favicon.png" alt="PachaFamily Logo" class="pf-login-icon">
+          <img src="/favicon.png" alt="HouseHub Logo" class="pf-login-icon">
           <h1><?= tr('login_header') ?></h1>
           <p><?= tr('login_subtitle') ?></p>
       </div>
@@ -14036,7 +14036,7 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_CONNECTTIMEOUT => 5,
     CURLOPT_TIMEOUT        => 10,
-    CURLOPT_USERAGENT      => 'PachaFamily-Holidays/1.0',
+    CURLOPT_USERAGENT      => 'HouseHub-Holidays/1.0',
     CURLOPT_SSL_VERIFYPEER => false,
     CURLOPT_SSL_VERIFYHOST => false
 ]);
@@ -15400,7 +15400,7 @@ body.pf-home .pf-modules-grid {
 ### 📄 Fichier : `test-engine.js`
 ```javascript
 /**
- * PachaFamily - Test Engine 🦙
+ * HouseHub - Test Engine 🦙
  * Moteur de tests automatisés (E2E) - Version Anti-Flakiness & QA Exhaustive
  */
 
