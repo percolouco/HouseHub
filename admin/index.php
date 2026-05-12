@@ -76,7 +76,7 @@ require __DIR__ . '/../header.php';
       </thead>
       <tbody>
         <?php foreach ($families as $f): ?>
-        <tr style="border-bottom:1px solid #f1f5f9">
+        <tr style="border-bottom:1px solid var(--border-light)">
           <td style="padding:10px 14px;color:#94a3b8"><?= $f['id'] ?></td>
           <td style="padding:10px 14px;font-weight:600"><?= htmlspecialchars($f['name']) ?></td>
           <td style="padding:10px 14px"><code style="font-size:0.8rem;background:#f1f5f9;padding:2px 6px;border-radius:4px"><?= $f['db_name'] ?></code></td>
@@ -135,7 +135,7 @@ require __DIR__ . '/../header.php';
       </thead>
       <tbody>
         <?php foreach ($users as $u): $isSelf = $u['id'] == $_SESSION['user']['id']; ?>
-        <tr style="border-bottom:1px solid #f1f5f9<?= $isSelf ? ';background:#fafff4' : '' ?>">
+        <tr style="border-bottom:1px solid var(--border-light)<?= $isSelf ? ';background:#fafff4' : '' ?>">
           <td style="padding:10px 14px;color:#94a3b8"><?= $u['id'] ?></td>
           <td style="padding:10px 14px">
             <strong><?= htmlspecialchars($u['display_name']) ?></strong>

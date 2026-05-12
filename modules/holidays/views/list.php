@@ -180,7 +180,7 @@ function renderHolidayCard($h, $pdo) {
             <span>🗓️ ".($dateDisplay ?: tr('hdl_dates_to_define'))."</span>
         </div>
         
-        <div style='margin-top:auto; padding-top:15px; border-top:1px solid #f1f5f9;'>
+        <div style='margin-top:auto; padding-top:15px; border-top:1px solid var(--border-light);'>
             <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
                 <span style='font-size:0.85rem; color:#64748b;'>".tr('hdl_total_budget')."</span>
                 <span style='font-size:1.1rem; font-weight:bold; color:#1e293b;'>".number_format($cost, 0, ',', ' ')." €</span>

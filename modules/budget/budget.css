@@ -424,7 +424,7 @@ input[type="number"] {
 }
 .prev-salary-table td {
   padding: 8px 12px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
   text-align: center;
 }
 
@@ -444,15 +444,15 @@ input[type="number"] {
 }
 .prev-alloc-table th {
   padding: 6px 10px;
-  border-right: 1px solid #f1f5f9;
+  border-right: 1px solid var(--border-light);
   white-space: nowrap;
   text-align: center;
   font-size: 0.9rem;
 }
 .prev-alloc-table td {
   padding: 3px 10px;
-  border-bottom: 1px solid #f1f5f9;
-  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
+  border-right: 1px solid var(--border-light);
   white-space: nowrap;
   text-align: center;
   font-size: 0.9rem;
@@ -601,7 +601,7 @@ tr:hover .row-actions {
 .recap-table th,
 .recap-table td {
   padding: 10px 15px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
   text-align: center;
   font-size: 0.95rem;
 }
