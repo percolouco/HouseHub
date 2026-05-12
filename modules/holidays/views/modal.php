@@ -40,7 +40,7 @@
                 </div>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 20px 0;">
 
             <div class="hol-columns-wrapper">
                 <div class="hol-col">
@@ -68,7 +68,7 @@
                 </div>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 20px 0;">
 
             <div class="form-row">
                 <div>
