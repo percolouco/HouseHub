@@ -54,6 +54,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
       <?php if (in_array('gifts',     $mods)): ?><a href="/gift-list.php" class="pf-nav-link <?= $activePage === 'gift-list' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_gifts') ?></a><?php endif; ?>
       <?php if (in_array('garage',    $mods)): ?><a href="/garage.php" class="pf-nav-link <?= $activePage === 'garage' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_garage') ?></a><?php endif; ?>
       <?php if (in_array('memo',      $mods)): ?><a href="/memo.php" class="pf-nav-link <?= $activePage === 'memo' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_memo') ?></a><?php endif; ?>
+      <?php if (in_array('todo',      $mods)): ?><a href="/todo.php" class="pf-nav-link <?= $activePage === 'todo' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_todo') ?></a><?php endif; ?>
     </nav>
     <?php endif; ?>
 
@@ -100,6 +101,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         <?php if (in_array('gifts',    $mods)): ?><a href="/gift-list.php" class="pf-mobile-nav-link">🎁 <?= tr('menu_gifts') ?></a><?php endif; ?>
         <?php if (in_array('garage',   $mods)): ?><a href="/garage.php" class="pf-mobile-nav-link">🚗 <?= tr('menu_garage') ?></a><?php endif; ?>
         <?php if (in_array('memo',     $mods)): ?><a href="/memo.php" class="pf-mobile-nav-link">📝 <?= tr('menu_memo') ?></a><?php endif; ?>
+        <?php if (in_array('todo',     $mods)): ?><a href="/todo.php" class="pf-mobile-nav-link">✅ <?= tr('menu_todo') ?></a><?php endif; ?>
         <a href="/settings.php" class="pf-mobile-nav-link">⚙️ Paramètres</a>
         <?php if (!empty($_SESSION['user']['is_admin'])): ?>
         <a href="/admin/" class="pf-mobile-nav-link" style="color:#2563eb">🛡️ Admin</a>

@@ -317,3 +317,27 @@ CREATE TABLE IF NOT EXISTS pf_memo_attachments (
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (note_id) REFERENCES pf_memo_notes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Todo ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_todo_lists (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  name       VARCHAR(255) NOT NULL,
+  color      VARCHAR(20) DEFAULT '#3b82f6',
+  icon       VARCHAR(10) DEFAULT '📋',
+  position   INT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_todos (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  list_id    INT DEFAULT NULL,
+  title      VARCHAR(500) NOT NULL,
+  notes      TEXT DEFAULT NULL,
+  due_date   DATE DEFAULT NULL,
+  priority   ENUM('none','low','medium','high') DEFAULT 'none',
+  done       TINYINT(1) DEFAULT 0,
+  done_at    DATETIME DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (list_id) REFERENCES pf_todo_lists(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
