@@ -293,3 +293,27 @@ CREATE TABLE IF NOT EXISTS pf_parts (
   FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE SET NULL,
   FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Notes / Memo ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_memo_notes (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(255) NOT NULL,
+  content    LONGTEXT DEFAULT '',
+  tags       VARCHAR(1000) DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FULLTEXT KEY ft_notes (title, content, tags)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_memo_attachments (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  note_id       INT NOT NULL,
+  type          ENUM('image','file','url') NOT NULL DEFAULT 'file',
+  filename      VARCHAR(255) DEFAULT NULL,
+  original_name VARCHAR(255) DEFAULT NULL,
+  url           TEXT DEFAULT NULL,
+  label         VARCHAR(255) DEFAULT NULL,
+  size          INT DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (note_id) REFERENCES pf_memo_notes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
