@@ -4,6 +4,7 @@ const API = '/modules/todo/api.php';
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function escHtml(s){const d=document.createElement('div');d.textContent=String(s??'');return d.innerHTML;}
 function fmtDate(d){if(!d)return null;const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});}
+function fmtTime(t){if(!t)return null;return t.slice(0,5);}
 function isToday(d){if(!d)return false;return d===new Date().toISOString().slice(0,10);}
 function isOverdue(d){if(!d)return false;return d<new Date().toISOString().slice(0,10);}
 function toast(msg,type='success'){
@@ -157,7 +158,8 @@ function todoItemHtml(t){
   const checkClass='todo-check'+(isDone?' checked':'');
   const itemClass='todo-item'+(isDone?' done':'');
   const dueCls=isOverdue(t.due_date)&&!isDone?' overdue':isToday(t.due_date)&&!isDone?' today':'';
-  const dueLabel=t.due_date?(isToday(t.due_date)?'Aujourd\'hui':isOverdue(t.due_date)?'En retard '+fmtDate(t.due_date):fmtDate(t.due_date)):null;
+  const timeLabel=t.due_time?fmtTime(t.due_time):null;
+  const dueLabel=t.due_date?(isToday(t.due_date)?'Aujourd\'hui'+(timeLabel?' à '+timeLabel:''):isOverdue(t.due_date)?'En retard '+fmtDate(t.due_date)+(timeLabel?' '+timeLabel:''):fmtDate(t.due_date)+(timeLabel?' à '+timeLabel:'')):null;
   const priBadge=t.priority&&t.priority!=='none'?
     `<span class="todo-priority-badge pri-${t.priority}">${t.priority==='high'?'Urgent':t.priority==='medium'?'Normal':'Bas'}</span>`:'';
   const listBadge=t.list_name?
@@ -219,6 +221,7 @@ function openAddTodo(){
   document.getElementById('todo-form-title').value='';
   document.getElementById('todo-form-notes').value='';
   document.getElementById('todo-form-due').value='';
+  document.getElementById('todo-form-time').value='';
   document.getElementById('todo-delete-btn').style.display='none';
   const sel=document.getElementById('todo-form-list');
   sel.innerHTML='<option value="">— Aucune —</option>'+lists.map(l=>`<option value="${l.id}">${escHtml(l.icon)} ${escHtml(l.name)}</option>`).join('');
@@ -238,6 +241,7 @@ async function openEditTodo(id){
     document.getElementById('todo-form-title').value=t.title;
     document.getElementById('todo-form-notes').value=t.notes||'';
     document.getElementById('todo-form-due').value=t.due_date||'';
+    document.getElementById('todo-form-time').value=t.due_time?t.due_time.slice(0,5):'';
     document.getElementById('todo-delete-btn').style.display='';
     const sel=document.getElementById('todo-form-list');
     sel.innerHTML='<option value="">— Aucune —</option>'+lists.map(l=>`<option value="${l.id}">${escHtml(l.icon)} ${escHtml(l.name)}</option>`).join('');
@@ -262,6 +266,7 @@ async function saveTodo(){
     title,
     notes:document.getElementById('todo-form-notes').value||null,
     due_date:document.getElementById('todo-form-due').value||null,
+    due_time:document.getElementById('todo-form-time').value||null,
     list_id:document.getElementById('todo-form-list').value||null,
     priority:selectedPriority
   };

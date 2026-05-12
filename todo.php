@@ -78,11 +78,16 @@ require __DIR__ . '/header.php';
           <input type="date" id="todo-form-due" class="form-control">
         </div>
         <div class="form-group">
-          <label class="form-label">Liste</label>
-          <select id="todo-form-list" class="form-control">
-            <option value="">— Aucune —</option>
-          </select>
+          <label class="form-label">Heure</label>
+          <input type="time" id="todo-form-time" class="form-control">
         </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Liste</label>
+        <select id="todo-form-list" class="form-control">
+          <option value="">— Aucune —</option>
+        </select>
       </div>
 
       <div class="form-group">

@@ -109,12 +109,13 @@ if ($action === 'todos') {
     if ($method === 'POST') {
         $d = tBody();
         $title = trim($d['title'] ?? ''); if (!$title) tErr('Titre requis');
-        $pdo->prepare("INSERT INTO pf_todos (list_id, title, notes, due_date, priority) VALUES (?,?,?,?,?)")
+        $pdo->prepare("INSERT INTO pf_todos (list_id, title, notes, due_date, due_time, priority) VALUES (?,?,?,?,?,?)")
             ->execute([
                 $d['list_id'] ?: null,
                 $title,
                 $d['notes'] ?? null,
                 $d['due_date'] ?: null,
+                $d['due_time'] ?: null,
                 $d['priority'] ?? 'none'
             ]);
         $id = (int)$pdo->lastInsertId();
@@ -144,8 +145,8 @@ if ($action === 'todos') {
 
         // Full update
         $title = trim($d['title'] ?? ''); if (!$title) tErr('Titre requis');
-        $pdo->prepare("UPDATE pf_todos SET list_id=?, title=?, notes=?, due_date=?, priority=?, updated_at=NOW() WHERE id=?")
-            ->execute([$d['list_id'] ?: null, $title, $d['notes'] ?? null, $d['due_date'] ?: null, $d['priority'] ?? 'none', $id]);
+        $pdo->prepare("UPDATE pf_todos SET list_id=?, title=?, notes=?, due_date=?, due_time=?, priority=?, updated_at=NOW() WHERE id=?")
+            ->execute([$d['list_id'] ?: null, $title, $d['notes'] ?? null, $d['due_date'] ?: null, $d['due_time'] ?: null, $d['priority'] ?? 'none', $id]);
         tOk(['updated' => true]);
     }
 
