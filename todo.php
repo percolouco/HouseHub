@@ -74,20 +74,15 @@ require __DIR__ . '/header.php';
 
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Date limite</label>
-          <input type="date" id="todo-form-due" class="form-control">
+          <label class="form-label">Heure de rappel *</label>
+          <input type="time" id="todo-form-time" class="form-control" required>
         </div>
         <div class="form-group">
-          <label class="form-label">Heure</label>
-          <input type="time" id="todo-form-time" class="form-control">
+          <label class="form-label">Liste</label>
+          <select id="todo-form-list" class="form-control">
+            <option value="">— Aucune —</option>
+          </select>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Liste</label>
-        <select id="todo-form-list" class="form-control">
-          <option value="">— Aucune —</option>
-        </select>
       </div>
 
       <div class="form-group">
