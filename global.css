@@ -29,6 +29,17 @@
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg:
     0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Alertes / badges (clair) — paramètres & blocs similaires */
+  --alert-success-bg: #dcfce7;
+  --alert-success-border: #86efac;
+  --alert-success-text: #166534;
+  --alert-error-bg: #fee2e2;
+  --alert-error-border: #fca5a5;
+  --alert-error-text: #991b1b;
+  --invite-code-color: #1d4ed8;
+  --badge-admin-bg: #dbeafe;
+  --badge-admin-text: #1d4ed8;
 }
 
 /* 🛡️ RESET MOBILE UNIVERSEL */
@@ -270,6 +281,252 @@ body.pf-home .pf-mobile-close-btn {
   border-radius: var(--radius);
   padding: 24px;
   margin-bottom: 24px;
+}
+
+/* ═══ Paramètres & petits blocs réutilisables ═══ */
+.pf-settings-page {
+  max-width: 680px;
+  margin: 32px auto;
+  padding: 0 16px;
+}
+.pf-settings-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 32px;
+  color: var(--text-main);
+}
+.pf-card-h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text-main);
+}
+.pf-card-h2--tight {
+  margin-bottom: 6px;
+}
+.pf-muted-note {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+.pf-muted-note.pf-muted-note--tight {
+  margin-bottom: 8px;
+}
+.pf-muted-tiny {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.pf-muted-inline {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-left: 6px;
+}
+
+.pf-alert {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+}
+.pf-alert--success {
+  background: var(--alert-success-bg);
+  border: 1px solid var(--alert-success-border);
+  color: var(--alert-success-text);
+}
+.pf-alert--error {
+  background: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+  color: var(--alert-error-text);
+}
+
+.pf-lang-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pf-btn--current-lang {
+  pointer-events: none;
+}
+
+.pf-stack-md {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.pf-stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Tuile module (checkbox) — état coché via :has(), compatible thème */
+.pf-module-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 2px solid var(--border-light);
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--bg-page);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.pf-module-tile:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--bg-soft);
+}
+
+.pf-checkbox-lg {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pf-tile-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.pf-tile-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+/* Encadré pointillé (code d’invitation, etc.) */
+.pf-dashed-panel {
+  background: var(--bg-page);
+  border: 2px dashed var(--border-strong);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.pf-home-bg-preview {
+  margin-bottom: 16px;
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 160px;
+  position: relative;
+}
+.pf-home-bg-preview img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+.pf-badge-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--bg-overlay);
+  color: var(--text-on-primary);
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.pf-inline-form-end {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pf-inline-form-end .pf-form-group {
+  flex: 1;
+  min-width: 200px;
+}
+.pf-shrink-0 {
+  flex-shrink: 0;
+}
+.pf-mt-sm {
+  margin-top: 10px;
+}
+.pf-btn-sm-text {
+  font-size: 0.85rem;
+}
+.pf-mb-section {
+  margin-bottom: 20px;
+}
+
+.pf-invite-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pf-invite-code {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--invite-code-color);
+  cursor: pointer;
+}
+.pf-copy-msg {
+  color: var(--success);
+  font-size: 0.85rem;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.pf-copy-msg.is-visible {
+  opacity: 1;
+}
+.pf-ml-auto {
+  margin-left: auto;
+}
+.pf-invite-footnote {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.pf-member-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-page);
+  border-radius: 8px;
+}
+.pf-admin-badge {
+  background: var(--badge-admin-bg);
+  color: var(--badge-admin-text);
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 6px;
+}
+.pf-members-heading {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 20px 0 12px;
+  color: var(--text-main);
+}
+.pf-settings-admin-link {
+  text-align: center;
+  margin-top: 8px;
+}
+.pf-settings-admin-link a {
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.pf-input--disabled-muted:disabled {
+  background: var(--bg-page);
+  color: var(--text-muted);
+}
+
+.pf-flag-inline {
+  vertical-align: middle;
+  border-radius: 2px;
+  margin-right: 5px;
+}
+
+.pf-flex-gap-8 {
+  display: flex;
+  gap: 8px;
 }
 
 h1 {
@@ -726,6 +983,15 @@ p {
   --border-strong: #484f58;
   --border-danger-soft: rgba(239,68,68,.3);
   --focus-ring: rgba(59,130,246,.25);
+  --alert-success-bg: rgba(34, 197, 94, 0.12);
+  --alert-success-border: rgba(34, 197, 94, 0.45);
+  --alert-success-text: #86efac;
+  --alert-error-bg: rgba(239, 68, 68, 0.12);
+  --alert-error-border: rgba(248, 113, 113, 0.45);
+  --alert-error-text: #fca5a5;
+  --invite-code-color: #93c5fd;
+  --badge-admin-bg: rgba(59, 130, 246, 0.2);
+  --badge-admin-text: #93c5fd;
 }
 [data-theme="dark"] body           { background: var(--bg-page); color: var(--text-main); }
 [data-theme="dark"] .pf-header     { background: var(--bg-panel); border-color: var(--border-light); }
