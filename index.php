@@ -15,7 +15,16 @@ $bodyClass  = "pf-home"; // Important pour l'image de fond définie dans home.cs
 $pageCss    = "/modules/home/home.css";
 
 require __DIR__ . '/header.php';
-?>
+
+// Override background si image personnalisée uploadée
+$_fid = $_SESSION['user']['family_id'] ?? null;
+$_has_custom_bg = false;
+if ($_fid) {
+    foreach (glob('/uploads/home_bg_' . $_fid . '.*') as $_f) { $_has_custom_bg = true; break; }
+}
+if ($_has_custom_bg): ?>
+<style>body.pf-home { background-image: url('/home-bg.php?v=<?= filemtime($_f) ?>'); }</style>
+<?php endif; ?>
 
 <div class="pf-container">
   
