@@ -1,4 +1,5 @@
-name: Deploy to Pacha Family
+name: Deploy HouseHub
+
 on:
   push:
     branches: [main]
@@ -7,14 +8,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Production
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
         with:
-          server: ${{ secrets.FTP_SERVER_PERCOLOUCO }}
-          username: ${{ secrets.FTP_USERNAME_PERCOLOUCO }}
-          password: ${{ secrets.FTP_PASSWORD_PERCOLOUCO }}
-          local-dir: ./
-          server-dir: /www/househub/ # ← Production reste ici
+          host: 192.168.1.29
+          username: perco
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/container/househub
+            git pull
+            echo "✓ HouseHub mis à jour"
