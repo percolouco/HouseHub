@@ -6,6 +6,8 @@
  * Usage: php /opt/container/househub/cron/todo_notify.php
  */
 
+date_default_timezone_set('Europe/Paris');
+
 $DB_HOST = getenv('DB_HOST') ?: 'househub-db';
 $DB_USER = getenv('DB_USER') ?: 'househub';
 $DB_PASS = getenv('DB_PASS') ?: 'changeme';
