@@ -12,7 +12,7 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $year       = (int)date('Y');
 $pageTitle  = tr('gift_page_title');
 $activePage = "gift-list";
-$bodyClass  = "pf-gift-list";
+$mainClass  = "pf-gift-list";
 $pageCss    = "/modules/gift-list/gift-list.css";
 
 $children = ['Pol', 'Pep', 'Elna', 'Bru', 'Guim'];
