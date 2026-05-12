@@ -470,7 +470,7 @@ body.no-scroll {
   background: var(--bg-panel);
   padding: 8px;
   border-radius: 8px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--border-light);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
@@ -1254,7 +1254,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .hol-time-slot {
   height: 75px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
   position: relative;
   transition: background 0.2s;
   box-sizing: border-box;

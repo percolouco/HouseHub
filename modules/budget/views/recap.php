@@ -113,7 +113,7 @@ $totalRevenus = 0;
                     $rowClass = ($item['category'] === 'income') ? 'row-income' : 'row-expense';
                     if ($item['is_estimate']) $rowClass .= ' row-estimate';
                 ?>
-                <tr class="<?= $rowClass ?>" style="border-bottom:1px solid #f1f5f9;">
+                <tr class="<?= $rowClass ?>" style="border-bottom:1px solid var(--border-light);">
                     <td style="padding:15px;">
                         <strong><?= htmlspecialchars($item['name']) ?></strong>
                         <?= $item['is_estimate'] ? ' <small style="color:#64748b;">('.tr('bud_est_short').')</small>' : '' ?>
