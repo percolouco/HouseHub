@@ -86,6 +86,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  ->execute([$new_code, $family_id]);
         $success = "Nouveau code d'invitation généré.";
     }
+
+    if ($action === 'upload_home_bg' && $family_id) {
+        $upload_dir = '/uploads/';
+        if (!is_dir($upload_dir)) @mkdir($upload_dir, 0755, true);
+        $file = $_FILES['home_bg'] ?? null;
+        if ($file && $file['error'] === 0) {
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
+                $error = "Format non supporté (jpg, png, webp).";
+            } else {
+                $dest = $upload_dir . 'home_bg_' . $family_id . '.' . $ext;
+                // Supprimer anciens fichiers de ce family
+                foreach (glob($upload_dir . 'home_bg_' . $family_id . '.*') as $old) @unlink($old);
+                if (move_uploaded_file($file['tmp_name'], $dest)) {
+                    $success = "Image d'accueil mise à jour.";
+                } else {
+                    $error = "Erreur lors de l'upload.";
+                }
+            }
+        }
+    }
+
+    if ($action === 'reset_home_bg' && $family_id) {
+        foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $old) @unlink($old);
+        $success = "Image d'accueil réinitialisée.";
+    }
 }
 
 // ─── Chargement données ───────────────────────────────────────────────────────
@@ -178,6 +204,42 @@ require __DIR__ . '/header.php';
       </div>
       <button type="submit" class="pf-btn">Enregistrer</button>
     </form>
+  </section>
+  <?php endif; ?>
+
+  <!-- ── Fond page d'accueil ───────────────────────────────────────────── -->
+  <?php if ($family_id):
+    $bg_file = null;
+    foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $f) { $bg_file = $f; break; }
+    $has_custom_bg = $bg_file !== null;
+  ?>
+  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+    <h2 style="font-size:1rem;font-weight:700;margin-bottom:6px">🖼️ Image d'accueil</h2>
+    <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px">Photo de fond affichée sur la page d'accueil (partagée avec tous les membres).</p>
+
+    <?php if ($has_custom_bg): ?>
+    <div style="margin-bottom:16px;border-radius:10px;overflow:hidden;max-height:160px;position:relative">
+      <img src="/home-bg.php" alt="Fond actuel" style="width:100%;height:160px;object-fit:cover">
+      <span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;font-size:.75rem;padding:3px 8px;border-radius:6px">Image personnalisée</span>
+    </div>
+    <?php endif; ?>
+
+    <form method="post" enctype="multipart/form-data" style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <input type="hidden" name="action" value="upload_home_bg">
+      <div class="pf-form-group" style="flex:1;min-width:200px">
+        <label class="pf-label">Nouvelle image (jpg, png, webp — max 10 Mo)</label>
+        <input type="file" name="home_bg" class="pf-input" accept="image/jpeg,image/png,image/webp" required>
+      </div>
+      <button type="submit" class="pf-btn" style="flex-shrink:0">Enregistrer</button>
+    </form>
+
+    <?php if ($has_custom_bg): ?>
+    <form method="post" style="margin-top:10px">
+      <input type="hidden" name="action" value="reset_home_bg">
+      <button type="submit" class="pf-btn btn-secondary" style="font-size:.85rem"
+        onclick="return confirm('Revenir à l\'image par défaut ?')">🔄 Remettre l'image par défaut</button>
+    </form>
+    <?php endif; ?>
   </section>
   <?php endif; ?>
 
