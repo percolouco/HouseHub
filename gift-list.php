@@ -201,7 +201,7 @@ require __DIR__ . '/header.php';
         <?php endforeach; ?>
     </section>
 
-    <section class="pf-section pf-section--panel" style="background:#f8fafc; border:1px solid var(--border-light); margin-top:40px;">
+    <section class="pf-section pf-section--panel" style="border:1px solid var(--border-light); margin-top:40px;">
         <h2 style="margin-top:0; color:var(--text-main); font-size:1.3rem;">⚖️ <?= tr('gift_liquidations') ?? 'Bilan & Remboursements' ?></h2>
         
         <?php if (empty($settlements)): ?>
@@ -217,7 +217,7 @@ require __DIR__ . '/header.php';
             </ul>
         <?php endif; ?>
 
-        <details style="margin-top:20px; background:white; padding:12px; border-radius:8px; border:1px solid #cbd5e1;">
+        <details style="margin-top:20px; padding:12px; border-radius:8px;">
             <summary style="cursor:pointer; font-weight:600; color:var(--text-muted); outline:none;"><?= tr('gift_view_matrix') ?></summary>
             <div style="overflow-x:auto; margin-top:15px;">
                 <table class="pf-table pf-table--compact cl-debt-matrix">
@@ -266,7 +266,7 @@ require __DIR__ . '/header.php';
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_price') ?></label><input type="number" step="0.01" name="amount" id="modalAmount" class="pf-input"></div>
             <div class="pf-form-group" style="margin-bottom:25px;"><label class="pf-label"><?= tr('gift_modal_link') ?></label><input type="url" name="product_link" id="modalLink" class="pf-input"></div>
             
-            <div class="modal-footer" style="padding-top:15px; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:10px;">
+            <div class="modal-footer" style="padding-top:15px; display:flex; justify-content:flex-end; gap:10px;">
                 <button type="button" class="pf-btn btn-secondary btn-modal-close"><?= tr('btn_cancel') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
