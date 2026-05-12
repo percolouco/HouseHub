@@ -4,12 +4,6 @@
    ════════════════════════════════════════════════════════════════════ */
 
 /* ─── HOME PAGE ─────────────────────────────────────────────────────────────── */
-/* Le header home.css a plus de spécificité que global.css → on le force ici */
-[data-theme="dark"] body[data-page="home"] .pf-header {
-  background: rgba(13,17,23,.92) !important;
-  border-color: rgba(48,54,61,.6) !important;
-  backdrop-filter: blur(8px) !important;
-}
 [data-theme="dark"] body[data-page="home"] .pf-module-card {
   background: rgba(22,27,34,.92) !important;
   border: 1px solid var(--border-light) !important;

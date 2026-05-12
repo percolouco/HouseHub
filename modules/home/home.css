@@ -22,47 +22,9 @@ body[data-page="home"]::before {
   z-index: -1; /* Derrière le contenu */
 }
 
-/* === 2. HEADER SPÉCIFIQUE (Translucide) === */
-body[data-page="home"] .pf-header {
-  background: rgba(36, 59, 83, 0.85); /* Ton ancien bleu sombre */
-  backdrop-filter: blur(8px); /* Effet verre dépoli */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
+/* Header : identique au reste du site (global.css + dark-mode) */
 
-/* Adaptation des couleurs des liens du header sur fond sombre */
-body[data-page="home"] .pf-logo {
-  color: var(--text-on-primary);
-}
-body[data-page="home"] .pf-burger-btn {
-  color: var(--text-on-primary);
-}
-
-body[data-page="home"] .pf-nav-link {
-  color: rgba(255, 255, 255, 0.8);
-}
-body[data-page="home"] .pf-nav-link:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--text-on-primary);
-}
-body[data-page="home"] .pf-nav-link--active {
-  background: rgba(255, 255, 255, 0.9);
-  color: #243b53; /* Texte foncé sur fond blanc */
-}
-
-/* Badge utilisateur */
-body[data-page="home"] .pf-user-badge {
-  color: rgba(255, 255, 255, 0.9);
-}
-body[data-page="home"] .pf-logout-btn {
-  color: var(--text-danger-soft);
-} /* Rouge clair */
-body[data-page="home"] .pf-logout-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--text-danger-soft);
-}
-
-/* === 3. HERO SECTION (Message de Bienvenue) === */
+/* === 2. HERO SECTION (Message de Bienvenue) === */
 .pf-hero {
   margin-top: 40px;
   margin-bottom: 60px;
@@ -83,7 +45,7 @@ body[data-page="home"] .pf-logout-btn:hover {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-/* === 4. GRILLE DES MODULES === */
+/* === 3. GRILLE DES MODULES === */
 
 /* Titre de section "Modules" */
 body[data-page="home"] .pf-modules-grid {
@@ -113,7 +75,7 @@ body[data-page="home"] .pf-modules-grid {
   color: var(--text-muted);
 }
 
-/* === 5. MOBILE RESPONSIVE === */
+/* === 4. MOBILE RESPONSIVE === */
 @media (max-width: 768px) {
   body[data-page="home"] {
     /* Image spécifique mobile */
@@ -130,10 +92,5 @@ body[data-page="home"] .pf-modules-grid {
 
   .pf-hero h1 {
     font-size: clamp(1.8rem, 6vw, 2.5rem); /* Typographie fluide */
-  }
-
-  /* Ajustement header mobile */
-  body[data-page="home"] .pf-header {
-    padding: 0 16px;
   }
 }
