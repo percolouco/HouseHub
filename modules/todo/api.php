@@ -1,4 +1,5 @@
 <?php
+ob_start();
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_login();
 
@@ -111,11 +112,11 @@ if ($action === 'todos') {
         $title = trim($d['title'] ?? ''); if (!$title) tErr('Titre requis');
         $pdo->prepare("INSERT INTO pf_todos (list_id, title, notes, due_date, due_time, priority) VALUES (?,?,?,?,?,?)")
             ->execute([
-                $d['list_id'] ?: null,
+                ($d['list_id'] ?? null) ?: null,
                 $title,
                 $d['notes'] ?? null,
-                $d['due_date'] ?: null,
-                $d['due_time'] ?: null,
+                ($d['due_date'] ?? null) ?: null,
+                ($d['due_time'] ?? null) ?: null,
                 $d['priority'] ?? 'none'
             ]);
         $id = (int)$pdo->lastInsertId();
@@ -147,7 +148,7 @@ if ($action === 'todos') {
         $title = trim($d['title'] ?? ''); if (!$title) tErr('Titre requis');
         // Reset notified_date so cron fires again today if time changed
         $pdo->prepare("UPDATE pf_todos SET list_id=?, title=?, notes=?, due_date=?, due_time=?, priority=?, notified_date=NULL, updated_at=NOW() WHERE id=?")
-            ->execute([$d['list_id'] ?: null, $title, $d['notes'] ?? null, $d['due_date'] ?: null, $d['due_time'] ?: null, $d['priority'] ?? 'none', $id]);
+            ->execute([($d['list_id'] ?? null) ?: null, $title, $d['notes'] ?? null, ($d['due_date'] ?? null) ?: null, ($d['due_time'] ?? null) ?: null, $d['priority'] ?? 'none', $id]);
         tOk(['updated' => true]);
     }
 
