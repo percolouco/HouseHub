@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS pf_budget_items (
 CREATE TABLE IF NOT EXISTS pf_expenses (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   date_exp       DATE NOT NULL,
-  gestion_month  VARCHAR(7) NOT NULL,
+  gestion_month  VARCHAR(10) NOT NULL,
   category       VARCHAR(100),
   label          VARCHAR(255),
   amount         DECIMAL(10,2) DEFAULT 0,
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS pf_alloc_categories (
 
 CREATE TABLE IF NOT EXISTS pf_alloc_values (
   id           INT AUTO_INCREMENT PRIMARY KEY,
-  month_date   VARCHAR(7) NOT NULL,
+  month_date   VARCHAR(10) NOT NULL,
   cat_id       INT NOT NULL,
   amount_alex  DECIMAL(10,2) DEFAULT 0,
   amount_laia  DECIMAL(10,2) DEFAULT 0,
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS pf_alloc_values (
 CREATE TABLE IF NOT EXISTS pf_savings (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   owner      VARCHAR(50) NOT NULL,
-  month_date VARCHAR(7) NOT NULL,
+  month_date VARCHAR(10) NOT NULL,
   category   VARCHAR(100) NOT NULL,
   amount     DECIMAL(10,2) DEFAULT 0,
   holiday_id INT DEFAULT NULL
