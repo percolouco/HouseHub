@@ -98,8 +98,11 @@ return [
     'menu_todo'          => 'Todo',
     'cta_open'           => 'Obrir',
     'cta_explore'        => 'Explorar',
-    'cta_view_lists'     => 'Veure les llistes',
+    'cta_view_lists'     => 'Desembolicar',
     'cta_manage'         => 'Gestionar',
+    'cta_service'        => 'Revisar',
+    'cta_jot'            => 'Apuntar',
+    'cta_check'          => 'Marcar',
 
     // ==========================================
     // FAMILY CALENDAR

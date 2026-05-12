@@ -87,7 +87,7 @@ if ($_has_custom_bg): ?>
         <div class="pf-card-icon">🚗</div>
         <h3 class="pf-card-title"><?= tr('mod_garage_name') ?></h3>
         <div class="pf-card-desc"><?= tr('mod_garage_desc') ?></div>
-        <span class="pf-card-cta"><?= tr('cta_open') ?></span>
+        <span class="pf-card-cta"><?= tr('cta_service') ?></span>
       </a>
       <?php endif; ?>
 
@@ -96,7 +96,7 @@ if ($_has_custom_bg): ?>
         <div class="pf-card-icon">📝</div>
         <h3 class="pf-card-title"><?= tr('mod_memo_name') ?></h3>
         <div class="pf-card-desc"><?= tr('mod_memo_desc') ?></div>
-        <span class="pf-card-cta"><?= tr('cta_open') ?></span>
+        <span class="pf-card-cta"><?= tr('cta_jot') ?></span>
       </a>
       <?php endif; ?>
 
@@ -105,7 +105,7 @@ if ($_has_custom_bg): ?>
         <div class="pf-card-icon">✅</div>
         <h3 class="pf-card-title"><?= tr('mod_todo_name') ?></h3>
         <div class="pf-card-desc"><?= tr('mod_todo_desc') ?></div>
-        <span class="pf-card-cta"><?= tr('cta_open') ?></span>
+        <span class="pf-card-cta"><?= tr('cta_check') ?></span>
       </a>
       <?php endif; ?>
 

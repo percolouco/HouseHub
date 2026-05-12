@@ -99,8 +99,11 @@ return [
     'menu_todo'          => 'Todo',
     'cta_open'           => 'Open',
     'cta_explore'        => 'Explore',
-    'cta_view_lists'     => 'View lists',
+    'cta_view_lists'     => 'Unwrap',
     'cta_manage'         => 'Manage',
+    'cta_service'        => 'Service',
+    'cta_jot'            => 'Jot down',
+    'cta_check'          => 'Check off',
 
     // ==========================================
     // FAMILY CALENDAR

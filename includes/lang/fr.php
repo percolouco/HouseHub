@@ -101,8 +101,11 @@ return [
     'menu_todo'          => 'Todo',
     'cta_open'           => 'Ouvrir',
     'cta_explore'        => 'Explorer',
-    'cta_view_lists'     => 'Voir les listes',
+    'cta_view_lists'     => 'Déballer',
     'cta_manage'         => 'Gérer',
+    'cta_service'        => 'Réviser',
+    'cta_jot'            => 'Griffonner',
+    'cta_check'          => 'Cocher',
 
     // ==========================================
     // FAMILY CALENDAR
