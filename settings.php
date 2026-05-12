@@ -148,7 +148,7 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
   <!-- ── Langue ─────────────────────────────────────────────────────────── -->
-  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+  <section class="pf-panel-card">
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px">🌐 Langue / Language</h2>
     <form method="post" style="display:flex;gap:10px;flex-wrap:wrap">
       <input type="hidden" name="action" value="set_lang">
@@ -176,7 +176,7 @@ require __DIR__ . '/header.php';
 
   <!-- ── Modules ────────────────────────────────────────────────────────── -->
   <?php if ($family_id): ?>
-  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+  <section class="pf-panel-card">
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:6px">🧩 Modules actifs</h2>
     <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px">Choisissez les modules visibles dans la navigation (partagé avec tous les membres de l'espace).</p>
     <?php
@@ -215,7 +215,7 @@ require __DIR__ . '/header.php';
     foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $f) { $bg_file = $f; break; }
     $has_custom_bg = $bg_file !== null;
   ?>
-  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+  <section class="pf-panel-card">
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:6px">🖼️ Image d'accueil</h2>
     <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px">Photo de fond affichée sur la page d'accueil (partagée avec tous les membres).</p>
 
@@ -246,7 +246,7 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
   <!-- ── Profil ──────────────────────────────────────────────────────────── -->
-  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+  <section class="pf-panel-card">
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px">👤 Mon profil</h2>
     <form method="post">
       <input type="hidden" name="action" value="update_profile">
@@ -263,7 +263,7 @@ require __DIR__ . '/header.php';
   </section>
 
   <!-- ── Mot de passe ────────────────────────────────────────────────────── -->
-  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+  <section class="pf-panel-card">
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px">🔒 Changer le mot de passe</h2>
     <form method="post">
       <input type="hidden" name="action" value="change_password">
@@ -285,7 +285,7 @@ require __DIR__ . '/header.php';
 
   <?php if ($family): ?>
   <!-- ── Espace familial ─────────────────────────────────────────────────── -->
-  <section style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px">
+  <section class="pf-panel-card">
     <h2 style="font-size:1rem;font-weight:700;margin-bottom:20px">🏠 Mon espace familial</h2>
 
     <form method="post" style="margin-bottom:20px">

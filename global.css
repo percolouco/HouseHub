@@ -262,6 +262,16 @@ body.pf-home .pf-mobile-close-btn {
   max-width: 1200px;
   margin: 0 auto;
 }
+
+/* Bloc type « carte » (ex. paramètres) — suit le thème light/dark */
+.pf-panel-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
 h1 {
   font-size: 2rem;
   font-weight: 800;
