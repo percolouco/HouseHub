@@ -60,14 +60,15 @@ foreach ($families as $family_id) {
     $webhook = $ws->fetchColumn();
     if (!$webhook) continue;
 
-    // Tasks due now: due today, due_time reached, not done, not yet notified
+    // Tasks due now: due_time reached, not done, not yet notified
+    // Handles: date+time, time only (null date = today), overdue with time
     $stmt = $pdo->prepare("
         SELECT t.id, t.title, t.due_date, t.due_time,
                l.name AS list_name, l.icon AS list_icon
         FROM pf_todos t
         LEFT JOIN pf_todo_lists l ON l.id = t.list_id
-        WHERE t.due_date = CURDATE()
-          AND t.due_time IS NOT NULL
+        WHERE t.due_time IS NOT NULL
+          AND (t.due_date IS NULL OR t.due_date <= CURDATE())
           AND t.due_time <= CURTIME()
           AND t.done = 0
           AND t.notified = 0
