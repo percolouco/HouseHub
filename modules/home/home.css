@@ -1,7 +1,7 @@
 /* modules/home/home.css */
 
 /* === 1. CONFIGURATION DU FOND & DU BODY === */
-body.pf-home {
+body[data-page="home"] {
   /* Image de fond desktop */
   background-image: url("/modules/home/assets/img/background.jpg");
   background-size: cover;
@@ -14,7 +14,7 @@ body.pf-home {
 }
 
 /* Voile sombre pour garantir la lisibilité du texte blanc */
-body.pf-home::before {
+body[data-page="home"]::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -23,7 +23,7 @@ body.pf-home::before {
 }
 
 /* === 2. HEADER SPÉCIFIQUE (Translucide) === */
-body.pf-home .pf-header {
+body[data-page="home"] .pf-header {
   background: rgba(36, 59, 83, 0.85); /* Ton ancien bleu sombre */
   backdrop-filter: blur(8px); /* Effet verre dépoli */
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -31,33 +31,33 @@ body.pf-home .pf-header {
 }
 
 /* Adaptation des couleurs des liens du header sur fond sombre */
-body.pf-home .pf-logo {
+body[data-page="home"] .pf-logo {
   color: #ffffff;
 }
-body.pf-home .pf-burger-btn {
+body[data-page="home"] .pf-burger-btn {
   color: #ffffff;
 }
 
-body.pf-home .pf-nav-link {
+body[data-page="home"] .pf-nav-link {
   color: rgba(255, 255, 255, 0.8);
 }
-body.pf-home .pf-nav-link:hover {
+body[data-page="home"] .pf-nav-link:hover {
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
 }
-body.pf-home .pf-nav-link--active {
+body[data-page="home"] .pf-nav-link--active {
   background: rgba(255, 255, 255, 0.9);
   color: #243b53; /* Texte foncé sur fond blanc */
 }
 
 /* Badge utilisateur */
-body.pf-home .pf-user-badge {
+body[data-page="home"] .pf-user-badge {
   color: rgba(255, 255, 255, 0.9);
 }
-body.pf-home .pf-logout-btn {
+body[data-page="home"] .pf-logout-btn {
   color: #fca5a5;
 } /* Rouge clair */
-body.pf-home .pf-logout-btn:hover {
+body[data-page="home"] .pf-logout-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: #fca5a5;
 }
@@ -86,7 +86,7 @@ body.pf-home .pf-logout-btn:hover {
 /* === 4. GRILLE DES MODULES === */
 
 /* Titre de section "Modules" */
-body.pf-home .pf-modules-grid {
+body[data-page="home"] .pf-modules-grid {
   /* On ajoute un titre visuel ou on espace simplement */
   margin-top: 20px;
 }
@@ -115,7 +115,7 @@ body.pf-home .pf-modules-grid {
 
 /* === 5. MOBILE RESPONSIVE === */
 @media (max-width: 768px) {
-  body.pf-home {
+  body[data-page="home"] {
     /* Image spécifique mobile */
     background-image: url("/modules/home/assets/img/background_m.jpg");
     background-attachment: scroll; /* Fixed bug souvent sur mobile, scroll est mieux */
@@ -133,7 +133,7 @@ body.pf-home .pf-modules-grid {
   }
 
   /* Ajustement header mobile */
-  body.pf-home .pf-header {
+  body[data-page="home"] .pf-header {
     padding: 0 16px;
   }
 }
