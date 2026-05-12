@@ -59,17 +59,18 @@ foreach ($families as $family_id) {
     $webhook = $ws->fetchColumn();
     if (!$webhook) continue;
 
-    // Daily reminder: fires every day when due_time is reached, resets at midnight
+    // Daily reminder: exact HH:MM match (same logic as the original todo app)
+    $now = date('H:i');
     $stmt = $pdo->prepare("
         SELECT t.id, t.title, t.due_time,
                l.name AS list_name, l.icon AS list_icon
         FROM pf_todos t
         LEFT JOIN pf_todo_lists l ON l.id = t.list_id
         WHERE t.due_time IS NOT NULL
-          AND t.due_time <= CURTIME()
+          AND TIME_FORMAT(t.due_time, '%H:%i') = ?
           AND t.done = 0
-          AND (t.notified_date IS NULL OR t.notified_date < CURDATE())
     ");
+    $stmt->execute([$now]);
     $stmt->execute();
 
     foreach ($stmt->fetchAll() as $t) {
@@ -89,8 +90,6 @@ foreach ($families as $family_id) {
         $ok = curl_getinfo($ch, CURLINFO_HTTP_CODE) < 300;
         curl_close($ch);
 
-        if ($ok) {
-            $pdo->prepare("UPDATE pf_todos SET notified_date = CURDATE() WHERE id=?")->execute([$t['id']]);
-        }
+        // No need to track notified_date with exact match — fires once per minute per day naturally
     }
 }
