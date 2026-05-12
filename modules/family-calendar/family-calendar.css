@@ -27,7 +27,7 @@
   --pf-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
-.pf-family-calendar .pf-main {
+.pf-family-calendar.pf-main {
   padding-top: 20px;
   padding-bottom: 40px;
 }

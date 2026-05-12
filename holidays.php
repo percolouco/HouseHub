@@ -17,7 +17,7 @@ $pageTitle  = ($tab === 'holiday_detail')
     : tr('hdl_title_list');
     
 $activePage = "holidays";
-$bodyClass  = "pf-holidays";
+$mainClass  = "pf-holidays";
 $pageCss    = "/modules/holidays/holidays.css";
 
 require __DIR__ . '/header.php';
