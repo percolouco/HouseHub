@@ -335,6 +335,7 @@ CREATE TABLE IF NOT EXISTS pf_todos (
   notes      TEXT DEFAULT NULL,
   due_date   DATE DEFAULT NULL,
   due_time   TIME DEFAULT NULL,
+  notified   TINYINT(1) DEFAULT 0,
   priority   ENUM('none','low','medium','high') DEFAULT 'none',
   done       TINYINT(1) DEFAULT 0,
   done_at    DATETIME DEFAULT NULL,

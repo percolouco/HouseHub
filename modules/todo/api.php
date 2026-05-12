@@ -122,7 +122,10 @@ if ($action === 'todos') {
         $new = $pdo->prepare("SELECT t.*, l.name as list_name, l.color as list_color, l.icon as list_icon FROM pf_todos t LEFT JOIN pf_todo_lists l ON l.id = t.list_id WHERE t.id=?");
         $new->execute([$id]);
         $row = $new->fetch();
-        discordNotify($pdo, "📋 **Nouvelle tâche** : " . $title . ($row['list_name'] ? " _(". $row['list_name'] .")_" : ""));
+        // Only notify immediately if no due_time (otherwise cron sends it at the right time)
+        if (empty($d['due_time'])) {
+            discordNotify($pdo, "📋 **Nouvelle tâche** : " . $title . ($row['list_name'] ? " _(". $row['list_name'] .")_" : ""));
+        }
         tOk($row);
     }
 
@@ -145,7 +148,8 @@ if ($action === 'todos') {
 
         // Full update
         $title = trim($d['title'] ?? ''); if (!$title) tErr('Titre requis');
-        $pdo->prepare("UPDATE pf_todos SET list_id=?, title=?, notes=?, due_date=?, due_time=?, priority=?, updated_at=NOW() WHERE id=?")
+        // Reset notified if due_time changed
+        $pdo->prepare("UPDATE pf_todos SET list_id=?, title=?, notes=?, due_date=?, due_time=?, priority=?, notified=0, updated_at=NOW() WHERE id=?")
             ->execute([$d['list_id'] ?: null, $title, $d['notes'] ?? null, $d['due_date'] ?: null, $d['due_time'] ?: null, $d['priority'] ?? 'none', $id]);
         tOk(['updated' => true]);
     }
