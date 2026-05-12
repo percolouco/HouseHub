@@ -9,8 +9,14 @@ body.no-scroll {
 :root {
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
-  --bg-card: #ffffff;
+  --bg-card: var(--bg-panel);
   --text-muted: #64748b;
+  --hol-accent-transport: #2563eb;
+  --hol-accent-accommodation: #059669;
+  --hol-accent-activity: #d97706;
+  --hol-info-bg: #e0f2fe;
+  --hol-info-text: #0369a1;
+  --hol-warning-bg: #fffbeb;
   --radius-l: 16px;
   --radius-m: 10px;
   --radius-s: 6px;
@@ -57,7 +63,7 @@ body.no-scroll {
 .hol-main-title {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--text-main);
   margin: 0;
 }
 
@@ -124,7 +130,7 @@ body.no-scroll {
 }
 
 .hol-map-toggle {
-  background: white;
+  background: var(--bg-panel);
   color: #0f766e;
   border: 1px solid #ccfbf1;
 }
@@ -135,19 +141,19 @@ body.no-scroll {
 }
 
 .pf-btn.btn-secondary {
-  background: white;
+  background: var(--bg-panel);
   color: var(--text-muted);
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   box-shadow: none;
 }
 .pf-btn.btn-secondary:hover {
-  background: #f8fafc;
+  background: var(--bg-page);
   color: var(--text-main);
 }
 
 /* Petit bouton + pour les colonnes */
 .btn-icon-small {
-  background: white !important;
+  background: var(--bg-panel) !important;
   border: 1px solid var(--border-light) !important;
   border-radius: 6px !important;
   width: 32px !important;
@@ -165,8 +171,8 @@ body.no-scroll {
 }
 
 .btn-icon-small:hover {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
+  background: var(--bg-subtle) !important;
+  border-color: var(--border-strong) !important;
   transform: scale(1.05);
 }
 
@@ -197,7 +203,7 @@ body.no-scroll {
 .hol-idea-card:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow-hover);
-  border-color: #e2e8f0;
+  border-color: var(--border-light);
 }
 
 .hol-idea-card__head {
@@ -226,7 +232,7 @@ body.no-scroll {
 
 .hol-notes {
   font-size: 0.85rem;
-  color: #64748b;
+  color: var(--text-muted);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -279,7 +285,7 @@ body.no-scroll {
 
 .pf-modal-content {
   position: relative;
-  background: white;
+  background: var(--bg-panel);
   width: 95%; /* Responsive */
   max-width: 1100px; /* Largeur augmentée pour 3 colonnes */
   max-height: 90vh;
@@ -292,13 +298,56 @@ body.no-scroll {
   margin: auto; /* Sécurité centrage */
 }
 
+.hol-modal-content {
+  max-width: 800px;
+  width: 95%;
+}
+
+.hol-flex-1 {
+  flex: 1;
+}
+
+.hol-flex-2 {
+  flex: 2;
+}
+
+.hol-date-range-group {
+  display: flex;
+  gap: 10px;
+}
+
+.hol-divider {
+  border: 0;
+  border-top: 1px solid var(--border-light);
+  margin: 20px 0;
+}
+
+.hol-cat-transport {
+  color: var(--hol-accent-transport);
+}
+
+.hol-cat-accommodation {
+  color: var(--hol-accent-accommodation);
+}
+
+.hol-cat-activity {
+  color: var(--hol-accent-activity);
+}
+
+.hol-btn-delete {
+  color: var(--danger);
+  border-color: var(--border-danger-soft);
+  margin-right: auto;
+  display: none;
+}
+
 /* Cas spécifique modale carte */
 .hol-dialog--map {
   width: 95vw;
   height: 90vh;
   max-width: 1400px;
   padding: 0;
-  background: white;
+  background: var(--bg-panel);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -316,20 +365,20 @@ body.no-scroll {
 .pf-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-m);
   font-size: 1rem;
-  background: #ffffff; /* Fond blanc forcé */
+  background: var(--bg-panel);
   color: var(--text-main);
   box-sizing: border-box;
   transition: all 0.2s;
 }
 
 .pf-input:focus {
-  background: white;
+  background: var(--bg-panel);
   border-color: var(--primary);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .form-row {
@@ -418,7 +467,7 @@ body.no-scroll {
   align-items: center;
   gap: 8px; /* Espace réduit */
   margin-bottom: 10px;
-  background: white;
+  background: var(--bg-panel);
   padding: 8px;
   border-radius: 8px;
   border: 1px solid #f1f5f9;
@@ -439,7 +488,7 @@ body.no-scroll {
   padding: 6px 8px !important;
   text-align: right;
   font-weight: 600;
-  color: #059669;
+  color: var(--hol-accent-accommodation);
 }
 
 /* Checkbox Payé */
@@ -447,7 +496,7 @@ body.no-scroll {
   display: flex;
   align-items: center;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   gap: 4px;
   cursor: pointer;
   white-space: nowrap;
@@ -470,7 +519,7 @@ body.no-scroll {
   transition: background 0.2s;
 }
 .btn-remove:hover {
-  background: #fef2f2;
+  background: var(--bg-danger-soft);
   color: #b91c1c;
 }
 
@@ -643,13 +692,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   padding: 4px 10px;
   border-radius: 12px;
   font-weight: bold;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--hol-info-bg);
+  color: var(--hol-info-text);
 }
 
 /* Bloc Résumé Financier */
 .hol-summary-card {
-  background: white;
+  background: var(--bg-panel);
   padding: 20px;
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-sm);
@@ -684,7 +733,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .hol-summary-value.total {
   font-size: 1.4rem;
   font-weight: bold;
-  color: #0f172a;
+  color: var(--text-main);
 }
 
 /* Grille principale : Carte + Timeline */
@@ -697,7 +746,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 /* Panneaux (Carte et Timeline) */
 .hol-panel {
-  background: white;
+  background: var(--bg-panel);
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-light);
@@ -713,7 +762,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f8fafc;
+  background: var(--bg-page);
 }
 
 .hol-panel-header h3 {
@@ -734,11 +783,11 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   border-radius: 8px;
   margin-bottom: 15px;
   overflow: hidden;
-  background: white;
+  background: var(--bg-panel);
 }
 
 .hol-cp-header {
-  background: #f8fafc;
+  background: var(--bg-page);
   padding: 12px 15px;
   display: flex;
   justify-content: space-between;
@@ -756,7 +805,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .hol-cp-title {
-  color: #0f172a;
+  color: var(--text-main);
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
@@ -792,7 +841,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   justify-content: space-between;
   font-size: 0.85rem;
   margin-bottom: 5px;
-  border-bottom: 1px dashed #f1f5f9;
+  border-bottom: 1px dashed var(--bg-subtle);
   padding-bottom: 5px;
 }
 
@@ -805,7 +854,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .hol-notes-panel {
   padding: 15px;
   border-top: 1px solid var(--border-light);
-  background: #fffbeb;
+  background: var(--hol-warning-bg);
   flex-shrink: 0;
   max-height: 200px;
   overflow-y: auto;
@@ -880,8 +929,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   display: flex;
   gap: 12px;
   font-size: 0.75rem;
-  color: #64748b;
-  background: white;
+  color: var(--text-muted);
+  background: var(--bg-panel);
   padding: 4px 10px;
   border-radius: 12px;
   border: 1px solid var(--border-light);
@@ -919,7 +968,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   align-items: flex-start;
   gap: 4px;
   margin-bottom: 8px;
-  border-bottom: 1px dashed #f1f5f9;
+  border-bottom: 1px dashed var(--bg-subtle);
   padding-bottom: 8px;
 }
 .hol-expense-wrapper:last-child {
@@ -935,7 +984,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-size: 0.85rem;
 }
 .hol-expense-name {
-  color: #475569;
+  color: var(--text-muted);
   font-weight: 500;
 }
 .hol-expense-amount {
@@ -953,7 +1002,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
 .hol-expense-note {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--border-strong);
   padding-left: 24px;
   word-break: break-all;
 }
@@ -987,7 +1036,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   flex-direction: column;
   gap: 6px;
   padding: 10px;
-  background: #f8fafc;
+  background: var(--bg-page);
   border-radius: 8px;
   border: 1px solid var(--border-light);
 }
@@ -1024,13 +1073,13 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-size: 0.75rem;
   margin-left: 4px;
   font-weight: bold;
-  color: #64748b;
+  color: var(--text-muted);
 }
 .hol-form-notes-input {
   font-size: 0.8rem;
   padding: 6px 8px;
   border-style: dashed;
-  color: #475569;
+  color: var(--text-muted);
   width: calc(100% - 58px);
   margin-left: 58px;
 }
@@ -1097,10 +1146,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 /* Zone des activités non planifiées */
 .hol-unmapped-zone {
   width: 250px;
-  background: #f8fafc;
+  background: var(--bg-page);
   padding: 15px;
   border-radius: 12px;
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--border-strong);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1110,7 +1159,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-muted);
   margin-bottom: 5px;
   text-align: center;
 }
@@ -1130,16 +1179,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 .hol-calendar-zone::-webkit-scrollbar-track,
 .hol-unmapped-zone::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--bg-subtle);
   border-radius: 5px;
 }
 .hol-calendar-zone::-webkit-scrollbar-thumb,
 .hol-unmapped-zone::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border-strong);
   border-radius: 5px;
 }
 .hol-calendar-zone::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--text-muted);
 }
 
 .hol-calendar-zone .hol-drag-item {
