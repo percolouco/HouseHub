@@ -40,13 +40,6 @@ require __DIR__ . '/header.php';
       </div>
     </div>
 
-    <!-- Quick add -->
-    <div class="todo-quick-add">
-      <span style="color:var(--text-muted)">+</span>
-      <input type="text" id="quick-add-input" placeholder="Ajouter une tâche rapide… (Entrée pour valider)">
-      <select id="quick-add-list" class="form-control" style="width:auto;font-size:.8rem;padding:.25rem .5rem;border:none;background:transparent;color:var(--text-muted)"></select>
-    </div>
-
     <!-- Todo list -->
     <div class="todo-list" id="todo-list"></div>
 

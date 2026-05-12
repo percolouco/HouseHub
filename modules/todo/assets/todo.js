@@ -13,10 +13,12 @@ function toast(msg,type='success'){
   t.textContent=msg;c.appendChild(t);setTimeout(()=>t.remove(),3000);
 }
 async function api(action,method='GET',data=null,extra=''){
-  const opts={method,headers:{}};
+  const opts={method,credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}};
   if(data){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(data);}
   const r=await fetch(API+'?action='+action+extra,opts);
-  const j=await r.json();
+  const text=await r.text();
+  let j;
+  try{j=JSON.parse(text);}catch(e){console.error('Bad JSON from API:',text.slice(0,200));throw new Error('Erreur serveur');}
   if(!j.ok)throw new Error(j.error||'Erreur');
   return j.data;
 }
@@ -84,7 +86,6 @@ async function loadTodos(){
 
     const todos=await api('todos','GET',null,extra);
     renderTodos(todos);
-    updateQuickAddList();
     updateHeader();
   }catch(e){toast(e.message,'error');}
 }
@@ -98,14 +99,6 @@ function updateHeader(){
     const l=lists.find(x=>x.id==currentFilter.slice(5));
     el.textContent=l?(l.icon+' '+l.name):'Liste';
   }
-}
-
-function updateQuickAddList(){
-  const sel=document.getElementById('quick-add-list');
-  if(!sel)return;
-  sel.innerHTML='<option value="">Sans liste</option>'+
-    lists.map(l=>`<option value="${l.id}">${escHtml(l.icon)} ${escHtml(l.name)}</option>`).join('');
-  if(currentFilter.startsWith('list_'))sel.value=currentFilter.slice(5);
 }
 
 function toggleShowDone(){
@@ -181,19 +174,6 @@ async function deleteTodo(e,id){
   if(!confirm('Supprimer cette tâche ?'))return;
   try{await api('todos','DELETE',null,'&id='+id);toast('Supprimée');loadTodos();loadSidebar();}
   catch(e){toast(e.message,'error');}
-}
-
-// ─── Quick add ────────────────────────────────────────────────────────────────
-async function quickAdd(e){
-  if(e.key!=='Enter')return;
-  const inp=document.getElementById('quick-add-input');
-  const title=inp.value.trim();
-  if(!title)return;
-  const listSel=document.getElementById('quick-add-list');
-  try{
-    await api('todos','POST',{title,list_id:listSel?.value||null,priority:'none'});
-    inp.value='';toast('Tâche ajoutée ✓');loadTodos();loadSidebar();
-  }catch(e){toast(e.message,'error');}
 }
 
 // ─── Todo modal ───────────────────────────────────────────────────────────────
@@ -346,6 +326,5 @@ function closeModal(id){document.getElementById(id)?.classList.remove('show');}
 document.addEventListener('DOMContentLoaded',()=>{
   loadSidebar();
   loadTodos();
-  document.getElementById('quick-add-input')?.addEventListener('keydown',quickAdd);
   document.querySelectorAll('.todo-modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
 });
