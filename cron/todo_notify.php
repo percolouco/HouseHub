@@ -1,7 +1,8 @@
 <?php
 /**
- * Cron: Todo reminder notifications via Discord webhook
- * Runs every minute — sends Discord alert when due_date+due_time is reached.
+ * Cron: Todo daily reminder notifications via Discord webhook
+ * Runs every minute — sends Discord reminder when due_time is reached.
+ * Repeats every day at the same time (resets at midnight via notified_date).
  * Usage: php /opt/container/househub/cron/todo_notify.php
  */
 
@@ -10,7 +11,7 @@ $DB_USER = getenv('DB_USER') ?: 'househub';
 $DB_PASS = getenv('DB_PASS') ?: 'changeme';
 $DB_ROOT = getenv('DB_ROOT_PASS') ?: 'rootchangeme';
 
-// Load .env if running from CLI (not inside container)
+// Load .env if running from CLI outside container
 $env_file = dirname(__DIR__) . '/.env';
 if (file_exists($env_file)) {
     foreach (file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
@@ -51,34 +52,30 @@ foreach ($families as $family_id) {
         continue;
     }
 
-    // Skip if todo tables don't exist yet
     if (!$pdo->query("SHOW TABLES LIKE 'pf_todos'")->fetchColumn()) continue;
 
-    // Get Discord webhook for this family
     $ws = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type='todo_settings' AND reference_id='webhook_discord'");
     $ws->execute();
     $webhook = $ws->fetchColumn();
     if (!$webhook) continue;
 
-    // Tasks due now: due_time reached, not done, not yet notified
-    // Handles: date+time, time only (null date = today), overdue with time
+    // Daily reminder: fires every day when due_time is reached, resets at midnight
     $stmt = $pdo->prepare("
-        SELECT t.id, t.title, t.due_date, t.due_time,
+        SELECT t.id, t.title, t.due_time,
                l.name AS list_name, l.icon AS list_icon
         FROM pf_todos t
         LEFT JOIN pf_todo_lists l ON l.id = t.list_id
         WHERE t.due_time IS NOT NULL
-          AND (t.due_date IS NULL OR t.due_date <= CURDATE())
           AND t.due_time <= CURTIME()
           AND t.done = 0
-          AND t.notified = 0
+          AND (t.notified_date IS NULL OR t.notified_date < CURDATE())
     ");
     $stmt->execute();
 
     foreach ($stmt->fetchAll() as $t) {
         $time = substr($t['due_time'], 0, 5);
         $list = $t['list_name'] ? " _({$t['list_icon']} {$t['list_name']})_" : '';
-        $msg  = "⏰ **Rappel** : {$t['title']}{$list} — prévu à {$time}";
+        $msg  = "⏰ **Rappel** : {$t['title']}{$list} — {$time}";
 
         $ch = curl_init($webhook);
         curl_setopt_array($ch, [
@@ -93,7 +90,7 @@ foreach ($families as $family_id) {
         curl_close($ch);
 
         if ($ok) {
-            $pdo->prepare("UPDATE pf_todos SET notified=1 WHERE id=?")->execute([$t['id']]);
+            $pdo->prepare("UPDATE pf_todos SET notified_date = CURDATE() WHERE id=?")->execute([$t['id']]);
         }
     }
 }

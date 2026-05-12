@@ -47,20 +47,7 @@ async function loadSidebar(){
         <span>📋</span> Toutes
         <span class="todo-nav-badge">${stats.pending||0}</span>
       </div>
-      <div class="todo-nav-item${currentFilter==='today'?' active':''}" onclick="setFilter('today')">
-        <span>☀️</span> Aujourd'hui
-        <span class="todo-nav-badge${parseInt(stats.today)>0?' urgent':''}">${stats.today||0}</span>
-      </div>
-      <div class="todo-nav-item${currentFilter==='upcoming'?' active':''}" onclick="setFilter('upcoming')">
-        <span>📅</span> À venir
-      </div>`;
-    if(parseInt(stats.overdue)>0){
-      html+=`<div class="todo-nav-item${currentFilter==='overdue'?' active':''}" onclick="setFilter('overdue')">
-        <span>⚠️</span> En retard
-        <span class="todo-nav-badge urgent">${stats.overdue}</span>
-      </div>`;
-    }
-    html+=`<div class="todo-nav-item${currentFilter==='done'?' active':''}" onclick="setFilter('done')">
+      <div class="todo-nav-item${currentFilter==='done'?' active':''}" onclick="setFilter('done')">
         <span>✅</span> Terminées
         <span class="todo-nav-badge">${stats.done||0}</span>
       </div>`;
@@ -91,11 +78,7 @@ function setFilter(f){
 async function loadTodos(){
   try{
     let extra='';
-    if(currentFilter==='all')extra='';
-    else if(currentFilter==='done')extra='&list_id=done&show_done=1';
-    else if(currentFilter==='today')extra='&list_id=today';
-    else if(currentFilter==='upcoming')extra='&list_id=upcoming';
-    else if(currentFilter==='overdue')extra='&list_id=overdue';
+    if(currentFilter==='done')extra='&list_id=done&show_done=1';
     else if(currentFilter.startsWith('list_'))extra='&list_id='+currentFilter.slice(5);
     if(showDone&&currentFilter!=='done')extra+='&show_done=1';
 
@@ -109,7 +92,7 @@ async function loadTodos(){
 function updateHeader(){
   const el=document.getElementById('todo-header-title');
   if(!el)return;
-  const map={all:'Toutes les tâches',today:"Aujourd'hui",upcoming:'À venir',done:'Tâches terminées',overdue:'En retard'};
+  const map={all:'Toutes les tâches',done:'Tâches terminées'};
   if(map[currentFilter]){el.textContent=map[currentFilter];return;}
   if(currentFilter.startsWith('list_')){
     const l=lists.find(x=>x.id==currentFilter.slice(5));
@@ -158,8 +141,7 @@ function todoItemHtml(t){
   const checkClass='todo-check'+(isDone?' checked':'');
   const itemClass='todo-item'+(isDone?' done':'');
   const dueCls=isOverdue(t.due_date)&&!isDone?' overdue':isToday(t.due_date)&&!isDone?' today':'';
-  const timeLabel=t.due_time?fmtTime(t.due_time):null;
-  const dueLabel=t.due_date?(isToday(t.due_date)?'Aujourd\'hui'+(timeLabel?' à '+timeLabel:''):isOverdue(t.due_date)?'En retard '+fmtDate(t.due_date)+(timeLabel?' '+timeLabel:''):fmtDate(t.due_date)+(timeLabel?' à '+timeLabel:'')):null;
+  const dueLabel=t.due_time?('🔔 '+fmtTime(t.due_time)):null;
   const priBadge=t.priority&&t.priority!=='none'?
     `<span class="todo-priority-badge pri-${t.priority}">${t.priority==='high'?'Urgent':t.priority==='medium'?'Normal':'Bas'}</span>`:'';
   const listBadge=t.list_name?
@@ -170,7 +152,7 @@ function todoItemHtml(t){
       <div class="todo-title">${escHtml(t.title)}</div>
       ${t.notes?`<div class="todo-notes-preview">${escHtml(t.notes)}</div>`:''}
       <div class="todo-meta">
-        ${dueLabel?`<span class="todo-due${dueCls}">📅 ${escHtml(dueLabel)}</span>`:''}
+        ${dueLabel?`<span class="todo-due">${escHtml(dueLabel)}</span>`:''}
         ${priBadge}${listBadge}
       </div>
     </div>
@@ -220,7 +202,6 @@ function openAddTodo(){
   document.getElementById('todo-modal-title').textContent='Nouvelle tâche';
   document.getElementById('todo-form-title').value='';
   document.getElementById('todo-form-notes').value='';
-  document.getElementById('todo-form-due').value='';
   document.getElementById('todo-form-time').value='';
   document.getElementById('todo-delete-btn').style.display='none';
   const sel=document.getElementById('todo-form-list');
@@ -240,7 +221,6 @@ async function openEditTodo(id){
     document.getElementById('todo-modal-title').textContent='Modifier la tâche';
     document.getElementById('todo-form-title').value=t.title;
     document.getElementById('todo-form-notes').value=t.notes||'';
-    document.getElementById('todo-form-due').value=t.due_date||'';
     document.getElementById('todo-form-time').value=t.due_time?t.due_time.slice(0,5):'';
     document.getElementById('todo-delete-btn').style.display='';
     const sel=document.getElementById('todo-form-list');
@@ -262,11 +242,12 @@ function setPriority(p){
 async function saveTodo(){
   const title=document.getElementById('todo-form-title').value.trim();
   if(!title){toast('Titre requis','error');return;}
+  const time=document.getElementById('todo-form-time').value;
+  if(!time){toast('Heure de rappel requise','error');return;}
   const data={
     title,
     notes:document.getElementById('todo-form-notes').value||null,
-    due_date:document.getElementById('todo-form-due').value||null,
-    due_time:document.getElementById('todo-form-time').value||null,
+    due_time:time,
     list_id:document.getElementById('todo-form-list').value||null,
     priority:selectedPriority
   };
