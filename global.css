@@ -13,6 +13,15 @@
   --text-muted: #64748b;
   --bg-page: #f8fafc;
   --bg-panel: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --bg-soft: #eff6ff;
+  --bg-danger-soft: #fef2f2;
+  --bg-overlay: rgba(15, 23, 42, 0.6);
+  --text-on-primary: #ffffff;
+  --text-danger-soft: #f87171;
+  --border-strong: #cbd5e1;
+  --border-danger-soft: #fecaca;
+  --focus-ring: rgba(37, 99, 235, 0.1);
 
   /* Bordures, Arrondis & Ombres */
   --border-light: #e2e8f0;
@@ -64,7 +73,7 @@ body.no-scroll {
 
 /* === HEADER & NAVIGATION === */
 .pf-header {
-  background: white;
+  background: var(--bg-panel);
   border-bottom: 1px solid var(--border-light);
   padding: 0 20px;
   height: 64px;
@@ -96,11 +105,11 @@ body.no-scroll {
   transition: all 0.2s;
 }
 .pf-nav-link:hover {
-  background: #f1f5f9;
+  background: var(--bg-subtle);
   color: var(--text-main);
 }
 .pf-nav-link--active {
-  background: #eff6ff;
+  background: var(--bg-soft);
   color: var(--primary);
 }
 .pf-header-actions {
@@ -125,8 +134,8 @@ body.no-scroll {
   border: 1px solid transparent;
 }
 .pf-logout-btn:hover {
-  background: #fef2f2;
-  border-color: #fecaca;
+  background: var(--bg-danger-soft);
+  border-color: var(--border-danger-soft);
 }
 .pf-burger-btn {
   display: none;
@@ -142,7 +151,7 @@ body.no-scroll {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--bg-overlay);
   backdrop-filter: blur(4px);
   z-index: 998;
   opacity: 0;
@@ -216,12 +225,12 @@ body.no-scroll {
 }
 
 .pf-mobile-nav-link:active {
-  background: #f1f5f9;
+  background: var(--bg-subtle);
 }
 
 .pf-mobile-logout {
   color: var(--danger);
-  background: #fef2f2;
+  background: var(--bg-danger-soft);
   margin-top: 10px;
 }
 
@@ -274,7 +283,7 @@ p {
   margin-top: 32px;
 }
 .pf-module-card {
-  background: white;
+  background: var(--bg-panel);
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   padding: 24px;
@@ -289,7 +298,7 @@ p {
 .pf-module-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow);
-  border-color: #cbd5e1;
+  border-color: var(--border-strong);
 }
 .pf-card-icon {
   font-size: 2rem;
@@ -322,7 +331,7 @@ p {
   justify-content: center;
   gap: 8px;
   background: var(--primary);
-  color: white;
+  color: var(--text-on-primary);
   border: none;
   border-radius: 8px;
   font-size: 1rem;
@@ -336,14 +345,14 @@ p {
   background: var(--primary-dark);
 }
 .pf-btn.btn-secondary {
-  background: white;
+  background: var(--bg-panel);
   color: var(--text-muted);
   border: 1px solid var(--border-light);
 }
 .pf-btn.btn-secondary:hover {
-  background: #f8fafc;
+  background: var(--bg-page);
   color: var(--text-main);
-  border-color: #94a3b8;
+  border-color: var(--border-strong);
 }
 
 /* Formulaires & Inputs Standards */
@@ -363,17 +372,17 @@ p {
   border: 1px solid var(--border-light);
   border-radius: 8px;
   font-size: 1rem;
-  background: #f8fafc;
+  background: var(--bg-page);
   color: var(--text-main);
   transition: all 0.2s;
   font-family: inherit;
   box-sizing: border-box;
 }
 .pf-input:focus {
-  background: white;
+  background: var(--bg-panel);
   border-color: var(--primary);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* Tableaux Standards */
@@ -387,7 +396,7 @@ p {
   overflow: hidden;
 }
 .pf-table th {
-  background: #f8fafc;
+  background: var(--bg-page);
   padding: 16px;
   text-align: left;
   font-weight: 600;
@@ -407,7 +416,7 @@ p {
   border-bottom: none;
 }
 .pf-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--bg-page);
 }
 
 /* === 🪟 LE DESIGN SYSTEM DES MODALES (Applicable partout) === */
@@ -416,7 +425,7 @@ p {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--bg-overlay);
   backdrop-filter: blur(4px);
   align-items: center;
   justify-content: center;
@@ -480,7 +489,7 @@ p {
 /* === FOOTER & TOASTS === */
 .pf-footer {
   border-top: 1px solid var(--border-light);
-  background: white;
+  background: var(--bg-panel);
   padding: 24px;
   text-align: center;
   font-size: 0.85rem;
@@ -492,7 +501,7 @@ p {
   bottom: 20px;
   right: 20px;
   padding: 12px 24px;
-  background: white;
+  background: var(--bg-panel);
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   border-left: 5px solid var(--primary);
@@ -548,7 +557,7 @@ p {
     display: block;
     width: 40px;
     height: 5px;
-    background: #cbd5e1;
+    background: var(--border-strong);
     border-radius: 10px;
     margin: -10px auto 20px auto;
   }
@@ -588,13 +597,13 @@ p {
   color: var(--primary);
 }
 .btn-icon-action.edit:hover {
-  background: #eff6ff; /* Fond bleu très clair au survol */
+  background: var(--bg-soft); /* Fond bleu très clair au survol */
 }
 .btn-icon-action.delete {
   color: var(--danger);
 }
 .btn-icon-action.delete:hover {
-  background: #fef2f2; /* Fond rouge très clair au survol */
+  background: var(--bg-danger-soft); /* Fond rouge très clair au survol */
 }
 
 /* === 13. PAGE DE CONNEXION (LOGIN) === */
@@ -610,7 +619,7 @@ p {
   width: 100%;
   max-width: 400px;
   padding: 32px;
-  background: white;
+  background: var(--bg-panel);
   border-radius: 16px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-light);
@@ -641,11 +650,11 @@ p {
 }
 
 .pf-login-error {
-  background: #fef2f2;
-  color: #ef4444;
+  background: var(--bg-danger-soft);
+  color: var(--danger);
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid #fca5a5;
+  border: 1px solid var(--border-danger-soft);
   margin-bottom: 20px;
   font-size: 0.9rem;
   text-align: center;
@@ -699,6 +708,14 @@ p {
   --border-light: #30363d;
   --shadow:       0 4px 6px -1px rgba(0,0,0,.4), 0 2px 4px -2px rgba(0,0,0,.3);
   --shadow-lg:    0 10px 15px -3px rgba(0,0,0,.5), 0 4px 6px -4px rgba(0,0,0,.4);
+  --bg-subtle: rgba(255,255,255,.06);
+  --bg-soft: rgba(59,130,246,.15);
+  --bg-danger-soft: rgba(239,68,68,.1);
+  --bg-overlay: rgba(0, 0, 0, 0.55);
+  --text-danger-soft: #f87171;
+  --border-strong: #484f58;
+  --border-danger-soft: rgba(239,68,68,.3);
+  --focus-ring: rgba(59,130,246,.25);
 }
 [data-theme="dark"] body           { background: var(--bg-page); color: var(--text-main); }
 [data-theme="dark"] .pf-header     { background: var(--bg-panel); border-color: var(--border-light); }

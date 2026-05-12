@@ -10,7 +10,7 @@ body[data-page="home"] {
   background-repeat: no-repeat;
 
   /* Couleur de texte par défaut sur la home (Blanc) */
-  color: #ffffff;
+  color: var(--text-on-primary);
 }
 
 /* Voile sombre pour garantir la lisibilité du texte blanc */
@@ -18,7 +18,7 @@ body[data-page="home"]::before {
   content: "";
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5); /* Bleu nuit semi-transparent */
+  background: var(--bg-overlay); /* Bleu nuit semi-transparent */
   z-index: -1; /* Derrière le contenu */
 }
 
@@ -32,10 +32,10 @@ body[data-page="home"] .pf-header {
 
 /* Adaptation des couleurs des liens du header sur fond sombre */
 body[data-page="home"] .pf-logo {
-  color: #ffffff;
+  color: var(--text-on-primary);
 }
 body[data-page="home"] .pf-burger-btn {
-  color: #ffffff;
+  color: var(--text-on-primary);
 }
 
 body[data-page="home"] .pf-nav-link {
@@ -43,7 +43,7 @@ body[data-page="home"] .pf-nav-link {
 }
 body[data-page="home"] .pf-nav-link:hover {
   background: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  color: var(--text-on-primary);
 }
 body[data-page="home"] .pf-nav-link--active {
   background: rgba(255, 255, 255, 0.9);
@@ -55,11 +55,11 @@ body[data-page="home"] .pf-user-badge {
   color: rgba(255, 255, 255, 0.9);
 }
 body[data-page="home"] .pf-logout-btn {
-  color: #fca5a5;
+  color: var(--text-danger-soft);
 } /* Rouge clair */
 body[data-page="home"] .pf-logout-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: #fca5a5;
+  border-color: var(--text-danger-soft);
 }
 
 /* === 3. HERO SECTION (Message de Bienvenue) === */
@@ -70,7 +70,7 @@ body[data-page="home"] .pf-logout-btn:hover {
 }
 
 .pf-hero h1 {
-  color: #ffffff;
+  color: var(--text-on-primary);
   font-size: 2.5rem;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); /* Ombre pour détacher le texte de l'image */
   margin-bottom: 12px;
@@ -100,7 +100,7 @@ body[data-page="home"] .pf-modules-grid {
 }
 
 .pf-module-card:hover {
-  background: #ffffff;
+  background: var(--bg-panel);
   transform: translateY(-5px);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
