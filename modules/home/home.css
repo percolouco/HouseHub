@@ -3,7 +3,7 @@
 /* === 1. CONFIGURATION DU FOND & DU BODY === */
 body.pf-home {
   /* Image de fond desktop */
-  background-image: url("/modules/home/assets/img/background.jpg");
+  background-image: url("/modules/home/assets/img/backgroundtest.jpg");
   background-size: cover;
   background-position: center center;
   background-attachment: fixed; /* Effet parallax léger */
