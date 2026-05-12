@@ -64,8 +64,8 @@ foreach ($families as $family_id) {
     // Daily reminder: exact HH:MM match (same logic as the original todo app)
     $now = date('H:i');
     $stmt = $pdo->prepare("
-        SELECT t.id, t.title, t.due_time,
-               l.name AS list_name, l.icon AS list_icon
+        SELECT t.id, t.title, t.notes, t.due_time, t.priority,
+               l.name AS list_name, l.icon AS list_icon, l.color AS list_color
         FROM pf_todos t
         LEFT JOIN pf_todo_lists l ON l.id = t.list_id
         WHERE t.due_time IS NOT NULL
@@ -73,12 +73,35 @@ foreach ($families as $family_id) {
           AND t.done = 0
     ");
     $stmt->execute([$now]);
-    $stmt->execute();
+
+    $priColors = ['high' => 0xef4444, 'medium' => 0xf59e0b, 'low' => 0x22c55e, 'none' => 0x3b82f6];
+    $priLabels = ['high' => '🔴 Haute', 'medium' => '🟡 Moyenne', 'low' => '🟢 Basse', 'none' => null];
 
     foreach ($stmt->fetchAll() as $t) {
-        $time = substr($t['due_time'], 0, 5);
-        $list = $t['list_name'] ? " _({$t['list_icon']} {$t['list_name']})_" : '';
-        $msg  = "⏰ **Rappel** : {$t['title']}{$list} — {$time}";
+        $time     = substr($t['due_time'], 0, 5);
+        $priority = $t['priority'] ?? 'none';
+        $color    = $priColors[$priority] ?? 0x3b82f6;
+
+        $fields = [];
+        if ($t['list_name']) {
+            $fields[] = ['name' => 'Liste', 'value' => $t['list_icon'] . ' ' . $t['list_name'], 'inline' => true];
+        }
+        if ($priLabels[$priority]) {
+            $fields[] = ['name' => 'Priorité', 'value' => $priLabels[$priority], 'inline' => true];
+        }
+        $fields[] = ['name' => 'Heure', 'value' => '⏰ ' . $time, 'inline' => true];
+
+        $embed = [
+            'title'       => '🔔 Rappel : ' . $t['title'],
+            'color'       => $color,
+            'fields'      => $fields,
+            'footer'      => ['text' => 'HouseHub Todo'],
+        ];
+        if (!empty($t['notes'])) {
+            $embed['description'] = $t['notes'];
+        }
+
+        $payload = ['username' => 'HouseHub Todo', 'embeds' => [$embed]];
 
         $ch = curl_init($webhook);
         curl_setopt_array($ch, [
@@ -86,12 +109,9 @@ foreach ($families as $family_id) {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 5,
             CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
-            CURLOPT_POSTFIELDS     => json_encode(['username' => 'HouseHub Todo', 'content' => $msg]),
+            CURLOPT_POSTFIELDS     => json_encode($payload),
         ]);
         curl_exec($ch);
-        $ok = curl_getinfo($ch, CURLINFO_HTTP_CODE) < 300;
         curl_close($ch);
-
-        // No need to track notified_date with exact match — fires once per minute per day naturally
     }
 }
