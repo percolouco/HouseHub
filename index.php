@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/i18n.php';
 // Configuration de la page
 $pageTitle  = tr('home_title');
 $activePage = "home";
-$bodyClass  = "pf-home"; // Important pour l'image de fond définie dans home.css
+// background géré par home.css via body[data-page="home"]
 $pageCss    = "/modules/home/home.css";
 
 require __DIR__ . '/header.php';
@@ -23,7 +23,7 @@ if ($_fid) {
     foreach (glob('/uploads/home_bg_' . $_fid . '.*') as $_f) { $_has_custom_bg = true; break; }
 }
 if ($_has_custom_bg): ?>
-<style>body.pf-home { background-image: url('/home-bg.php?v=<?= filemtime($_f) ?>'); }</style>
+<style>body[data-page="home"] { background-image: url('/home-bg.php?v=<?= filemtime($_f) ?>'); }</style>
 <?php endif; ?>
 
 <div class="pf-container">

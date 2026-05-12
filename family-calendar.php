@@ -10,7 +10,7 @@ require_once __DIR__ . '/includes/i18n.php';
 
 $pageTitle  = tr('fc_page_title');
 $activePage = "family-calendar";
-$bodyClass  = "pf-family-calendar"; 
+$mainClass  = "pf-family-calendar";
 $pageCss    = "/modules/family-calendar/family-calendar.css"; 
 
 require __DIR__ . '/header.php';

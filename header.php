@@ -39,7 +39,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     }
   </style>
 </head>
-<body class="<?= htmlspecialchars($bodyClass ?? '') ?>">
+<body data-page="<?= htmlspecialchars($activePage ?? '') ?>">
 
   <header class="pf-header">
     <a href="/index.php" class="pf-logo">HouseHub</a>
@@ -107,7 +107,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   </div>
   <?php endif; ?>
 
-  <main class="pf-main">
+  <main class="pf-main<?= ($mainClass ?? '') ? ' '.htmlspecialchars($mainClass) : '' ?>">
 
   <script>
     /**
