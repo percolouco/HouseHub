@@ -16,27 +16,29 @@ require __DIR__ . '/header.php';
     <div class="ios-calendar-head">
       <h1>📱 <?= tr('menu_calendar_ios') ?></h1>
       <div class="ios-calendar-head-actions">
-        <button class="pf-btn btn-secondary" id="ios-sync-btn">Synchroniser</button>
+        <button type="button" class="ios-agenda-btn ios-agenda-btn--ghost" id="ios-sync-btn">Synchroniser</button>
       </div>
     </div>
-    <p class="pf-muted-note">Les événements affichés viennent de HouseHub après import. <strong>Synchroniser</strong> interroge <strong>tous tes calendriers iCloud</strong> (même compte) sur une fenêtre d’environ trois ans en arrière à quatre ans en avant. Modification et suppression sont renvoyées vers iCloud à la synchro suivante.</p>
-    <div class="ios-view-toggle" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-      <button type="button" class="pf-btn btn-secondary ios-view-btn ios-view-btn--active" id="ios-view-month">Vue mois</button>
-      <button type="button" class="pf-btn btn-secondary ios-view-btn" id="ios-view-list">Liste</button>
-    </div>
+    <p class="ios-agenda-intro">Les événements viennent de HouseHub après synchro iCloud. <strong>Synchroniser</strong> met à jour tous les calendriers du compte ; les changements locaux partent au prochain envoi.</p>
   </section>
 
-  <section class="pf-panel-card" id="ios-month-section">
-    <div class="ios-cal-toolbar">
-      <button type="button" class="pf-btn btn-secondary" id="ios-month-prev" aria-label="Mois précédent">←</button>
-      <span id="ios-month-label" class="ios-cal-month-label"></span>
-      <button type="button" class="pf-btn btn-secondary" id="ios-month-next" aria-label="Mois suivant">→</button>
+  <section class="pf-panel-card ios-agenda-card">
+    <div class="ios-agenda-toolbar">
+      <div class="ios-agenda-title" id="ios-agenda-title" aria-live="polite">—</div>
+      <div class="ios-agenda-segments" role="tablist">
+        <button type="button" class="ios-seg" data-ios-view="day" role="tab">Jour</button>
+        <button type="button" class="ios-seg ios-seg--active" data-ios-view="week" role="tab">Semaine</button>
+        <button type="button" class="ios-seg" data-ios-view="month" role="tab">Mois</button>
+      </div>
+      <div class="ios-agenda-nav">
+        <button type="button" class="ios-agenda-btn" id="ios-agenda-prev" aria-label="Période précédente">‹</button>
+        <button type="button" class="ios-agenda-btn" id="ios-agenda-next" aria-label="Période suivante">›</button>
+        <button type="button" class="ios-agenda-today" id="ios-agenda-today">Aujourd'hui</button>
+        <button type="button" class="ios-agenda-add" id="ios-agenda-add" title="Nouvel événement">+</button>
+        <button type="button" class="ios-agenda-listlink" id="ios-view-list">Liste</button>
+      </div>
     </div>
-    <div class="ios-cal-weekdays" aria-hidden="true">
-      <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
-    </div>
-    <div id="ios-cal-grid" class="ios-cal-grid"></div>
-    <div id="ios-day-detail" class="ios-day-detail"></div>
+    <div id="ios-agenda-mount" class="ios-agenda-mount"></div>
   </section>
 
   <section class="pf-panel-card" id="ios-edit-panel">
@@ -70,9 +72,9 @@ require __DIR__ . '/header.php';
     </form>
   </section>
 
-  <section class="pf-panel-card" id="ios-list-section">
+  <section class="pf-panel-card" id="ios-list-section" style="display:none">
     <h2 class="pf-card-h2">Événements (liste)</h2>
-    <div id="ios-sync-status" class="pf-muted-note"></div>
+    <div id="ios-sync-status" class="ios-agenda-intro"></div>
     <div id="ios-events-list" class="ios-events-list"></div>
   </section>
 </div>

@@ -1,14 +1,30 @@
 const iosEventsList = document.getElementById("ios-events-list");
 const iosSyncStatus = document.getElementById("ios-sync-status");
 const iosForm = document.getElementById("ios-event-form");
-const iosCalGrid = document.getElementById("ios-cal-grid");
-const iosMonthLabel = document.getElementById("ios-month-label");
-const iosDayDetail = document.getElementById("ios-day-detail");
+const iosAgendaMount = document.getElementById("ios-agenda-mount");
+const iosAgendaTitle = document.getElementById("ios-agenda-title");
+
+const H_START = 6;
+const H_END = 22;
+const PX_PER_H = 44;
+const TRACK_H = (H_END - H_START) * PX_PER_H;
 
 let iosEventsCache = [];
-/** @type {Date} mois affiché (jour ignoré) */
-let iosMonthCursor = new Date();
-let iosView = "month";
+/** @type {'day'|'week'|'month'} */
+let iosViewMode = "week";
+/** Ancre de navigation (jour courant dans la période affichée) */
+let iosCursor = new Date();
+let iosNowTimer = null;
+let iosListVisible = false;
+
+const PALETTE = [
+  "ios-cal-c0",
+  "ios-cal-c1",
+  "ios-cal-c2",
+  "ios-cal-c3",
+  "ios-cal-c4",
+  "ios-cal-c5",
+];
 
 function escHtml(s) {
   const d = document.createElement("div");
@@ -16,7 +32,6 @@ function escHtml(s) {
   return d.innerHTML;
 }
 
-/** SQL datetime → valeur input datetime-local */
 function sqlToDatetimeLocal(s) {
   if (!s) return "";
   const m = /^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2})/.exec(String(s).trim());
@@ -24,11 +39,95 @@ function sqlToDatetimeLocal(s) {
   return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
 }
 
-/** datetime-local → SQL pour l’API */
 function localDatetimeToSql(s) {
   if (!s) return "";
   const t = s.includes("T") ? s.replace("T", " ") : s;
   return t.length === 16 ? `${t}:00` : t;
+}
+
+function parseEvtDate(iso) {
+  const d = new Date(String(iso).replace(" ", "T"));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function colorClassForEvent(evt) {
+  const key = String(evt.calendar_source_url || evt.external_uid || evt.id || "");
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return PALETTE[h % PALETTE.length];
+}
+
+function mondayOf(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dow = d.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function addDays(d, n) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function addMonths(d, n) {
+  const x = new Date(d);
+  x.setMonth(x.getMonth() + n);
+  return x;
+}
+
+function sameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/** Segment d’un événement visible dans [dayMidnight, dayMidnight+1j[ */
+function segmentInLocalDay(evt, dayMidnight) {
+  const s = parseEvtDate(evt.start_at);
+  const e = parseEvtDate(evt.end_at);
+  if (!s || !e) return null;
+  const dayEnd = addDays(dayMidnight, 1);
+  if (e <= dayMidnight || s >= dayEnd) return null;
+  const segStart = s > dayMidnight ? s : dayMidnight;
+  const segEnd = e < dayEnd ? e : dayEnd;
+  return { segStart, segEnd, evt };
+}
+
+function pxInTrackFromHourFraction(dayMidnight, t) {
+  const grid0 = new Date(dayMidnight);
+  grid0.setHours(H_START, 0, 0, 0);
+  const grid1 = new Date(dayMidnight);
+  grid1.setHours(H_END, 0, 0, 0);
+  const tt = Math.min(Math.max(t.getTime(), grid0.getTime()), grid1.getTime());
+  return ((tt - grid0.getTime()) / 3600000) * PX_PER_H;
+}
+
+function heightPxForSegment(dayMidnight, segStart, segEnd) {
+  const a = pxInTrackFromHourFraction(dayMidnight, segStart);
+  const b = pxInTrackFromHourFraction(dayMidnight, segEnd);
+  return Math.max(18, b - a);
+}
+
+function nowLineTopPx(colDay) {
+  const now = new Date();
+  if (!sameLocalDay(now, colDay)) return null;
+  return pxInTrackFromHourFraction(colDay, now);
+}
+
+function assignLanes(segments) {
+  if (segments.length === 0) return;
+  segments.sort((a, b) => a.segStart - b.segStart);
+  const laneEnds = [];
+  segments.forEach((seg) => {
+    let L = 0;
+    while (laneEnds[L] && seg.segStart < laneEnds[L]) L++;
+    laneEnds[L] = seg.segEnd;
+    seg._lane = L;
+  });
+  const maxL = segments.reduce((m, s) => Math.max(m, s._lane), 0);
+  segments.forEach((s) => {
+    s._laneCount = maxL + 1;
+  });
 }
 
 async function iosApi(action, options = {}) {
@@ -54,8 +153,8 @@ async function iosApi(action, options = {}) {
 }
 
 function formatDate(iso) {
-  const d = new Date(String(iso).replace(" ", "T"));
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+  const d = parseEvtDate(iso);
+  return d ? d.toLocaleString("fr-FR") : iso;
 }
 
 function fillForm(evt) {
@@ -74,121 +173,276 @@ function resetForm() {
 
 function eventsForLocalDay(y, m, d) {
   return iosEventsCache.filter((evt) => {
-    const t = new Date(String(evt.start_at).replace(" ", "T"));
-    return !Number.isNaN(t.getTime()) && t.getFullYear() === y && t.getMonth() === m && t.getDate() === d;
+    const t = parseEvtDate(evt.start_at);
+    return t && t.getFullYear() === y && t.getMonth() === m && t.getDate() === d;
   });
 }
 
-function renderMonthGrid() {
-  if (!iosCalGrid) return;
-  const y = iosMonthCursor.getFullYear();
-  const m = iosMonthCursor.getMonth();
-  if (iosMonthLabel) {
-    iosMonthLabel.textContent = new Date(y, m, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+function updateToolbarTitle() {
+  if (!iosAgendaTitle) return;
+  if (iosViewMode === "day") {
+    iosAgendaTitle.textContent = iosCursor.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    return;
+  }
+  if (iosViewMode === "week") {
+    const mon = mondayOf(iosCursor);
+    const sun = addDays(mon, 6);
+    if (mon.getMonth() === sun.getMonth() && mon.getFullYear() === sun.getFullYear()) {
+      iosAgendaTitle.textContent = `${mon.getDate()} – ${sun.getDate()} ${sun.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}`;
+    } else {
+      iosAgendaTitle.textContent = `${mon.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} – ${sun.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`;
+    }
+    return;
+  }
+  iosAgendaTitle.textContent = new Date(iosCursor.getFullYear(), iosCursor.getMonth(), 1).toLocaleDateString("fr-FR", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function setActiveSegments() {
+  document.querySelectorAll(".ios-seg").forEach((b) => {
+    b.classList.toggle("ios-seg--active", b.getAttribute("data-ios-view") === iosViewMode);
+  });
+}
+
+function renderTimeGutter() {
+  const frag = document.createDocumentFragment();
+  for (let h = H_START; h < H_END; h++) {
+    const row = document.createElement("div");
+    row.className = "ios-agenda-gutter-cell";
+    row.textContent = `${h} h`;
+    frag.appendChild(row);
+  }
+  return frag;
+}
+
+function buildDayColumn(dayMidnight) {
+  const col = document.createElement("div");
+  col.className = "ios-agenda-col";
+  const inner = document.createElement("div");
+  inner.className = "ios-agenda-col-inner";
+  inner.style.height = `${TRACK_H}px`;
+
+  const segs = [];
+  iosEventsCache.forEach((evt) => {
+    const seg = segmentInLocalDay(evt, dayMidnight);
+    if (seg) segs.push(seg);
+  });
+  assignLanes(segs);
+
+  segs.forEach((seg) => {
+    const top = pxInTrackFromHourFraction(dayMidnight, seg.segStart);
+    const h = heightPxForSegment(dayMidnight, seg.segStart, seg.segEnd);
+    const w = 100 / seg._laneCount;
+    const left = (100 * seg._lane) / seg._laneCount;
+    const blk = document.createElement("button");
+    blk.type = "button";
+    blk.className = `ios-event-block ${colorClassForEvent(seg.evt)}`;
+    blk.style.top = `${top}px`;
+    blk.style.height = `${h}px`;
+    blk.style.left = `calc(${left}% + 2px)`;
+    blk.style.width = `calc(${w}% - 4px)`;
+    blk.innerHTML = `<span class="ios-event-block-title">${escHtml(seg.evt.title || "(Sans titre)")}</span>`;
+    blk.title = [seg.evt.title, seg.evt.location, seg.evt.calendar_source_url].filter(Boolean).join("\n");
+    blk.addEventListener("click", () => {
+      fillForm(seg.evt);
+      document.getElementById("ios-edit-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    inner.appendChild(blk);
+  });
+
+  col.appendChild(inner);
+  return col;
+}
+
+function renderWeekOrDay() {
+  if (!iosAgendaMount) return;
+  const isDay = iosViewMode === "day";
+  const weekStart = isDay ? new Date(iosCursor.getFullYear(), iosCursor.getMonth(), iosCursor.getDate()) : mondayOf(iosCursor);
+  const days = isDay ? [weekStart] : Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const wrap = document.createElement("div");
+  wrap.className = "ios-week-wrap";
+
+  const head = document.createElement("div");
+  head.className = "ios-week-head" + (isDay ? " ios-week-head--day" : "");
+  const corner = document.createElement("div");
+  corner.className = "ios-week-corner";
+  head.appendChild(corner);
+  const today = new Date();
+  days.forEach((d) => {
+    const th = document.createElement("div");
+    th.className = "ios-week-head-day";
+    if (sameLocalDay(d, today)) th.classList.add("ios-week-head-day--today");
+    const num = document.createElement("span");
+    num.className = "ios-week-head-num";
+    num.textContent = String(d.getDate());
+    const wd = d.toLocaleDateString("fr-FR", { weekday: "short" }).replace(/\.$/, "");
+    th.appendChild(num);
+    th.appendChild(document.createTextNode(` ${wd}.`));
+    head.appendChild(th);
+  });
+  wrap.appendChild(head);
+
+  const scroll = document.createElement("div");
+  scroll.className = "ios-week-scroll";
+
+  const track = document.createElement("div");
+  track.className = "ios-week-track";
+
+  const gutter = document.createElement("div");
+  gutter.className = "ios-agenda-gutter";
+  gutter.appendChild(renderTimeGutter());
+  track.appendChild(gutter);
+
+  const colsWrap = document.createElement("div");
+  colsWrap.className = "ios-agenda-cols-wrap";
+
+  const cols = document.createElement("div");
+  cols.className = `ios-agenda-cols${isDay ? " ios-agenda-cols--day" : ""}`;
+  days.forEach((d0) => {
+    const dm = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate());
+    cols.appendChild(buildDayColumn(dm));
+  });
+  colsWrap.appendChild(cols);
+
+  const todayCol = days.findIndex((d) => sameLocalDay(d, new Date()));
+  if (todayCol >= 0) {
+    const dm = new Date(days[todayCol].getFullYear(), days[todayCol].getMonth(), days[todayCol].getDate());
+    const nowTop = nowLineTopPx(dm);
+    if (nowTop !== null) {
+      const ov = document.createElement("div");
+      ov.className = "ios-now-overlay";
+      const line = document.createElement("div");
+      line.className = "ios-now-line-span";
+      line.style.top = `${nowTop}px`;
+      const lbl = document.createElement("div");
+      lbl.className = "ios-now-lbl-span";
+      lbl.textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      lbl.style.top = `${Math.max(2, nowTop - 10)}px`;
+      ov.appendChild(line);
+      ov.appendChild(lbl);
+      colsWrap.appendChild(ov);
+    }
   }
 
+  track.appendChild(colsWrap);
+  scroll.appendChild(track);
+  wrap.appendChild(scroll);
+  iosAgendaMount.innerHTML = "";
+  iosAgendaMount.appendChild(wrap);
+}
+
+function renderMonthInAgenda() {
+  if (!iosAgendaMount) return;
+  const y = iosCursor.getFullYear();
+  const m = iosCursor.getMonth();
   const first = new Date(y, m, 1);
   const last = new Date(y, m + 1, 0);
   let startWeekday = first.getDay() - 1;
   if (startWeekday < 0) startWeekday = 6;
 
-  const frag = document.createDocumentFragment();
+  const wrap = document.createElement("div");
+  wrap.className = "ios-month-agenda";
+  const wk = document.createElement("div");
+  wk.className = "ios-month-agenda-weekdays";
+  ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].forEach((t) => {
+    const s = document.createElement("span");
+    s.textContent = t;
+    wk.appendChild(s);
+  });
+  wrap.appendChild(wk);
+  const grid = document.createElement("div");
+  grid.className = "ios-month-agenda-grid";
+
   for (let i = 0; i < startWeekday; i++) {
     const c = document.createElement("div");
-    c.className = "ios-cal-cell ios-cal-cell--pad";
-    frag.appendChild(c);
+    c.className = "ios-month-cell ios-month-cell--pad";
+    grid.appendChild(c);
   }
-
+  const today = new Date();
   for (let d = 1; d <= last.getDate(); d++) {
     const cell = document.createElement("button");
     cell.type = "button";
-    cell.className = "ios-cal-cell";
-    const dayEvents = eventsForLocalDay(y, m, d);
-    if (dayEvents.length) cell.classList.add("ios-cal-cell--has");
-    const today = new Date();
+    cell.className = "ios-month-cell";
+    const list = eventsForLocalDay(y, m, d);
+    if (list.length) cell.classList.add("ios-month-cell--has");
     if (y === today.getFullYear() && m === today.getMonth() && d === today.getDate()) {
-      cell.classList.add("ios-cal-cell--today");
+      cell.classList.add("ios-month-cell--today");
     }
-    cell.innerHTML = `<span class="ios-cal-daynum">${d}</span>`;
-    if (dayEvents.length) {
+    cell.innerHTML = `<span class="ios-month-num">${d}</span>`;
+    if (list.length) {
       const dots = document.createElement("div");
-      dots.className = "ios-cal-dots";
-      dayEvents.slice(0, 4).forEach(() => {
+      dots.className = "ios-month-dots";
+      list.slice(0, 4).forEach(() => {
         const dot = document.createElement("span");
-        dot.className = "ios-cal-dot";
+        dot.className = "ios-month-dot";
         dots.appendChild(dot);
       });
       cell.appendChild(dots);
     }
-    cell.addEventListener("click", () => showDayDetail(y, m, d));
-    frag.appendChild(cell);
+    cell.addEventListener("click", () => {
+      iosViewMode = "day";
+      iosCursor = new Date(y, m, d);
+      setActiveSegments();
+      updateToolbarTitle();
+      renderAgenda();
+    });
+    grid.appendChild(cell);
   }
-  iosCalGrid.innerHTML = "";
-  iosCalGrid.appendChild(frag);
+  wrap.appendChild(grid);
+  iosAgendaMount.innerHTML = "";
+  iosAgendaMount.appendChild(wrap);
 }
 
-function showDayDetail(y, mo, d) {
-  if (!iosDayDetail) return;
-  const list = eventsForLocalDay(y, mo, d);
-  if (!list.length) {
-    iosDayDetail.innerHTML = `<span class="pf-muted-note">Aucun événement le ${d}/${mo + 1}/${y}.</span>`;
-    return;
+function renderAgenda() {
+  updateToolbarTitle();
+  setActiveSegments();
+  if (iosViewMode === "month") {
+    renderMonthInAgenda();
+  } else {
+    renderWeekOrDay();
   }
-  const label = new Date(y, mo, d).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-  iosDayDetail.innerHTML = `<div class="ios-day-detail-title">${escHtml(label)}</div>` + list.map((evt) => `
-    <div class="ios-day-row">
-      <span class="ios-day-row-time">${escHtml(String(evt.start_at).slice(11, 16) || "")}</span>
-      <span class="ios-day-row-title">${escHtml(evt.title || "(Sans titre)")}</span>
-      <span class="ios-day-row-actions">
-        <button type="button" class="pf-btn btn-secondary btn-sm" data-ed="${evt.id}">Modifier</button>
-        <button type="button" class="pf-btn btn-secondary btn-sm" data-del="${evt.id}">Supprimer</button>
-      </span>
-    </div>`).join("");
-  iosDayDetail.querySelectorAll("[data-ed]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = parseInt(btn.getAttribute("data-ed"), 10);
-      const evt = iosEventsCache.find((e) => e.id === id);
-      if (evt) {
-        fillForm(evt);
-        document.getElementById("ios-edit-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
-  });
-  iosDayDetail.querySelectorAll("[data-del]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = parseInt(btn.getAttribute("data-del"), 10);
-      if (!confirm("Supprimer cet événement ?")) return;
-      await iosApi("events", { method: "DELETE", body: { id } });
-      await loadEvents();
-      showDayDetail(y, mo, d);
-    });
-  });
 }
 
-function setView(mode) {
-  iosView = mode;
-  const mEl = document.getElementById("ios-view-month");
-  const lEl = document.getElementById("ios-view-list");
-  const wrap = document.getElementById("ios-month-section");
-  const listSec = document.getElementById("ios-list-section");
-  mEl?.classList.toggle("ios-view-btn--active", mode === "month");
-  lEl?.classList.toggle("ios-view-btn--active", mode === "list");
-  if (wrap) wrap.style.display = mode === "month" ? "block" : "none";
-  if (listSec) listSec.style.display = mode === "list" ? "block" : "none";
-  if (mode === "month") renderMonthGrid();
+function startNowTimer() {
+  if (iosNowTimer) clearInterval(iosNowTimer);
+  iosNowTimer = setInterval(() => {
+    if (iosViewMode === "week" || iosViewMode === "day") renderAgenda();
+  }, 60000);
+}
+
+function showListSection(show) {
+  iosListVisible = !!show;
+  const sec = document.getElementById("ios-list-section");
+  if (!sec) return;
+  sec.style.display = show ? "block" : "none";
+  if (show && iosAgendaMount) {
+    iosAgendaMount.innerHTML =
+      '<p class="ios-agenda-list-hint">Vue liste ci-dessous. Utilise <strong>Jour</strong>, <strong>Semaine</strong> ou <strong>Mois</strong> pour retrouver l’agenda.</p>';
+  } else {
+    renderAgenda();
+  }
 }
 
 async function loadEvents() {
   const events = await iosApi("events");
   iosEventsCache = events;
-  iosEventsList.innerHTML = "";
-  if (!events.length) {
-    iosEventsList.innerHTML = "<div class='pf-muted-note'>Aucun événement.</div>";
-  } else {
-    events.forEach((evt) => {
-      const card = document.createElement("div");
-      card.className = "ios-event-card";
-      card.innerHTML = `
+  if (iosEventsList) {
+    iosEventsList.innerHTML = "";
+    if (!events.length) {
+      iosEventsList.innerHTML = "<div class='ios-agenda-intro'>Aucun événement.</div>";
+    } else {
+      events.forEach((evt) => {
+        const card = document.createElement("div");
+        card.className = "ios-event-card";
+        card.innerHTML = `
       <div class="ios-event-card-head">
         <div>
           <div class="ios-event-card-title">${escHtml(evt.title || "(Sans titre)")}</div>
@@ -196,24 +450,28 @@ async function loadEvents() {
           <div class="ios-event-card-meta">${escHtml(evt.location || "")}</div>
         </div>
         <div class="ios-event-card-actions">
-          <button type="button" class="pf-btn btn-secondary" data-edit="${evt.id}">Modifier</button>
-          <button type="button" class="pf-btn btn-secondary" data-delete="${evt.id}">Supprimer</button>
+          <button type="button" class="ios-agenda-btn" data-edit="${evt.id}">Modifier</button>
+          <button type="button" class="ios-agenda-btn" data-delete="${evt.id}">Supprimer</button>
         </div>
       </div>
     `;
-      card.querySelector("[data-edit]").addEventListener("click", () => fillForm(evt));
-      card.querySelector("[data-delete]").addEventListener("click", async () => {
-        if (!confirm("Supprimer cet événement ?")) return;
-        await iosApi("events", { method: "DELETE", body: { id: evt.id } });
-        await loadEvents();
+        card.querySelector("[data-edit]").addEventListener("click", () => fillForm(evt));
+        card.querySelector("[data-delete]").addEventListener("click", async () => {
+          if (!confirm("Supprimer cet événement ?")) return;
+          await iosApi("events", { method: "DELETE", body: { id: evt.id } });
+          await loadEvents();
+        });
+        iosEventsList.appendChild(card);
       });
-      iosEventsList.appendChild(card);
-    });
+    }
   }
-  if (iosView === "month") renderMonthGrid();
+  if (!iosListVisible) {
+    renderAgenda();
+  }
 }
 
 async function loadSyncStatus() {
+  if (!iosSyncStatus) return;
   const status = await iosApi("sync_status");
   iosSyncStatus.textContent = status.message;
 }
@@ -239,37 +497,76 @@ iosForm.addEventListener("submit", async (e) => {
 });
 
 document.getElementById("ios-form-reset")?.addEventListener("click", resetForm);
+
 document.getElementById("ios-sync-btn")?.addEventListener("click", async () => {
   const btn = document.getElementById("ios-sync-btn");
   btn.disabled = true;
   try {
     const data = await iosApi("sync", { method: "POST", body: {} });
-    iosSyncStatus.textContent = data.message;
+    if (iosSyncStatus) iosSyncStatus.textContent = data.message;
     await loadEvents();
   } finally {
     btn.disabled = false;
   }
 });
 
-document.getElementById("ios-month-prev")?.addEventListener("click", () => {
-  iosMonthCursor = new Date(iosMonthCursor.getFullYear(), iosMonthCursor.getMonth() - 1, 1);
-  renderMonthGrid();
+document.querySelectorAll(".ios-seg").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    iosViewMode = /** @type {'day'|'week'|'month'} */ (btn.getAttribute("data-ios-view"));
+    showListSection(false);
+    startNowTimer();
+  });
 });
 
-document.getElementById("ios-month-next")?.addEventListener("click", () => {
-  iosMonthCursor = new Date(iosMonthCursor.getFullYear(), iosMonthCursor.getMonth() + 1, 1);
-  renderMonthGrid();
+document.getElementById("ios-view-list")?.addEventListener("click", () => {
+  showListSection(true);
+  if (iosNowTimer) clearInterval(iosNowTimer);
 });
 
-document.getElementById("ios-view-month")?.addEventListener("click", () => setView("month"));
-document.getElementById("ios-view-list")?.addEventListener("click", () => setView("list"));
+document.getElementById("ios-agenda-prev")?.addEventListener("click", () => {
+  if (iosViewMode === "day") iosCursor = addDays(iosCursor, -1);
+  else if (iosViewMode === "week") iosCursor = addDays(iosCursor, -7);
+  else iosCursor = addMonths(iosCursor, -1);
+  renderAgenda();
+});
+
+document.getElementById("ios-agenda-next")?.addEventListener("click", () => {
+  if (iosViewMode === "day") iosCursor = addDays(iosCursor, 1);
+  else if (iosViewMode === "week") iosCursor = addDays(iosCursor, 7);
+  else iosCursor = addMonths(iosCursor, 1);
+  renderAgenda();
+});
+
+document.getElementById("ios-agenda-today")?.addEventListener("click", () => {
+  iosCursor = new Date();
+  showListSection(false);
+  startNowTimer();
+});
+
+document.getElementById("ios-agenda-add")?.addEventListener("click", () => {
+  resetForm();
+  const now = new Date();
+  now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0);
+  const end = new Date(now.getTime() + 3600000);
+  const f = (d) => {
+    const p = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  document.getElementById("ios-start").value = f(now);
+  document.getElementById("ios-end").value = f(end);
+  document.getElementById("ios-edit-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.getElementById("ios-title")?.focus();
+});
 
 window.addEventListener("DOMContentLoaded", async () => {
   try {
+    iosCursor = new Date();
     await loadEvents();
     await loadSyncStatus();
-    setView("month");
+    showListSection(false);
+    startNowTimer();
   } catch (e) {
-    iosSyncStatus.textContent = e.message;
+    if (iosSyncStatus) iosSyncStatus.textContent = e.message;
+    if (iosAgendaMount) iosAgendaMount.innerHTML = `<p class="ios-agenda-intro">${escHtml(e.message)}</p>`;
   }
 });
