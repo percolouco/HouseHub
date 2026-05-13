@@ -358,7 +358,7 @@ async function saveNote(){
       await api('notes','PUT',{title,content,tags},'&id='+editingId);
       noteId=editingId;toast('Note mise à jour');
     }else{
-      const r=await api('notes','POST',JSON.stringify({title,content,tags,urls}));
+      const r=await api('notes','POST',{title,content,tags,urls});
       noteId=r.id;toast('Note créée');
     }
 
