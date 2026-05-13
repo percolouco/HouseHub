@@ -8,6 +8,12 @@ function hh_normalize_apple_app_password(string $password): string
     return preg_replace('/\s+/', '', trim($password));
 }
 
+function hh_caldav_url_is_icloud(string $url): bool
+{
+    $h = strtolower((string) (parse_url(trim($url), PHP_URL_HOST) ?: ''));
+    return str_contains($h, 'icloud.com');
+}
+
 function hh_caldav_is_icloud_well_known_root(string $url): bool
 {
     $parts = parse_url(rtrim(trim($url), '/'));
@@ -118,11 +124,13 @@ function hh_caldav_parse_calendar_collections(string $xml): array
 }
 
 /**
- * Depuis la racine iCloud (https://caldav.icloud.com), découvre l’URL d’un calendrier (par défaut « Calendar » / « Calendrier », sinon le premier).
+ * Liste les collections calendrier iCloud (URL complète avec / final + nom affiché).
+ *
+ * @return list<array{display:string, url:string}>
  *
  * @throws RuntimeException
  */
-function hh_icloud_discover_default_calendar_url(string $username, string $password): string
+function hh_icloud_discover_calendar_entries(string $username, string $password): array
 {
     $password = hh_normalize_apple_app_password($password);
     $root = 'https://caldav.icloud.com/';
@@ -166,27 +174,37 @@ function hh_icloud_discover_default_calendar_url(string $username, string $passw
     if (!in_array($r3['code'], [200, 207], true)) {
         throw new RuntimeException('Liste des calendriers impossible (HTTP ' . $r3['code'] . ').');
     }
-    $entries = hh_caldav_parse_calendar_collections($r3['body']);
-    if ($entries === []) {
+    $raw = hh_caldav_parse_calendar_collections($r3['body']);
+    if ($raw === []) {
         throw new RuntimeException('Aucun calendrier trouvé sur ce compte iCloud.');
     }
 
+    $out = [];
+    foreach ($raw as $e) {
+        $url = rtrim(hh_caldav_resolve_href($homeUrl, $e['href']), '/') . '/';
+        $out[] = ['display' => $e['display'], 'url' => $url];
+    }
+    return $out;
+}
+
+/**
+ * Depuis la racine iCloud (https://caldav.icloud.com), découvre l’URL d’un calendrier (par défaut « Calendar » / « Calendrier », sinon le premier).
+ *
+ * @throws RuntimeException
+ */
+function hh_icloud_discover_default_calendar_url(string $username, string $password): string
+{
+    $entries = hh_icloud_discover_calendar_entries($username, $password);
     $preferred = ['calendar', 'calendrier', 'home', 'par défaut', 'default'];
-    $chosenHref = null;
     foreach ($entries as $e) {
         $lower = mb_strtolower($e['display']);
         foreach ($preferred as $p) {
             if ($lower !== '' && str_contains($lower, $p)) {
-                $chosenHref = $e['href'];
-                break 2;
+                return $e['url'];
             }
         }
     }
-    if ($chosenHref === null) {
-        $chosenHref = $entries[0]['href'];
-    }
-
-    return rtrim(hh_caldav_resolve_href($homeUrl, $chosenHref), '/') . '/';
+    return $entries[0]['url'];
 }
 
 /**

@@ -56,11 +56,17 @@ CREATE TABLE IF NOT EXISTS pf_calendar_event_links (
   external_uid VARCHAR(255) NOT NULL,
   external_etag VARCHAR(255) DEFAULT NULL,
   calendar_url VARCHAR(1024) DEFAULT NULL,
+  external_href VARCHAR(2048) DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_calendar_event (calendar_event_id),
   UNIQUE KEY uq_external_link (external_uid)
 )");
+try {
+    $pdo->exec('ALTER TABLE pf_calendar_event_links ADD COLUMN external_href VARCHAR(2048) DEFAULT NULL');
+} catch (Throwable $e) {
+    // colonne déjà présente
+}
 
 function ios_ok($data): void { echo json_encode(['ok' => true, 'data' => $data], JSON_UNESCAPED_UNICODE); exit; }
 function ios_err(string $message, int $status = 400): void { http_response_code($status); echo json_encode(['ok' => false, 'error' => $message]); exit; }
@@ -70,6 +76,18 @@ function ios_require_csrf(): void {
     if (!verify_csrf($token)) {
         ios_err('Token CSRF invalide', 403);
     }
+}
+
+function ios_normalize_datetime(?string $s): ?string
+{
+    if ($s === null || $s === '') {
+        return null;
+    }
+    $s = str_replace('T', ' ', trim($s));
+    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $s)) {
+        $s .= ':00';
+    }
+    return $s;
 }
 
 $integrationStmt = $meta_pdo->prepare("SELECT * FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
@@ -91,7 +109,10 @@ if ($action === 'events' && $method === 'POST') {
         INSERT INTO pf_calendar_events (family_id, created_by_user_id, title, description, location, start_at, end_at, timezone, sync_state)
         VALUES (?, ?, ?, ?, ?, ?, ?, 'Europe/Paris', 'pending_push')
     ");
-    $stmt->execute([$familyId, $userId, trim($d['title']), $d['description'] ?? null, $d['location'] ?? null, $d['start_at'], $d['end_at']]);
+    $stmt->execute([
+        $familyId, $userId, trim($d['title']), $d['description'] ?? null, $d['location'] ?? null,
+        ios_normalize_datetime($d['start_at'] ?? null), ios_normalize_datetime($d['end_at'] ?? null),
+    ]);
     ios_ok(['id' => (int)$pdo->lastInsertId()]);
 }
 
@@ -105,7 +126,10 @@ if ($action === 'events' && $method === 'PUT') {
         SET title=?, description=?, location=?, start_at=?, end_at=?, updated_at=NOW(), sync_state='pending_push'
         WHERE id=?
     ");
-    $stmt->execute([trim($d['title'] ?? ''), $d['description'] ?? null, $d['location'] ?? null, $d['start_at'] ?? null, $d['end_at'] ?? null, $id]);
+    $stmt->execute([
+        trim($d['title'] ?? ''), $d['description'] ?? null, $d['location'] ?? null,
+        ios_normalize_datetime($d['start_at'] ?? null), ios_normalize_datetime($d['end_at'] ?? null), $id,
+    ]);
     ios_ok(['updated' => true]);
 }
 
@@ -137,23 +161,30 @@ if ($action === 'sync' && $method === 'POST') {
         $ctx = ios_caldav_prepare($integration, $meta_pdo);
         $integration = $ctx['integration'];
         $davPassword = $ctx['password'];
-        $remoteEvents = ios_fetch_remote_events($integration, $davPassword);
-        $remoteByUid = [];
-        foreach ($remoteEvents as $re) {
-            $remoteByUid[$re['external_uid']] = $re;
-        }
+        $syncUrls = ios_sync_calendar_collection_urls($integration, $davPassword);
+        $remoteEvents = ios_fetch_remote_events_all_calendars($integration, $davPassword);
 
         $localStmt = $pdo->query("SELECT * FROM pf_calendar_events WHERE deleted_at IS NULL");
         $localEvents = $localStmt->fetchAll();
 
+        $linkStmt = $pdo->prepare('SELECT external_href, calendar_url FROM pf_calendar_event_links WHERE calendar_event_id = ?');
+
         foreach ($localEvents as $evt) {
             if ($evt['sync_state'] === 'pending_push' || empty($evt['external_uid'])) {
-                $push = ios_push_event_to_remote($integration, $evt, $davPassword);
+                $linkStmt->execute([$evt['id']]);
+                $lr = $linkStmt->fetch() ?: [];
+                $push = ios_push_event_to_remote(
+                    $integration,
+                    $evt,
+                    $davPassword,
+                    $lr['external_href'] ?? null,
+                    $lr['calendar_url'] ?? null
+                );
                 if ($push['code'] >= 200 && $push['code'] < 300) {
                     $uid = $evt['external_uid'] ?: ('hh-' . $evt['id'] . '@househub');
                     $pdo->prepare("UPDATE pf_calendar_events SET external_uid=?, sync_state='synced', updated_at=NOW() WHERE id=?")->execute([$uid, $evt['id']]);
-                    $pdo->prepare("INSERT INTO pf_calendar_event_links (calendar_event_id, external_uid, calendar_url, external_etag) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE external_etag=VALUES(external_etag), calendar_url=VALUES(calendar_url), updated_at=NOW()")
-                        ->execute([$evt['id'], $uid, $integration['calendar_url'], null]);
+                    $pdo->prepare("INSERT INTO pf_calendar_event_links (calendar_event_id, external_uid, calendar_url, external_etag, external_href) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE external_etag=VALUES(external_etag), calendar_url=VALUES(calendar_url), external_href=COALESCE(VALUES(external_href), external_href), updated_at=NOW()")
+                        ->execute([$evt['id'], $uid, $integration['calendar_url'], null, $lr['external_href'] ?? null]);
                 }
             }
         }
@@ -161,13 +192,23 @@ if ($action === 'sync' && $method === 'POST') {
         $pendingDelete = $pdo->query("SELECT id, external_uid FROM pf_calendar_events WHERE deleted_at IS NOT NULL AND sync_state='pending_delete'")->fetchAll();
         foreach ($pendingDelete as $evt) {
             if (!empty($evt['external_uid'])) {
-                ios_delete_remote_event($integration, $evt['external_uid'], $davPassword);
+                $linkStmt->execute([$evt['id']]);
+                $lr = $linkStmt->fetch() ?: [];
+                ios_delete_remote_event(
+                    $integration,
+                    $evt['external_uid'],
+                    $davPassword,
+                    $lr['external_href'] ?? null,
+                    $lr['calendar_url'] ?? null
+                );
             }
             $pdo->prepare("DELETE FROM pf_calendar_event_links WHERE calendar_event_id=?")->execute([$evt['id']]);
             $pdo->prepare("DELETE FROM pf_calendar_events WHERE id=?")->execute([$evt['id']]);
         }
 
         foreach ($remoteEvents as $remote) {
+            $href = $remote['_resource_url'] ?? null;
+            $colUrl = $remote['_calendar_collection_url'] ?? $integration['calendar_url'];
             $existing = $pdo->prepare("SELECT id, updated_at FROM pf_calendar_events WHERE external_uid=? LIMIT 1");
             $existing->execute([$remote['external_uid']]);
             $row = $existing->fetch();
@@ -177,14 +218,18 @@ if ($action === 'sync' && $method === 'POST') {
                     VALUES (?, ?, ?, ?, ?, ?, ?, 'Europe/Paris', ?, 'synced')
                 ")->execute([$familyId, $userId, $remote['title'], $remote['description'], $remote['location'], $remote['start_at'], $remote['end_at'], $remote['external_uid']]);
                 $newId = (int)$pdo->lastInsertId();
-                $pdo->prepare("INSERT INTO pf_calendar_event_links (calendar_event_id, external_uid, calendar_url, external_etag) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE updated_at=NOW()")
-                    ->execute([$newId, $remote['external_uid'], $integration['calendar_url'], null]);
+                $pdo->prepare("INSERT INTO pf_calendar_event_links (calendar_event_id, external_uid, calendar_url, external_etag, external_href) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE calendar_url=VALUES(calendar_url), external_href=COALESCE(VALUES(external_href), external_href), updated_at=NOW()")
+                    ->execute([$newId, $remote['external_uid'], $colUrl, null, $href]);
+            } elseif ($href) {
+                $pdo->prepare('UPDATE pf_calendar_event_links SET external_href = COALESCE(external_href, ?), calendar_url = COALESCE(calendar_url, ?) WHERE calendar_event_id = ?')
+                    ->execute([$href, $colUrl, $row['id']]);
             }
         }
 
         $meta_pdo->prepare("UPDATE user_calendar_integrations SET last_sync_at=NOW(), status='connected' WHERE id=?")->execute([$integration['id']]);
         $n = count($remoteEvents);
-        ios_ok(['message' => 'Synchronisation terminée. ' . $n . ' événement(s) lu(s) depuis iCloud.']);
+        $nc = count($syncUrls);
+        ios_ok(['message' => 'Synchronisation terminée. ' . $n . ' événement(s) depuis ' . $nc . ' calendrier(s) distant(s).']);
     } catch (Throwable $e) {
         ios_err('CalDAV: ' . $e->getMessage(), 400);
     }

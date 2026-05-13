@@ -82,29 +82,6 @@ function ios_ics_unfold(string $ics): string
 }
 
 /**
- * Extrait les blocs texte <calendar-data> d’une réponse 207 REPORT (CalDAV).
- *
- * @return list<string>
- */
-function ios_caldav_extract_calendar_data_bodies(string $xmlBody): array
-{
-    $dom = new DOMDocument();
-    if (!@$dom->loadXML($xmlBody)) {
-        return [];
-    }
-    $xpath = new DOMXPath($dom);
-    $nodes = $xpath->query("//*[local-name()='calendar-data']");
-    $out = [];
-    foreach ($nodes as $node) {
-        $t = trim($node->textContent);
-        if ($t !== '') {
-            $out[] = $t;
-        }
-    }
-    return $out;
-}
-
-/**
  * @return list<array{external_uid:string,title:string,description:string,location:string,start_at:string,end_at:string}>
  */
 function ios_parse_vevents_from_ics(string $ics): array
@@ -182,6 +159,70 @@ function ios_parse_vevents_from_ics(string $ics): array
     return $events;
 }
 
+/**
+ * Associe chaque fragment iCalendar du REPORT à l’URL de ressource CalDAV (nécessaire pour PUT/DELETE sur iCloud).
+ *
+ * @return list<array{resource_url:string,ical:string}>
+ */
+function ios_caldav_parse_report_calendar_fragments(string $xmlBody, string $calendarBaseUrl): array
+{
+    $dom = new DOMDocument();
+    if (!@$dom->loadXML($xmlBody)) {
+        return [];
+    }
+    $xpath = new DOMXPath($dom);
+    $responses = $xpath->query("//*[local-name()='response']");
+    $out = [];
+    foreach ($responses as $resp) {
+        $hrefNodes = $xpath->query(".//*[local-name()='href']", $resp);
+        if ($hrefNodes->length === 0) {
+            continue;
+        }
+        $href = trim($hrefNodes->item(0)->textContent);
+        if ($href === '') {
+            continue;
+        }
+        $cd = $xpath->query(".//*[local-name()='calendar-data']", $resp);
+        if ($cd->length === 0) {
+            continue;
+        }
+        $ical = trim($cd->item(0)->textContent);
+        if ($ical === '' || stripos($ical, 'BEGIN:VEVENT') === false) {
+            continue;
+        }
+        $resourceUrl = (str_starts_with($href, 'http://') || str_starts_with($href, 'https://'))
+            ? $href
+            : hh_caldav_resolve_href(rtrim($calendarBaseUrl, '/') . '/', $href);
+        $out[] = ['resource_url' => $resourceUrl, 'ical' => $ical];
+    }
+    return $out;
+}
+
+/**
+ * URLs des collections calendrier à interroger (tous les calendriers iCloud du compte, sinon l’URL configurée seule).
+ *
+ * @return list<string>
+ */
+function ios_sync_calendar_collection_urls(array $integration, string $password): array
+{
+    $primary = rtrim($integration['calendar_url'] ?? '', '/') . '/';
+    if (hh_caldav_url_is_icloud($primary)) {
+        try {
+            $entries = hh_icloud_discover_calendar_entries($integration['username'], $password);
+
+            return array_values(array_unique(array_map(static function (array $e): string {
+                return rtrim($e['url'], '/') . '/';
+            }, $entries)));
+        } catch (Throwable $e) {
+            // compte partiellement lisible : au moins le calendrier principal
+        }
+    }
+    return [$primary];
+}
+
+/**
+ * @return list<array<string,mixed>> champs événement + _resource_url + _calendar_collection_url
+ */
 function ios_fetch_remote_events(array $integration, string $password): array
 {
     $calUrl = rtrim($integration['calendar_url'], '/') . '/';
@@ -204,17 +245,21 @@ function ios_fetch_remote_events(array $integration, string $password): array
     if (!in_array($res['code'], [200, 207], true)) {
         throw new RuntimeException('Lecture CalDAV (REPORT) impossible (HTTP ' . $res['code'] . ').');
     }
-    $bodies = ios_caldav_extract_calendar_data_bodies($res['body']);
+    $fragments = ios_caldav_parse_report_calendar_fragments($res['body'], $calUrl);
     $byUid = [];
-    foreach ($bodies as $fragment) {
-        foreach (ios_parse_vevents_from_ics($fragment) as $ev) {
+    foreach ($fragments as $frag) {
+        foreach (ios_parse_vevents_from_ics($frag['ical']) as $ev) {
+            $ev['_resource_url'] = $frag['resource_url'];
+            $ev['_calendar_collection_url'] = $calUrl;
             $byUid[$ev['external_uid']] = $ev;
         }
     }
-    if ($byUid === [] && strpos($res['body'], '<multistatus') === false && strpos($res['body'], 'multistatus') === false) {
+    if ($byUid === [] && strpos($res['body'], 'multistatus') === false) {
         $get = ios_caldav_request($calUrl, $integration['username'], $password, 'GET', null, ['Accept: text/calendar']);
         if ($get['code'] >= 200 && $get['code'] < 400 && str_contains($get['body'], 'BEGIN:VEVENT')) {
             foreach (ios_parse_vevents_from_ics($get['body']) as $ev) {
+                $ev['_resource_url'] = null;
+                $ev['_calendar_collection_url'] = $calUrl;
                 $byUid[$ev['external_uid']] = $ev;
             }
         }
@@ -222,16 +267,37 @@ function ios_fetch_remote_events(array $integration, string $password): array
     return array_values($byUid);
 }
 
-function ios_push_event_to_remote(array $integration, array $event, string $password): array
+/**
+ * Fusionne tous les calendriers du compte (iCloud) ou une seule collection.
+ *
+ * @return list<array<string,mixed>>
+ */
+function ios_fetch_remote_events_all_calendars(array $integration, string $password): array
+{
+    $urls = ios_sync_calendar_collection_urls($integration, $password);
+    $merged = [];
+    foreach ($urls as $url) {
+        $sub = $integration;
+        $sub['calendar_url'] = $url;
+        foreach (ios_fetch_remote_events($sub, $password) as $ev) {
+            $merged[$ev['external_uid']] = $ev;
+        }
+    }
+    return array_values($merged);
+}
+
+function ios_push_event_to_remote(array $integration, array $event, string $password, ?string $resourceUrl = null, ?string $collectionUrlOverride = null): array
 {
     $uid = $event['external_uid'] ?: ('hh-' . $event['id'] . '@househub');
-    $url = rtrim($integration['calendar_url'], '/') . '/' . rawurlencode($uid) . '.ics';
+    $collection = rtrim($collectionUrlOverride ?? $integration['calendar_url'], '/');
+    $url = $resourceUrl ?: ($collection . '/' . rawurlencode($uid) . '.ics');
     $ics = ios_make_ics($event);
     return ios_caldav_request($url, $integration['username'], $password, 'PUT', $ics);
 }
 
-function ios_delete_remote_event(array $integration, string $externalUid, string $password): array
+function ios_delete_remote_event(array $integration, string $externalUid, string $password, ?string $resourceUrl = null, ?string $collectionUrlOverride = null): array
 {
-    $url = rtrim($integration['calendar_url'], '/') . '/' . rawurlencode($externalUid) . '.ics';
+    $collection = rtrim($collectionUrlOverride ?? $integration['calendar_url'], '/');
+    $url = $resourceUrl ?: ($collection . '/' . rawurlencode($externalUid) . '.ics');
     return ios_caldav_request($url, $integration['username'], $password, 'DELETE', null, ['Accept: */*']);
 }
