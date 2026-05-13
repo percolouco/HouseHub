@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/includes/i18n.php';
 require_once __DIR__ . '/includes/meta_db.php';
+require_once __DIR__ . '/includes/auth.php';
 
 $pageTitle = tr('login_title');
 $activePage = "login";
@@ -14,6 +15,9 @@ if (isset($_SESSION['user'])) {
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verify_csrf($_POST['csrf_token'] ?? null)) {
+        $error = "Session invalide (CSRF). Rechargez la page.";
+    } else {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
@@ -36,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($user['family_id'] && !$user['family_active']) {
                 $error = "Espace familial désactivé. Contactez l'administrateur.";
             } else {
+                session_regenerate_id(true);
                 $_SESSION['user'] = [
                     'id'           => (int)$user['id'],
                     'username'     => $user['username'],
@@ -45,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 $_SESSION['family_db']       = $user['db_name'];
                 $_SESSION['app_lang']        = $user['lang'] ?? 'fr';
-                $_SESSION['enabled_modules'] = json_decode($user['enabled_modules'] ?? '["calendar","budget","holidays","gifts"]', true);
+                $_SESSION['enabled_modules'] = json_decode($user['enabled_modules'] ?? '["calendar","budget","holidays","gifts","calendar_ios"]', true);
                 $redirectTo = $_GET['redirect'] ?? '/index.php';
                 header('Location: ' . $redirectTo);
                 exit;
@@ -53,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = tr('error_invalid_credentials');
         }
+    }
     }
 }
 
@@ -75,6 +81,7 @@ require __DIR__ . '/header.php';
         <?php endif; ?>
 
         <form method="post" action="/login.php<?= isset($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : '' ?>">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
             <div class="pf-form-group">
                 <label class="pf-label" for="username"><?= tr('label_username') ?></label>
                 <input type="text" id="username" name="username" class="pf-input" 

@@ -24,6 +24,7 @@ return [
     'menu_budget'       => 'Budget',
     'menu_holidays'     => 'Voyages',
     'menu_gifts'        => 'Cadeaux',
+    'menu_calendar_ios' => 'Calendrier iOS',
     'nav_home'          => 'Accueil',
     'nav_calendar'      => 'Calendrier',
     'nav_budget'        => 'Budget',
@@ -98,6 +99,8 @@ return [
     'menu_memo'          => 'Notes',
     'mod_todo_name'      => 'Todo',
     'mod_todo_desc'      => 'Gérez vos tâches, listes de courses et rappels en famille.',
+    'mod_calendar_ios_name' => 'Calendrier iOS',
+    'mod_calendar_ios_desc' => 'Synchronisez vos événements HouseHub avec votre calendrier iPhone (iCloud CalDAV).',
     'menu_todo'          => 'Todo',
     'cta_open'           => 'Ouvrir',
     'cta_explore'        => 'Explorer',
@@ -106,6 +109,7 @@ return [
     'cta_service'        => 'Réviser',
     'cta_jot'            => 'Griffonner',
     'cta_check'          => 'Cocher',
+    'cta_sync'           => 'Synchroniser',
 
     // ==========================================
     // FAMILY CALENDAR

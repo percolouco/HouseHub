@@ -235,3 +235,37 @@ VALUES (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/ig
 -- Personnes (IDs fixes correspondant aux constantes dans config.php)
 INSERT IGNORE INTO pf_people (id, name) VALUES (2, 'Alex');
 INSERT IGNORE INTO pf_people (id, name) VALUES (3, 'Laia');
+
+-- ─── Calendar iOS ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_calendar_events (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  family_id          INT NOT NULL,
+  created_by_user_id INT NOT NULL,
+  title              VARCHAR(255) NOT NULL,
+  description        TEXT DEFAULT NULL,
+  location           VARCHAR(255) DEFAULT NULL,
+  start_at           DATETIME NOT NULL,
+  end_at             DATETIME NOT NULL,
+  is_all_day         TINYINT(1) DEFAULT 0,
+  timezone           VARCHAR(64) DEFAULT 'Europe/Paris',
+  rrule              VARCHAR(500) DEFAULT NULL,
+  status             VARCHAR(50) DEFAULT 'confirmed',
+  external_uid       VARCHAR(255) DEFAULT NULL,
+  sync_state         VARCHAR(30) DEFAULT 'pending_push',
+  deleted_at         DATETIME DEFAULT NULL,
+  created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at         DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_external_uid (external_uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_calendar_event_links (
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  calendar_event_id INT NOT NULL,
+  external_uid      VARCHAR(255) NOT NULL,
+  external_etag     VARCHAR(255) DEFAULT NULL,
+  calendar_url      VARCHAR(1024) DEFAULT NULL,
+  created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_calendar_event (calendar_event_id),
+  UNIQUE KEY uq_external_link (external_uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

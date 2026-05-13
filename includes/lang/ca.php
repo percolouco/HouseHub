@@ -22,6 +22,7 @@ return [
     'menu_budget'       => 'Pressupost',
     'menu_holidays'     => 'Viatges',
     'menu_gifts'        => 'Regals',
+    'menu_calendar_ios' => 'Calendari iOS',
     'nav_home'          => 'Inici',
     'nav_calendar'      => 'Calendari',
     'nav_budget'        => 'Pressupost',
@@ -95,6 +96,8 @@ return [
     'menu_memo'          => 'Notes',
     'mod_todo_name'      => 'Todo',
     'mod_todo_desc'      => 'Gestioneu les vostres tasques, llistes de la compra i recordatoris familiars.',
+    'mod_calendar_ios_name' => 'Calendari iOS',
+    'mod_calendar_ios_desc' => 'Sincronitzeu els esdeveniments de HouseHub amb el calendari de l\'iPhone (iCloud CalDAV).',
     'menu_todo'          => 'Todo',
     'cta_open'           => 'Obrir',
     'cta_explore'        => 'Explorar',
@@ -103,6 +106,7 @@ return [
     'cta_service'        => 'Revisar',
     'cta_jot'            => 'Apuntar',
     'cta_check'          => 'Marcar',
+    'cta_sync'           => 'Sincronitzar',
 
     // ==========================================
     // FAMILY CALENDAR

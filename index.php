@@ -43,7 +43,7 @@ if ($_has_custom_bg): ?>
   <section class="pf-section">
     <h2 style="color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6);"><?= tr('home_modules_title') ?></h2>
 
-    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','garage']; ?>
+    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','garage','calendar_ios']; ?>
     <div class="pf-modules-grid">
 
       <?php if (in_array('calendar', $mods)): ?>
@@ -106,6 +106,15 @@ if ($_has_custom_bg): ?>
         <h3 class="pf-card-title"><?= tr('mod_todo_name') ?></h3>
         <div class="pf-card-desc"><?= tr('mod_todo_desc') ?></div>
         <span class="pf-card-cta"><?= tr('cta_check') ?></span>
+      </a>
+      <?php endif; ?>
+
+      <?php if (in_array('calendar_ios', $mods)): ?>
+      <a href="/calendar-ios.php" class="pf-module-card">
+        <div class="pf-card-icon">📱</div>
+        <h3 class="pf-card-title"><?= tr('mod_calendar_ios_name') ?></h3>
+        <div class="pf-card-desc"><?= tr('mod_calendar_ios_desc') ?></div>
+        <span class="pf-card-cta"><?= tr('cta_sync') ?></span>
       </a>
       <?php endif; ?>
 
