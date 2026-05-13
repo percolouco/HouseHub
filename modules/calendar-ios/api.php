@@ -133,7 +133,15 @@ if ($action === 'sync' && $method === 'POST') {
     ios_require_csrf();
     if (!$integration) ios_err('Connexion iCloud non configurée.', 400);
 
-    $remoteEvents = ios_fetch_remote_events($integration);
+    try {
+        $ctx = ios_caldav_prepare($integration, $meta_pdo);
+    } catch (Throwable $e) {
+        ios_err('CalDAV: ' . $e->getMessage(), 400);
+    }
+    $integration = $ctx['integration'];
+    $davPassword = $ctx['password'];
+
+    $remoteEvents = ios_fetch_remote_events($integration, $davPassword);
     $remoteByUid = [];
     foreach ($remoteEvents as $re) $remoteByUid[$re['external_uid']] = $re;
 
@@ -142,7 +150,7 @@ if ($action === 'sync' && $method === 'POST') {
 
     foreach ($localEvents as $evt) {
         if ($evt['sync_state'] === 'pending_push' || empty($evt['external_uid'])) {
-            $push = ios_push_event_to_remote($integration, $evt);
+            $push = ios_push_event_to_remote($integration, $evt, $davPassword);
             if ($push['code'] >= 200 && $push['code'] < 300) {
                 $uid = $evt['external_uid'] ?: ('hh-' . $evt['id'] . '@househub');
                 $pdo->prepare("UPDATE pf_calendar_events SET external_uid=?, sync_state='synced', updated_at=NOW() WHERE id=?")->execute([$uid, $evt['id']]);
@@ -155,7 +163,7 @@ if ($action === 'sync' && $method === 'POST') {
     $pendingDelete = $pdo->query("SELECT id, external_uid FROM pf_calendar_events WHERE deleted_at IS NOT NULL AND sync_state='pending_delete'")->fetchAll();
     foreach ($pendingDelete as $evt) {
         if (!empty($evt['external_uid'])) {
-            ios_delete_remote_event($integration, $evt['external_uid']);
+            ios_delete_remote_event($integration, $evt['external_uid'], $davPassword);
         }
         $pdo->prepare("DELETE FROM pf_calendar_event_links WHERE calendar_event_id=?")->execute([$evt['id']]);
         $pdo->prepare("DELETE FROM pf_calendar_events WHERE id=?")->execute([$evt['id']]);
