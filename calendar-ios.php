@@ -20,6 +20,14 @@ require __DIR__ . '/header.php';
       </div>
     </div>
     <p class="ios-agenda-intro">Les événements viennent de HouseHub après synchro iCloud. <strong>Synchroniser</strong> met à jour tous les calendriers du compte ; les changements locaux partent au prochain envoi.</p>
+
+    <details class="ios-cal-prefs-details" id="ios-cal-prefs-details">
+      <summary class="ios-cal-prefs-summary">Calendriers affichés et couleurs</summary>
+      <p class="ios-cal-prefs-help">Décoche un calendrier pour le masquer dans l’agenda. La couleur est libre (repère la teinte iOS sur ton téléphone puis copie-la avec le sélecteur).</p>
+      <div id="ios-calendar-prefs-rows" class="ios-cal-prefs-rows"></div>
+      <p id="ios-calendar-prefs-msg" class="ios-cal-prefs-msg" role="status"></p>
+      <button type="button" class="pf-btn" id="ios-calendar-prefs-save">Enregistrer affichage &amp; couleurs</button>
+    </details>
   </section>
 
   <section class="pf-panel-card ios-agenda-card">

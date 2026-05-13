@@ -28,6 +28,12 @@ CREATE TABLE IF NOT EXISTS user_calendar_integrations (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_user_provider (user_id, provider)
 )");
+try {
+    $meta_pdo->exec('ALTER TABLE user_calendar_integrations ADD COLUMN calendar_prefs_json TEXT NULL');
+} catch (Throwable $e) {
+    // colonne déjà présente
+}
+
 $pdo->exec("
 CREATE TABLE IF NOT EXISTS pf_calendar_events (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -90,11 +96,113 @@ function ios_normalize_datetime(?string $s): ?string
     return $s;
 }
 
+function ios_calendar_url_key(?string $url): string
+{
+    if ($url === null || $url === '') {
+        return '';
+    }
+    return rtrim(trim($url), '/');
+}
+
+/** @return array<string, array{visible:bool, color:?string}> */
+function ios_calendar_prefs_decode(?string $json): array
+{
+    if ($json === null || $json === '') {
+        return [];
+    }
+    $d = json_decode($json, true);
+    if (!is_array($d)) {
+        return [];
+    }
+    $out = [];
+    foreach ($d as $k => $v) {
+        if (!is_string($k) || $k === '' || !is_array($v)) {
+            continue;
+        }
+        $key = ios_calendar_url_key($k);
+        if ($key === '') {
+            continue;
+        }
+        $out[$key] = [
+            'visible' => !array_key_exists('visible', $v) ? true : (bool) $v['visible'],
+            'color' => (isset($v['color']) && is_string($v['color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $v['color'])) ? $v['color'] : null,
+        ];
+    }
+    return $out;
+}
+
+/**
+ * @return list<array{url:string,url_key:string,display:string,visible:bool,color:?string}>
+ */
+function ios_list_calendar_sources_for_ui(array $integration, string $password, PDO $pdo): array
+{
+    $prefs = ios_calendar_prefs_decode($integration['calendar_prefs_json'] ?? null);
+    $urlsMeta = [];
+    $primary = $integration['calendar_url'] ?? '';
+    if (hh_caldav_url_is_icloud($primary)) {
+        try {
+            foreach (hh_icloud_discover_calendar_entries($integration['username'], $password) as $e) {
+                $k = ios_calendar_url_key($e['url']);
+                if ($k === '') {
+                    continue;
+                }
+                $disp = trim((string) ($e['display'] ?? ''));
+                if ($disp === '') {
+                    $disp = basename(parse_url($e['url'], PHP_URL_PATH) ?: '') ?: $k;
+                }
+                $urlsMeta[$k] = ['url' => rtrim($e['url'], '/') . '/', 'display' => $disp];
+            }
+        } catch (Throwable $e) {
+        }
+    } else {
+        $k = ios_calendar_url_key($primary);
+        if ($k !== '') {
+            $urlsMeta[$k] = ['url' => rtrim($primary, '/') . '/', 'display' => 'Calendrier'];
+        }
+    }
+    $stmt = $pdo->query("
+        SELECT DISTINCT l.calendar_url AS u
+        FROM pf_calendar_event_links l
+        INNER JOIN pf_calendar_events e ON e.id = l.calendar_event_id
+        WHERE e.deleted_at IS NULL AND l.calendar_url IS NOT NULL AND TRIM(l.calendar_url) != ''
+    ");
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $u) {
+        $k = ios_calendar_url_key((string) $u);
+        if ($k === '' || isset($urlsMeta[$k])) {
+            continue;
+        }
+        $urlsMeta[$k] = [
+            'url' => rtrim((string) $u, '/') . '/',
+            'display' => basename(parse_url((string) $u, PHP_URL_PATH) ?: '') ?: $k,
+        ];
+    }
+    $out = [];
+    foreach ($urlsMeta as $key => $meta) {
+        $p = $prefs[$key] ?? [];
+        $visible = !array_key_exists('visible', $p) ? true : (bool) $p['visible'];
+        $color = (isset($p['color']) && is_string($p['color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $p['color'])) ? $p['color'] : null;
+        $out[] = [
+            'url' => $meta['url'],
+            'url_key' => $key,
+            'display' => $meta['display'],
+            'visible' => $visible,
+            'color' => $color,
+        ];
+    }
+    usort($out, static fn ($a, $b) => strcasecmp($a['display'], $b['display']));
+
+    return $out;
+}
+
 $integrationStmt = $meta_pdo->prepare("SELECT * FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
 $integrationStmt->execute([$userId]);
 $integration = $integrationStmt->fetch();
 
 if ($action === 'events' && $method === 'GET') {
+    $prefs = [];
+    if ($integration) {
+        $prefs = ios_calendar_prefs_decode($integration['calendar_prefs_json'] ?? null);
+    }
     $rows = $pdo->query("
         SELECT e.*, l.calendar_url AS calendar_source_url
         FROM pf_calendar_events e
@@ -102,7 +210,73 @@ if ($action === 'events' && $method === 'GET') {
         WHERE e.deleted_at IS NULL
         ORDER BY e.start_at ASC
     ")->fetchAll();
-    ios_ok($rows);
+    $out = [];
+    foreach ($rows as $r) {
+        $key = ios_calendar_url_key($r['calendar_source_url'] ?? '');
+        if ($key !== '' && isset($prefs[$key]['visible']) && $prefs[$key]['visible'] === false) {
+            continue;
+        }
+        $r['display_color'] = null;
+        if ($key !== '' && !empty($prefs[$key]['color']) && is_string($prefs[$key]['color']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $prefs[$key]['color'])) {
+            $r['display_color'] = $prefs[$key]['color'];
+        }
+        $out[] = $r;
+    }
+    ios_ok($out);
+}
+
+if ($action === 'calendar_sources' && $method === 'GET') {
+    if (!$integration) {
+        ios_ok(['calendars' => []]);
+    }
+    try {
+        $ctx = ios_caldav_prepare($integration, $meta_pdo);
+    } catch (Throwable $e) {
+        ios_err('CalDAV: ' . $e->getMessage(), 400);
+    }
+    $integrationStmt->execute([$userId]);
+    $integrationFresh = $integrationStmt->fetch();
+    if (!$integrationFresh) {
+        ios_ok(['calendars' => []]);
+    }
+    ios_ok(['calendars' => ios_list_calendar_sources_for_ui($integrationFresh, $ctx['password'], $pdo)]);
+}
+
+if ($action === 'calendar_prefs' && $method === 'POST') {
+    ios_require_csrf();
+    if (!$integration) {
+        ios_err('Connexion iCloud non configurée.', 400);
+    }
+    $body = ios_body();
+    $raw = $body['prefs'] ?? null;
+    if (!is_array($raw)) {
+        ios_err('Format prefs invalide', 400);
+    }
+    $clean = [];
+    foreach ($raw as $key => $p) {
+        if (!is_array($p)) {
+            continue;
+        }
+        $urlKey = ios_calendar_url_key(is_string($key) ? $key : '');
+        if ($urlKey === '') {
+            continue;
+        }
+        $visible = array_key_exists('visible', $p) ? (bool) $p['visible'] : true;
+        $col = $p['color'] ?? null;
+        if ($col !== null && $col !== '' && is_string($col) && preg_match('/^#[0-9A-Fa-f]{6}$/', $col)) {
+            $col = '#' . strtolower(substr($col, 1));
+        } else {
+            $col = null;
+        }
+        $clean[$urlKey] = ['visible' => $visible, 'color' => $col];
+    }
+    $existing = ios_calendar_prefs_decode($integration['calendar_prefs_json'] ?? null);
+    foreach ($clean as $urlKey => $v) {
+        $existing[$urlKey] = $v;
+    }
+    $json = json_encode($existing, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $meta_pdo->prepare('UPDATE user_calendar_integrations SET calendar_prefs_json = ? WHERE id = ?')->execute([$json, $integration['id']]);
+    ios_ok(['saved' => true]);
 }
 
 if ($action === 'events' && $method === 'POST') {

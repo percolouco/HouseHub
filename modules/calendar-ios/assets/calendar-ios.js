@@ -26,6 +26,8 @@ const PALETTE = [
   "ios-cal-c5",
 ];
 
+const SUGGEST_HEX = ["#22c55e", "#3b82f6", "#8b5cf6", "#eab308", "#14b8a6", "#f43f5e"];
+
 function escHtml(s) {
   const d = document.createElement("div");
   d.textContent = s ?? "";
@@ -50,11 +52,42 @@ function parseEvtDate(iso) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function darkenHex(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.max(0, (n >> 16) - amount);
+  const g = Math.max(0, ((n >> 8) & 0xff) - amount);
+  const b = Math.max(0, (n & 0xff) - amount);
+  return `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function suggestedColorForKey(key) {
+  const k = String(key || "");
+  let h = 0;
+  for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  return SUGGEST_HEX[h % SUGGEST_HEX.length];
+}
+
 function colorClassForEvent(evt) {
   const key = String(evt.calendar_source_url || evt.external_uid || evt.id || "");
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
   return PALETTE[h % PALETTE.length];
+}
+
+/** Applique couleur perso (API) ou palette par défaut */
+function styleEventBlock(el, evt) {
+  el.className = "ios-event-block";
+  el.style.background = "";
+  el.style.boxShadow = "";
+  const hex = evt.display_color;
+  if (hex && /^#[0-9A-Fa-f]{6}$/i.test(hex)) {
+    const c = hex.startsWith("#") ? hex : `#${hex.slice(-6)}`;
+    el.classList.add("ios-event-block--custom");
+    el.style.background = `linear-gradient(135deg, ${darkenHex(c, 40)} 0%, ${c} 100%)`;
+    el.style.boxShadow = "inset 3px 0 0 rgba(255,255,255,0.35)";
+  } else {
+    el.classList.add(colorClassForEvent(evt));
+  }
 }
 
 function mondayOf(date) {
@@ -243,7 +276,7 @@ function buildDayColumn(dayMidnight) {
     const left = (100 * seg._lane) / seg._laneCount;
     const blk = document.createElement("button");
     blk.type = "button";
-    blk.className = `ios-event-block ${colorClassForEvent(seg.evt)}`;
+    styleEventBlock(blk, seg.evt);
     blk.style.top = `${top}px`;
     blk.style.height = `${h}px`;
     blk.style.left = `calc(${left}% + 2px)`;
@@ -442,6 +475,9 @@ async function loadEvents() {
       events.forEach((evt) => {
         const card = document.createElement("div");
         card.className = "ios-event-card";
+        if (evt.display_color && /^#[0-9A-Fa-f]{6}$/i.test(evt.display_color)) {
+          card.style.borderLeft = `4px solid ${evt.display_color}`;
+        }
         card.innerHTML = `
       <div class="ios-event-card-head">
         <div>
@@ -476,6 +512,94 @@ async function loadSyncStatus() {
   iosSyncStatus.textContent = status.message;
 }
 
+async function loadCalendarPrefs() {
+  const wrap = document.getElementById("ios-calendar-prefs-rows");
+  const msg = document.getElementById("ios-calendar-prefs-msg");
+  if (!wrap) return;
+  if (msg) msg.textContent = "";
+  wrap.innerHTML = "<span class=\"ios-agenda-intro\">Chargement des calendriers…</span>";
+  try {
+    const data = await iosApi("calendar_sources");
+    const rows = data.calendars || [];
+    wrap.innerHTML = "";
+    if (!rows.length) {
+      wrap.innerHTML =
+        "<span class=\"ios-agenda-intro\">Aucun calendrier détecté. Configure iCloud dans Paramètres puis synchronise.</span>";
+      return;
+    }
+    rows.forEach((row, idx) => {
+      const id = `ios-cal-cb-${idx}`;
+      const rowEl = document.createElement("div");
+      rowEl.className = "ios-cal-pref-row";
+      rowEl.dataset.urlKey = row.url_key;
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = id;
+      cb.checked = row.visible !== false;
+
+      const lab = document.createElement("label");
+      lab.className = "ios-cal-pref-label";
+      lab.htmlFor = id;
+      lab.textContent = row.display || row.url_key;
+
+      const colInp = document.createElement("input");
+      colInp.type = "color";
+      colInp.className = "ios-cal-pref-color";
+      colInp.value = row.color || suggestedColorForKey(row.url_key);
+      colInp.title = "Couleur dans l’agenda";
+
+      const autoBtn = document.createElement("button");
+      autoBtn.type = "button";
+      autoBtn.className = "ios-cal-pref-reset";
+      autoBtn.textContent = "Palette auto";
+      autoBtn.title = "Couleurs HouseHub par défaut (sans teinte iOS)";
+      autoBtn.addEventListener("click", () => {
+        rowEl.dataset.paletteAuto = "1";
+        colInp.disabled = true;
+        colInp.style.opacity = "0.35";
+      });
+
+      rowEl.appendChild(cb);
+      rowEl.appendChild(lab);
+      rowEl.appendChild(colInp);
+      rowEl.appendChild(autoBtn);
+      wrap.appendChild(rowEl);
+    });
+  } catch (e) {
+    wrap.innerHTML = `<span class="ios-agenda-intro">${escHtml(e.message)}</span>`;
+  }
+}
+
+async function saveCalendarPrefs() {
+  const msg = document.getElementById("ios-calendar-prefs-msg");
+  const wrap = document.getElementById("ios-calendar-prefs-rows");
+  if (!wrap) return;
+  const prefs = {};
+  wrap.querySelectorAll(".ios-cal-pref-row").forEach((rowEl) => {
+    const key = rowEl.dataset.urlKey;
+    if (!key) return;
+    const vis = rowEl.querySelector('input[type="checkbox"]')?.checked === true;
+    const colInp = rowEl.querySelector(".ios-cal-pref-color");
+    let color = null;
+    if (!rowEl.dataset.paletteAuto && colInp && !colInp.disabled) {
+      const v = colInp.value;
+      if (v && /^#[0-9A-Fa-f]{6}$/i.test(v)) {
+        color = v.startsWith("#") ? v.toLowerCase() : `#${v}`.toLowerCase();
+      }
+    }
+    prefs[key] = { visible: vis, color };
+  });
+  try {
+    await iosApi("calendar_prefs", { method: "POST", body: { prefs } });
+    if (msg) msg.textContent = "Préférences enregistrées.";
+    await loadEvents();
+    await loadCalendarPrefs();
+  } catch (e) {
+    if (msg) msg.textContent = e.message;
+  }
+}
+
 iosForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const idStr = document.getElementById("ios-event-id").value.trim();
@@ -505,6 +629,7 @@ document.getElementById("ios-sync-btn")?.addEventListener("click", async () => {
     const data = await iosApi("sync", { method: "POST", body: {} });
     if (iosSyncStatus) iosSyncStatus.textContent = data.message;
     await loadEvents();
+    await loadCalendarPrefs();
   } finally {
     btn.disabled = false;
   }
@@ -558,10 +683,13 @@ document.getElementById("ios-agenda-add")?.addEventListener("click", () => {
   document.getElementById("ios-title")?.focus();
 });
 
+document.getElementById("ios-calendar-prefs-save")?.addEventListener("click", () => saveCalendarPrefs());
+
 window.addEventListener("DOMContentLoaded", async () => {
   try {
     iosCursor = new Date();
     await loadEvents();
+    await loadCalendarPrefs();
     await loadSyncStatus();
     showListSection(false);
     startNowTimer();
