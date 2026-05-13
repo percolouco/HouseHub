@@ -19,7 +19,7 @@ require __DIR__ . '/header.php';
         <button class="pf-btn btn-secondary" id="ios-sync-btn">Synchroniser</button>
       </div>
     </div>
-    <p class="pf-muted-note">Créez vos événements ici, puis synchronisez-les avec iCloud CalDAV.</p>
+    <p class="pf-muted-note">Les événements affichés viennent de HouseHub après import. Cliquez sur <strong>Synchroniser</strong> pour récupérer ceux qui sont déjà dans ton calendrier iCloud (fenêtre d’environ trois ans en arrière à quatre ans en avant).</p>
   </section>
 
   <section class="pf-panel-card">
