@@ -95,7 +95,13 @@ $integrationStmt->execute([$userId]);
 $integration = $integrationStmt->fetch();
 
 if ($action === 'events' && $method === 'GET') {
-    $rows = $pdo->query("SELECT * FROM pf_calendar_events ORDER BY start_at ASC")->fetchAll();
+    $rows = $pdo->query("
+        SELECT e.*, l.calendar_url AS calendar_source_url
+        FROM pf_calendar_events e
+        LEFT JOIN pf_calendar_event_links l ON l.calendar_event_id = e.id
+        WHERE e.deleted_at IS NULL
+        ORDER BY e.start_at ASC
+    ")->fetchAll();
     ios_ok($rows);
 }
 
