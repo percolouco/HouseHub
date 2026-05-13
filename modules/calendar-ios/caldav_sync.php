@@ -1,5 +1,25 @@
 <?php
 require_once dirname(__DIR__, 2) . '/includes/crypto.php';
+require_once dirname(__DIR__, 2) . '/includes/icloud_caldav.php';
+
+/**
+ * Mot de passe normalisé + URL calendrier (découverte si racine iCloud).
+ *
+ * @return array{integration: array, password: string}
+ */
+function ios_caldav_prepare(array $integration, ?PDO $metaPdo = null): array
+{
+    $password = hh_normalize_apple_app_password(hh_decrypt_secret($integration['secret_encrypted']));
+    $url = trim($integration['calendar_url'] ?? '');
+    $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($integration['username'], $password, $url);
+    $out = $integration;
+    $out['calendar_url'] = $resolvedUrl;
+    if ($metaPdo && !empty($integration['id']) && rtrim($url, '/') !== rtrim($resolvedUrl, '/')) {
+        $metaPdo->prepare('UPDATE user_calendar_integrations SET calendar_url = ? WHERE id = ?')
+            ->execute([$resolvedUrl, $integration['id']]);
+    }
+    return ['integration' => $out, 'password' => $password];
+}
 
 function ios_make_ics(array $event): string
 {
@@ -46,9 +66,8 @@ function ios_caldav_request(string $url, string $username, string $password, str
     ];
 }
 
-function ios_fetch_remote_events(array $integration): array
+function ios_fetch_remote_events(array $integration, string $password): array
 {
-    $password = hh_decrypt_secret($integration['secret_encrypted']);
     $res = ios_caldav_request($integration['calendar_url'], $integration['username'], $password, 'GET', null, ['Accept: text/calendar']);
     if ($res['code'] < 200 || $res['code'] >= 400) {
         throw new RuntimeException('Lecture CalDAV impossible (HTTP ' . $res['code'] . ')');
@@ -82,18 +101,16 @@ function ios_fetch_remote_events(array $integration): array
     return $events;
 }
 
-function ios_push_event_to_remote(array $integration, array $event): array
+function ios_push_event_to_remote(array $integration, array $event, string $password): array
 {
-    $password = hh_decrypt_secret($integration['secret_encrypted']);
     $uid = $event['external_uid'] ?: ('hh-' . $event['id'] . '@househub');
     $url = rtrim($integration['calendar_url'], '/') . '/' . rawurlencode($uid) . '.ics';
     $ics = ios_make_ics($event);
     return ios_caldav_request($url, $integration['username'], $password, 'PUT', $ics);
 }
 
-function ios_delete_remote_event(array $integration, string $externalUid): array
+function ios_delete_remote_event(array $integration, string $externalUid, string $password): array
 {
-    $password = hh_decrypt_secret($integration['secret_encrypted']);
     $url = rtrim($integration['calendar_url'], '/') . '/' . rawurlencode($externalUid) . '.ics';
     return ios_caldav_request($url, $integration['username'], $password, 'DELETE', null, ['Accept: */*']);
 }

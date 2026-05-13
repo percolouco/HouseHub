@@ -3,6 +3,7 @@ require __DIR__ . '/includes/auth.php';
 require_login();
 require_once __DIR__ . '/includes/meta_db.php';
 require_once __DIR__ . '/includes/crypto.php';
+require_once __DIR__ . '/includes/icloud_caldav.php';
 require_once __DIR__ . '/includes/i18n.php';
 
 $user_id   = $_SESSION['user']['id'];
@@ -135,20 +136,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($action === 'calendar_ios_save') {
         $username = trim($_POST['icloud_username'] ?? '');
-        $appPassword = trim($_POST['icloud_app_password'] ?? '');
+        $appPassword = hh_normalize_apple_app_password((string) ($_POST['icloud_app_password'] ?? ''));
         $calendarUrl = trim($_POST['icloud_calendar_url'] ?? '');
 
         if (!$username || !$appPassword || !$calendarUrl) {
             $error = "Merci de renseigner identifiant iCloud, mot de passe d'app et URL CalDAV.";
         } else {
             try {
+                $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($username, $appPassword, $calendarUrl);
                 $encrypted = hh_encrypt_secret($appPassword);
                 $meta_pdo->prepare("
                     INSERT INTO user_calendar_integrations (user_id, provider, username, secret_encrypted, calendar_url, status, updated_at)
                     VALUES (?, 'icloud_caldav', ?, ?, ?, 'connected', NOW())
                     ON DUPLICATE KEY UPDATE username=VALUES(username), secret_encrypted=VALUES(secret_encrypted), calendar_url=VALUES(calendar_url), status='connected', updated_at=NOW()
-                ")->execute([$user_id, $username, $encrypted, $calendarUrl]);
-                $success = "Connexion calendrier iOS enregistrée.";
+                ")->execute([$user_id, $username, $encrypted, $resolvedUrl]);
+                $msg = "Connexion calendrier iOS enregistrée.";
+                if (rtrim($resolvedUrl, '/') !== rtrim($calendarUrl, '/')) {
+                    $msg .= " URL du calendrier détectée automatiquement (tu avais mis la racine iCloud).";
+                }
+                $success = $msg;
             } catch (\Throwable $e) {
                 $error = "Impossible d'enregistrer la connexion iOS: " . $e->getMessage();
             }
@@ -156,29 +162,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'calendar_ios_test') {
-        $row = $meta_pdo->prepare("SELECT username, secret_encrypted, calendar_url FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
+        $row = $meta_pdo->prepare("SELECT id, username, secret_encrypted, calendar_url FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
         $row->execute([$user_id]);
         $integration = $row->fetch();
         if (!$integration) {
             $error = "Aucune connexion iOS configurée.";
         } else {
             try {
-                $pwd = hh_decrypt_secret($integration['secret_encrypted']);
-                $ch = curl_init($integration['calendar_url']);
-                curl_setopt_array($ch, [
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_TIMEOUT => 10,
-                    CURLOPT_NOBODY => true,
-                    CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
-                    CURLOPT_USERPWD => $integration['username'] . ':' . $pwd,
-                ]);
-                curl_exec($ch);
-                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                curl_close($ch);
-                if ($code >= 200 && $code < 400) {
-                    $success = "Connexion iCloud CalDAV valide.";
+                $pwd = hh_normalize_apple_app_password(hh_decrypt_secret($integration['secret_encrypted']));
+                $calendarUrl = trim($integration['calendar_url']);
+                $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($integration['username'], $pwd, $calendarUrl);
+                $code = hh_caldav_test_calendar_collection($integration['username'], $pwd, $resolvedUrl);
+                if (in_array($code, [200, 207], true)) {
+                    if (rtrim($resolvedUrl, '/') !== rtrim($calendarUrl, '/')) {
+                        $meta_pdo->prepare("UPDATE user_calendar_integrations SET calendar_url = ? WHERE id = ?")
+                            ->execute([$resolvedUrl, $integration['id']]);
+                    }
+                    $success = "Connexion iCloud CalDAV valide (HTTP $code).";
                 } else {
-                    $error = "Test connexion échoué (HTTP $code).";
+                    $error = "Test connexion échoué (HTTP $code). Vérifie identifiant Apple, mot de passe d’app (16 caractères) et que le compte iCloud a le Calendrier activé.";
                 }
             } catch (\Throwable $e) {
                 $error = "Test connexion impossible: " . $e->getMessage();
@@ -293,6 +295,11 @@ require __DIR__ . '/header.php';
   <section class="pf-panel-card">
     <h2 class="pf-card-h2 pf-card-h2--tight">📱 Intégration Calendrier iOS (CalDAV)</h2>
     <p class="pf-muted-note">Configurez ici votre calendrier iCloud pour synchroniser les événements créés dans HouseHub.</p>
+    <p class="pf-muted-note" style="margin-top:8px;">
+      Pour voir et gérer les événements : ouvrez le module
+      <a href="/calendar-ios.php" style="color:var(--primary);font-weight:600;">Calendrier iOS</a>
+      (menu du haut ou burger « Calendrier iOS », ou carte sur l’accueil). Le module doit être coché dans « Modules actifs » ci-dessus.
+    </p>
     <form method="post" class="pf-stack-md">
       <input type="hidden" name="action" value="calendar_ios_save">
       <div class="pf-form-group">
@@ -322,6 +329,10 @@ require __DIR__ . '/header.php';
         <button type="submit" class="pf-btn btn-secondary">Déconnecter</button>
       </form>
     </div>
+    <p class="pf-muted-note" style="margin-top:10px;">
+      Après enregistrement, utilisez « Tester la connexion » : un message vert confirme que l’URL CalDAV répond avec tes identifiants.
+      Sur la page Calendrier iOS, le bouton « Synchroniser » envoie les événements vers iCloud et récupère ceux créés sur l’iPhone.
+    </p>
     <?php if (!empty($calendarIntegration['last_sync_at'])): ?>
     <p class="pf-muted-note">Dernière synchro: <?= htmlspecialchars($calendarIntegration['last_sync_at']) ?></p>
     <?php endif; ?>
