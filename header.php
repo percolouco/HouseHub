@@ -45,7 +45,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     <a href="/index.php" class="pf-logo">HouseHub</a>
 
     <?php if (isset($_SESSION['user'])): ?>
-    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts']; ?>
+    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','calendar_ios']; ?>
     <nav class="pf-nav">
       <a href="/index.php" class="pf-nav-link <?= $activePage === 'home' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_home') ?></a>
       <?php if (in_array('calendar',  $mods)): ?><a href="/family-calendar.php" class="pf-nav-link <?= $activePage === 'family-calendar' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_calendar') ?></a><?php endif; ?>
@@ -55,6 +55,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
       <?php if (in_array('garage',    $mods)): ?><a href="/garage.php" class="pf-nav-link <?= $activePage === 'garage' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_garage') ?></a><?php endif; ?>
       <?php if (in_array('memo',      $mods)): ?><a href="/memo.php" class="pf-nav-link <?= $activePage === 'memo' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_memo') ?></a><?php endif; ?>
       <?php if (in_array('todo',      $mods)): ?><a href="/todo.php" class="pf-nav-link <?= $activePage === 'todo' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_todo') ?></a><?php endif; ?>
+      <?php if (in_array('calendar_ios', $mods)): ?><a href="/calendar-ios.php" class="pf-nav-link <?= $activePage === 'calendar-ios' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_calendar_ios') ?></a><?php endif; ?>
     </nav>
     <?php endif; ?>
 
@@ -102,6 +103,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         <?php if (in_array('garage',   $mods)): ?><a href="/garage.php" class="pf-mobile-nav-link">🚗 <?= tr('menu_garage') ?></a><?php endif; ?>
         <?php if (in_array('memo',     $mods)): ?><a href="/memo.php" class="pf-mobile-nav-link">📝 <?= tr('menu_memo') ?></a><?php endif; ?>
         <?php if (in_array('todo',     $mods)): ?><a href="/todo.php" class="pf-mobile-nav-link">✅ <?= tr('menu_todo') ?></a><?php endif; ?>
+        <?php if (in_array('calendar_ios', $mods)): ?><a href="/calendar-ios.php" class="pf-mobile-nav-link">📱 <?= tr('menu_calendar_ios') ?></a><?php endif; ?>
         <a href="/settings.php" class="pf-mobile-nav-link">⚙️ Paramètres</a>
         <?php if (!empty($_SESSION['user']['is_admin'])): ?>
         <a href="/admin/" class="pf-mobile-nav-link" style="color:#2563eb">🛡️ Admin</a>
@@ -124,7 +126,8 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         ID_ALEX: <?php echo defined('ID_ALEX') ? ID_ALEX : 2; ?>,
         ID_LAIA: <?php echo defined('ID_LAIA') ? ID_LAIA : 3; ?>,
         CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>'
-    };    
+    };
+    window.CSRF_TOKEN = "<?= htmlspecialchars(function_exists('csrf_token') ? csrf_token() : '') ?>";
     
     function tr(key) {
         return window.I18N[key] || key;

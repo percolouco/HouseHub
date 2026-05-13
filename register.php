@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/includes/i18n.php';
 require_once __DIR__ . '/includes/meta_db.php';
+require_once __DIR__ . '/includes/auth.php';
 
 if (isset($_SESSION['user'])) {
     header('Location: /index.php');
@@ -40,6 +41,9 @@ function createFamilyDb(PDO $meta, string $db_host, string $db_user, string $db_
 // ─── Traitement du formulaire ─────────────────────────────────────────────────
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verify_csrf($_POST['csrf_token'] ?? null)) {
+        $error = "Session invalide (CSRF). Rechargez la page.";
+    } else {
     $action       = $_POST['action'] ?? 'create';
     $username     = trim($_POST['username'] ?? '');
     $display_name = trim($_POST['display_name'] ?? '');
@@ -93,6 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'family_id'    => (int)$family['id'],
                     ];
                     $_SESSION['family_db'] = $family['db_name'];
+                    session_regenerate_id(true);
                     header('Location: /index.php');
                     exit;
                 }
@@ -133,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'family_id'    => $family_id,
                     ];
                     $_SESSION['family_db'] = $db_name;
+                    session_regenerate_id(true);
                     header('Location: /index.php');
                     exit;
                 }
@@ -141,6 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($meta_pdo->inTransaction()) $meta_pdo->rollBack();
             $error = "Erreur lors de la création : " . $e->getMessage();
         }
+    }
     }
 }
 
@@ -172,6 +179,7 @@ require __DIR__ . '/header.php';
 
     <!-- Formulaire commun -->
     <form method="post" action="/register.php" id="reg-form">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" id="reg-action" value="create">
 
       <div class="pf-form-group">

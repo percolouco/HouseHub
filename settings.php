@@ -2,6 +2,7 @@
 require __DIR__ . '/includes/auth.php';
 require_login();
 require_once __DIR__ . '/includes/meta_db.php';
+require_once __DIR__ . '/includes/crypto.php';
 require_once __DIR__ . '/includes/i18n.php';
 
 $user_id   = $_SESSION['user']['id'];
@@ -10,12 +11,31 @@ $family_id = $_SESSION['user']['family_id'];
 $error   = null;
 $success = null;
 
+$meta_pdo->exec("
+CREATE TABLE IF NOT EXISTS user_calendar_integrations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  provider VARCHAR(50) NOT NULL DEFAULT 'icloud_caldav',
+  username VARCHAR(255) NOT NULL,
+  secret_encrypted TEXT NOT NULL,
+  dav_principal_url VARCHAR(1024) DEFAULT NULL,
+  calendar_url VARCHAR(1024) DEFAULT NULL,
+  status VARCHAR(30) DEFAULT 'connected',
+  last_sync_at DATETIME DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_user_provider (user_id, provider)
+)");
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verify_csrf($_POST['csrf_token'] ?? null)) {
+        $error = "Session invalide (CSRF). Rechargez la page.";
+    } else {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'set_modules' && $family_id) {
-        $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo'];
+        $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'calendar_ios'];
         $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
         if (empty($enabled)) {
             $error = "Vous devez garder au moins un module actif.";
@@ -112,6 +132,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $old) @unlink($old);
         $success = "Image d'accueil réinitialisée.";
     }
+    
+    if ($action === 'calendar_ios_save') {
+        $username = trim($_POST['icloud_username'] ?? '');
+        $appPassword = trim($_POST['icloud_app_password'] ?? '');
+        $calendarUrl = trim($_POST['icloud_calendar_url'] ?? '');
+
+        if (!$username || !$appPassword || !$calendarUrl) {
+            $error = "Merci de renseigner identifiant iCloud, mot de passe d'app et URL CalDAV.";
+        } else {
+            try {
+                $encrypted = hh_encrypt_secret($appPassword);
+                $meta_pdo->prepare("
+                    INSERT INTO user_calendar_integrations (user_id, provider, username, secret_encrypted, calendar_url, status, updated_at)
+                    VALUES (?, 'icloud_caldav', ?, ?, ?, 'connected', NOW())
+                    ON DUPLICATE KEY UPDATE username=VALUES(username), secret_encrypted=VALUES(secret_encrypted), calendar_url=VALUES(calendar_url), status='connected', updated_at=NOW()
+                ")->execute([$user_id, $username, $encrypted, $calendarUrl]);
+                $success = "Connexion calendrier iOS enregistrée.";
+            } catch (\Throwable $e) {
+                $error = "Impossible d'enregistrer la connexion iOS: " . $e->getMessage();
+            }
+        }
+    }
+
+    if ($action === 'calendar_ios_test') {
+        $row = $meta_pdo->prepare("SELECT username, secret_encrypted, calendar_url FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
+        $row->execute([$user_id]);
+        $integration = $row->fetch();
+        if (!$integration) {
+            $error = "Aucune connexion iOS configurée.";
+        } else {
+            try {
+                $pwd = hh_decrypt_secret($integration['secret_encrypted']);
+                $ch = curl_init($integration['calendar_url']);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_NOBODY => true,
+                    CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
+                    CURLOPT_USERPWD => $integration['username'] . ':' . $pwd,
+                ]);
+                curl_exec($ch);
+                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                if ($code >= 200 && $code < 400) {
+                    $success = "Connexion iCloud CalDAV valide.";
+                } else {
+                    $error = "Test connexion échoué (HTTP $code).";
+                }
+            } catch (\Throwable $e) {
+                $error = "Test connexion impossible: " . $e->getMessage();
+            }
+        }
+    }
+
+    if ($action === 'calendar_ios_disconnect') {
+        $meta_pdo->prepare("DELETE FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'")->execute([$user_id]);
+        $success = "Connexion iOS supprimée.";
+    }
+    }
 }
 
 // ─── Chargement données ───────────────────────────────────────────────────────
@@ -130,6 +209,10 @@ if ($family_id) {
     $mem->execute([$family_id]);
     $members = $mem->fetchAll();
 }
+
+$calendarIntegration = $meta_pdo->prepare("SELECT username, calendar_url, status, last_sync_at FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
+$calendarIntegration->execute([$user_id]);
+$calendarIntegration = $calendarIntegration->fetch();
 
 $pageTitle = "Paramètres — HouseHub";
 $activePage = "settings";
@@ -179,7 +262,7 @@ require __DIR__ . '/header.php';
     <h2 class="pf-card-h2 pf-card-h2--tight">🧩 Modules actifs</h2>
     <p class="pf-muted-note">Choisissez les modules visibles dans la navigation (partagé avec tous les membres de l'espace).</p>
     <?php
-      $enabledMods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts'];
+      $enabledMods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','calendar_ios'];
       $allModules = [
           'calendar' => ['icon' => '📅', 'label' => tr('menu_calendar')],
           'budget'   => ['icon' => '💰', 'label' => tr('menu_budget')],
@@ -188,6 +271,7 @@ require __DIR__ . '/header.php';
           'garage'   => ['icon' => '🚗', 'label' => tr('menu_garage')],
           'memo'     => ['icon' => '📝', 'label' => tr('menu_memo')],
           'todo'     => ['icon' => '✅', 'label' => tr('menu_todo')],
+          'calendar_ios' => ['icon' => '📱', 'label' => tr('menu_calendar_ios')],
       ];
     ?>
     <form method="post">
@@ -205,6 +289,43 @@ require __DIR__ . '/header.php';
     </form>
   </section>
   <?php endif; ?>
+
+  <section class="pf-panel-card">
+    <h2 class="pf-card-h2 pf-card-h2--tight">📱 Intégration Calendrier iOS (CalDAV)</h2>
+    <p class="pf-muted-note">Configurez ici votre calendrier iCloud pour synchroniser les événements créés dans HouseHub.</p>
+    <form method="post" class="pf-stack-md">
+      <input type="hidden" name="action" value="calendar_ios_save">
+      <div class="pf-form-group">
+        <label class="pf-label">Identifiant Apple (email iCloud)</label>
+        <input type="text" name="icloud_username" class="pf-input" value="<?= htmlspecialchars($calendarIntegration['username'] ?? '') ?>" placeholder="nom@icloud.com" required>
+      </div>
+      <div class="pf-form-group">
+        <label class="pf-label">Mot de passe d'app Apple</label>
+        <input type="password" name="icloud_app_password" class="pf-input" placeholder="xxxx-xxxx-xxxx-xxxx" required>
+      </div>
+      <div class="pf-form-group">
+        <label class="pf-label">URL du calendrier CalDAV</label>
+        <input type="url" name="icloud_calendar_url" class="pf-input" value="<?= htmlspecialchars($calendarIntegration['calendar_url'] ?? '') ?>" placeholder="https://caldav.icloud.com/..." required>
+      </div>
+      <div class="pf-flex-gap-8">
+        <button type="submit" class="pf-btn">Enregistrer</button>
+      </div>
+    </form>
+
+    <div class="pf-flex-gap-8 pf-mt-sm">
+      <form method="post">
+        <input type="hidden" name="action" value="calendar_ios_test">
+        <button type="submit" class="pf-btn btn-secondary">Tester la connexion</button>
+      </form>
+      <form method="post">
+        <input type="hidden" name="action" value="calendar_ios_disconnect">
+        <button type="submit" class="pf-btn btn-secondary">Déconnecter</button>
+      </form>
+    </div>
+    <?php if (!empty($calendarIntegration['last_sync_at'])): ?>
+    <p class="pf-muted-note">Dernière synchro: <?= htmlspecialchars($calendarIntegration['last_sync_at']) ?></p>
+    <?php endif; ?>
+  </section>
 
   <!-- ── Fond page d'accueil ───────────────────────────────────────────── -->
   <?php if ($family_id):
@@ -346,6 +467,16 @@ require __DIR__ . '/header.php';
 </div>
 
 <script>
+document.querySelectorAll('form[method="post"]').forEach((form) => {
+  if (!form.querySelector('input[name="csrf_token"]')) {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'csrf_token';
+    input.value = window.CSRF_TOKEN || '';
+    form.appendChild(input);
+  }
+});
+
 function copyCode() {
   const code = document.getElementById('invite-code').textContent.trim();
   navigator.clipboard.writeText(code).then(() => {
