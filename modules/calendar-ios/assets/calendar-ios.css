@@ -24,6 +24,102 @@
   line-height: 1.45;
 }
 
+.ios-cal-prefs-details {
+  margin-top: 14px;
+  border: 1px solid var(--pf-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--pf-bg-page, #fff);
+}
+
+.ios-cal-prefs-summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.ios-cal-prefs-help {
+  margin: 10px 0 12px;
+  font-size: 0.85rem;
+  color: var(--pf-text-muted, #64748b);
+  line-height: 1.45;
+}
+
+.ios-cal-prefs-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ios-cal-pref-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--pf-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--pf-bg-lighter, #f8fafc);
+}
+
+.ios-cal-pref-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.ios-cal-pref-label {
+  font-size: 0.88rem;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.ios-cal-pref-color {
+  width: 44px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--pf-border, #e2e8f0);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--pf-bg-page, #fff);
+}
+
+.ios-cal-pref-reset {
+  border: none;
+  background: transparent;
+  color: var(--pf-text-muted, #64748b);
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.ios-cal-pref-reset:hover {
+  color: var(--pf-text-main, #0f172a);
+}
+
+.ios-cal-prefs-msg {
+  min-height: 1.25em;
+  font-size: 0.85rem;
+  margin: 0 0 10px;
+}
+
+@media (max-width: 640px) {
+  .ios-cal-pref-row {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+  }
+  .ios-cal-pref-color {
+    grid-column: 2;
+  }
+  .ios-cal-pref-reset {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
 .ios-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -349,8 +445,10 @@
   box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.35);
 }
 
-.ios-event-block:hover {
-  filter: brightness(1.08);
+.ios-event-block--custom {
+  border: none !important;
+  color: #fff !important;
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.35) !important;
 }
 
 .ios-event-block-title {
