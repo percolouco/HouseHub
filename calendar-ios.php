@@ -19,10 +19,27 @@ require __DIR__ . '/header.php';
         <button class="pf-btn btn-secondary" id="ios-sync-btn">Synchroniser</button>
       </div>
     </div>
-    <p class="pf-muted-note">Les événements affichés viennent de HouseHub après import. Cliquez sur <strong>Synchroniser</strong> pour récupérer ceux qui sont déjà dans ton calendrier iCloud (fenêtre d’environ trois ans en arrière à quatre ans en avant).</p>
+    <p class="pf-muted-note">Les événements affichés viennent de HouseHub après import. <strong>Synchroniser</strong> interroge <strong>tous tes calendriers iCloud</strong> (même compte) sur une fenêtre d’environ trois ans en arrière à quatre ans en avant. Modification et suppression sont renvoyées vers iCloud à la synchro suivante.</p>
+    <div class="ios-view-toggle" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+      <button type="button" class="pf-btn btn-secondary ios-view-btn ios-view-btn--active" id="ios-view-month">Vue mois</button>
+      <button type="button" class="pf-btn btn-secondary ios-view-btn" id="ios-view-list">Liste</button>
+    </div>
   </section>
 
-  <section class="pf-panel-card">
+  <section class="pf-panel-card" id="ios-month-section">
+    <div class="ios-cal-toolbar">
+      <button type="button" class="pf-btn btn-secondary" id="ios-month-prev" aria-label="Mois précédent">←</button>
+      <span id="ios-month-label" class="ios-cal-month-label"></span>
+      <button type="button" class="pf-btn btn-secondary" id="ios-month-next" aria-label="Mois suivant">→</button>
+    </div>
+    <div class="ios-cal-weekdays" aria-hidden="true">
+      <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+    </div>
+    <div id="ios-cal-grid" class="ios-cal-grid"></div>
+    <div id="ios-day-detail" class="ios-day-detail"></div>
+  </section>
+
+  <section class="pf-panel-card" id="ios-edit-panel">
     <h2 class="pf-card-h2">Ajouter / Modifier un événement</h2>
     <form id="ios-event-form" class="ios-form-grid">
       <input type="hidden" id="ios-event-id">
@@ -53,8 +70,8 @@ require __DIR__ . '/header.php';
     </form>
   </section>
 
-  <section class="pf-panel-card">
-    <h2 class="pf-card-h2">Événements</h2>
+  <section class="pf-panel-card" id="ios-list-section">
+    <h2 class="pf-card-h2">Événements (liste)</h2>
     <div id="ios-sync-status" class="pf-muted-note"></div>
     <div id="ios-events-list" class="ios-events-list"></div>
   </section>

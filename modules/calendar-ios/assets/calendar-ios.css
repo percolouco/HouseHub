@@ -64,6 +64,130 @@
   gap: 8px;
 }
 
+.ios-view-btn--active {
+  border-color: var(--pf-accent, #3b82f6);
+  background: color-mix(in srgb, var(--pf-accent, #3b82f6) 12%, transparent);
+}
+
+.ios-cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ios-cal-month-label {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.ios-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 0.72rem;
+  color: var(--pf-text-muted, #64748b);
+  text-align: center;
+}
+
+.ios-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.ios-cal-cell {
+  aspect-ratio: 1;
+  min-height: 44px;
+  border: 1px solid var(--pf-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--pf-bg-page, #fff);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 2px;
+  font: inherit;
+  color: inherit;
+}
+
+.ios-cal-cell--pad {
+  visibility: hidden;
+  pointer-events: none;
+  border: none;
+  background: transparent;
+}
+
+.ios-cal-cell--today {
+  border-color: var(--pf-accent, #3b82f6);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pf-accent, #3b82f6) 35%, transparent);
+}
+
+.ios-cal-cell--has {
+  background: color-mix(in srgb, var(--pf-accent, #3b82f6) 6%, var(--pf-bg-page, #fff));
+}
+
+.ios-cal-daynum {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ios-cal-dots {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.ios-cal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--pf-accent, #3b82f6);
+}
+
+.ios-day-detail {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--pf-border, #e2e8f0);
+}
+
+.ios-day-detail-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: capitalize;
+}
+
+.ios-day-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--pf-border, #e2e8f0);
+  font-size: 0.9rem;
+}
+
+.ios-day-row-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--pf-text-muted, #64748b);
+  min-width: 40px;
+}
+
+.ios-day-row-title {
+  flex: 1;
+  min-width: 120px;
+}
+
+.ios-day-row-actions {
+  display: flex;
+  gap: 6px;
+}
+
 @media (max-width: 768px) {
   .ios-form-grid {
     grid-template-columns: 1fr;
@@ -75,5 +199,9 @@
   .ios-event-card-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .ios-cal-cell {
+    min-height: 40px;
+    font-size: 0.8rem;
   }
 }
