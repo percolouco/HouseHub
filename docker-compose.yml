@@ -12,6 +12,8 @@ services:
       DB_NAME: ${DB_NAME:-househub}
       DB_USER: ${DB_USER:-househub}
       DB_PASS: ${DB_PASS:-changeme}
+      # Clé applicative pour chiffrer les secrets (iCloud, etc.). Optionnel si absent : fichier data/.hh_app_secret ou dérivation DB.
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-}
     volumes:
       - househub_uploads:/uploads
       - /opt/container/househub:/var/www/html
