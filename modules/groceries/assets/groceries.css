@@ -1,0 +1,174 @@
+/* HouseHub — Courses (liste de courses) */
+.groceries-layout {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 1rem 2.5rem;
+}
+
+.groceries-hero {
+  padding: 1.25rem 0 1rem;
+}
+.groceries-hero h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+  color: var(--text-main);
+}
+.groceries-hero p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.groceries-quick-add {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.groceries-quick-add input {
+  flex: 1;
+  min-width: 0;
+}
+
+.groceries-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.groceries-section-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 1rem 0 0.5rem;
+}
+.groceries-section-title:first-of-type {
+  margin-top: 0;
+}
+
+.groceries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.groceries-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.groceries-row:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.groceries-row.in-cart {
+  opacity: 0.62;
+}
+.groceries-row.in-cart .groceries-label {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.groceries-check {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  border: 2px solid var(--border-light);
+  background: var(--bg-page);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: transparent;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.groceries-check:hover {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+.groceries-check.checked {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.groceries-check.checked::after {
+  content: '✓';
+}
+
+.groceries-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-main);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.groceries-row-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.groceries-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.groceries-empty .groceries-empty-icon {
+  font-size: 2.75rem;
+  opacity: 0.35;
+  margin-bottom: 0.75rem;
+}
+
+.groceries-toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.groceries-toast {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  font-size: 0.875rem;
+  min-width: 200px;
+  color: var(--text-main);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-left: 4px solid var(--primary);
+}
+.groceries-toast.error {
+  border-left-color: var(--danger);
+}
+
+[data-theme='dark'] .groceries-row {
+  background: var(--bg-panel);
+  border-color: var(--border-light);
+}
+[data-theme='dark'] .groceries-row:hover {
+  border-color: #484f58;
+}
+[data-theme='dark'] .groceries-check {
+  border-color: #484f58;
+  background: var(--bg-page);
+}
+[data-theme='dark'] .groceries-check:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--primary);
+}
