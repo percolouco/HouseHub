@@ -7,6 +7,12 @@ function $$(s,ctx=document){return [...ctx.querySelectorAll(s)];}
 function fmt(n){return n!=null?Number(n).toLocaleString('fr-FR'):'--';}
 function fmtPrice(n){return n!=null?Number(n).toFixed(2)+' €':'--';}
 function fmtDate(d){if(!d)return '--';return new Date(d).toLocaleDateString('fr-FR');}
+function formatBytes(n){
+  n=Number(n)||0;
+  if(n<1024)return n+' o';
+  if(n<1048576)return (n/1024).toFixed(1)+' Ko';
+  return (n/1048576).toFixed(1)+' Mo';
+}
 function ago(d){if(!d)return '';const diff=Math.floor((Date.now()-new Date(d))/86400000);if(diff===0)return "aujourd'hui";if(diff===1)return 'hier';return 'il y a '+diff+'j';}
 function escHtml(s){const d=document.createElement('div');d.textContent=String(s??'');return d.innerHTML;}
 function toast(msg,type='success'){
@@ -25,7 +31,7 @@ function navigate(page,params={}){
   $$('.page').forEach(p=>p.classList.remove('active'));
   $$('.nav-link').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page)?.classList.add('active');
-  const navTarget=page==='maintenance'?'maintenances-all':page;
+  const navTarget=page==='maintenance'?'maintenances-all':page==='vehicle'?'vehicles':page;
   document.querySelector('.nav-link[data-page="'+navTarget+'"]')?.classList.add('active');
   if(page==='dashboard')loadDashboard();
   else if(page==='vehicles')loadVehicles();
@@ -127,6 +133,8 @@ async function loadVehicleDetail(id){
     renderVehicleHeader(v);
     renderMaintenances(maintenances);
     renderVehicleParts(parts);
+    setVehicleDocTabBadge(v);
+    await loadVehicleDocuments();
     document.title='GarageManager · '+v.name;
   }catch(e){toast(e.message,'error');}
 }
@@ -152,8 +160,13 @@ function renderVehicleHeader(v){
           (v.purchase_date?'<div class="meta-item"><span class="k">Achat</span><br><span class="v">'+fmtDate(v.purchase_date)+'</span></div>':'')+
           (v.vin?'<div class="meta-item"><span class="k">VIN</span><br><span class="v" style="font-size:.75rem;font-family:monospace">'+escHtml(v.vin)+'</span></div>':'')+
         '</div>'+
+        '<div class="garage-docs-recap">'+
+          '📎 <strong>'+(Number(v.vehicle_docs_count)||0)+'</strong> '+(Number(v.vehicle_docs_count)===1?'document':'documents')+' véhicule · '+
+          '<strong>'+(Number(v.maint_docs_count)||0)+'</strong> sur entretiens (factures, etc.) · '+
+          '<button type="button" class="btn-link-sm" onclick="switchTab(\'documents\')">Voir les documents véhicule</button>'+
+        '</div>'+
       '</div>'+
-      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-self:flex-start">'+
+      '<div class="vehicle-detail-actions">'+
         '<button class="btn btn-secondary btn-sm" onclick="openEditVehicle('+v.id+')">✏️ Modifier</button>'+
         '<button class="btn btn-secondary btn-sm" onclick="openUploadPhoto('+v.id+')">📷 Photo</button>'+
         '<button class="btn btn-danger btn-sm" onclick="deleteVehicle('+v.id+')">🗑️ Supprimer</button>'+
@@ -168,7 +181,9 @@ function renderMaintenances(list){
   if(!list.length){el.innerHTML='<div class="empty-state"><div class="icon">🔧</div><p>Aucun entretien enregistré</p></div>';return;}
   el.innerHTML='<div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Kilométrage</th><th>Coût MO</th><th>Pièces</th><th>Prochain</th><th></th></tr></thead><tbody>'+
     list.map(m=>'<tr style="cursor:pointer" onclick="navigate(\'maintenance\',{id:'+m.id+'})">'+
-      '<td><strong>'+fmtDate(m.date)+'</strong><br><span style="color:var(--muted);font-size:.75rem">'+ago(m.date)+'</span></td>'+
+      '<td><strong>'+fmtDate(m.date)+'</strong><br><span style="color:var(--muted);font-size:.75rem">'+ago(m.date)+'</span>'+
+        (m.documents_count>0?' <span class="badge badge-gray garage-maint-doc-badge" title="Documents / factures">📎 '+m.documents_count+'</span>':'')+
+      '</td>'+
       '<td><span class="badge badge-blue">'+escHtml(m.type)+'</span></td>'+
       '<td style="max-width:200px;color:var(--muted)">'+(m.description?escHtml(m.description):'--')+'</td>'+
       '<td>'+(m.km?fmt(m.km)+' km':'--')+'</td>'+
@@ -218,6 +233,7 @@ async function loadMaintenanceDetail(id){
     currentVehicleId=m.vehicle_id;
     renderMaintenanceDetailHeader(m);
     renderMaintenanceParts(parts,id,m.vehicle_id);
+    await loadMaintenanceDocuments();
     loadKnownParts(m.vehicle_id);
     const f=document.getElementById('inline-part-form');
     if(f)f.style.display='none';
@@ -231,6 +247,7 @@ function renderMaintenanceDetailHeader(m){
         '<div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">'+
           '<span class="badge badge-blue" style="font-size:.95rem;padding:.35rem .8rem">'+escHtml(m.type)+'</span>'+
           '<span style="color:var(--muted)">'+fmtDate(m.date)+' · '+ago(m.date)+'</span>'+
+          (m.documents_count>0?'<span class="badge badge-gray" title="Documents attachés à cette révision">📎 '+m.documents_count+' fichier'+(m.documents_count>1?'s':'')+'</span>':'')+
           (m.vehicle_name?'<span style="color:var(--muted);font-size:.85rem">🚗 <a href="#" onclick="navigate(\'vehicle\',{id:'+m.vehicle_id+'});return false" style="color:inherit;text-decoration:underline">'+escHtml(m.vehicle_name)+'</a></span>':'')+
         '</div>'+
         (m.description?'<p style="margin-bottom:.75rem">'+escHtml(m.description)+'</p>':'')+
@@ -244,7 +261,7 @@ function renderMaintenanceDetailHeader(m){
         '</div>'+
         (m.notes?'<p style="margin-top:.75rem;color:var(--muted);font-size:.85rem;font-style:italic">'+escHtml(m.notes)+'</p>':'')+
       '</div>'+
-      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-self:flex-start">'+
+      '<div class="vehicle-detail-actions">'+
         '<button class="btn btn-secondary btn-sm" onclick="openEditMaintenance('+m.id+')">✏️ Modifier</button>'+
         '<button class="btn btn-danger btn-sm" onclick="deleteMaintenance('+m.id+')">🗑️ Supprimer</button>'+
       '</div>'+
@@ -635,12 +652,120 @@ async function doUploadPhoto(){
   }catch(e){toast(e.message,'error');}
 }
 
+function setVehicleDocTabBadge(v){
+  const el=document.getElementById('vehicle-docs-tab-count');
+  if(!el)return;
+  const n=Number(v.vehicle_docs_count)||0;
+  el.textContent=n>0?'('+n+')':'';
+}
+
+async function loadVehicleDocuments(){
+  if(!currentVehicleId)return;
+  try{
+    const list=await api('garage_documents','GET',null,'&vehicle_id='+currentVehicleId+'&vehicle_only=1');
+    renderGarageDocList('vehicle-documents-list',list);
+  }catch(e){toast(e.message,'error');}
+}
+
+async function loadMaintenanceDocuments(){
+  if(!currentMaintenanceId)return;
+  try{
+    const list=await api('garage_documents','GET',null,'&maintenance_id='+currentMaintenanceId);
+    renderGarageDocList('maintenance-documents-list',list);
+  }catch(e){toast(e.message,'error');}
+}
+
+function renderGarageDocList(elId,list){
+  const el=document.getElementById(elId);
+  if(!el)return;
+  if(!list||!list.length){
+    el.innerHTML='<div class="empty-state garage-doc-empty"><p>Aucun document pour l’instant</p></div>';
+    return;
+  }
+  el.innerHTML='<ul class="garage-doc-list">'+
+    list.map(d=>{
+      const href=API+'?action=garage_document&id='+encodeURIComponent(d.id);
+      const title=escHtml(d.label||d.original_name||d.filename||'Document');
+      const meta=fmtDate(d.created_at)+' · '+formatBytes(d.size||0);
+      return '<li class="garage-doc-item">'+
+        '<a class="garage-doc-link" href="'+href+'" target="_blank" rel="noopener noreferrer">📄 '+title+'</a>'+
+        '<span class="garage-doc-meta">'+meta+'</span>'+
+        '<button type="button" class="btn btn-danger btn-sm btn-icon" onclick="deleteGarageDocument('+parseInt(d.id,10)+')" title="Supprimer">🗑️</button>'+
+      '</li>';
+    }).join('')+
+  '</ul>';
+}
+
+async function uploadVehicleDocument(){
+  const inp=document.getElementById('vehicle-doc-file');
+  if(!inp||!inp.files[0]){toast('Choisissez un fichier','error');return;}
+  const fd=new FormData();
+  fd.append('vehicle_id',String(currentVehicleId));
+  fd.append('file',inp.files[0]);
+  const lab=document.getElementById('vehicle-doc-label')?.value.trim();
+  if(lab)fd.append('label',lab);
+  try{
+    const r=await fetch(API+'?action=garage_documents',{method:'POST',body:fd});
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'Erreur');
+    toast('Document ajouté');
+    inp.value='';
+    const ll=document.getElementById('vehicle-doc-label');if(ll)ll.value='';
+    const v=await api('vehicles','GET',null,'&id='+currentVehicleId);
+    renderVehicleHeader(v);
+    setVehicleDocTabBadge(v);
+    await loadVehicleDocuments();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function uploadMaintenanceDocument(){
+  const inp=document.getElementById('maint-doc-file');
+  if(!inp||!inp.files[0]){toast('Choisissez un fichier','error');return;}
+  if(!currentVehicleId||!currentMaintenanceId){toast('Contexte manquant','error');return;}
+  const fd=new FormData();
+  fd.append('vehicle_id',String(currentVehicleId));
+  fd.append('maintenance_id',String(currentMaintenanceId));
+  fd.append('file',inp.files[0]);
+  const lab=document.getElementById('maint-doc-label')?.value.trim();
+  if(lab)fd.append('label',lab);
+  try{
+    const r=await fetch(API+'?action=garage_documents',{method:'POST',body:fd});
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'Erreur');
+    toast('Document ajouté');
+    inp.value='';
+    const ll=document.getElementById('maint-doc-label');if(ll)ll.value='';
+    const m=await api('maintenances','GET',null,'&id='+currentMaintenanceId);
+    renderMaintenanceDetailHeader(m);
+    await loadMaintenanceDocuments();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function deleteGarageDocument(id){
+  if(!confirm('Supprimer ce document ?'))return;
+  try{
+    await api('garage_documents','DELETE',null,'&id='+id);
+    toast('Document supprimé');
+    if(currentPage==='vehicle'){
+      const v=await api('vehicles','GET',null,'&id='+currentVehicleId);
+      renderVehicleHeader(v);
+      setVehicleDocTabBadge(v);
+      await loadVehicleDocuments();
+    }else if(currentPage==='maintenance'){
+      const m=await api('maintenances','GET',null,'&id='+currentMaintenanceId);
+      renderMaintenanceDetailHeader(m);
+      await loadMaintenanceDocuments();
+    }
+  }catch(e){toast(e.message,'error');}
+}
+
 // ─── TABS ────────────────────────────────────────────────────────────────────
 function switchTab(tab){
   $$('.tab-btn').forEach(b=>b.classList.remove('active'));
   $$('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.querySelector('.tab-btn[data-tab="'+tab+'"]')?.classList.add('active');
   document.getElementById('tab-'+tab)?.classList.add('active');
+  if(tab==='documents'&&currentVehicleId)loadVehicleDocuments();
 }
 
 // ─── PHOTO PREVIEW ────────────────────────────────────────────────────────────

@@ -294,6 +294,22 @@ CREATE TABLE IF NOT EXISTS pf_parts (
   FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS pf_garage_documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT NOT NULL,
+  maintenance_id INT DEFAULT NULL,
+  label VARCHAR(255) DEFAULT NULL,
+  filename VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) DEFAULT NULL,
+  mime VARCHAR(120) DEFAULT NULL,
+  size INT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_gd_vehicle (vehicle_id),
+  KEY idx_gd_maint (maintenance_id),
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE CASCADE,
+  FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ─── Notes / Memo ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_memo_notes (
   id         INT AUTO_INCREMENT PRIMARY KEY,
