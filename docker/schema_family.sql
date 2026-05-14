@@ -355,6 +355,15 @@ CREATE TABLE IF NOT EXISTS pf_grocery_items (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS pf_grocery_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  label_hash CHAR(64) NOT NULL,
+  label_display VARCHAR(500) NOT NULL,
+  last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_grocery_hist_hash (label_hash),
+  KEY idx_hist_last (last_used_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ─── Calendar iOS ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_calendar_events (
   id                 INT AUTO_INCREMENT PRIMARY KEY,
