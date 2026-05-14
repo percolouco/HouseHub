@@ -133,12 +133,20 @@ function rowHtml(i, inCart) {
     escHtml(i.label) +
     '</div>' +
     '<div class="groceries-row-actions">' +
-    '<button type="button" class="btn btn-secondary btn-sm" onclick="editItem(' +
+    '<button type="button" class="btn-icon-action edit" onclick="editItem(' +
     id +
-    ')">✏️</button>' +
-    '<button type="button" class="btn btn-danger btn-sm" onclick="deleteItem(' +
+    ')" title="' +
+    escAttr(T('edit', 'Modifier')) +
+    '" aria-label="' +
+    escAttr(T('edit', 'Modifier')) +
+    '">✏️</button>' +
+    '<button type="button" class="btn-icon-action delete" onclick="deleteItem(' +
     id +
-    ')">🗑️</button>' +
+    ')" title="' +
+    escAttr(T('delete', 'Supprimer')) +
+    '" aria-label="' +
+    escAttr(T('delete', 'Supprimer')) +
+    '">🗑️</button>' +
     '</div></div>'
   );
 }
