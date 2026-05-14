@@ -269,6 +269,7 @@ require __DIR__ . '/header.php';
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">🌐 Langue / Language</h2>
     <form method="post" class="pf-lang-form">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="set_lang">
       <?php
         $s = 'class="pf-flag-inline"';
@@ -311,6 +312,7 @@ require __DIR__ . '/header.php';
       ];
     ?>
     <form method="post">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="set_modules">
       <div class="pf-stack-md">
         <?php foreach ($allModules as $key => $mod): $active = in_array($key, $enabledMods); ?>
@@ -334,6 +336,7 @@ require __DIR__ . '/header.php';
     <h2 class="pf-card-h2 pf-card-h2--tight">🛒 <?= htmlspecialchars(tr('groceries_settings_title')) ?></h2>
     <p class="pf-muted-note"><?= htmlspecialchars(tr('groceries_settings_intro')) ?></p>
     <form method="post" class="pf-stack-md" style="margin-top:1rem">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="grocery_history_max">
       <div class="pf-form-group">
         <label class="pf-label" for="history_max"><?= htmlspecialchars(tr('groceries_settings_history_max')) ?></label>
@@ -357,6 +360,7 @@ require __DIR__ . '/header.php';
       (menu du haut ou burger « Calendrier iOS », ou carte sur l’accueil). Le module doit être coché dans « Modules actifs » ci-dessus.
     </p>
     <form method="post" class="pf-stack-md">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="calendar_ios_save">
       <div class="pf-form-group">
         <label class="pf-label">Identifiant Apple (email iCloud)</label>
@@ -377,10 +381,12 @@ require __DIR__ . '/header.php';
 
     <div class="pf-flex-gap-8 pf-mt-sm">
       <form method="post">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="action" value="calendar_ios_test">
         <button type="submit" class="pf-btn btn-secondary">Tester la connexion</button>
       </form>
       <form method="post">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="action" value="calendar_ios_disconnect">
         <button type="submit" class="pf-btn btn-secondary">Déconnecter</button>
       </form>
@@ -412,6 +418,7 @@ require __DIR__ . '/header.php';
     <?php endif; ?>
 
     <form method="post" enctype="multipart/form-data" class="pf-inline-form-end">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="upload_home_bg">
       <div class="pf-form-group">
         <label class="pf-label">Nouvelle image (jpg, png, webp — max 10 Mo)</label>
@@ -422,6 +429,7 @@ require __DIR__ . '/header.php';
 
     <?php if ($has_custom_bg): ?>
     <form method="post" class="pf-mt-sm">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="reset_home_bg">
       <button type="submit" class="pf-btn btn-secondary pf-btn-sm-text"
         onclick="return confirm('Revenir à l\'image par défaut ?')">🔄 Remettre l'image par défaut</button>
@@ -434,6 +442,7 @@ require __DIR__ . '/header.php';
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">👤 Mon profil</h2>
     <form method="post">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="update_profile">
       <div class="pf-form-group">
         <label class="pf-label">Nom d'utilisateur</label>
@@ -451,6 +460,7 @@ require __DIR__ . '/header.php';
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">🔒 Changer le mot de passe</h2>
     <form method="post">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="change_password">
       <div class="pf-form-group">
         <label class="pf-label">Mot de passe actuel</label>
@@ -474,6 +484,7 @@ require __DIR__ . '/header.php';
     <h2 class="pf-card-h2">🏠 Mon espace familial</h2>
 
     <form method="post" class="pf-mb-section">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="update_family_name">
       <div class="pf-form-group">
         <label class="pf-label">Nom de l'espace</label>
@@ -494,6 +505,7 @@ require __DIR__ . '/header.php';
         </code>
         <span id="copy-msg" class="pf-copy-msg">✓ Copié !</span>
         <form method="post" class="pf-ml-auto">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
           <input type="hidden" name="action" value="regen_invite">
           <button type="submit" class="pf-btn btn-secondary pf-btn-sm-text"
             onclick="return confirm('Regénérer le code ? L\'ancien sera invalidé.')">

@@ -119,9 +119,16 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
 
   <script>
     /**
+     * CSRF en premier : si window.I18N contenait une chaîne type "</script>",
+     * le parseur HTML fermait la balise <script> trop tôt et CSRF_TOKEN n'était
+     * jamais défini → formulaires paramètres sans jeton (session invalide).
+     */
+    window.CSRF_TOKEN = "<?= htmlspecialchars(function_exists('csrf_token') ? csrf_token() : '', ENT_QUOTES, 'UTF-8') ?>";
+
+    /**
      * Pont d'Internationalisation et Configuration
      */
-    window.I18N = <?php echo json_encode($current_translations_array ?? []); ?>;
+    window.I18N = <?php echo json_encode($current_translations_array ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>;
 
     // ✅ Injection sécurisée (évite le crash si config.php n'est pas chargé)
     window.CONFIG = {
@@ -129,7 +136,6 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         ID_LAIA: <?php echo defined('ID_LAIA') ? ID_LAIA : 3; ?>,
         CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>'
     };
-    window.CSRF_TOKEN = "<?= htmlspecialchars(function_exists('csrf_token') ? csrf_token() : '') ?>";
     
     function tr(key) {
         return window.I18N[key] || key;
