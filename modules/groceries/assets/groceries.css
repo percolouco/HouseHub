@@ -87,6 +87,16 @@
   border-color: rgba(239, 68, 68, 0.5) !important;
   color: var(--danger) !important;
 }
+.groceries-toolbar-btn--outline {
+  border: 1px dashed var(--border-strong) !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+}
+.groceries-toolbar-btn--outline:hover {
+  background: var(--bg-page) !important;
+  color: var(--text-main) !important;
+  border-color: var(--text-muted) !important;
+}
 
 .groceries-section-title {
   font-size: 0.72rem;
@@ -248,4 +258,91 @@
 }
 [data-theme='dark'] .groceries-check.checked {
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.22), 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Historique produits */
+.groceries-history-card {
+  margin-top: 1.75rem;
+  padding: 1.15rem 1.2rem 1.2rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-panel);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+.groceries-history-h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+  color: var(--text-main);
+}
+.groceries-history-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 0.85rem;
+  line-height: 1.45;
+}
+.groceries-history-settings-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.groceries-history-settings-link:hover {
+  text-decoration: underline;
+}
+.groceries-history-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.groceries-history-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem 0.45rem 0.55rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-main);
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  text-align: left;
+  max-width: 100%;
+}
+.groceries-history-chip:hover {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.06);
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.12);
+}
+.groceries-history-chip-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--text-on-primary, #fff);
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.groceries-history-empty {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+[data-theme='dark'] .groceries-history-card {
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+}
+[data-theme='dark'] .groceries-history-chip {
+  background: var(--bg-page);
+  border-color: var(--border-light);
+}
+[data-theme='dark'] .groceries-history-chip:hover {
+  background: rgba(59, 130, 246, 0.1);
 }

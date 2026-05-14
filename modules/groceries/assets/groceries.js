@@ -54,11 +54,12 @@ async function api(action, method = 'GET', data = null, extra = '') {
   return j.data;
 }
 
-async function loadItems() {
+async function loadAll() {
   try {
-    const items = await api('items', 'GET');
+    const [items, hist] = await Promise.all([api('items', 'GET'), api('history', 'GET')]);
     render(items);
     updateSubtitle(items);
+    renderHistory(hist);
   } catch (e) {
     toast(e.message || T('error_occured', 'Erreur'), 'error');
   }
@@ -77,6 +78,46 @@ function updateSubtitle(items) {
   el.textContent = (tpl && tpl !== 'groceries_subtitle' ? tpl : '{pending} à prendre · {cart} dans le caddie')
     .replace('{pending}', String(pending))
     .replace('{cart}', String(cart));
+}
+
+function renderHistory(hist) {
+  const root = document.getElementById('groceries-history-root');
+  if (!root) return;
+  const max = hist && typeof hist.history_max === 'number' ? hist.history_max : 20;
+  const labels = (hist && hist.labels) || [];
+  const title = escHtml(T('groceries_history_title', 'Historique'));
+  const metaTpl = T('groceries_history_meta', 'Jusqu’à {max} produits · ');
+  const meta = escHtml(metaTpl.replace('{max}', String(max)));
+  const linkLabel = escHtml(T('groceries_settings_link', 'Paramètres'));
+  let chips = '';
+  labels.forEach((lab) => {
+    const l = String(lab);
+    chips +=
+      '<button type="button" class="groceries-history-chip" data-label="' +
+      escAttr(l) +
+      '"><span class="groceries-history-chip-plus">+</span>' +
+      escHtml(l) +
+      '</button>';
+  });
+  const emptyHint = labels.length
+    ? ''
+    : '<p class="groceries-history-empty">' + escHtml(T('groceries_history_empty', '')) + '</p>';
+  root.innerHTML =
+    '<div class="groceries-history-inner">' +
+    '<div class="groceries-history-head">' +
+    '<h2 class="groceries-history-h2">' +
+    title +
+    '</h2>' +
+    '<p class="groceries-history-meta">' +
+    meta +
+    '<a href="/settings.php" class="groceries-history-settings-link">' +
+    linkLabel +
+    '</a></p></div>' +
+    '<div class="groceries-history-chips">' +
+    chips +
+    '</div>' +
+    emptyHint +
+    '</div>';
 }
 
 function render(items) {
@@ -160,7 +201,19 @@ async function addFromInput() {
     input.value = '';
     input.focus();
     toast(T('groceries_added', 'Ajouté'));
-    loadItems();
+    loadAll();
+  } catch (e) {
+    toast(e.message || T('error_occured', 'Erreur'), 'error');
+  }
+}
+
+async function addFromHistory(label) {
+  const t = String(label || '').trim();
+  if (!t) return;
+  try {
+    await api('items', 'POST', { label: t });
+    toast(T('groceries_added', 'Ajouté'));
+    loadAll();
   } catch (e) {
     toast(e.message || T('error_occured', 'Erreur'), 'error');
   }
@@ -169,7 +222,7 @@ async function addFromInput() {
 async function toggleCart(id, next) {
   try {
     await api('items', 'PUT', { in_cart: !!parseInt(next, 10) }, '&id=' + id);
-    loadItems();
+    loadAll();
   } catch (e) {
     toast(e.message || T('error_occured', 'Erreur'), 'error');
   }
@@ -188,7 +241,7 @@ async function editItem(id) {
   try {
     await api('items', 'PUT', { label: t }, '&id=' + id);
     toast(T('groceries_updated', 'Mis à jour'));
-    loadItems();
+    loadAll();
   } catch (e) {
     toast(e.message || T('error_occured', 'Erreur'), 'error');
   }
@@ -203,7 +256,7 @@ async function deleteItem(id) {
   try {
     await api('items', 'DELETE', null, '&id=' + id);
     toast(T('groceries_deleted', 'Supprimé'));
-    loadItems();
+    loadAll();
   } catch (e) {
     toast(e.message || T('error_occured', 'Erreur'), 'error');
   }
@@ -218,7 +271,7 @@ async function uncheckAll() {
   try {
     await api('uncheck_all', 'POST', {});
     toast(T('groceries_reset_next', 'Liste prête pour la prochaine sortie'));
-    loadItems();
+    loadAll();
   } catch (e) {
     toast(e.message || T('error_occured', 'Erreur'), 'error');
   }
@@ -233,7 +286,22 @@ async function deletePicked() {
   try {
     await api('delete_picked', 'POST', {});
     toast(T('groceries_picked_removed', 'Articles retirés'));
-    loadItems();
+    loadAll();
+  } catch (e) {
+    toast(e.message || T('error_occured', 'Erreur'), 'error');
+  }
+}
+
+async function clearWholeList() {
+  const ok = await pachaConfirm(
+    T('groceries_confirm_empty_list_title', 'Vider toute la liste ?'),
+    T('groceries_confirm_empty_list_body', '')
+  );
+  if (!ok) return;
+  try {
+    await api('clear_all', 'POST', {});
+    toast(T('groceries_list_cleared', 'Liste vidée'));
+    loadAll();
   } catch (e) {
     toast(e.message || T('error_occured', 'Erreur'), 'error');
   }
@@ -249,5 +317,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  loadItems();
+  const histRoot = document.getElementById('groceries-history-root');
+  if (histRoot) {
+    histRoot.addEventListener('click', (e) => {
+      const btn = e.target.closest('.groceries-history-chip');
+      if (!btn || !histRoot.contains(btn)) return;
+      const raw = btn.getAttribute('data-label');
+      if (raw) addFromHistory(raw);
+    });
+  }
+  loadAll();
 });

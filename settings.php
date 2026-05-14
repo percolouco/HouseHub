@@ -133,6 +133,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $old) @unlink($old);
         $success = "Image d'accueil réinitialisée.";
     }
+
+    if ($action === 'grocery_history_max' && $family_id) {
+        require_once __DIR__ . '/includes/db.php';
+        if (!isset($pdo)) {
+            $error = "Base famille indisponible.";
+        } else {
+            $n = (int) ($_POST['history_max'] ?? 20);
+            $n = max(1, min(50, $n));
+            try {
+                $pdo->prepare(
+                    "INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('grocery_settings','history_max',?) ON DUPLICATE KEY UPDATE content=VALUES(content)"
+                )->execute([(string) $n]);
+                $success = tr('groceries_settings_saved');
+            } catch (\Throwable $e) {
+                $error = tr('groceries_settings_error') . ' ' . $e->getMessage();
+            }
+        }
+    }
     
     if ($action === 'calendar_ios_save') {
         $username = trim($_POST['icloud_username'] ?? '');
@@ -216,6 +234,21 @@ $calendarIntegration = $meta_pdo->prepare("SELECT username, calendar_url, status
 $calendarIntegration->execute([$user_id]);
 $calendarIntegration = $calendarIntegration->fetch();
 
+$groceryHistoryMaxSetting = 20;
+if ($family_id) {
+    require_once __DIR__ . '/includes/db.php';
+    if (isset($pdo)) {
+        try {
+            $gv = $pdo->query("SELECT content FROM pf_notes WHERE note_type='grocery_settings' AND reference_id='history_max'")->fetchColumn();
+            if ($gv !== false && $gv !== null && $gv !== '') {
+                $groceryHistoryMaxSetting = max(1, min(50, (int) $gv));
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+    }
+}
+
 $pageTitle = "Paramètres — HouseHub";
 $activePage = "settings";
 require __DIR__ . '/header.php';
@@ -290,6 +323,28 @@ require __DIR__ . '/header.php';
       </div>
       <button type="submit" class="pf-btn">Enregistrer</button>
     </form>
+  </section>
+  <?php endif; ?>
+
+  <?php
+    $enabledModsForGrocery = $_SESSION['enabled_modules'] ?? [];
+    if ($family_id && in_array('groceries', $enabledModsForGrocery, true)):
+  ?>
+  <section class="pf-panel-card">
+    <h2 class="pf-card-h2 pf-card-h2--tight">🛒 <?= htmlspecialchars(tr('groceries_settings_title')) ?></h2>
+    <p class="pf-muted-note"><?= htmlspecialchars(tr('groceries_settings_intro')) ?></p>
+    <form method="post" class="pf-stack-md" style="margin-top:1rem">
+      <input type="hidden" name="action" value="grocery_history_max">
+      <div class="pf-form-group">
+        <label class="pf-label" for="history_max"><?= htmlspecialchars(tr('groceries_settings_history_max')) ?></label>
+        <input type="number" name="history_max" id="history_max" class="pf-input" style="max-width:120px" min="1" max="50" step="1" value="<?= (int) $groceryHistoryMaxSetting ?>" required>
+        <p class="pf-muted-note" style="margin-top:0.35rem"><?= htmlspecialchars(tr('groceries_settings_history_hint')) ?></p>
+      </div>
+      <button type="submit" class="pf-btn"><?= htmlspecialchars(tr('btn_save')) ?></button>
+    </form>
+    <p class="pf-muted-note" style="margin-top:1rem">
+      <a href="/groceries.php" style="color:var(--primary);font-weight:600;"><?= htmlspecialchars(tr('mod_groceries_name')) ?></a>
+    </p>
   </section>
   <?php endif; ?>
 

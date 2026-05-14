@@ -30,9 +30,12 @@ require __DIR__ . '/header.php';
   <div class="groceries-toolbar">
     <button type="button" class="pf-btn btn-secondary groceries-toolbar-btn" onclick="uncheckAll()"><?= htmlspecialchars(tr('groceries_btn_uncheck_all')) ?></button>
     <button type="button" class="pf-btn btn-secondary groceries-toolbar-btn groceries-toolbar-btn--danger" onclick="deletePicked()"><?= htmlspecialchars(tr('groceries_btn_delete_picked')) ?></button>
+    <button type="button" class="pf-btn btn-secondary groceries-toolbar-btn groceries-toolbar-btn--outline" onclick="clearWholeList()"><?= htmlspecialchars(tr('groceries_btn_clear_list')) ?></button>
   </div>
 
   <div id="groceries-lists"></div>
+
+  <div class="groceries-history-card" id="groceries-history-root" aria-live="polite"></div>
 </div>
 
 <script src="/modules/groceries/assets/groceries.js"></script>
