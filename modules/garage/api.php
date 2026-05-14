@@ -17,6 +17,24 @@ require_once dirname(__DIR__, 2) . '/includes/db.php';
 $UPLOAD_DIR = '/uploads/garage/';
 if (!is_dir($UPLOAD_DIR)) { @mkdir($UPLOAD_DIR, 0755, true); }
 
+$pdo->exec("
+CREATE TABLE IF NOT EXISTS pf_garage_documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT NOT NULL,
+  maintenance_id INT DEFAULT NULL,
+  label VARCHAR(255) DEFAULT NULL,
+  filename VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) DEFAULT NULL,
+  mime VARCHAR(120) DEFAULT NULL,
+  size INT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_gd_vehicle (vehicle_id),
+  KEY idx_gd_maint (maintenance_id),
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE CASCADE,
+  FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+");
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -38,6 +56,37 @@ function handleUpload(string $field, string $dir): ?string {
     return null;
 }
 
+function handleGarageDocumentUpload(string $field, string $dir): ?array {
+    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    if ($_FILES[$field]['size'] > 12 * 1024 * 1024) {
+        gErr('Fichier trop volumineux (max 12 Mo).', 400);
+    }
+    $ext = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
+    $allowed = ['pdf','jpg','jpeg','png','gif','webp','doc','docx','xls','xlsx','odt','txt'];
+    if (!in_array($ext, $allowed, true)) {
+        gErr('Format non autorisé.', 400);
+    }
+    $fname = 'd_' . uniqid('', true) . '.' . $ext;
+    if (!move_uploaded_file($_FILES[$field]['tmp_name'], $dir . $fname)) {
+        return null;
+    }
+    $mimeMap = [
+        'pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
+        'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp',
+        'doc' => 'application/msword', 'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'odt' => 'application/vnd.oasis.opendocument.text', 'txt' => 'text/plain',
+    ];
+    return [
+        'filename' => $fname,
+        'original_name' => $_FILES[$field]['name'],
+        'mime' => $mimeMap[$ext] ?? 'application/octet-stream',
+        'size' => (int) $_FILES[$field]['size'],
+    ];
+}
+
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 if ($action === 'vehicles') {
     if ($method === 'GET') {
@@ -47,6 +96,12 @@ if ($action === 'vehicles') {
             $vehicle = $v->fetch(); if (!$vehicle) gErr('Véhicule introuvable', 404);
             $s = $pdo->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(cost),0) as total FROM pf_maintenances WHERE vehicle_id = ?"); $s->execute([$id]); $vehicle['stats'] = $s->fetch();
             $p = $pdo->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(price*quantity),0) as total FROM pf_parts WHERE vehicle_id = ?"); $p->execute([$id]); $vehicle['parts_stats'] = $p->fetch();
+            $dc = $pdo->prepare("SELECT COUNT(*) FROM pf_garage_documents WHERE vehicle_id = ? AND maintenance_id IS NULL");
+            $dc->execute([$id]);
+            $vehicle['vehicle_docs_count'] = (int) $dc->fetchColumn();
+            $dm = $pdo->prepare("SELECT COUNT(*) FROM pf_garage_documents WHERE vehicle_id = ? AND maintenance_id IS NOT NULL");
+            $dm->execute([$id]);
+            $vehicle['maint_docs_count'] = (int) $dm->fetchColumn();
             gOk($vehicle);
         }
         $stmt = $pdo->query("SELECT v.*, (SELECT COUNT(*) FROM pf_maintenances m WHERE m.vehicle_id = v.id) as maintenance_count, (SELECT COALESCE(SUM(cost),0) FROM pf_maintenances m WHERE m.vehicle_id = v.id) as total_cost, (SELECT date FROM pf_maintenances m WHERE m.vehicle_id = v.id ORDER BY date DESC LIMIT 1) as last_maintenance FROM pf_vehicles v ORDER BY v.created_at DESC");
@@ -76,9 +131,108 @@ if ($action === 'vehicles') {
     }
     if ($method === 'DELETE') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant');
+        $docs = $pdo->prepare('SELECT filename FROM pf_garage_documents WHERE vehicle_id = ?');
+        $docs->execute([$id]);
+        foreach ($docs->fetchAll(PDO::FETCH_COLUMN) as $fn) {
+            if ($fn) {
+                @unlink($UPLOAD_DIR . basename($fn));
+            }
+        }
         $v = $pdo->prepare("SELECT photo FROM pf_vehicles WHERE id=?"); $v->execute([$id]); $row = $v->fetch(); if ($row['photo']) @unlink($UPLOAD_DIR . $row['photo']);
         $pdo->prepare("DELETE FROM pf_vehicles WHERE id = ?")->execute([$id]); gOk(['deleted' => true]);
     }
+}
+
+// ─── Documents (véhicule / entretien — factures, PDF, etc.) ───────────────────
+if ($action === 'garage_documents') {
+    if ($method === 'GET') {
+        $vid = $_GET['vehicle_id'] ?? null;
+        $mid = $_GET['maintenance_id'] ?? null;
+        $vehicleOnly = ($_GET['vehicle_only'] ?? '') === '1';
+        if ($mid) {
+            $stmt = $pdo->prepare("SELECT d.*, v.name as vehicle_name FROM pf_garage_documents d JOIN pf_vehicles v ON v.id = d.vehicle_id WHERE d.maintenance_id = ? ORDER BY d.created_at DESC");
+            $stmt->execute([$mid]);
+            gOk($stmt->fetchAll());
+        }
+        if (!$vid) {
+            gErr('vehicle_id ou maintenance_id requis');
+        }
+        if ($vehicleOnly) {
+            $stmt = $pdo->prepare("SELECT * FROM pf_garage_documents WHERE vehicle_id = ? AND maintenance_id IS NULL ORDER BY created_at DESC");
+            $stmt->execute([$vid]);
+        } else {
+            $stmt = $pdo->prepare("SELECT * FROM pf_garage_documents WHERE vehicle_id = ? ORDER BY created_at DESC");
+            $stmt->execute([$vid]);
+        }
+        gOk($stmt->fetchAll());
+    }
+    if ($method === 'POST') {
+        $d = $_POST;
+        $vid = (int) ($d['vehicle_id'] ?? 0);
+        if ($vid < 1) {
+            gErr('vehicle_id manquant');
+        }
+        $mid = isset($d['maintenance_id']) && $d['maintenance_id'] !== '' ? (int) $d['maintenance_id'] : null;
+        if ($mid) {
+            $chk = $pdo->prepare("SELECT id FROM pf_maintenances WHERE id = ? AND vehicle_id = ?");
+            $chk->execute([$mid, $vid]);
+            if (!$chk->fetch()) {
+                gErr('Entretien invalide pour ce véhicule');
+            }
+        }
+        $up = handleGarageDocumentUpload('file', $UPLOAD_DIR);
+        if (!$up) {
+            gErr('Upload échoué ou fichier manquant');
+        }
+        $label = trim($d['label'] ?? '');
+        $pdo->prepare("INSERT INTO pf_garage_documents (vehicle_id, maintenance_id, label, filename, original_name, mime, size) VALUES (?,?,?,?,?,?,?)")
+            ->execute([$vid, $mid, $label ?: null, $up['filename'], $up['original_name'], $up['mime'], $up['size']]);
+        gOk(['id' => (int) $pdo->lastInsertId()]);
+    }
+    if ($method === 'DELETE') {
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id < 1) {
+            gErr('ID manquant');
+        }
+        $r = $pdo->prepare("SELECT filename FROM pf_garage_documents WHERE id = ?");
+        $r->execute([$id]);
+        $row = $r->fetch();
+        if (!$row) {
+            gErr('Document introuvable', 404);
+        }
+        if (!empty($row['filename'])) {
+            @unlink($UPLOAD_DIR . $row['filename']);
+        }
+        $pdo->prepare("DELETE FROM pf_garage_documents WHERE id = ?")->execute([$id]);
+        gOk(['deleted' => true]);
+    }
+}
+
+if ($action === 'garage_document') {
+    $id = (int) ($_GET['id'] ?? 0);
+    if ($id < 1) {
+        gErr('ID manquant');
+    }
+    $stmt = $pdo->prepare('SELECT * FROM pf_garage_documents WHERE id = ?');
+    $stmt->execute([$id]);
+    $doc = $stmt->fetch();
+    if (!$doc || empty($doc['filename'])) {
+        http_response_code(404);
+        exit;
+    }
+    $f = basename($doc['filename']);
+    $path = $UPLOAD_DIR . $f;
+    if (!preg_match('/^d_[a-zA-Z0-9._-]+$/', $f) || !is_file($path)) {
+        http_response_code(404);
+        exit;
+    }
+    $mime = $doc['mime'] ?: 'application/octet-stream';
+    header('Content-Type: ' . $mime);
+    $disp = $doc['original_name'] ?: $f;
+    header('Content-Disposition: inline; filename="' . rawurlencode($disp) . '"');
+    header('Cache-Control: private, max-age=3600');
+    readfile($path);
+    exit;
 }
 
 // ─── Maintenances ─────────────────────────────────────────────────────────────
@@ -89,10 +243,13 @@ if ($action === 'maintenances') {
         if ($id) {
             $stmt = $pdo->prepare("SELECT m.*, v.name as vehicle_name, v.license_plate, v.current_km FROM pf_maintenances m JOIN pf_vehicles v ON v.id = m.vehicle_id WHERE m.id = ?");
             $stmt->execute([$id]); $m = $stmt->fetch(); if (!$m) gErr('Entretien introuvable', 404);
+            $dc = $pdo->prepare("SELECT COUNT(*) FROM pf_garage_documents WHERE maintenance_id = ?");
+            $dc->execute([$id]);
+            $m['documents_count'] = (int) $dc->fetchColumn();
             gOk($m);
         }
         if ($vid) {
-            $stmt = $pdo->prepare("SELECT m.*, GROUP_CONCAT(p.name SEPARATOR ', ') as parts_names, COUNT(p.id) as parts_count, COALESCE(SUM(p.price*p.quantity),0) as parts_cost FROM pf_maintenances m LEFT JOIN pf_parts p ON p.maintenance_id = m.id WHERE m.vehicle_id = ? GROUP BY m.id ORDER BY m.date DESC, m.created_at DESC");
+            $stmt = $pdo->prepare("SELECT m.*, GROUP_CONCAT(p.name SEPARATOR ', ') as parts_names, COUNT(p.id) as parts_count, COALESCE(SUM(p.price*p.quantity),0) as parts_cost, (SELECT COUNT(*) FROM pf_garage_documents d WHERE d.maintenance_id = m.id) as documents_count FROM pf_maintenances m LEFT JOIN pf_parts p ON p.maintenance_id = m.id WHERE m.vehicle_id = ? GROUP BY m.id ORDER BY m.date DESC, m.created_at DESC");
             $stmt->execute([$vid]); gOk($stmt->fetchAll());
         }
         $stmt = $pdo->query("SELECT m.*, v.name as vehicle_name, v.license_plate, v.current_km FROM pf_maintenances m JOIN pf_vehicles v ON v.id = m.vehicle_id WHERE m.next_date IS NOT NULL OR m.next_km IS NOT NULL ORDER BY m.next_date ASC");
@@ -126,6 +283,13 @@ if ($action === 'maintenances') {
     }
     if ($method === 'DELETE') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant');
+        $docs = $pdo->prepare('SELECT filename FROM pf_garage_documents WHERE maintenance_id = ?');
+        $docs->execute([$id]);
+        foreach ($docs->fetchAll(PDO::FETCH_COLUMN) as $fn) {
+            if ($fn) {
+                @unlink($UPLOAD_DIR . basename($fn));
+            }
+        }
         $pdo->prepare("DELETE FROM pf_maintenances WHERE id = ?")->execute([$id]); gOk(['deleted' => true]);
     }
 }

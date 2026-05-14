@@ -28,15 +28,15 @@ require __DIR__ . '/header.php';
       <div class="stat-pill amber"><div class="label">Pièces</div><div class="value" id="stat-parts">--</div></div>
       <div class="stat-pill red"><div class="label">Coût total</div><div class="value" id="stat-cost">--</div></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 380px;gap:1.5rem;align-items:start">
-      <div>
-        <div class="card-header" style="margin-bottom:.75rem">
+    <div class="garage-dash-layout">
+      <div class="garage-dash-main">
+        <div class="card-header garage-card-header" style="margin-bottom:.75rem">
           <h2 style="font-size:1rem;font-weight:600">Mes véhicules</h2>
           <button class="btn btn-primary btn-sm" onclick="openAddVehicle()">+ Ajouter</button>
         </div>
         <div id="dashboard-vehicles" class="vehicles-grid"></div>
       </div>
-      <div class="card">
+      <div class="card garage-dash-aside">
         <div class="card-header"><div class="card-title">🔔 Rappels & prochains entretiens</div></div>
         <div id="reminders-list"></div>
       </div>
@@ -47,7 +47,7 @@ require __DIR__ . '/header.php';
 <!-- ── VÉHICULES ──────────────────────────────────────────────────────────── -->
 <div id="page-vehicles" class="page">
   <div class="container">
-    <div class="card-header" style="margin-bottom:1rem">
+    <div class="card-header garage-card-header" style="margin-bottom:1rem">
       <h1 style="font-size:1.2rem;font-weight:700">🚗 Mes véhicules</h1>
       <button class="btn btn-primary" onclick="openAddVehicle()">+ Ajouter un véhicule</button>
     </div>
@@ -62,21 +62,37 @@ require __DIR__ . '/header.php';
       <button class="btn btn-secondary btn-sm" onclick="navigate('vehicles')">← Retour</button>
     </div>
     <div id="vehicle-header"></div>
-    <div class="tabs">
+    <div class="tabs garage-tabs">
       <button class="tab-btn active" data-tab="maintenances" onclick="switchTab('maintenances')">🔧 Entretiens <span id="maintenance-total" style="color:var(--muted);font-size:.78rem"></span></button>
       <button class="tab-btn" data-tab="parts" onclick="switchTab('parts')">🔩 Pièces <span id="parts-total-vehicle" style="color:var(--muted);font-size:.78rem"></span></button>
+      <button class="tab-btn" data-tab="documents" onclick="switchTab('documents')">📎 Documents <span id="vehicle-docs-tab-count" style="color:var(--muted);font-size:.78rem"></span></button>
     </div>
     <div id="tab-maintenances" class="tab-pane active">
-      <div style="margin-bottom:1rem;display:flex;justify-content:flex-end">
+      <div class="garage-tab-actions">
         <button class="btn btn-primary btn-sm" onclick="openAddMaintenance()">+ Ajouter un entretien</button>
       </div>
       <div id="maintenance-list"></div>
     </div>
     <div id="tab-parts" class="tab-pane">
-      <div style="margin-bottom:1rem;display:flex;justify-content:flex-end">
+      <div class="garage-tab-actions">
         <button class="btn btn-primary btn-sm" onclick="openAddPart()">+ Ajouter une pièce</button>
       </div>
       <div id="parts-list-vehicle"></div>
+    </div>
+    <div id="tab-documents" class="tab-pane">
+      <div class="garage-doc-upload-bar">
+        <div class="form-group" style="flex:1;min-width:0;margin:0">
+          <label class="form-label" for="vehicle-doc-label">Libellé (optionnel)</label>
+          <input type="text" class="form-control" id="vehicle-doc-label" placeholder="Carte grise, assurance…">
+        </div>
+        <div class="form-group" style="margin:0;flex:1;min-width:140px">
+          <label class="form-label" for="vehicle-doc-file">Fichier</label>
+          <input type="file" class="form-control" id="vehicle-doc-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.txt">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm garage-doc-upload-btn" onclick="uploadVehicleDocument()">Envoyer</button>
+      </div>
+      <p class="garage-doc-hint">PDF, images, Office… · max 12 Mo</p>
+      <div id="vehicle-documents-list"></div>
     </div>
   </div>
 </div>
@@ -88,6 +104,28 @@ require __DIR__ . '/header.php';
       <button class="btn btn-secondary btn-sm" id="maintenance-back-btn" onclick="navigate('vehicle',{id:currentVehicleId})">← Retour au véhicule</button>
     </div>
     <div id="maintenance-detail-header"></div>
+
+    <div class="card garage-docs-card" style="margin-top:1rem">
+      <div class="card-header garage-card-header">
+        <span class="card-title">📎 Documents & factures (cette révision)</span>
+      </div>
+      <div style="padding:0 1.25rem 1rem">
+        <div class="garage-doc-upload-bar">
+          <div class="form-group" style="flex:1;min-width:0;margin:0">
+            <label class="form-label" for="maint-doc-label">Libellé (ex. facture garage)</label>
+            <input type="text" class="form-control" id="maint-doc-label" placeholder="Facture, devis…">
+          </div>
+          <div class="form-group" style="margin:0;flex:1;min-width:140px">
+            <label class="form-label" for="maint-doc-file">Fichier</label>
+            <input type="file" class="form-control" id="maint-doc-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.txt">
+          </div>
+          <button type="button" class="btn btn-primary btn-sm garage-doc-upload-btn" onclick="uploadMaintenanceDocument()">Envoyer</button>
+        </div>
+        <p class="garage-doc-hint">PDF, images… · max 12 Mo</p>
+        <div id="maintenance-documents-list"></div>
+      </div>
+    </div>
+
     <div class="card" style="padding:0;margin-top:1.5rem">
       <div class="card-header">
         <span class="card-title">🔩 Pièces utilisées <span id="maint-parts-count" class="badge badge-gray" style="margin-left:.5rem"></span></span>
@@ -127,7 +165,7 @@ require __DIR__ . '/header.php';
 <!-- ── TOUS LES ENTRETIENS ─────────────────────────────────────────────────── -->
 <div id="page-maintenances-all" class="page">
   <div class="container">
-    <div class="card-header" style="margin-bottom:1rem">
+    <div class="card-header garage-card-header" style="margin-bottom:1rem">
       <div>
         <h1 style="font-size:1.2rem;font-weight:700">🔧 Tous les entretiens</h1>
         <p style="color:var(--muted);font-size:.85rem"><span id="all-maint-count">0</span> entretiens · Total : <span id="all-maint-total">--</span></p>
@@ -140,7 +178,7 @@ require __DIR__ . '/header.php';
 <!-- ── TOUTES LES PIÈCES ──────────────────────────────────────────────────── -->
 <div id="page-parts" class="page">
   <div class="container">
-    <div class="card-header" style="margin-bottom:1rem">
+    <div class="card-header garage-card-header" style="margin-bottom:1rem">
       <div>
         <h1 style="font-size:1.2rem;font-weight:700">🔩 Toutes les pièces</h1>
         <p style="color:var(--muted);font-size:.85rem"><span id="all-parts-count">0</span> pièces · Total : <span id="all-parts-total">--</span></p>
