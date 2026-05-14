@@ -27,3 +27,6 @@ if (!function_exists('tr')) {
         return $GLOBALS['translations'][$key] ?? $key;
     }
 }
+
+// Export pour le client (header.php → window.I18N) : pachaConfirm, modules JS, etc.
+$current_translations_array = $GLOBALS['translations'] ?? [];
