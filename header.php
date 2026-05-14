@@ -118,11 +118,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   <main class="pf-main<?= ($mainClass ?? '') ? ' '.htmlspecialchars($mainClass) : '' ?>">
 
   <script>
-    /**
-     * CSRF en premier : si window.I18N contenait une chaîne type "</script>",
-     * le parseur HTML fermait la balise <script> trop tôt et CSRF_TOKEN n'était
-     * jamais défini → formulaires paramètres sans jeton (session invalide).
-     */
+    // CSRF avant I18N : le parseur HTML coupe le script dès la séquence de fin de balise « script » (même dans un commentaire JS).
     window.CSRF_TOKEN = "<?= htmlspecialchars(function_exists('csrf_token') ? csrf_token() : '', ENT_QUOTES, 'UTF-8') ?>";
 
     /**
