@@ -345,6 +345,16 @@ CREATE TABLE IF NOT EXISTS pf_todos (
   FOREIGN KEY (list_id) REFERENCES pf_todo_lists(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ─── Liste de courses ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_grocery_items (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  label      VARCHAR(500) NOT NULL,
+  in_cart    TINYINT(1) NOT NULL DEFAULT 0,
+  position   INT NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ─── Calendar iOS ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_calendar_events (
   id                 INT AUTO_INCREMENT PRIMARY KEY,
