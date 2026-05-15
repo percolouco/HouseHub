@@ -413,3 +413,38 @@ CREATE TABLE IF NOT EXISTS pf_calendar_event_links (
   UNIQUE KEY uq_calendar_event (calendar_event_id),
   UNIQUE KEY uq_external_link (external_uid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── PrintVault ───────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_pv_models (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  name          VARCHAR(255) NOT NULL,
+  description   TEXT DEFAULT '',
+  category      VARCHAR(100) DEFAULT 'Non classé',
+  tags          VARCHAR(500) DEFAULT '',
+  file_type     VARCHAR(20) NOT NULL,
+  filename      VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  file_size     INT DEFAULT 0,
+  dim_x         DECIMAL(10,3) DEFAULT 0,
+  dim_y         DECIMAL(10,3) DEFAULT 0,
+  dim_z         DECIMAL(10,3) DEFAULT 0,
+  volume        DECIMAL(10,3) DEFAULT 0,
+  gcode_time    VARCHAR(50) DEFAULT '',
+  gcode_filament VARCHAR(50) DEFAULT '',
+  gcode_nozzle  VARCHAR(20) DEFAULT '',
+  gcode_bed     VARCHAR(20) DEFAULT '',
+  thumb         VARCHAR(255) DEFAULT '',
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_pv_categories (
+  id    INT AUTO_INCREMENT PRIMARY KEY,
+  name  VARCHAR(100) NOT NULL UNIQUE,
+  color VARCHAR(20) DEFAULT '#8b5cf6'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO pf_pv_categories (name, color) VALUES
+  ('Non classé','#64748b'),('Déco','#ec4899'),('Fonctionnel','#3b82f6'),
+  ('Mécanique','#f59e0b'),('Jouets','#10b981'),('Outils','#ef4444'),
+  ('Architecture','#8b5cf6'),('Art','#06b6d4');
