@@ -238,6 +238,51 @@ if ($action === 'models') {
     }
 }
 
+// ── GCODE PATHS ────────────────────────────────────────────────────────────────
+if ($action === 'gcode_paths') {
+    $id     = (int)($_GET['id'] ?? 0);
+    $max    = min((int)($_GET['max'] ?? 30000), 80000);
+    $s = $pdo->prepare("SELECT filename, file_type FROM pf_pv_models WHERE id=?"); $s->execute([$id]);
+    $row = $s->fetch(); if (!$row) pvErr('Introuvable', 404);
+    $ext = strtolower($row['file_type']);
+    if (!in_array($ext, ['gcode','gco','g'])) pvErr('Pas un fichier GCode');
+    $path = PV_MODEL_DIR . $row['filename'];
+    if (!file_exists($path)) pvErr('Fichier introuvable', 404);
+
+    $segments = [];
+    $x=0.0; $y=0.0; $z=0.0; $e=0.0; $lastE=0.0;
+    $minZ=PHP_FLOAT_MAX; $maxZ=0.0;
+
+    $handle = fopen($path, 'r');
+    while (!feof($handle) && count($segments) < $max) {
+        $line = trim(fgets($handle));
+        if (($p = strpos($line, ';')) !== false) $line = substr($line, 0, $p);
+        $line = trim($line);
+        if (!$line) continue;
+        $cmd = strtoupper(strtok($line, ' '));
+        if ($cmd === 'G92') {
+            if (preg_match('/E([-\d.]+)/i', $line, $m)) $lastE = (float)$m[1];
+            continue;
+        }
+        if ($cmd !== 'G0' && $cmd !== 'G1') continue;
+        $nx=$x; $ny=$y; $nz=$z; $ne=$e;
+        if (preg_match('/X([-\d.]+)/i', $line, $m)) $nx = (float)$m[1];
+        if (preg_match('/Y([-\d.]+)/i', $line, $m)) $ny = (float)$m[1];
+        if (preg_match('/Z([-\d.]+)/i', $line, $m)) $nz = (float)$m[1];
+        if (preg_match('/E([-\d.]+)/i', $line, $m)) $ne = (float)$m[1];
+        $extruding = ($cmd === 'G1' && $ne > $lastE) ? 1 : 0;
+        if ($nx !== $x || $ny !== $y || $nz !== $z) {
+            $segments[] = [$x, $y, $z, $nx, $ny, $nz, $extruding];
+            $minZ = min($minZ, $nz);
+            $maxZ = max($maxZ, $nz);
+        }
+        $x=$nx; $y=$ny; $z=$nz;
+        if ($ne !== $e) { $lastE = $e = $ne; }
+    }
+    fclose($handle);
+    pvOk(['segments' => $segments, 'min_z' => $minZ === PHP_FLOAT_MAX ? 0 : $minZ, 'max_z' => $maxZ, 'total' => count($segments)]);
+}
+
 // ── FILE SERVE ─────────────────────────────────────────────────────────────────
 if ($action === 'file') {
     $id = (int)($_GET['id'] ?? 0);

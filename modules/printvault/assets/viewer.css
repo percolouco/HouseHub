@@ -146,6 +146,20 @@
   font-size: .72rem; color: var(--text-muted); line-height: 1.3;
 }
 
+/* GCode legend */
+.pv-gcode-viewer-legend {
+  position: absolute; bottom: 2.5rem; left: 1rem;
+  background: rgba(15,23,42,.8); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; padding: .5rem .75rem;
+  display: flex; flex-direction: column; gap: .3rem;
+  pointer-events: none;
+}
+.pv-legend-item {
+  font-size: .72rem; color: #94a3b8;
+  display: flex; align-items: center; gap: .5rem;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .pv-detail-body { grid-template-columns: 1fr; grid-template-rows: 55vh 1fr; }

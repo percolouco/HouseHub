@@ -14,7 +14,7 @@ $s2 = $pdo->query("SELECT name, color FROM pf_pv_categories ORDER BY name");
 $categories = $s2->fetchAll();
 
 $ext      = strtolower($model['file_type']);
-$canView  = in_array($ext, ['stl','3mf']);
+$canView  = in_array($ext, ['stl','3mf','gcode','gco','g']);
 $isGcode  = in_array($ext, ['gcode','gco','g']);
 $thumbUrl = $model['thumb'] ? '/uploads/printvault/thumbs/' . rawurlencode($model['thumb']) : null;
 $typeIcon = ['stl'=>'🟣','3mf'=>'🔵','gcode'=>'🟢','gco'=>'🟢','g'=>'🟢'][$ext] ?? '📄';
@@ -65,7 +65,17 @@ require __DIR__ . '/header.php';
         </div>
         <canvas id="viewer-canvas"></canvas>
         <div class="pv-viewer-controls-hint">Clic+glisser : rotation · Scroll : zoom</div>
+        <?php if (!$isGcode): ?>
         <button class="pv-viewer-screenshot-btn" onclick="takeScreenshot()" title="Sauvegarder comme aperçu">📸</button>
+        <?php endif; ?>
+        <?php if ($isGcode): ?>
+        <div class="pv-gcode-viewer-legend" id="gcode-legend">
+          <div class="pv-legend-item"><span style="display:inline-block;width:12px;height:3px;background:#3b82f6;border-radius:2px;vertical-align:middle"></span> Couches basses</div>
+          <div class="pv-legend-item"><span style="display:inline-block;width:12px;height:3px;background:#10b981;border-radius:2px;vertical-align:middle"></span> Couches moyennes</div>
+          <div class="pv-legend-item"><span style="display:inline-block;width:12px;height:3px;background:#ef4444;border-radius:2px;vertical-align:middle"></span> Couches hautes</div>
+          <div class="pv-legend-item" style="color:#475569"><span style="display:inline-block;width:12px;height:1px;background:#475569;border-radius:2px;vertical-align:middle;opacity:.5"></span> Déplacements</div>
+        </div>
+        <?php endif; ?>
       </div>
       <?php elseif ($thumbUrl): ?>
       <div class="pv-detail-thumb-large">
@@ -241,14 +251,16 @@ document.querySelectorAll('.pv-modal-backdrop').forEach(m => m.addEventListener(
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+<?php if (!$isGcode): ?>
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 <?php if ($ext === '3mf'): ?>
 import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
 <?php endif; ?>
+<?php endif; ?>
 
-const canvas = document.getElementById('viewer-canvas');
-const wrap   = document.getElementById('viewer-wrap');
-const scene  = new THREE.Scene();
+const canvas  = document.getElementById('viewer-canvas');
+const wrap    = document.getElementById('viewer-wrap');
+const scene   = new THREE.Scene();
 scene.background = new THREE.Color(0x0f172a);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
@@ -256,11 +268,11 @@ const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(5,10,7.5
 const fill= new THREE.DirectionalLight(0x8ab4f8, 0.4); fill.position.set(-5,-3,-5); scene.add(fill);
 const rim = new THREE.DirectionalLight(0xffffff, 0.3); rim.position.set(0,5,-10); scene.add(rim);
 
-const grid = new THREE.GridHelper(200,40,0x1e293b,0x1e293b);
+const grid = new THREE.GridHelper(300,50,0x1e293b,0x1e293b);
 grid.material.opacity=0.4; grid.material.transparent=true; scene.add(grid);
 
 const camera = new THREE.PerspectiveCamera(45, wrap.clientWidth/wrap.clientHeight, 0.1, 10000);
-camera.position.set(100,100,100);
+camera.position.set(150,150,150);
 
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -269,19 +281,86 @@ renderer.setSize(wrap.clientWidth, wrap.clientHeight);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping=true; controls.dampingFactor=0.05;
 
-const material = new THREE.MeshPhysicalMaterial({color:0x4cc9f0,metalness:0.3,roughness:0.4,side:THREE.DoubleSide});
-
-let meshGroup = null;
 function fitCamera(obj) {
     const box = new THREE.Box3().setFromObject(obj);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    const dist = Math.abs(Math.max(size.x,size.y,size.z)/Math.sin(camera.fov*Math.PI/180/2))*0.75;
-    camera.position.set(center.x+dist*.7, center.y+dist*.5, center.z+dist*.7);
+    const dist = Math.abs(Math.max(size.x,size.y,size.z)/Math.sin(camera.fov*Math.PI/180/2))*0.8;
+    camera.position.set(center.x+dist*.7, center.y+dist*.6, center.z+dist*.7);
     controls.target.copy(center);
-    grid.position.y = box.min.y;
+    grid.position.y = box.min.y - 0.5;
     controls.update();
 }
+
+<?php if ($isGcode): ?>
+// ── GCode path viewer ─────────────────────────────────────────────────────────
+function zToColor(z, minZ, maxZ) {
+    const t = maxZ > minZ ? (z - minZ) / (maxZ - minZ) : 0;
+    // Blue(0,0,1) → Cyan(0,1,1) → Green(0,1,0) → Yellow(1,1,0) → Red(1,0,0)
+    let r, g, b;
+    if (t < 0.25)      { r=0;       g=t*4;     b=1; }
+    else if (t < 0.5)  { r=0;       g=1;       b=1-(t-0.25)*4; }
+    else if (t < 0.75) { r=(t-0.5)*4; g=1;     b=0; }
+    else               { r=1;       g=1-(t-0.75)*4; b=0; }
+    return new THREE.Color(r, g, b);
+}
+
+document.getElementById('viewer-loading-text').textContent = 'Chargement des trajectoires…';
+
+fetch('/modules/printvault/api.php?action=gcode_paths&id=<?= $id ?>&max=30000', {
+    credentials: 'same-origin',
+    headers: {'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
+})
+.then(r => r.json())
+.then(j => {
+    if (!j.ok) { document.getElementById('viewer-loading-text').textContent = j.error; return; }
+    const {segments, min_z, max_z} = j.data;
+
+    // Separate extrusion and travel moves
+    const extPositions   = [];
+    const extColors      = [];
+    const travelPositions = [];
+
+    segments.forEach(([x1,y1,z1, x2,y2,z2, ext]) => {
+        if (ext) {
+            const col = zToColor(z1, min_z, max_z);
+            extPositions.push(x1,z1,-y1, x2,z2,-y2);  // swap Y/Z for Three.js
+            extColors.push(col.r,col.g,col.b, col.r,col.g,col.b);
+        } else {
+            travelPositions.push(x1,z1,-y1, x2,z2,-y2);
+        }
+    });
+
+    const group = new THREE.Group();
+
+    if (extPositions.length) {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(extPositions, 3));
+        geo.setAttribute('color',    new THREE.Float32BufferAttribute(extColors, 3));
+        const mat = new THREE.LineBasicMaterial({vertexColors: true, linewidth: 1});
+        group.add(new THREE.LineSegments(geo, mat));
+    }
+    if (travelPositions.length) {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(travelPositions, 3));
+        const mat = new THREE.LineBasicMaterial({color: 0x334155, linewidth: 1, transparent: true, opacity: 0.3});
+        group.add(new THREE.LineSegments(geo, mat));
+    }
+
+    scene.add(group);
+    fitCamera(group);
+    document.getElementById('viewer-loading').style.display = 'none';
+
+    const total = segments.length;
+    const extCount = segments.filter(s=>s[6]).length;
+    document.getElementById('viewer-loading-text').textContent = `${total.toLocaleString()} segments (${extCount.toLocaleString()} extrusion)`;
+})
+.catch(err => { document.getElementById('viewer-loading-text').textContent = 'Erreur: '+err.message; });
+
+<?php else: ?>
+// ── STL / 3MF viewer ─────────────────────────────────────────────────────────
+const material = new THREE.MeshPhysicalMaterial({color:0x4cc9f0,metalness:0.3,roughness:0.4,side:THREE.DoubleSide});
+let meshGroup = null;
 
 <?php if ($ext === 'stl'): ?>
 new STLLoader().load('/modules/printvault/api.php?action=model_data&id=<?= $id ?>',
@@ -306,14 +385,6 @@ new ThreeMFLoader().load('/modules/printvault/api.php?action=model_data&id=<?= $
 );
 <?php endif; ?>
 
-(function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
-
-window.addEventListener('resize',()=>{
-    renderer.setSize(wrap.clientWidth,wrap.clientHeight);
-    camera.aspect=wrap.clientWidth/wrap.clientHeight;
-    camera.updateProjectionMatrix();
-});
-
 window.takeScreenshot = async () => {
     renderer.render(scene,camera);
     canvas.toBlob(async blob=>{
@@ -323,6 +394,15 @@ window.takeScreenshot = async () => {
         if(j.ok){toast('Aperçu sauvegardé ✓');}
     },'image/png',0.9);
 };
+<?php endif; ?>
+
+(function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
+
+window.addEventListener('resize',()=>{
+    renderer.setSize(wrap.clientWidth,wrap.clientHeight);
+    camera.aspect=wrap.clientWidth/wrap.clientHeight;
+    camera.updateProjectionMatrix();
+});
 </script>
 <?php endif; ?>
 
