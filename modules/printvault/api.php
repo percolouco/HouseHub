@@ -241,7 +241,7 @@ if ($action === 'models') {
 // ── GCODE PATHS ────────────────────────────────────────────────────────────────
 if ($action === 'gcode_paths') {
     $id     = (int)($_GET['id'] ?? 0);
-    $max    = min((int)($_GET['max'] ?? 300000), 500000);
+    $max    = (int)($_GET['max'] ?? 0) ?: PHP_INT_MAX; // no cap by default
     $s = $pdo->prepare("SELECT filename, file_type FROM pf_pv_models WHERE id=?"); $s->execute([$id]);
     $row = $s->fetch(); if (!$row) pvErr('Introuvable', 404);
     $ext = strtolower($row['file_type']);
@@ -251,7 +251,7 @@ if ($action === 'gcode_paths') {
 
     $segments = [];
     $x=0.0; $y=0.0; $z=0.0; $e=0.0; $lastE=0.0;
-    $minZ=PHP_FLOAT_MAX; $maxZ=0.0;
+    $minZ=PHP_FLOAT_MAX; $maxZ=0.0; $count=0;
 
     $handle = fopen($path, 'r');
     while (!feof($handle) && count($segments) < $max) {
@@ -272,15 +272,19 @@ if ($action === 'gcode_paths') {
         if (preg_match('/E([-\d.]+)/i', $line, $m)) $ne = (float)$m[1];
         $extruding = ($cmd === 'G1' && $ne > $lastE) ? 1 : 0;
         if ($nx !== $x || $ny !== $y || $nz !== $z) {
-            $segments[] = [$x, $y, $z, $nx, $ny, $nz, $extruding];
+            // Compact flat array: x1,y1,z1,x2,y2,z2,ext (2 decimal precision)
+            $segments[] = round($x,2); $segments[] = round($y,2); $segments[] = round($z,2);
+            $segments[] = round($nx,2); $segments[] = round($ny,2); $segments[] = round($nz,2);
+            $segments[] = $extruding;
             $minZ = min($minZ, $nz);
             $maxZ = max($maxZ, $nz);
+            $count++;
         }
         $x=$nx; $y=$ny; $z=$nz;
         if ($ne !== $e) { $lastE = $e = $ne; }
     }
     fclose($handle);
-    pvOk(['segments' => $segments, 'min_z' => $minZ === PHP_FLOAT_MAX ? 0 : $minZ, 'max_z' => $maxZ, 'total' => count($segments)]);
+    pvOk(['flat' => $segments, 'min_z' => round($minZ === PHP_FLOAT_MAX ? 0 : $minZ, 2), 'max_z' => round($maxZ, 2), 'total' => $count]);
 }
 
 // ── FILE SERVE ─────────────────────────────────────────────────────────────────
