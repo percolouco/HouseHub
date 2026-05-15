@@ -241,7 +241,7 @@ if ($action === 'models') {
 // ── GCODE PATHS ────────────────────────────────────────────────────────────────
 if ($action === 'gcode_paths') {
     $id     = (int)($_GET['id'] ?? 0);
-    $max    = min((int)($_GET['max'] ?? 30000), 80000);
+    $max    = min((int)($_GET['max'] ?? 300000), 500000);
     $s = $pdo->prepare("SELECT filename, file_type FROM pf_pv_models WHERE id=?"); $s->execute([$id]);
     $row = $s->fetch(); if (!$row) pvErr('Introuvable', 404);
     $ext = strtolower($row['file_type']);
