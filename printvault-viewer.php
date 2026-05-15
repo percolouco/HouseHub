@@ -307,7 +307,7 @@ function zToColor(z, minZ, maxZ) {
 
 document.getElementById('viewer-loading-text').textContent = 'Chargement des trajectoires…';
 
-fetch('/modules/printvault/api.php?action=gcode_paths&id=<?= $id ?>&max=30000', {
+fetch('/modules/printvault/api.php?action=gcode_paths&id=<?= $id ?>&max=300000', {
     credentials: 'same-origin',
     headers: {'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
 })
