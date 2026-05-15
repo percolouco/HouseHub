@@ -149,6 +149,10 @@ return [
     'cta_check'          => 'Check off',
     'cta_cart'           => 'Go shopping',
     'cta_sync'           => 'Sync',
+    'mod_printvault_name' => 'PrintVault',
+    'mod_printvault_desc' => 'Manage your 3D print files — STL, 3MF, GCode with interactive viewer.',
+    'menu_printvault'    => 'PrintVault',
+    'cta_print'          => 'Print',
 
     // ==========================================
     // FAMILY CALENDAR

@@ -148,6 +148,10 @@ return [
     'cta_check'          => 'Marcar',
     'cta_cart'           => 'Anar a comprar',
     'cta_sync'           => 'Sincronitzar',
+    'mod_printvault_name' => 'PrintVault',
+    'mod_printvault_desc' => 'Gestioneu els vostres fitxers d\'impressió 3D — STL, 3MF, GCode.',
+    'menu_printvault'    => 'PrintVault',
+    'cta_print'          => 'Imprimir',
 
     // ==========================================
     // FAMILY CALENDAR
