@@ -307,53 +307,51 @@ function zToColor(z, minZ, maxZ) {
 
 document.getElementById('viewer-loading-text').textContent = 'Chargement des trajectoires…';
 
-fetch('/modules/printvault/api.php?action=gcode_paths&id=<?= $id ?>&max=300000', {
+document.getElementById('viewer-loading-text').textContent = 'Parsing GCode…';
+
+fetch('/modules/printvault/api.php?action=gcode_paths&id=<?= $id ?>', {
     credentials: 'same-origin',
     headers: {'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
 })
 .then(r => r.json())
 .then(j => {
     if (!j.ok) { document.getElementById('viewer-loading-text').textContent = j.error; return; }
-    const {segments, min_z, max_z} = j.data;
+    const {flat, min_z, max_z, total} = j.data;
 
-    // Separate extrusion and travel moves
-    const extPositions   = [];
-    const extColors      = [];
-    const travelPositions = [];
+    document.getElementById('viewer-loading-text').textContent = 'Construction du rendu…';
 
-    segments.forEach(([x1,y1,z1, x2,y2,z2, ext]) => {
+    // flat = [x1,y1,z1,x2,y2,z2,ext, x1,y1,z1,...] stride 7
+    const extPos=[], extCol=[], travPos=[];
+    for (let i=0; i < flat.length; i+=7) {
+        const x1=flat[i],y1=flat[i+1],z1=flat[i+2];
+        const x2=flat[i+3],y2=flat[i+4],z2=flat[i+5];
+        const ext=flat[i+6];
         if (ext) {
             const col = zToColor(z1, min_z, max_z);
-            extPositions.push(x1,z1,-y1, x2,z2,-y2);  // swap Y/Z for Three.js
-            extColors.push(col.r,col.g,col.b, col.r,col.g,col.b);
+            extPos.push(x1,z1,-y1, x2,z2,-y2);
+            extCol.push(col.r,col.g,col.b, col.r,col.g,col.b);
         } else {
-            travelPositions.push(x1,z1,-y1, x2,z2,-y2);
+            travPos.push(x1,z1,-y1, x2,z2,-y2);
         }
-    });
+    }
 
     const group = new THREE.Group();
-
-    if (extPositions.length) {
+    if (extPos.length) {
         const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(extPositions, 3));
-        geo.setAttribute('color',    new THREE.Float32BufferAttribute(extColors, 3));
-        const mat = new THREE.LineBasicMaterial({vertexColors: true, linewidth: 1});
-        group.add(new THREE.LineSegments(geo, mat));
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(extPos, 3));
+        geo.setAttribute('color',    new THREE.Float32BufferAttribute(extCol, 3));
+        group.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({vertexColors:true})));
     }
-    if (travelPositions.length) {
+    if (travPos.length) {
         const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(travelPositions, 3));
-        const mat = new THREE.LineBasicMaterial({color: 0x334155, linewidth: 1, transparent: true, opacity: 0.3});
-        group.add(new THREE.LineSegments(geo, mat));
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(travPos, 3));
+        group.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color:0x334155,transparent:true,opacity:0.25})));
     }
 
     scene.add(group);
     fitCamera(group);
     document.getElementById('viewer-loading').style.display = 'none';
-
-    const total = segments.length;
-    const extCount = segments.filter(s=>s[6]).length;
-    document.getElementById('viewer-loading-text').textContent = `${total.toLocaleString()} segments (${extCount.toLocaleString()} extrusion)`;
+    document.getElementById('viewer-loading-text').textContent = `${total.toLocaleString()} segments`;
 })
 .catch(err => { document.getElementById('viewer-loading-text').textContent = 'Erreur: '+err.message; });
 
