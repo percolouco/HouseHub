@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'set_modules' && $family_id) {
-        $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'calendar_ios', 'groceries'];
+        $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'groceries', 'calendar_ios'];
         $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
         if (empty($enabled)) {
             $error = "Vous devez garder au moins un module actif.";
@@ -307,8 +307,8 @@ require __DIR__ . '/header.php';
           'garage'   => ['icon' => '🚗', 'label' => tr('menu_garage')],
           'memo'     => ['icon' => '📝', 'label' => tr('menu_memo')],
           'todo'     => ['icon' => '✅', 'label' => tr('menu_todo')],
-          'calendar_ios' => ['icon' => '📱', 'label' => tr('menu_calendar_ios')],
           'groceries' => ['icon' => '🛒', 'label' => tr('menu_groceries')],
+          'calendar_ios' => ['icon' => '📱', 'label' => tr('menu_calendar_ios')],
       ];
     ?>
     <form method="post">
