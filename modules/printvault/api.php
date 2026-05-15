@@ -12,8 +12,8 @@ require_once dirname(__DIR__, 2) . '/includes/db.php';
 define('PV_MODEL_DIR', '/uploads/printvault/models/');
 define('PV_THUMB_DIR', '/uploads/printvault/thumbs/');
 
-function pvOk($d)       { echo json_encode(['ok'=>true,'data'=>$d], JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE); exit; }
-function pvErr($m,$c=400){ http_response_code($c); echo json_encode(['ok'=>false,'error'=>$m]); exit; }
+function pvOk($d)       { ob_end_clean(); echo json_encode(['ok'=>true,'data'=>$d], JSON_UNESCAPED_UNICODE|JSON_INVALID_UTF8_SUBSTITUTE); exit; }
+function pvErr($m,$c=400){ ob_end_clean(); http_response_code($c); echo json_encode(['ok'=>false,'error'=>$m]); exit; }
 function pvBody()       { return json_decode(file_get_contents('php://input'), true) ?? []; }
 
 // ── STL parser ─────────────────────────────────────────────────────────────────
@@ -41,9 +41,9 @@ function parseSTLBinary(string $data): array {
 
     for ($i = 0; $i < $n; $i++) {
         $off = 84 + $i * 50;
-        $v1 = array_values(unpack('fff', substr($data, $off+12, 12)));
-        $v2 = array_values(unpack('fff', substr($data, $off+24, 12)));
-        $v3 = array_values(unpack('fff', substr($data, $off+36, 12)));
+        $v1 = array_values(unpack('f3', substr($data, $off+12, 12)));
+        $v2 = array_values(unpack('f3', substr($data, $off+24, 12)));
+        $v3 = array_values(unpack('f3', substr($data, $off+36, 12)));
         for ($j = 0; $j < 3; $j++) {
             $vals = [$v1[$j], $v2[$j], $v3[$j]];
             $mins[$j] = min($mins[$j], ...$vals);
