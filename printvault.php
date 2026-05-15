@@ -45,58 +45,6 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 
-<!-- ── MODAL : DÉTAIL ──────────────────────────────────────────────────────── -->
-<div class="pv-modal-backdrop" id="pv-detail-modal">
-  <div class="pv-modal">
-    <div class="pv-modal-header">
-      <h3>Détail du modèle</h3>
-      <button class="pv-modal-close" onclick="document.getElementById('pv-detail-modal').classList.remove('show')">×</button>
-    </div>
-    <div class="pv-modal-body" id="pv-detail-body"></div>
-    <div class="pv-modal-footer">
-      <button class="btn btn-danger btn-sm" id="pv-detail-del-btn" style="margin-right:auto">🗑 Supprimer</button>
-      <button class="btn btn-secondary btn-sm" id="pv-detail-edit-btn">✏️ Modifier</button>
-      <a class="btn btn-secondary btn-sm" id="pv-detail-dl-btn" download>⬇ Télécharger</a>
-      <button class="btn btn-primary btn-sm" id="pv-detail-3d-btn">🎮 Vue 3D</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── MODAL : ÉDITION ─────────────────────────────────────────────────────── -->
-<div class="pv-modal-backdrop" id="pv-edit-modal">
-  <div class="pv-modal">
-    <div class="pv-modal-header">
-      <h3>Modifier le modèle</h3>
-      <button class="pv-modal-close" onclick="document.getElementById('pv-edit-modal').classList.remove('show')">×</button>
-    </div>
-    <div class="pv-modal-body">
-      <input type="hidden" id="pv-edit-id">
-      <div class="form-group">
-        <label class="form-label">Nom *</label>
-        <input type="text" id="pv-edit-name" class="form-control">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Description</label>
-        <input type="text" id="pv-edit-desc" class="form-control">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-        <div class="form-group">
-          <label class="form-label">Catégorie</label>
-          <select id="pv-edit-cat" class="form-control"></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Tags</label>
-          <input type="text" id="pv-edit-tags" class="form-control" placeholder="tag1, tag2">
-        </div>
-      </div>
-    </div>
-    <div class="pv-modal-footer">
-      <button class="btn btn-secondary" onclick="document.getElementById('pv-edit-modal').classList.remove('show')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button>
-    </div>
-  </div>
-</div>
-
 <!-- ── MODAL : UPLOAD ──────────────────────────────────────────────────────── -->
 <div class="pv-modal-backdrop" id="pv-upload-modal">
   <div class="pv-modal">

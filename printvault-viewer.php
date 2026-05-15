@@ -4,112 +4,239 @@ require_login();
 require_once __DIR__ . '/includes/db.php';
 
 $id = (int)($_GET['id'] ?? 0);
-if (!$id) { http_response_code(404); exit('Modèle introuvable'); }
+if (!$id) { header('Location: /printvault.php'); exit; }
 
 $s = $pdo->prepare("SELECT * FROM pf_pv_models WHERE id=?"); $s->execute([$id]);
 $model = $s->fetch();
-if (!$model) { http_response_code(404); exit('Modèle introuvable'); }
+if (!$model) { header('Location: /printvault.php'); exit; }
 
-$ext = strtolower($model['file_type']);
-$canView = in_array($ext, ['stl','3mf']);
-?><!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= htmlspecialchars($model['name']) ?> — PrintVault</title>
-  <link rel="icon" href="/favicon.png">
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#0f172a; color:#e2e8f0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; overflow:hidden; }
-    #canvas-container { width:100vw; height:100vh; position:relative; }
-    canvas { display:block; }
-    #ui-overlay {
-      position:fixed; top:0; left:0; right:0;
-      display:flex; align-items:center; justify-content:space-between;
-      padding:.75rem 1.25rem; background:rgba(15,23,42,.85); backdrop-filter:blur(8px);
-      border-bottom:1px solid rgba(255,255,255,.08); z-index:10;
-    }
-    #model-name { font-size:.95rem; font-weight:600; color:#f1f5f9; }
-    #model-meta { font-size:.75rem; color:#94a3b8; margin-top:.15rem; }
-    .ui-btns { display:flex; gap:.5rem; }
-    .ui-btn {
-      padding:.35rem .8rem; border-radius:8px; border:1px solid rgba(255,255,255,.15);
-      background:rgba(255,255,255,.08); color:#e2e8f0; font-size:.8rem; cursor:pointer;
-      transition:background .15s; white-space:nowrap;
-    }
-    .ui-btn:hover { background:rgba(255,255,255,.15); }
-    .ui-btn.primary { background:#3b82f6; border-color:#3b82f6; color:#fff; }
-    .ui-btn.primary:hover { background:#2563eb; }
-    #loading {
-      position:fixed; inset:0; display:flex; flex-direction:column;
-      align-items:center; justify-content:center; background:#0f172a; z-index:20;
-      gap:1rem; color:#94a3b8; font-size:.9rem;
-    }
-    .spinner { width:40px; height:40px; border:3px solid #1e293b; border-top-color:#3b82f6; border-radius:50%; animation:spin .8s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    #error { display:none; text-align:center; }
-    #controls-hint {
-      position:fixed; bottom:1rem; left:50%; transform:translateX(-50%);
-      font-size:.72rem; color:#475569; background:rgba(15,23,42,.7);
-      padding:.35rem .75rem; border-radius:999px; pointer-events:none;
-    }
-    #gcode-info {
-      position:fixed; inset:0; display:flex; flex-direction:column;
-      align-items:center; justify-content:center; gap:1.5rem; padding:2rem;
-    }
-    .info-card {
-      background:#1e293b; border:1px solid #334155; border-radius:14px;
-      padding:1.5rem 2rem; max-width:420px; width:100%;
-    }
-    .info-card h2 { font-size:1.1rem; margin-bottom:1rem; color:#f1f5f9; }
-    .info-row { display:flex; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid #1e293b; font-size:.875rem; }
-    .info-row:last-child { border:none; }
-    .info-label { color:#94a3b8; }
-    .info-value { color:#e2e8f0; font-weight:500; }
-  </style>
-</head>
-<body>
+$s2 = $pdo->query("SELECT name, color FROM pf_pv_categories ORDER BY name");
+$categories = $s2->fetchAll();
 
-<div id="ui-overlay">
-  <div>
-    <div id="model-name"><?= htmlspecialchars($model['name']) ?></div>
-    <div id="model-meta">
-      <?= htmlspecialchars(strtoupper($model['file_type'])) ?>
-      <?php if ($model['dim_x'] > 0): ?>
-        · <?= round($model['dim_x']) ?>×<?= round($model['dim_y']) ?>×<?= round($model['dim_z']) ?> mm
-      <?php endif; ?>
-      · <?= round(($model['file_size']??0)/1024) ?> Ko
+$ext      = strtolower($model['file_type']);
+$canView  = in_array($ext, ['stl','3mf']);
+$isGcode  = in_array($ext, ['gcode','gco','g']);
+$thumbUrl = $model['thumb'] ? '/uploads/printvault/thumbs/' . rawurlencode($model['thumb']) : null;
+$typeIcon = ['stl'=>'🟣','3mf'=>'🔵','gcode'=>'🟢','gco'=>'🟢','g'=>'🟢'][$ext] ?? '📄';
+
+function fmtSize(int $b): string {
+    if ($b > 1048576) return round($b/1048576,1).' Mo';
+    return round($b/1024).' Ko';
+}
+function fmtDate(string $s): string {
+    return date('d/m/Y', strtotime($s));
+}
+
+$pageTitle = htmlspecialchars($model['name']) . ' — PrintVault';
+$activePage = 'printvault';
+require __DIR__ . '/header.php';
+?>
+
+<link rel="stylesheet" href="/modules/printvault/assets/printvault.css">
+<link rel="stylesheet" href="/modules/printvault/assets/viewer.css">
+<div id="pv-toasts" class="pv-toast-container"></div>
+
+<div class="pv-detail-page">
+
+  <!-- ── TOP BAR ────────────────────────────────────────────────────────── -->
+  <div class="pv-detail-topbar">
+    <a href="/printvault.php" class="btn btn-secondary btn-sm">← Retour</a>
+    <div class="pv-detail-topbar-title">
+      <span class="pv-type-badge pv-type-<?= $ext ?>"><?= strtoupper($ext) ?></span>
+      <h1><?= htmlspecialchars($model['name']) ?></h1>
+    </div>
+    <div style="display:flex;gap:.5rem;margin-left:auto">
+      <button class="btn btn-secondary btn-sm" onclick="openEdit()">✏️ Modifier</button>
+      <a href="/modules/printvault/api.php?action=file&id=<?= $id ?>" class="btn btn-secondary btn-sm" download>⬇ Télécharger</a>
+      <button class="btn btn-danger btn-sm" onclick="deleteModel()">🗑 Supprimer</button>
     </div>
   </div>
-  <div class="ui-btns">
-    <button class="ui-btn" onclick="resetCamera()">⟳ Centrer</button>
-    <?php if ($canView): ?>
-    <button class="ui-btn" onclick="takeScreenshot()" id="thumb-btn">📸 Aperçu</button>
-    <?php endif; ?>
-    <button class="ui-btn" onclick="window.close()">✕ Fermer</button>
-    <a href="/modules/printvault/api.php?action=file&id=<?= $id ?>" class="ui-btn primary" download>⬇ Télécharger</a>
+
+  <!-- ── BODY ───────────────────────────────────────────────────────────── -->
+  <div class="pv-detail-body">
+
+    <!-- Left: viewer or thumbnail -->
+    <div class="pv-detail-left">
+      <?php if ($canView): ?>
+      <div class="pv-viewer-wrap" id="viewer-wrap">
+        <div id="viewer-loading" class="pv-viewer-loading">
+          <div class="pv-spinner"></div>
+          <div id="viewer-loading-text">Chargement…</div>
+        </div>
+        <canvas id="viewer-canvas"></canvas>
+        <div class="pv-viewer-controls-hint">Clic+glisser : rotation · Scroll : zoom</div>
+        <button class="pv-viewer-screenshot-btn" onclick="takeScreenshot()" title="Sauvegarder comme aperçu">📸</button>
+      </div>
+      <?php elseif ($thumbUrl): ?>
+      <div class="pv-detail-thumb-large">
+        <img src="<?= htmlspecialchars($thumbUrl) ?>" alt="">
+      </div>
+      <?php else: ?>
+      <div class="pv-detail-thumb-large pv-detail-thumb-placeholder">
+        <span><?= $typeIcon ?></span>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Right: metadata -->
+    <div class="pv-detail-right">
+
+      <?php if ($model['description']): ?>
+      <div class="pv-meta-section">
+        <p class="pv-detail-description"><?= htmlspecialchars($model['description']) ?></p>
+      </div>
+      <?php endif; ?>
+
+      <?php if ($model['tags']): ?>
+      <div class="pv-meta-section pv-tags-row">
+        <?php foreach (array_filter(explode(',', $model['tags'])) as $tag): ?>
+        <span class="pv-tag"><?= htmlspecialchars(trim($tag)) ?></span>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+
+      <!-- File info -->
+      <div class="pv-meta-section">
+        <div class="pv-meta-title">Informations</div>
+        <div class="pv-meta-grid">
+          <div class="pv-meta-item"><span class="pv-meta-label">Catégorie</span><span class="pv-meta-value"><?= htmlspecialchars($model['category']) ?></span></div>
+          <div class="pv-meta-item"><span class="pv-meta-label">Taille fichier</span><span class="pv-meta-value"><?= fmtSize((int)$model['file_size']) ?></span></div>
+          <div class="pv-meta-item"><span class="pv-meta-label">Ajouté le</span><span class="pv-meta-value"><?= fmtDate($model['created_at']) ?></span></div>
+          <?php if ($model['dim_x'] > 0): ?>
+          <div class="pv-meta-item pv-meta-item--full">
+            <span class="pv-meta-label">Dimensions</span>
+            <span class="pv-meta-value"><?= round($model['dim_x']) ?> × <?= round($model['dim_y']) ?> × <?= round($model['dim_z']) ?> mm<?= $model['volume'] > 0 ? ' · '.round($model['volume'],2).' cm³' : '' ?></span>
+          </div>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <?php if ($isGcode && ($model['gcode_time'] || $model['gcode_filament'] || $model['gcode_nozzle'] || $model['gcode_bed'])): ?>
+      <!-- GCode metadata cards -->
+      <div class="pv-meta-section">
+        <div class="pv-meta-title">Métadonnées impression</div>
+        <div class="pv-gcode-cards">
+          <?php if ($model['gcode_time']): ?>
+          <div class="pv-gcode-card">
+            <div class="pv-gcode-icon">⏱</div>
+            <div class="pv-gcode-value"><?= htmlspecialchars($model['gcode_time']) ?></div>
+            <div class="pv-gcode-label">Temps d'impression estimé</div>
+          </div>
+          <?php endif; ?>
+          <?php if ($model['gcode_filament']): ?>
+          <div class="pv-gcode-card">
+            <div class="pv-gcode-icon">🧵</div>
+            <div class="pv-gcode-value"><?= htmlspecialchars($model['gcode_filament']) ?></div>
+            <div class="pv-gcode-label">Filament utilisé</div>
+          </div>
+          <?php endif; ?>
+          <?php if ($model['gcode_nozzle']): ?>
+          <div class="pv-gcode-card">
+            <div class="pv-gcode-icon">🔥</div>
+            <div class="pv-gcode-value"><?= htmlspecialchars($model['gcode_nozzle']) ?></div>
+            <div class="pv-gcode-label">Température buse</div>
+          </div>
+          <?php endif; ?>
+          <?php if ($model['gcode_bed']): ?>
+          <div class="pv-gcode-card">
+            <div class="pv-gcode-icon">🟦</div>
+            <div class="pv-gcode-value"><?= htmlspecialchars($model['gcode_bed']) ?></div>
+            <div class="pv-gcode-label">Température plateau</div>
+          </div>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endif; ?>
+
+    </div>
   </div>
 </div>
 
-<?php if ($canView): ?>
-
-<div id="loading">
-  <div class="spinner"></div>
-  <div>Chargement du modèle…</div>
-  <div id="error" style="color:#ef4444"></div>
+<!-- ── MODAL : ÉDITION ─────────────────────────────────────────────────────── -->
+<div class="pv-modal-backdrop" id="pv-edit-modal">
+  <div class="pv-modal">
+    <div class="pv-modal-header">
+      <h3>Modifier le modèle</h3>
+      <button class="pv-modal-close" onclick="document.getElementById('pv-edit-modal').classList.remove('show')">×</button>
+    </div>
+    <div class="pv-modal-body">
+      <div class="form-group">
+        <label class="form-label">Nom *</label>
+        <input type="text" id="edit-name" class="form-control" value="<?= htmlspecialchars($model['name']) ?>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <input type="text" id="edit-desc" class="form-control" value="<?= htmlspecialchars($model['description'] ?? '') ?>">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-group">
+          <label class="form-label">Catégorie</label>
+          <select id="edit-cat" class="form-control">
+            <?php foreach ($categories as $c): ?>
+            <option value="<?= htmlspecialchars($c['name']) ?>" <?= $c['name'] === $model['category'] ? 'selected' : '' ?>><?= htmlspecialchars($c['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <input type="text" id="edit-tags" class="form-control" value="<?= htmlspecialchars($model['tags'] ?? '') ?>" placeholder="tag1, tag2">
+        </div>
+      </div>
+    </div>
+    <div class="pv-modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('pv-edit-modal').classList.remove('show')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button>
+    </div>
+  </div>
 </div>
 
-<div id="canvas-container"></div>
-<div id="controls-hint">Clic+glisser : rotation · Scroll : zoom · Clic droit : déplacer</div>
+<script>
+const MODEL_ID  = <?= $id ?>;
+const MODEL_EXT = '<?= $ext ?>';
+const API       = '/modules/printvault/api.php';
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-  }
+function toast(msg, type='success') {
+    const c = document.getElementById('pv-toasts');
+    const t = document.createElement('div');
+    t.className = 'pv-toast' + (type==='error'?' error':'');
+    t.textContent = msg; c.appendChild(t); setTimeout(()=>t.remove(),3500);
 }
+
+function openEdit() { document.getElementById('pv-edit-modal').classList.add('show'); }
+
+async function saveEdit() {
+    const name = document.getElementById('edit-name').value.trim();
+    if (!name) { toast('Nom requis','error'); return; }
+    try {
+        const r = await fetch(API+'?action=models&id='+MODEL_ID, {
+            method:'PUT', credentials:'same-origin',
+            headers:{'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+            body: JSON.stringify({name, description:document.getElementById('edit-desc').value, category:document.getElementById('edit-cat').value, tags:document.getElementById('edit-tags').value})
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error);
+        toast('Mis à jour ✓');
+        document.getElementById('pv-edit-modal').classList.remove('show');
+        setTimeout(()=>location.reload(),600);
+    } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteModel() {
+    if (!confirm('Supprimer ce modèle ?')) return;
+    try {
+        const r = await fetch(API+'?action=models&id='+MODEL_ID, {method:'DELETE',credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error);
+        window.location.href = '/printvault.php';
+    } catch(e) { toast(e.message,'error'); }
+}
+
+document.querySelectorAll('.pv-modal-backdrop').forEach(m => m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
+</script>
+
+<?php if ($canView): ?>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -119,171 +246,84 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js';
 <?php endif; ?>
 
-const MODEL_URL = '/modules/printvault/api.php?action=model_data&id=<?= $id ?>';
-const MODEL_ID  = <?= $id ?>;
-const API       = '/modules/printvault/api.php';
-
-// Scene
-const scene    = new THREE.Scene();
+const canvas = document.getElementById('viewer-canvas');
+const wrap   = document.getElementById('viewer-wrap');
+const scene  = new THREE.Scene();
 scene.background = new THREE.Color(0x0f172a);
+
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(5,10,7.5); scene.add(key);
+const fill= new THREE.DirectionalLight(0x8ab4f8, 0.4); fill.position.set(-5,-3,-5); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 0.3); rim.position.set(0,5,-10); scene.add(rim);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-keyLight.position.set(5, 10, 7.5);
-scene.add(keyLight);
+const grid = new THREE.GridHelper(200,40,0x1e293b,0x1e293b);
+grid.material.opacity=0.4; grid.material.transparent=true; scene.add(grid);
 
-const fillLight = new THREE.DirectionalLight(0x8ab4f8, 0.4);
-fillLight.position.set(-5, -3, -5);
-scene.add(fillLight);
+const camera = new THREE.PerspectiveCamera(45, wrap.clientWidth/wrap.clientHeight, 0.1, 10000);
+camera.position.set(100,100,100);
 
-const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
-rimLight.position.set(0, 5, -10);
-scene.add(rimLight);
-
-// Grid
-const grid = new THREE.GridHelper(200, 40, 0x1e293b, 0x1e293b);
-grid.material.opacity = 0.5; grid.material.transparent = true;
-scene.add(grid);
-
-// Camera & renderer
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000);
-camera.position.set(100, 100, 100);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-document.getElementById('canvas-container').appendChild(renderer.domElement);
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.dampingFactor = 0.05;
+controls.enableDamping=true; controls.dampingFactor=0.05;
+
+const material = new THREE.MeshPhysicalMaterial({color:0x4cc9f0,metalness:0.3,roughness:0.4,side:THREE.DoubleSide});
 
 let meshGroup = null;
-
-function fitCamera(object) {
-    const box = new THREE.Box3().setFromObject(object);
+function fitCamera(obj) {
+    const box = new THREE.Box3().setFromObject(obj);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const fov = camera.fov * (Math.PI / 180);
-    const dist = Math.abs(maxDim / Math.sin(fov / 2)) * 0.75;
-    camera.position.set(center.x + dist * 0.7, center.y + dist * 0.5, center.z + dist * 0.7);
+    const dist = Math.abs(Math.max(size.x,size.y,size.z)/Math.sin(camera.fov*Math.PI/180/2))*0.75;
+    camera.position.set(center.x+dist*.7, center.y+dist*.5, center.z+dist*.7);
     controls.target.copy(center);
-    // Align grid to bottom of object
     grid.position.y = box.min.y;
     controls.update();
 }
 
-window.resetCamera = () => { if (meshGroup) fitCamera(meshGroup); };
-
-const material = new THREE.MeshPhysicalMaterial({
-    color: 0x4cc9f0, metalness: 0.3, roughness: 0.4,
-    side: THREE.DoubleSide,
-});
-
-// Load model
 <?php if ($ext === 'stl'): ?>
-new STLLoader().load(MODEL_URL,
-    (geometry) => {
-        geometry.computeVertexNormals();
-        const mesh = new THREE.Mesh(geometry, material);
-        meshGroup = new THREE.Group(); meshGroup.add(mesh);
-        scene.add(meshGroup);
-        fitCamera(meshGroup);
-        document.getElementById('loading').style.display = 'none';
+new STLLoader().load('/modules/printvault/api.php?action=model_data&id=<?= $id ?>',
+    geo => {
+        geo.computeVertexNormals();
+        meshGroup = new THREE.Group(); meshGroup.add(new THREE.Mesh(geo,material));
+        scene.add(meshGroup); fitCamera(meshGroup);
+        document.getElementById('viewer-loading').style.display='none';
     },
-    (xhr) => {
-        if (xhr.total) document.querySelector('#loading div:last-child').textContent =
-            'Chargement… ' + Math.round(xhr.loaded/xhr.total*100) + '%';
-    },
-    (err) => {
-        document.getElementById('error').style.display = '';
-        document.getElementById('error').textContent = 'Erreur chargement: ' + err.message;
-    }
+    xhr => { if(xhr.total) document.getElementById('viewer-loading-text').textContent='Chargement… '+Math.round(xhr.loaded/xhr.total*100)+'%'; },
+    err => { document.getElementById('viewer-loading-text').textContent='Erreur: '+err.message; }
 );
 <?php elseif ($ext === '3mf'): ?>
-new ThreeMFLoader().load(MODEL_URL,
-    (obj) => {
-        meshGroup = obj;
-        // Apply material to all meshes
-        obj.traverse(child => {
-            if (child.isMesh) child.material = material;
-        });
-        scene.add(meshGroup);
-        fitCamera(meshGroup);
-        document.getElementById('loading').style.display = 'none';
+new ThreeMFLoader().load('/modules/printvault/api.php?action=model_data&id=<?= $id ?>',
+    obj => {
+        obj.traverse(c=>{if(c.isMesh)c.material=material;});
+        meshGroup=obj; scene.add(meshGroup); fitCamera(meshGroup);
+        document.getElementById('viewer-loading').style.display='none';
     },
-    (xhr) => {
-        if (xhr.total) document.querySelector('#loading div:last-child').textContent =
-            'Chargement… ' + Math.round(xhr.loaded/xhr.total*100) + '%';
-    },
-    (err) => {
-        document.getElementById('error').style.display = '';
-        document.getElementById('error').textContent = 'Erreur: ' + err.message;
-    }
+    xhr => { if(xhr.total) document.getElementById('viewer-loading-text').textContent='Chargement… '+Math.round(xhr.loaded/xhr.total*100)+'%'; },
+    err => { document.getElementById('viewer-loading-text').textContent='Erreur: '+err.message; }
 );
 <?php endif; ?>
 
-// Animation loop
-function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-}
-animate();
+(function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);})();
 
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+window.addEventListener('resize',()=>{
+    renderer.setSize(wrap.clientWidth,wrap.clientHeight);
+    camera.aspect=wrap.clientWidth/wrap.clientHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Screenshot → save as thumbnail
 window.takeScreenshot = async () => {
-    renderer.render(scene, camera);
-    const canvas = renderer.domElement;
-    canvas.toBlob(async (blob) => {
-        const fd = new FormData();
-        fd.append('thumb', blob, 'thumb.png');
-        try {
-            const r = await fetch(API + '?action=thumb&id=' + MODEL_ID, {
-                method: 'POST', credentials: 'same-origin', body: fd,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const j = await r.json();
-            if (j.ok) {
-                document.getElementById('thumb-btn').textContent = '✅ Sauvegardé';
-                setTimeout(() => { document.getElementById('thumb-btn').textContent = '📸 Aperçu'; }, 2000);
-            }
-        } catch(e) { console.error(e); }
-    }, 'image/png', 0.9);
+    renderer.render(scene,camera);
+    canvas.toBlob(async blob=>{
+        const fd=new FormData(); fd.append('thumb',blob,'thumb.png');
+        const r=await fetch(API+'?action=thumb&id='+MODEL_ID,{method:'POST',credentials:'same-origin',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});
+        const j=await r.json();
+        if(j.ok){toast('Aperçu sauvegardé ✓');}
+    },'image/png',0.9);
 };
 </script>
-
-<?php else: ?>
-<!-- GCode / non-viewable file: show metadata only -->
-<div id="gcode-info">
-  <div class="info-card">
-    <h2>🟢 <?= htmlspecialchars($model['name']) ?></h2>
-    <?php $rows = [
-      ['Fichier', $model['original_name']],
-      ['Taille', round($model['file_size']/1024).' Ko'],
-      ['Catégorie', $model['category']],
-      $model['gcode_time']     ? ['Temps impression', $model['gcode_time']]    : null,
-      $model['gcode_filament'] ? ['Filament',         $model['gcode_filament']]: null,
-      $model['gcode_nozzle']   ? ['Buse',             $model['gcode_nozzle']]  : null,
-      $model['gcode_bed']      ? ['Plateau',          $model['gcode_bed']]     : null,
-      ['Ajouté le', date('d/m/Y', strtotime($model['created_at']))],
-    ]; ?>
-    <?php foreach (array_filter($rows) as $r): ?>
-    <div class="info-row">
-      <span class="info-label"><?= htmlspecialchars($r[0]) ?></span>
-      <span class="info-value"><?= htmlspecialchars($r[1]) ?></span>
-    </div>
-    <?php endforeach; ?>
-  </div>
-</div>
 <?php endif; ?>
 
-</body>
-</html>
+<?php require __DIR__ . '/footer.php'; ?>

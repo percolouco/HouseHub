@@ -128,7 +128,7 @@ function cardHtml(m) {
         : icon;
     const dims = m.dim_x > 0 ? `${Math.round(m.dim_x)}×${Math.round(m.dim_y)}×${Math.round(m.dim_z)}mm` : '';
     const gcInfo = m.gcode_time || '';
-    return `<div class="pv-card" onclick="openDetail(${m.id})">
+    return `<a class="pv-card" href="/printvault-viewer.php?id=${m.id}" style="text-decoration:none">
       <div class="pv-card-thumb">${thumbHtml}</div>
       <div class="pv-card-body">
         <div class="pv-card-name">${escHtml(m.name)}</div>
@@ -139,93 +139,7 @@ function cardHtml(m) {
           <span style="margin-left:auto">${escHtml(fmtSize(m.file_size))}</span>
         </div>
       </div>
-    </div>`;
-}
-
-// ─── Detail panel ─────────────────────────────────────────────────────────────
-let currentDetailId = null;
-
-function openDetail(id) {
-    const m = allModels.find(x => x.id === id);
-    if (!m) return;
-    currentDetailId = id;
-    const ext = m.file_type.toLowerCase();
-    const canView = ['stl','3mf'].includes(ext);
-    const isGcode = ['gcode','gco','g'].includes(ext);
-    const icon = typeIcon[ext] || '📄';
-    const thumbUrl = m.thumb ? `/uploads/printvault/thumbs/${encodeURIComponent(m.thumb)}` : null;
-
-    document.getElementById('pv-detail-body').innerHTML = `
-      <div class="pv-detail-thumb">
-        ${thumbUrl ? `<img src="${escHtml(thumbUrl)}" alt="">` : icon}
-      </div>
-      <div style="font-size:1rem;font-weight:700;color:var(--text-main)">${escHtml(m.name)}</div>
-      ${m.description ? `<div style="font-size:.85rem;color:var(--text-muted)">${escHtml(m.description)}</div>` : ''}
-      ${m.tags ? `<div style="display:flex;gap:.3rem;flex-wrap:wrap">${m.tags.split(',').filter(Boolean).map(t=>`<span style="font-size:.72rem;background:var(--bg-page);border:1px solid var(--border-light);padding:.1rem .45rem;border-radius:999px;color:var(--text-muted)">${escHtml(t.trim())}</span>`).join('')}</div>` : ''}
-      <div class="pv-detail-grid">
-        <div class="pv-detail-item"><span class="pv-detail-label">Type</span><span class="pv-detail-value"><span class="pv-type-badge pv-type-${escHtml(ext)}">${escHtml(m.file_type.toUpperCase())}</span></span></div>
-        <div class="pv-detail-item"><span class="pv-detail-label">Catégorie</span><span class="pv-detail-value">${escHtml(m.category)}</span></div>
-        <div class="pv-detail-item"><span class="pv-detail-label">Taille</span><span class="pv-detail-value">${escHtml(fmtSize(m.file_size))}</span></div>
-        <div class="pv-detail-item"><span class="pv-detail-label">Ajouté le</span><span class="pv-detail-value">${escHtml(fmtDate(m.created_at))}</span></div>
-        ${m.dim_x > 0 ? `<div class="pv-detail-item" style="grid-column:1/-1"><span class="pv-detail-label">Dimensions</span><span class="pv-detail-value">${Math.round(m.dim_x)}×${Math.round(m.dim_y)}×${Math.round(m.dim_z)} mm${m.volume > 0 ? ' · '+m.volume+' cm³' : ''}</span></div>` : ''}
-        ${isGcode && m.gcode_time     ? `<div class="pv-detail-item"><span class="pv-detail-label">Temps</span><span class="pv-detail-value">${escHtml(m.gcode_time)}</span></div>` : ''}
-        ${isGcode && m.gcode_filament ? `<div class="pv-detail-item"><span class="pv-detail-label">Filament</span><span class="pv-detail-value">${escHtml(m.gcode_filament)}</span></div>` : ''}
-        ${isGcode && m.gcode_nozzle   ? `<div class="pv-detail-item"><span class="pv-detail-label">Buse</span><span class="pv-detail-value">${escHtml(m.gcode_nozzle)}</span></div>` : ''}
-        ${isGcode && m.gcode_bed      ? `<div class="pv-detail-item"><span class="pv-detail-label">Plateau</span><span class="pv-detail-value">${escHtml(m.gcode_bed)}</span></div>` : ''}
-      </div>`;
-
-    const btn3d = document.getElementById('pv-detail-3d-btn');
-    if (canView) {
-        btn3d.style.display = '';
-        btn3d.onclick = () => window.open(`/printvault-viewer.php?id=${id}`, '_blank', 'width=1200,height=800');
-    } else {
-        btn3d.style.display = 'none';
-    }
-
-    document.getElementById('pv-detail-dl-btn').href = `${API}?action=file&id=${id}`;
-    document.getElementById('pv-detail-edit-btn').onclick = () => openEdit(m);
-    document.getElementById('pv-detail-del-btn').onclick = () => deleteModel(id, m.name);
-    document.getElementById('pv-detail-modal').classList.add('show');
-}
-
-async function deleteModel(id, name) {
-    if (!confirm(`Supprimer "${name}" ?`)) return;
-    try {
-        await api('models', 'DELETE', null, '&id='+id);
-        document.getElementById('pv-detail-modal').classList.remove('show');
-        toast('Modèle supprimé');
-        allModels = allModels.filter(m => m.id !== id);
-        renderSidebar(); renderModels();
-    } catch(e) { toast(e.message, 'error'); }
-}
-
-// ─── Edit ─────────────────────────────────────────────────────────────────────
-function openEdit(m) {
-    document.getElementById('pv-detail-modal').classList.remove('show');
-    document.getElementById('pv-edit-id').value   = m.id;
-    document.getElementById('pv-edit-name').value = m.name;
-    document.getElementById('pv-edit-desc').value = m.description || '';
-    document.getElementById('pv-edit-tags').value = m.tags || '';
-    const sel = document.getElementById('pv-edit-cat');
-    sel.innerHTML = categories.map(c => `<option value="${escHtml(c.name)}"${c.name===m.category?' selected':''}>${escHtml(c.name)}</option>`).join('');
-    document.getElementById('pv-edit-modal').classList.add('show');
-}
-
-async function saveEdit() {
-    const id = document.getElementById('pv-edit-id').value;
-    const name = document.getElementById('pv-edit-name').value.trim();
-    if (!name) { toast('Nom requis', 'error'); return; }
-    try {
-        await api('models', 'PUT', {
-            name,
-            description: document.getElementById('pv-edit-desc').value,
-            category:    document.getElementById('pv-edit-cat').value,
-            tags:        document.getElementById('pv-edit-tags').value,
-        }, '&id='+id);
-        toast('Mis à jour ✓');
-        document.getElementById('pv-edit-modal').classList.remove('show');
-        await loadModels();
-    } catch(e) { toast(e.message, 'error'); }
+    </a>`;
 }
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
