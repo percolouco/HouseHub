@@ -151,6 +151,10 @@ return [
     'cta_check'          => 'Cocher',
     'cta_cart'           => 'Faire les courses',
     'cta_sync'           => 'Synchroniser',
+    'mod_printvault_name' => 'PrintVault',
+    'mod_printvault_desc' => 'Gérez vos fichiers d\'impression 3D — STL, 3MF, GCode avec viewer interactif.',
+    'menu_printvault'    => 'PrintVault',
+    'cta_print'          => 'Imprimer',
 
     // ==========================================
     // FAMILY CALENDAR

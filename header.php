@@ -57,6 +57,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
       <?php if (in_array('todo',      $mods)): ?><a href="/todo.php" class="pf-nav-link <?= $activePage === 'todo' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_todo') ?></a><?php endif; ?>
       <?php if (in_array('groceries', $mods)): ?><a href="/groceries.php" class="pf-nav-link <?= $activePage === 'groceries' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_groceries') ?></a><?php endif; ?>
       <?php if (in_array('calendar_ios', $mods)): ?><a href="/calendar-ios.php" class="pf-nav-link <?= $activePage === 'calendar-ios' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_calendar_ios') ?></a><?php endif; ?>
+      <?php if (in_array('printvault',  $mods)): ?><a href="/printvault.php" class="pf-nav-link <?= $activePage === 'printvault' ? 'pf-nav-link--active' : '' ?>"><?= tr('menu_printvault') ?></a><?php endif; ?>
     </nav>
     <?php endif; ?>
 
@@ -106,6 +107,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         <?php if (in_array('todo',     $mods)): ?><a href="/todo.php" class="pf-mobile-nav-link">✅ <?= tr('menu_todo') ?></a><?php endif; ?>
         <?php if (in_array('groceries',$mods)): ?><a href="/groceries.php" class="pf-mobile-nav-link">🛒 <?= tr('menu_groceries') ?></a><?php endif; ?>
         <?php if (in_array('calendar_ios', $mods)): ?><a href="/calendar-ios.php" class="pf-mobile-nav-link">📱 <?= tr('menu_calendar_ios') ?></a><?php endif; ?>
+        <?php if (in_array('printvault',  $mods)): ?><a href="/printvault.php" class="pf-mobile-nav-link">🖨️ <?= tr('menu_printvault') ?></a><?php endif; ?>
         <a href="/settings.php" class="pf-mobile-nav-link">⚙️ Paramètres</a>
         <?php if (!empty($_SESSION['user']['is_admin'])): ?>
         <a href="/admin/" class="pf-mobile-nav-link" style="color:#2563eb">🛡️ Admin</a>
