@@ -1,5 +1,10 @@
-🦙 HouseHub OS
-Système de gestion familiale sur-mesure : Budget, Calendrier, Voyages, Cadeaux et Garage.
+# 🦙 HouseHub OS
+
+Système de gestion familiale sur-mesure — Budget, Calendrier, Voyages, Tâches, Courses, Notes, Impression 3D et plus.
+
+Stack : PHP 8.2 natif · Vanilla JS · MariaDB 11 · Docker · Traefik
+
+---
 
 ## 🚀 Déploiement (Docker)
 
@@ -24,17 +29,18 @@ La base de données meta (`househub_meta`) et les permissions sont **initialisé
 
 Aucun compte par défaut — le premier utilisateur s'inscrit via `/register.php` et choisit de créer un espace familial.
 
+---
+
 ## 👥 Gestion multi-tenant
 
-HouseHub supporte plusieurs familles indépendantes sur la même instance :
+HouseHub supporte plusieurs familles indépendantes sur la même instance.
 
 | URL | Description |
 |-----|-------------|
-| `/register.php` | Créer un compte + nouvel espace, ou rejoindre un espace existant via code |
+| `/register.php` | Créer un compte + nouvel espace, ou rejoindre via code d'invitation |
 | `/login.php` | Connexion |
-| `/settings.php` | Paramètres : profil, mot de passe, langue, modules actifs, code d'invitation |
+| `/settings.php` | Profil, mot de passe, langue, modules actifs, code d'invitation |
 | `/admin/` | Panneau d'administration (admin uniquement) |
-| `/garage.php` | Module Garage — véhicules, entretiens, pièces |
 
 ### Inviter quelqu'un dans son espace
 1. Aller sur `/settings.php` → copier le code d'invitation
@@ -46,73 +52,78 @@ Le premier utilisateur inscrit doit être promu admin manuellement :
 ```sql
 UPDATE househub_meta.users SET is_admin = 1 WHERE username = 'ton_username';
 ```
-L'admin peut ensuite promouvoir/désactiver d'autres utilisateurs depuis `/admin/`.
-
-## 🧩 Modules
-
-| Module | Route | Description |
-|--------|-------|-------------|
-| Calendrier | `/family-calendar.php` | Congés, modes de garde, planning hebdo |
-| Budget | `/budget.php` | Suivi mensuel, prévisionnel, épargne |
-| Voyages | `/holidays.php` | Roadtrips, cartographie, météo |
-| Cadeaux | `/gift-list.php` | Noël, anniversaires, Tricount |
-| Garage | `/garage.php` | Véhicules, entretiens, pièces détachées |
-
-Les modules sont activables/désactivables par famille depuis `/settings.php`.
 
 ---
 
-📝 Présentation du projet
-HouseHub est une application web privée conçue pour centraliser l'organisation de la tribu. Elle repose sur une stack légère (PHP natif / Vanilla JS) pour garantir rapidité et portabilité, avec un support complet de l'internationalisation (FR/CA).
+## 🧩 Modules
 
-🛠️ Fonctionnalités Principales
-💰 Module Budget
-Suivi Mensuel : Interface de gestion des dépenses réelles avec import CSV bancaire et catégorisation automatique.
+Tous les modules sont activables/désactivables par famille depuis `/settings.php`.
 
-Budget Prévisionnel : Planification des revenus et répartition automatique vers les différents comptes (Commune, Livrets, Épargne).
+| Module | Route | Description |
+|--------|-------|-------------|
+| 💰 Budget | `/budget.php` | Suivi mensuel, prévisionnel, épargne, import CSV bancaire |
+| 📅 Calendrier | `/family-calendar.php` | Congés (CP/JRA/JA), modes de garde, planning hebdo, vacances scolaires |
+| 🗓️ Calendrier iOS | `/calendar-ios.php` | Synchronisation CalDAV avec iPhone/iPad |
+| 🏖️ Voyages | `/holidays.php` | Roadtrips, cartographie Leaflet, itinéraires OSRM, météo Open-Meteo |
+| 🎁 Cadeaux | `/gift-list.php` | Listes Noël / anniversaires, intégration Tricount |
+| 🚗 Garage | `/garage.php` | Véhicules, historique entretiens, pièces détachées |
+| 🛒 Courses | `/groceries.php` | Liste de courses partagée en temps réel |
+| ✅ Todo | `/todo.php` | Listes de tâches avec rappels quotidiens via Discord webhook |
+| 📝 Mémo | `/memo.php` | Notes personnelles / familiales avec éditeur riche |
+| 🖨️ PrintVault | `/printvault.php` | Gestionnaire de fichiers d'impression 3D (STL, 3MF, GCode) avec viewer Three.js |
 
-Épargne : Visualisation des soldes bancaires et ventilation par postes de dépenses avec mode "Addition Rapide".
+---
 
-📅 Calendrier Familial
-Planning Hebdomadaire : Gestion visuelle des modes de garde, des congés enfants et de la maladie.
+## 🖨️ PrintVault
 
-Gestion des Congés (CP/JRA/JA) : Calcul automatique des soldes restants avec snapshots de correction.
+Module de gestion de fichiers d'impression 3D entièrement intégré à HouseHub.
 
-Vacances Scolaires : Intégration automatique via l'API Data.Education (Zone C).
+- **Formats supportés** : STL (binaire/ASCII), 3MF, GCode
+- **Viewer 3D** : Three.js (STL/3MF) et visualisation des trajectoires GCode avec dégradé de couleur par hauteur Z
+- **Métadonnées GCode** : temps d'impression estimé, longueur filament, température buse/plateau
+- **Stockage local** : fichiers sur le serveur, métadonnées en MariaDB (`pf_pv_*`)
+- **Limite upload** : 300 Mo
 
-🏖️ Holidays & Roadtrips
-Gestion de Voyages : Planification avec statuts (Brouillon, Confirmé, Terminé).
+---
 
-Moteur de Roadtrip : Cartographie interactive (Leaflet), itinéraires (OSRM) et gestion des étapes.
+## ✅ Todo — Rappels Discord
 
-Météo Intelligente : Prévisions réelles ou archives historiques (Open-Meteo).
+Le module Todo supporte des rappels quotidiens via un **webhook Discord** :
 
-## 🚀 Roadmap d'Optimisation
+1. Aller sur `/todo.php` → ⚙️ → coller l'URL du webhook Discord
+2. Configurer le cron sur l'hôte :
 
-- [x] **[Quickwin] Sécurisation AJAX (pachaFetch)**
-- [x] **[Quickwin] Correction du piège "action"**
-- [x] **[Structure] Centralisation des Constantes**
-- [x] **[UX] Harmonisation Mobile**
-- [x] **[Performance] Audit et Optimisation SQL**
-- [ ] **[Backend] Système de Backup Automatique de la BDD**
+```bash
+* * * * * docker exec househub php /var/www/html/cron/todo_notify.php >> /home/perco/househub_todo_cron.log 2>&1
+```
 
-Étape 3 : Performance & Backend
-[ ] Audit SQL : Remplacement des requêtes en boucle par des jointures.
+Le cron tourne chaque minute et envoie une notification Discord à l'heure exacte configurée sur chaque tâche.
 
-[ ] Cache Cleanup : Script de nettoyage pour le cache de géocodage.
+---
 
-📌 Patch / Versioning
+## 🛠️ Stack technique
 
-- **v1.3.0 :** Optimisation Performance SQL. Suppression des requêtes en boucle (N+1) dans les modules Budget et Holidays. Temps de réponse divisé par 3 sur les gros historiques.
+| Composant | Technologie |
+|-----------|-------------|
+| Backend | PHP 8.2 (Apache) |
+| Base de données | MariaDB 11 |
+| Frontend | Vanilla JS, CSS custom (dark mode natif) |
+| Viewer 3D | Three.js (ES modules via importmap CDN) |
+| Cartographie | Leaflet + OSRM |
+| Conteneurisation | Docker + Docker Compose |
+| Reverse proxy | Traefik |
+| Internationalisation | FR / CA |
 
-* **v1.2.0 :** Modernisation de l'UI. Remplacement des alertes systèmes par des Toasts et des confirmations sur-mesure.
-* **v1.1.0 :** Refonte de l'expérience mobile (Bottom Sheets).
-  v1.0.4 : Centralisation des constantes (IDs, devises) dans includes/config.php et injection dans window.CONFIG.
+---
 
-v1.0.3 : Migration du module Calendrier vers pachaFetch.
+## 📌 Versioning
 
-v1.0.2 : Correction systématique du bug form.action dans les fichiers Budget.
-
-v1.0.1 : Création de l'utilitaire global pachaFetch dans le header.
-
-v1.0.0 : Version stable initiale.
+| Version | Changements |
+|---------|-------------|
+| v2.0.0 | Module PrintVault : viewer 3D STL/3MF/GCode, stockage local, trajectoires GCode illimitées |
+| v1.5.0 | Modules Todo (rappels Discord), Mémo, Courses (liste partagée) |
+| v1.4.0 | Synchronisation CalDAV iOS |
+| v1.3.0 | Optimisation SQL — suppression des requêtes N+1, temps de réponse ÷3 |
+| v1.2.0 | Modernisation UI — Toasts, confirmations sur-mesure |
+| v1.1.0 | Refonte expérience mobile (Bottom Sheets) |
+| v1.0.0 | Version stable initiale — Budget, Calendrier, Voyages, Cadeaux, Garage |
