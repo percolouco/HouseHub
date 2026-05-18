@@ -71,6 +71,20 @@ Tous les modules sont activables/désactivables par famille depuis `/settings.ph
 | ✅ Todo | `/todo.php` | Listes de tâches avec rappels quotidiens via Discord webhook |
 | 📝 Mémo | `/memo.php` | Notes personnelles / familiales avec éditeur riche |
 | 🖨️ PrintVault | `/printvault.php` | Gestionnaire de fichiers d'impression 3D (STL, 3MF, GCode) avec viewer Three.js |
+| 📋 Planka | `/planka.php` | Kanban natif connecté à Planka — boards, listes, cartes, drag & drop, checklist |
+
+---
+
+## 📋 Planka
+
+Module Kanban natif connecté à l'instance Planka du NAS — affichage et gestion directement dans HouseHub sans iframe.
+
+- **Boards** : sélecteur de boards du projet Planka lié à la famille
+- **Colonnes** : listes Planka affichées en colonnes scrollables
+- **Cartes** : labels colorés, date d'échéance, checklist
+- **Actions** : créer, modifier, supprimer des cartes ; drag & drop entre colonnes ; cocher les tâches
+- **Par famille** : chaque espace HouseHub peut pointer vers son propre projet Planka
+- **Paramètres** : bouton ⚙️ pour configurer le `project_id` Planka
 
 ---
 
@@ -120,6 +134,7 @@ Le cron tourne chaque minute et envoie une notification Discord à l'heure exact
 
 | Version | Changements |
 |---------|-------------|
+| v2.1.0 | Module Planka : Kanban natif connecté à Planka via API proxy PHP |
 | v2.0.0 | Module PrintVault : viewer 3D STL/3MF/GCode, stockage local, trajectoires GCode illimitées |
 | v1.5.0 | Modules Todo (rappels Discord), Mémo, Courses (liste partagée) |
 | v1.4.0 | Synchronisation CalDAV iOS |
