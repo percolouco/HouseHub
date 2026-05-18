@@ -153,6 +153,9 @@ return [
     'mod_printvault_desc' => 'Manage your 3D print files — STL, 3MF, GCode with interactive viewer.',
     'menu_printvault'    => 'PrintVault',
     'cta_print'          => 'Print',
+    'mod_planka_name'    => 'Planka',
+    'mod_planka_desc'    => 'Manage your projects in Kanban mode with Planka.',
+    'menu_planka'        => 'Planka',
 
     // ==========================================
     // FAMILY CALENDAR

@@ -152,6 +152,9 @@ return [
     'mod_printvault_desc' => 'Gestioneu els vostres fitxers d\'impressió 3D — STL, 3MF, GCode.',
     'menu_printvault'    => 'PrintVault',
     'cta_print'          => 'Imprimir',
+    'mod_planka_name'    => 'Planka',
+    'mod_planka_desc'    => 'Gestioneu els vostres projectes en mode Kanban amb Planka.',
+    'menu_planka'        => 'Planka',
 
     // ==========================================
     // FAMILY CALENDAR

@@ -448,3 +448,14 @@ INSERT IGNORE INTO pf_pv_categories (name, color) VALUES
   ('Non classé','#64748b'),('Déco','#ec4899'),('Fonctionnel','#3b82f6'),
   ('Mécanique','#f59e0b'),('Jouets','#10b981'),('Outils','#ef4444'),
   ('Architecture','#8b5cf6'),('Art','#06b6d4');
+
+-- ─── Planka ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_planka_config (
+  id               INT NOT NULL DEFAULT 1,
+  project_id       VARCHAR(32),
+  admin_token      TEXT,
+  token_expires_at DATETIME,
+  active_board_id  VARCHAR(32),
+  updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
