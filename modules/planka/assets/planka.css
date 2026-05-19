@@ -488,3 +488,17 @@
   background: var(--bg-panel, #f3f4f6);
   color: var(--primary, #4361ee);
 }
+
+.pk-drop-before {
+  height: 4px;
+  border-radius: 4px;
+  transition: height .12s, background .12s;
+  margin: -2px 0;
+}
+.pk-drop-before.drop-before-active {
+  height: 28px;
+  background: rgba(59,130,246,.15);
+  border: 2px dashed var(--primary, #4361ee);
+  border-radius: 6px;
+  margin: 2px 0;
+}

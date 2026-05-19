@@ -150,24 +150,50 @@ function renderBoard() {
 <div class="pk-list pk-list-new">
   <button class="pk-add-list-btn" onclick="promptCreateList()">＋ Ajouter une liste</button>
 </div>`;
+    // Drag source — cards
     area.querySelectorAll('.pk-card').forEach(el => {
         el.addEventListener('click', () => openCardModal(el.dataset.id));
         el.addEventListener('dragstart', e => {
-            e.dataTransfer.setData('text/plain', el.dataset.id);
+            e.dataTransfer.setData('card-id', el.dataset.id);
             e.dataTransfer.effectAllowed = 'move';
-            el.classList.add('is-dragging');
+            setTimeout(() => el.classList.add('is-dragging'), 0);
         });
-        el.addEventListener('dragend', e => { el.classList.remove('is-dragging'); });
+        el.addEventListener('dragend', () => {
+            el.classList.remove('is-dragging');
+            area.querySelectorAll('.drag-over,.drop-before-active').forEach(x => x.classList.remove('drag-over','drop-before-active'));
+        });
     });
-    // Drop target = toute la colonne .pk-cards
+
+    // Drop zone — before a specific card
+    area.querySelectorAll('.pk-drop-before').forEach(el => {
+        el.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); el.classList.add('drop-before-active'); });
+        el.addEventListener('dragleave', () => el.classList.remove('drop-before-active'));
+        el.addEventListener('drop', e => {
+            e.preventDefault(); e.stopPropagation();
+            el.classList.remove('drop-before-active');
+            const cardId = e.dataTransfer.getData('card-id');
+            if (!cardId) return;
+            const listId  = el.dataset.listId;
+            const prevPos = parseFloat(el.dataset.prevPos || 0);
+            const curPos  = parseFloat(el.dataset.curPos  || 0);
+            const newPos  = prevPos === 0 ? curPos / 2 : (prevPos + curPos) / 2;
+            moveCard(cardId, listId, newPos);
+        });
+    });
+
+    // Drop zone — end of column (whole .pk-cards)
     area.querySelectorAll('.pk-cards').forEach(el => {
         el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drag-over'); });
         el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over'); });
         el.addEventListener('drop', e => {
-            e.preventDefault();
+            e.preventDefault(); e.stopPropagation();
             el.classList.remove('drag-over');
-            const cardId = e.dataTransfer.getData('text/plain');
-            if (cardId) dropCard(el.dataset.listId, cardId);
+            const cardId = e.dataTransfer.getData('card-id');
+            if (!cardId) return;
+            const listId = el.dataset.listId;
+            const listCards = state.cards.filter(c => c.listId === listId && c.id !== cardId);
+            const maxPos = listCards.reduce((m, c) => Math.max(m, c.position || 0), 0);
+            moveCard(cardId, listId, maxPos + 65535);
         });
     });
 }
@@ -180,15 +206,15 @@ function renderList(list) {
     <span class="pk-list-name">${esc(list.name)}</span>
     <span class="pk-list-count">${cards.length}</span>
   </div>
-  <div class="pk-cards" id="cards-${list.id}" data-list-id="${list.id}">
+  <div class="pk-cards" id="cards-${list.id}" data-list-id="${list.id}" data-drop-end="1">
     ${cards.length === 0 ? '<div class="pk-drop-hint">Déposer ici</div>' : ''}
-    ${cards.map(c => renderCard(c)).join('')}
+    ${cards.map((c, i) => renderCard(c, cards[i-1] ?? null)).join('')}
   </div>
   <button class="pk-add-card-btn" onclick="quickAddCard('${list.id}')">＋ Ajouter une carte</button>
 </div>`;
 }
 
-function renderCard(card) {
+function renderCard(card, prevCard) {
     const labels = (state.cardLabels || []).filter(cl => cl.cardId === card.id).map(cl => {
         const lbl = (state.labels || []).find(l => l.id === cl.labelId);
         if (!lbl) return '';
@@ -203,24 +229,25 @@ function renderCard(card) {
         return `<span class="pk-due ${cls}">📅 ${formatDate(card.dueDate)}</span>`;
     })() : '';
     const taskHtml = cardTasks.length ? `<span class="pk-task-count">☑ ${doneCount}/${cardTasks.length}</span>` : '';
+    const prevPos = prevCard ? (prevCard.position ?? 0) : 0;
     return `
-<div class="pk-card" data-id="${card.id}" draggable="true">
+<div class="pk-drop-before" data-list-id="${card.listId}" data-before-id="${card.id}" data-prev-pos="${prevPos}" data-cur-pos="${card.position ?? 0}"></div>
+<div class="pk-card" data-id="${card.id}" data-list-id="${card.listId}" data-position="${card.position ?? 0}" draggable="true">
   ${labels ? `<div class="pk-card-labels">${labels}</div>` : ''}
   <div class="pk-card-name">${esc(card.name)}</div>
   ${dueHtml || taskHtml ? `<div class="pk-card-meta">${dueHtml}${taskHtml}</div>` : ''}
 </div>`;
 }
 
-async function dropCard(listId, cardId) {
+async function moveCard(cardId, listId, position) {
     const card = state.cards.find(c => c.id === cardId);
-    if (!card || card.listId === listId) return;
-    // Planka requires position when changing listId
-    const targetCards = state.cards.filter(c => c.listId === listId);
-    const maxPos = targetCards.reduce((m, c) => Math.max(m, c.position || 0), 0);
-    const position = maxPos + 65535;
-    const res = await apiFetch('update_card', { id: cardId }, 'PATCH', { listId, position });
+    if (!card) return;
+    // Skip no-op (same list, same position range)
+    if (card.listId === listId && Math.abs((card.position || 0) - position) < 1) return;
+    const body = { listId, position };
+    const res = await apiFetch('update_card', { id: cardId }, 'PATCH', body);
     if (!res.ok) { showToast('Erreur : ' + (res.error || 'déplacement impossible'), 'error'); return; }
-    card.listId = listId;
+    card.listId   = listId;
     card.position = position;
     renderBoard();
     showToast('Carte déplacée ✓');
@@ -229,7 +256,9 @@ async function dropCard(listId, cardId) {
 async function quickAddCard(listId) {
     const name = prompt('Nom de la carte :');
     if (!name || !name.trim()) return;
-    const res = await apiFetch('create_card', { list_id: listId, board_id: state.activeBoardId, name: name.trim() });
+    const listCards = state.cards.filter(c => c.listId === listId);
+    const maxPos = listCards.reduce((m, c) => Math.max(m, c.position || 0), 0);
+    const res = await apiFetch('create_card', { list_id: listId, name: name.trim(), position: maxPos + 65535 });
     if (!res.ok) { showToast('Erreur: ' + res.error, 'error'); return; }
     state.cards.push(res.data);
     renderBoard();
