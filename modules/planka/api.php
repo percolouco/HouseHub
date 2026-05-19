@@ -96,6 +96,18 @@ if ($action === 'set_active_board') {
     tOk(['updated' => true]);
 }
 
+if ($action === 'create_list') {
+    $board_id = $_GET['board_id'] ?? null; if (!$board_id) tErr('board_id manquant');
+    $name     = trim($_GET['name'] ?? '');  if (!$name)    tErr('name manquant');
+    $position = (int) ($_GET['position'] ?? 65535);
+    $resp = planka_api('POST', '/api/boards/' . $board_id . '/lists', [
+        'name'     => $name,
+        'position' => $position,
+    ], $token);
+    if (empty($resp['item'])) tErr($resp['message'] ?? 'Planka n\'a pas créé la liste', 502);
+    tOk($resp['item']);
+}
+
 if ($action === 'create_card') {
     $list_id  = $_GET['list_id'] ?? null;  if (!$list_id)  tErr('list_id manquant');
     $board_id = $_GET['board_id'] ?? null; if (!$board_id) tErr('board_id manquant');

@@ -94,7 +94,6 @@ require __DIR__ . '/header.php';
 const API = 'modules/planka/api.php';
 let state = { boards: [], activeBoardId: null, lists: [], cards: [], labels: [], cardLabels: [], tasks: [] };
 let editingCard = null;
-let dragCardId  = null;
 
 async function apiFetch(action, params = {}, method = 'GET', body = null) {
     const qs = new URLSearchParams({ action, ...params }).toString();
@@ -146,19 +145,30 @@ async function loadBoard(id) {
 
 function renderBoard() {
     const area = document.getElementById('pk-board-area');
-    if (!state.lists.length) { area.innerHTML = '<div class="pk-loading">Aucune liste dans ce board.</div>'; return; }
     const sorted = [...state.lists].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    area.innerHTML = sorted.map(list => renderList(list)).join('');
+    area.innerHTML = sorted.map(list => renderList(list)).join('') + `
+<div class="pk-list pk-list-new">
+  <button class="pk-add-list-btn" onclick="promptCreateList()">＋ Ajouter une liste</button>
+</div>`;
     area.querySelectorAll('.pk-card').forEach(el => {
         el.addEventListener('click', () => openCardModal(el.dataset.id));
-        el.addEventListener('dragstart', e => { dragCardId = el.dataset.id; el.classList.add('is-dragging'); e.stopPropagation(); });
-        el.addEventListener('dragend', e => { el.classList.remove('is-dragging'); dragCardId = null; });
+        el.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', el.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+            el.classList.add('is-dragging');
+        });
+        el.addEventListener('dragend', e => { el.classList.remove('is-dragging'); });
     });
-    // Drop target = toute la colonne .pk-cards (pas juste une zone invisible de 4px)
+    // Drop target = toute la colonne .pk-cards
     area.querySelectorAll('.pk-cards').forEach(el => {
-        el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+        el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drag-over'); });
         el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over'); });
-        el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('drag-over'); dropCard(el.dataset.listId); });
+        el.addEventListener('drop', e => {
+            e.preventDefault();
+            el.classList.remove('drag-over');
+            const cardId = e.dataTransfer.getData('text/plain');
+            if (cardId) dropCard(el.dataset.listId, cardId);
+        });
     });
 }
 
@@ -201,20 +211,19 @@ function renderCard(card) {
 </div>`;
 }
 
-async function dropCard(listId) {
-    if (!dragCardId) return;
-    const card = state.cards.find(c => c.id === dragCardId);
+async function dropCard(listId, cardId) {
+    const card = state.cards.find(c => c.id === cardId);
     if (!card || card.listId === listId) return;
     // Planka requires position when changing listId
     const targetCards = state.cards.filter(c => c.listId === listId);
     const maxPos = targetCards.reduce((m, c) => Math.max(m, c.position || 0), 0);
     const position = maxPos + 65535;
-    const res = await apiFetch('update_card', { id: dragCardId }, 'PATCH', { listId, position });
-    if (!res.ok) { showToast('Erreur déplacement : ' + (res.error || 'inconnu'), 'error'); return; }
+    const res = await apiFetch('update_card', { id: cardId }, 'PATCH', { listId, position });
+    if (!res.ok) { showToast('Erreur : ' + (res.error || 'déplacement impossible'), 'error'); return; }
     card.listId = listId;
     card.position = position;
     renderBoard();
-    showToast('Carte déplacée');
+    showToast('Carte déplacée ✓');
 }
 
 async function quickAddCard(listId) {
@@ -325,6 +334,17 @@ async function saveSettings() {
     state.activeBoardId = null;
     showToast('Projet mis à jour, rechargement…');
     setTimeout(() => init(), 800);
+}
+
+async function promptCreateList() {
+    const name = prompt('Nom de la nouvelle liste :');
+    if (!name || !name.trim()) return;
+    const maxPos = state.lists.reduce((m, l) => Math.max(m, l.position || 0), 0);
+    const res = await apiFetch('create_list', { board_id: state.activeBoardId, name: name.trim(), position: maxPos + 65535 });
+    if (!res.ok) { showToast('Erreur : ' + (res.error || 'création impossible'), 'error'); return; }
+    state.lists.push(res.data);
+    renderBoard();
+    showToast('Liste créée ✓');
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
