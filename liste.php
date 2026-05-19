@@ -18,14 +18,6 @@ require __DIR__ . '/header.php';
     <button class="liste-tab-add" id="btn-add-list" title="<?= htmlspecialchars(tr('liste_new_list')) ?>">+</button>
   </div>
 
-  <!-- Formulaire de création de liste inline -->
-  <div class="liste-new-form hidden" id="liste-new-form">
-    <input type="text" id="new-list-name" maxlength="100"
-           placeholder="<?= htmlspecialchars(tr('liste_list_name_placeholder')) ?>" autocomplete="off">
-    <button id="btn-confirm-new-list"><?= htmlspecialchars(tr('liste_create')) ?></button>
-    <button id="btn-cancel-new-list"><?= htmlspecialchars(tr('cancel')) ?></button>
-  </div>
-
   <!-- Corps de la liste active -->
   <div class="liste-body" id="liste-body">
 
