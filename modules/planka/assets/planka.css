@@ -463,3 +463,28 @@
   border-radius: 8px;
   margin-bottom: .35rem;
 }
+
+.pk-list-new {
+  background: transparent;
+  border: 2px dashed var(--border-light, #e5e7eb);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: .75rem .5rem;
+}
+.pk-add-list-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #9ca3af);
+  font-size: .9rem;
+  font-weight: 600;
+  padding: .4rem .75rem;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.pk-add-list-btn:hover {
+  background: var(--bg-panel, #f3f4f6);
+  color: var(--primary, #4361ee);
+}
