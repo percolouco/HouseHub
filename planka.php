@@ -151,12 +151,13 @@ function renderBoard() {
     area.innerHTML = sorted.map(list => renderList(list)).join('');
     area.querySelectorAll('.pk-card').forEach(el => {
         el.addEventListener('click', () => openCardModal(el.dataset.id));
-        el.addEventListener('dragstart', e => { dragCardId = el.dataset.id; el.classList.add('is-dragging'); });
+        el.addEventListener('dragstart', e => { dragCardId = el.dataset.id; el.classList.add('is-dragging'); e.stopPropagation(); });
         el.addEventListener('dragend', e => { el.classList.remove('is-dragging'); dragCardId = null; });
     });
-    area.querySelectorAll('.pk-drop-zone').forEach(el => {
+    // Drop target = toute la colonne .pk-cards (pas juste une zone invisible de 4px)
+    area.querySelectorAll('.pk-cards').forEach(el => {
         el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
-        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+        el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over'); });
         el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('drag-over'); dropCard(el.dataset.listId); });
     });
 }
@@ -169,8 +170,8 @@ function renderList(list) {
     <span class="pk-list-name">${esc(list.name)}</span>
     <span class="pk-list-count">${cards.length}</span>
   </div>
-  <div class="pk-cards" id="cards-${list.id}">
-    <div class="pk-drop-zone" data-list-id="${list.id}"></div>
+  <div class="pk-cards" id="cards-${list.id}" data-list-id="${list.id}">
+    ${cards.length === 0 ? '<div class="pk-drop-hint">Déposer ici</div>' : ''}
     ${cards.map(c => renderCard(c)).join('')}
   </div>
   <button class="pk-add-card-btn" onclick="quickAddCard('${list.id}')">＋ Ajouter une carte</button>

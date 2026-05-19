@@ -444,3 +444,22 @@
   .pk-page { height: auto; overflow: visible; }
   .pk-board-area { overflow-x: auto; height: auto; padding-bottom: 4rem; }
 }
+
+/* ── Drag & Drop amélioré ──────────────────────────────────────────────────── */
+.pk-cards.drag-over {
+  background: rgba(59,130,246,.07);
+  outline: 2px dashed var(--primary, #4361ee);
+  outline-offset: -2px;
+  border-radius: 8px;
+  min-height: 80px;
+}
+.pk-card.is-dragging { opacity: .4; }
+.pk-drop-hint {
+  text-align: center;
+  color: var(--text-muted, #9ca3af);
+  font-size: .78rem;
+  padding: .75rem;
+  border: 2px dashed var(--border-light, #e5e7eb);
+  border-radius: 8px;
+  margin-bottom: .35rem;
+}
