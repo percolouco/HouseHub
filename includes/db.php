@@ -34,6 +34,21 @@ try {
         ]
     );
     $pdo->exec("SET collation_connection = utf8mb4_general_ci");
+
+    try {
+        $foyer = $pdo->query("SELECT currency, zone_scolaire FROM pf_foyer_settings WHERE id = 1")->fetch();
+        if (!defined('CURRENCY')) {
+            define('CURRENCY', $foyer['currency'] ?? '€');
+        }
+        if (!defined('ZONE_SCOLAIRE')) {
+            define('ZONE_SCOLAIRE', $foyer['zone_scolaire'] ?? 'C');
+        }
+    } catch (\PDOException $e) {
+        if (!defined('CURRENCY')) define('CURRENCY', '€');
+        if (!defined('ZONE_SCOLAIRE')) define('ZONE_SCOLAIRE', 'C');
+    }
+    // ------------------------------------------------
+
 } catch (\PDOException $e) {
     if (!headers_sent()) { header('Content-Type: application/json'); http_response_code(500); }
     die(json_encode(['ok' => false, 'error' => 'Erreur BDD : ' . $e->getMessage()]));

@@ -133,12 +133,25 @@ Le cron tourne chaque minute et envoie une notification Discord à l'heure exact
 
 ---
 
+## 🔄 Mises à jour & Migrations SQL (Multi-Tenant)
+
+L'architecture de HouseHub isole chaque foyer dans sa propre base de données (`househub_f1`, `househub_f2`, etc.). Lors de l'ajout de nouvelles fonctionnalités impliquant des changements de structure SQL, il faut suivre une double procédure :
+
+1. **Pour les futures familles (Initialisation) :**
+   Mettre à jour le fichier `docker/schema_family.sql`. Ce fichier est lu par `register.php` à la création d'un nouvel espace.
+2. **Pour les familles existantes (Migration) :**
+   Créer ou mettre à jour le script `migrate.php` à la racine du projet. Ce script boucle sur toutes les bases existantes référencées dans `househub_meta.families` pour y injecter les requêtes `ALTER TABLE` ou `CREATE TABLE`.
+   - **Exécution** : Accéder à `https://votre-domaine.com/migrate.php` avec un navigateur.
+   - ⚠️ **Sécurité** : Pensez à supprimer ou sécuriser l'accès à ce fichier après exécution en production.
+
+---
+
 ## 🗺️ Roadmap de Variabilisation (Migration Multi-Tenant)
 
 Afin de transformer complètement l'application héritée de Pacha Family en un produit générique et autonome pour chaque espace familial, les chantiers suivants doivent être menés.
 
 🟢 Niveau 1 : Facile (Constantes et configurations globales)
-[ ] Configuration de base : Extraire la devise (CURRENCY) et la zone de vacances scolaires (ZONE_SCOLAIRE) du fichier config.php pour les stocker dans les paramètres d'espace en BDD.
+[x] Configuration de base : Extraire la devise (CURRENCY) et la zone de vacances scolaires (ZONE_SCOLAIRE) du fichier config.php pour les stocker dans les paramètres d'espace en BDD.
 [ ] Filtres API Éducation Nationale : Rendre dynamique la zone de l'API (zones LIKE '%Zone C%' dans family-calendar.js) pour s'adapter à la région de chaque foyer.
 [ ] Identifiant Planka : Variabiliser le project_id Planka par défaut écrit en dur dans planka/api.php.
 [ ] Suppression des IDs statiques : Supprimer les IDs parents fixes (ID_ALEX = 2, ID_LAIA = 3) dans config.php au profit d'une lecture dynamique basée sur les utilisateurs réels de la famille connectée.
@@ -163,6 +176,7 @@ Afin de transformer complètement l'application héritée de Pacha Family en un 
 
 | Version | Changements                                                                                |
 | ------- | ------------------------------------------------------------------------------------------ |
+| v2.2.0  | Multi-tenant (p.1) : Paramètres dynamiques du foyer (€, Zone) via BDD + script migration   |
 | v2.1.0  | Module Planka : Kanban natif connecté à Planka via API proxy PHP                           |
 | v2.0.0  | Module PrintVault : viewer 3D STL/3MF/GCode, stockage local, trajectoires GCode illimitées |
 | v1.5.0  | Modules Todo (rappels Discord), Mémo, Courses (liste partagée)                             |

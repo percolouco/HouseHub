@@ -12,6 +12,17 @@ CREATE TABLE IF NOT EXISTS pf_users (
   display_name  VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ─── Familles ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_foyer_settings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  currency VARCHAR(10) NOT NULL DEFAULT '€',
+  zone_scolaire VARCHAR(5) NOT NULL DEFAULT 'C',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Initialisation de la ligne unique par défaut
+INSERT IGNORE INTO pf_foyer_settings (id, currency, zone_scolaire) VALUES (1, '€', 'C');
+
 -- ─── Personnes ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_people (
   id   INT AUTO_INCREMENT PRIMARY KEY,

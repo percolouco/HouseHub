@@ -35,6 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
     $action = $_POST['action'] ?? '';
 
+    if ($action === 'update_family_info') {
+        require_once __DIR__ . '/includes/db.php';
+        $currency = trim($_POST['currency'] ?? '€');
+        $zone = trim($_POST['zone_scolaire'] ?? 'C');
+
+        $stmtSave = $pdo->prepare("UPDATE pf_foyer_settings SET currency = ?, zone_scolaire = ? WHERE id = 1");
+        $stmtSave->execute([$currency, $zone]);
+        $success = "Paramètres du foyer mis à jour avec succès.";
+    }
+
     if ($action === 'set_modules' && $family_id) {
         $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'groceries', 'calendar_ios', 'printvault', 'planka'];
         $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
@@ -439,6 +449,41 @@ require __DIR__ . '/header.php';
     <?php endif; ?>
   </section>
   <?php endif; ?>
+
+
+  <!-- ── Famille ──────────────────────────────────────────────────────────── -->
+   <?php
+    $currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
+    $currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
+  ?>
+  <section class="pf-panel-card">
+    <h2 class="pf-card-h2">👪 Configuration du foyer</h2>
+    <p class="pf-muted-note">Configurez les informations partagées par l'ensemble de votre foyer.</p>
+    
+    <form method="post" class="pf-stack-md">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="action" value="update_family_info">
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label class="pf-label">Devise monétaire</label>
+          <input type="text" name="currency" class="pf-input" value="<?= htmlspecialchars($currentCurrency) ?>" placeholder="ex: €, $, CHF" required maxlength="10">
+        </div>
+        <div class="form-group">
+          <label class="pf-label">Zone de vacances scolaires (France)</label>
+          <select name="zone_scolaire" class="pf-input" style="background:var(--bg-panel);">
+            <option value="A" <?= $currentZone === 'A' ? 'selected' : '' ?>>Zone A</option>
+            <option value="B" <?= $currentZone === 'B' ? 'selected' : '' ?>>Zone B</option>
+            <option value="C" <?= $currentZone === 'C' ? 'selected' : '' ?>>Zone C</option>
+            <option value="Autre" <?= $currentZone === 'Autre' ? 'selected' : '' ?>>Hors France / Autre</option>
+          </select>
+        </div>
+      </div>
+      
+      <button type="submit" class="pf-btn">Enregistrer</button>
+    </form>
+  </section>
+
 
   <!-- ── Profil ──────────────────────────────────────────────────────────── -->
   <section class="pf-panel-card">
