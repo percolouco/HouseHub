@@ -253,22 +253,31 @@ function renderTabs() {
   container.innerHTML = '';
 
   state.lists.forEach(list => {
+    const isActive = list.id === state.currentListId;
     const tab = document.createElement('div');
-    tab.className = 'liste-tab' + (list.id === state.currentListId ? ' active' : '');
+    tab.className = 'liste-tab' + (isActive ? ' active' : '');
     tab.dataset.id = list.id;
 
-    const dot   = list.color ? `<span class="liste-tab-dot" style="background:${esc(list.color)}"></span>` : '';
+    // Apply custom color to entire tab
+    if (list.color) {
+      if (isActive) {
+        tab.style.cssText = `background:${list.color};border-color:${list.color};color:#fff`;
+      } else {
+        tab.style.cssText = `border-color:${list.color};color:${list.color}`;
+      }
+    }
+
     const emoji = typeEmoji(list.list_type);
     const prefix = emoji ? `<span class="liste-tab-type">${emoji}</span>` : '';
 
-    if (list.id === state.currentListId) {
+    if (isActive) {
       tab.innerHTML = `
-        ${dot}${prefix}
+        ${prefix}
         <span class="liste-tab-name">${esc(list.name)}</span>
         <button class="liste-tab-btn liste-tab-edit" title="Modifier" data-id="${list.id}">✏</button>
       `;
     } else {
-      tab.innerHTML = `${dot}${prefix}<span class="liste-tab-name">${esc(list.name)}</span>`;
+      tab.innerHTML = `${prefix}<span class="liste-tab-name">${esc(list.name)}</span>`;
       tab.addEventListener('click', () => switchList(list.id));
     }
     container.appendChild(tab);

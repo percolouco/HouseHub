@@ -435,15 +435,8 @@
 }
 .liste-color-swatch-none.active { outline-color: var(--primary, #4361ee); }
 
-/* ── Tab dot + type emoji ──────────────────────────────────────────────────── */
+/* ── Tab type emoji ────────────────────────────────────────────────────────── */
 
-.liste-tab-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: inline-block;
-}
 .liste-tab-type { font-size: .85rem; line-height: 1; }
 
 /* ── Category section headers ──────────────────────────────────────────────── */
