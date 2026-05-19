@@ -68,13 +68,25 @@ if ($action === 'board') {
     $id = $_GET['id'] ?? null; if (!$id) tErr('ID manquant');
     $resp = planka_api('GET', '/api/boards/' . $id, null, $token);
     $inc = $resp['included'] ?? [];
+
+    // Filter: only lists with a real name (Planka creates unnamed "None" placeholder lists)
+    $lists = array_values(array_filter($inc['lists'] ?? [], fn($l) =>
+        !empty($l['name']) && $l['name'] !== 'None' &&
+        (isset($l['boardId']) ? $l['boardId'] === $id : true)
+    ));
+    // Filter cards that belong to a list in this board
+    $listIds = array_column($lists, 'id');
+    $cards = array_values(array_filter($inc['cards'] ?? [], fn($c) =>
+        in_array($c['listId'] ?? '', $listIds)
+    ));
+
     tOk([
-        'lists'   => $inc['lists'] ?? [],
-        'cards'   => $inc['cards'] ?? [],
-        'labels'  => $inc['labels'] ?? [],
-        'members' => $inc['users'] ?? [],
+        'lists'      => $lists,
+        'cards'      => $cards,
+        'labels'     => $inc['labels'] ?? [],
+        'members'    => $inc['users'] ?? [],
         'cardLabels' => $inc['cardLabels'] ?? [],
-        'tasks'   => $inc['tasks'] ?? [],
+        'tasks'      => $inc['tasks'] ?? [],
     ]);
 }
 
@@ -84,28 +96,45 @@ if ($action === 'set_active_board') {
     tOk(['updated' => true]);
 }
 
-if ($action === 'create_card') {
-    $list_id  = $_GET['list_id'] ?? null;  if (!$list_id)  tErr('list_id manquant');
+if ($action === 'create_list') {
     $board_id = $_GET['board_id'] ?? null; if (!$board_id) tErr('board_id manquant');
-    $name     = trim($_GET['name'] ?? ''); if (!$name)     tErr('name manquant');
-    $resp = planka_api('POST', '/api/boards/' . $board_id . '/cards', [
-        'listId'   => $list_id,
+    $name     = trim($_GET['name'] ?? '');  if (!$name)    tErr('name manquant');
+    $position = (float) ($_GET['position'] ?? 65535);
+    $resp = planka_api('POST', '/api/boards/' . $board_id . '/lists', [
         'name'     => $name,
-        'position' => 65535,
+        'position' => $position,
+        'type'     => 'active',
     ], $token);
-    tOk($resp['item'] ?? []);
+    if (empty($resp['item'])) tErr($resp['message'] ?? ($resp['problems'][0] ?? 'Erreur Planka'), 502);
+    tOk($resp['item']);
+}
+
+if ($action === 'create_card') {
+    $list_id = $_GET['list_id'] ?? null; if (!$list_id) tErr('list_id manquant');
+    $name    = trim($_GET['name'] ?? '');  if (!$name)  tErr('name manquant');
+    $pos     = (float) ($_GET['position'] ?? 65535);
+    // Planka v2+: POST /api/lists/{listId}/cards with type required
+    $resp = planka_api('POST', '/api/lists/' . $list_id . '/cards', [
+        'name'     => $name,
+        'position' => $pos,
+        'type'     => 'story',
+    ], $token);
+    if (empty($resp['item'])) tErr($resp['message'] ?? ($resp['problems'][0] ?? 'Erreur Planka'), 502);
+    tOk($resp['item']);
 }
 
 if ($action === 'update_card') {
     $id = $_GET['id'] ?? null; if (!$id) tErr('ID manquant');
     $d = tBody();
     $payload = [];
-    if (isset($d['name']))        $payload['name']        = $d['name'];
-    if (isset($d['description']))  $payload['description']  = $d['description'];
-    if (array_key_exists('dueDate', $d)) $payload['dueDate'] = $d['dueDate'];
-    if (isset($d['listId']))       $payload['listId']       = $d['listId'];
+    if (isset($d['name']))               $payload['name']        = $d['name'];
+    if (isset($d['description']))        $payload['description'] = $d['description'];
+    if (array_key_exists('dueDate', $d)) $payload['dueDate']     = $d['dueDate'];
+    if (isset($d['listId']))             $payload['listId']      = $d['listId'];
+    if (isset($d['position']))           $payload['position']    = (float)$d['position'];
     $resp = planka_api('PATCH', '/api/cards/' . $id, $payload, $token);
-    tOk($resp['item'] ?? []);
+    if (empty($resp['item'])) tErr($resp['message'] ?? ($resp['problems'][0] ?? 'Planka a rejeté la mise à jour'), 502);
+    tOk($resp['item']);
 }
 
 if ($action === 'delete_card') {
