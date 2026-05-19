@@ -69,9 +69,10 @@ if ($action === 'board') {
     $resp = planka_api('GET', '/api/boards/' . $id, null, $token);
     $inc = $resp['included'] ?? [];
 
-    // Filter lists that actually belong to this board (prevents ghost lists from other boards)
+    // Filter: only lists with a real name (Planka creates unnamed "None" placeholder lists)
     $lists = array_values(array_filter($inc['lists'] ?? [], fn($l) =>
-        isset($l['boardId']) ? $l['boardId'] === $id : true
+        !empty($l['name']) && $l['name'] !== 'None' &&
+        (isset($l['boardId']) ? $l['boardId'] === $id : true)
     ));
     // Filter cards that belong to a list in this board
     $listIds = array_column($lists, 'id');
