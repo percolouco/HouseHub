@@ -150,7 +150,7 @@ function renderBoard() {
 <div class="pk-list pk-list-new">
   <button class="pk-add-list-btn" onclick="promptCreateList()">＋ Ajouter une liste</button>
 </div>`;
-    // Drag source — cards
+    // ── Drag source ──────────────────────────────────────────────────────────
     area.querySelectorAll('.pk-card').forEach(el => {
         el.addEventListener('click', () => openCardModal(el.dataset.id));
         el.addEventListener('dragstart', e => {
@@ -160,39 +160,60 @@ function renderBoard() {
         });
         el.addEventListener('dragend', () => {
             el.classList.remove('is-dragging');
-            area.querySelectorAll('.drag-over,.drop-before-active').forEach(x => x.classList.remove('drag-over','drop-before-active'));
+            area.querySelectorAll('.drop-top,.drop-bottom,.drag-over').forEach(x =>
+                x.classList.remove('drop-top','drop-bottom','drag-over')
+            );
         });
-    });
 
-    // Drop zone — before a specific card
-    area.querySelectorAll('.pk-drop-before').forEach(el => {
-        el.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); el.classList.add('drop-before-active'); });
-        el.addEventListener('dragleave', () => el.classList.remove('drop-before-active'));
+        // ── Drop ON a card: top half = before, bottom half = after ──────────
+        el.addEventListener('dragover', e => {
+            e.preventDefault(); e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            const mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+            if (e.clientY < mid) { el.classList.add('drop-top');    el.classList.remove('drop-bottom'); }
+            else                 { el.classList.add('drop-bottom'); el.classList.remove('drop-top'); }
+        });
+        el.addEventListener('dragleave', () => el.classList.remove('drop-top','drop-bottom'));
         el.addEventListener('drop', e => {
             e.preventDefault(); e.stopPropagation();
-            el.classList.remove('drop-before-active');
+            const isBefore = el.classList.contains('drop-top');
+            el.classList.remove('drop-top','drop-bottom');
             const cardId = e.dataTransfer.getData('card-id');
-            if (!cardId) return;
-            const listId  = el.dataset.listId;
-            const prevPos = parseFloat(el.dataset.prevPos || 0);
-            const curPos  = parseFloat(el.dataset.curPos  || 0);
-            const newPos  = prevPos === 0 ? curPos / 2 : (prevPos + curPos) / 2;
-            moveCard(cardId, listId, newPos);
+            if (!cardId || cardId === el.dataset.id) return;
+            const listId = el.dataset.listId;
+            const sorted = state.cards.filter(c => c.listId === listId && c.id !== cardId)
+                                      .sort((a, b) => (a.position||0) - (b.position||0));
+            const idx = sorted.findIndex(c => c.id === el.dataset.id);
+            let pos;
+            if (isBefore) {
+                pos = idx === 0
+                    ? (sorted[0].position || 65535) / 2
+                    : ((sorted[idx-1].position||0) + (sorted[idx].position||0)) / 2;
+            } else {
+                pos = idx === sorted.length - 1
+                    ? (sorted[idx].position || 0) + 65535
+                    : ((sorted[idx].position||0) + (sorted[idx+1].position||0)) / 2;
+            }
+            moveCard(cardId, listId, pos);
         });
     });
 
-    // Drop zone — end of column (whole .pk-cards)
+    // ── Drop at end of column (empty list or after all cards) ───────────────
     area.querySelectorAll('.pk-cards').forEach(el => {
-        el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drag-over'); });
+        el.addEventListener('dragover', e => {
+            // Only highlight column when not over a card
+            if (!e.target.closest('.pk-card')) { e.preventDefault(); el.classList.add('drag-over'); }
+        });
         el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over'); });
         el.addEventListener('drop', e => {
-            e.preventDefault(); e.stopPropagation();
+            if (e.target.closest('.pk-card')) return; // handled by card listener
+            e.preventDefault();
             el.classList.remove('drag-over');
             const cardId = e.dataTransfer.getData('card-id');
             if (!cardId) return;
-            const listId = el.dataset.listId;
-            const listCards = state.cards.filter(c => c.listId === listId && c.id !== cardId);
-            const maxPos = listCards.reduce((m, c) => Math.max(m, c.position || 0), 0);
+            const listId  = el.dataset.listId;
+            const others  = state.cards.filter(c => c.listId === listId && c.id !== cardId);
+            const maxPos  = others.reduce((m, c) => Math.max(m, c.position||0), 0);
             moveCard(cardId, listId, maxPos + 65535);
         });
     });
@@ -206,15 +227,15 @@ function renderList(list) {
     <span class="pk-list-name">${esc(list.name)}</span>
     <span class="pk-list-count">${cards.length}</span>
   </div>
-  <div class="pk-cards" id="cards-${list.id}" data-list-id="${list.id}" data-drop-end="1">
+  <div class="pk-cards" id="cards-${list.id}" data-list-id="${list.id}">
     ${cards.length === 0 ? '<div class="pk-drop-hint">Déposer ici</div>' : ''}
-    ${cards.map((c, i) => renderCard(c, cards[i-1] ?? null)).join('')}
+    ${cards.map(c => renderCard(c)).join('')}
   </div>
   <button class="pk-add-card-btn" onclick="quickAddCard('${list.id}')">＋ Ajouter une carte</button>
 </div>`;
 }
 
-function renderCard(card, prevCard) {
+function renderCard(card) {
     const labels = (state.cardLabels || []).filter(cl => cl.cardId === card.id).map(cl => {
         const lbl = (state.labels || []).find(l => l.id === cl.labelId);
         if (!lbl) return '';
@@ -229,9 +250,7 @@ function renderCard(card, prevCard) {
         return `<span class="pk-due ${cls}">📅 ${formatDate(card.dueDate)}</span>`;
     })() : '';
     const taskHtml = cardTasks.length ? `<span class="pk-task-count">☑ ${doneCount}/${cardTasks.length}</span>` : '';
-    const prevPos = prevCard ? (prevCard.position ?? 0) : 0;
     return `
-<div class="pk-drop-before" data-list-id="${card.listId}" data-before-id="${card.id}" data-prev-pos="${prevPos}" data-cur-pos="${card.position ?? 0}"></div>
 <div class="pk-card" data-id="${card.id}" data-list-id="${card.listId}" data-position="${card.position ?? 0}" draggable="true">
   ${labels ? `<div class="pk-card-labels">${labels}</div>` : ''}
   <div class="pk-card-name">${esc(card.name)}</div>

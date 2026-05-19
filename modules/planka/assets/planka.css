@@ -514,3 +514,7 @@
   border-radius: 6px;
   margin: 2px 0;
 }
+
+/* ── Indicateurs drop sur carte ────────────────────────────────────────────── */
+.pk-card.drop-top    { border-top:    3px solid var(--primary, #4361ee) !important; }
+.pk-card.drop-bottom { border-bottom: 3px solid var(--primary, #4361ee) !important; }
