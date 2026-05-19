@@ -205,9 +205,16 @@ async function dropCard(listId) {
     if (!dragCardId) return;
     const card = state.cards.find(c => c.id === dragCardId);
     if (!card || card.listId === listId) return;
-    await apiFetch('update_card', { id: dragCardId }, 'PATCH', { listId });
+    // Planka requires position when changing listId
+    const targetCards = state.cards.filter(c => c.listId === listId);
+    const maxPos = targetCards.reduce((m, c) => Math.max(m, c.position || 0), 0);
+    const position = maxPos + 65535;
+    const res = await apiFetch('update_card', { id: dragCardId }, 'PATCH', { listId, position });
+    if (!res.ok) { showToast('Erreur déplacement : ' + (res.error || 'inconnu'), 'error'); return; }
     card.listId = listId;
+    card.position = position;
     renderBoard();
+    showToast('Carte déplacée');
 }
 
 async function quickAddCard(listId) {
