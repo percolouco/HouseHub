@@ -68,13 +68,24 @@ if ($action === 'board') {
     $id = $_GET['id'] ?? null; if (!$id) tErr('ID manquant');
     $resp = planka_api('GET', '/api/boards/' . $id, null, $token);
     $inc = $resp['included'] ?? [];
+
+    // Filter lists that actually belong to this board (prevents ghost lists from other boards)
+    $lists = array_values(array_filter($inc['lists'] ?? [], fn($l) =>
+        isset($l['boardId']) ? $l['boardId'] === $id : true
+    ));
+    // Filter cards that belong to a list in this board
+    $listIds = array_column($lists, 'id');
+    $cards = array_values(array_filter($inc['cards'] ?? [], fn($c) =>
+        in_array($c['listId'] ?? '', $listIds)
+    ));
+
     tOk([
-        'lists'   => $inc['lists'] ?? [],
-        'cards'   => $inc['cards'] ?? [],
-        'labels'  => $inc['labels'] ?? [],
-        'members' => $inc['users'] ?? [],
+        'lists'      => $lists,
+        'cards'      => $cards,
+        'labels'     => $inc['labels'] ?? [],
+        'members'    => $inc['users'] ?? [],
         'cardLabels' => $inc['cardLabels'] ?? [],
-        'tasks'   => $inc['tasks'] ?? [],
+        'tasks'      => $inc['tasks'] ?? [],
     ]);
 }
 
