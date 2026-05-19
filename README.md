@@ -35,20 +35,23 @@ Aucun compte par défaut — le premier utilisateur s'inscrit via `/register.php
 
 HouseHub supporte plusieurs familles indépendantes sur la même instance.
 
-| URL | Description |
-|-----|-------------|
+| URL             | Description                                                         |
+| --------------- | ------------------------------------------------------------------- |
 | `/register.php` | Créer un compte + nouvel espace, ou rejoindre via code d'invitation |
-| `/login.php` | Connexion |
-| `/settings.php` | Profil, mot de passe, langue, modules actifs, code d'invitation |
-| `/admin/` | Panneau d'administration (admin uniquement) |
+| `/login.php`    | Connexion                                                           |
+| `/settings.php` | Profil, mot de passe, langue, modules actifs, code d'invitation     |
+| `/admin/`       | Panneau d'administration (admin uniquement)                         |
 
 ### Inviter quelqu'un dans son espace
+
 1. Aller sur `/settings.php` → copier le code d'invitation
 2. La personne va sur `/register.php` → onglet "Rejoindre" → coller le code
 3. Les deux comptes partagent le même environnement de données
 
 ### Rôle admin
+
 Le premier utilisateur inscrit doit être promu admin manuellement :
+
 ```sql
 UPDATE househub_meta.users SET is_admin = 1 WHERE username = 'ton_username';
 ```
@@ -59,19 +62,19 @@ UPDATE househub_meta.users SET is_admin = 1 WHERE username = 'ton_username';
 
 Tous les modules sont activables/désactivables par famille depuis `/settings.php`.
 
-| Module | Route | Description |
-|--------|-------|-------------|
-| 💰 Budget | `/budget.php` | Suivi mensuel, prévisionnel, épargne, import CSV bancaire |
-| 📅 Calendrier | `/family-calendar.php` | Congés (CP/JRA/JA), modes de garde, planning hebdo, vacances scolaires |
-| 🗓️ Calendrier iOS | `/calendar-ios.php` | Synchronisation CalDAV avec iPhone/iPad |
-| 🏖️ Voyages | `/holidays.php` | Roadtrips, cartographie Leaflet, itinéraires OSRM, météo Open-Meteo |
-| 🎁 Cadeaux | `/gift-list.php` | Listes Noël / anniversaires, intégration Tricount |
-| 🚗 Garage | `/garage.php` | Véhicules, historique entretiens, pièces détachées |
-| 🛒 Courses | `/groceries.php` | Liste de courses partagée en temps réel |
-| ✅ Todo | `/todo.php` | Listes de tâches avec rappels quotidiens via Discord webhook |
-| 📝 Mémo | `/memo.php` | Notes personnelles / familiales avec éditeur riche |
-| 🖨️ PrintVault | `/printvault.php` | Gestionnaire de fichiers d'impression 3D (STL, 3MF, GCode) avec viewer Three.js |
-| 📋 Planka | `/planka.php` | Kanban natif connecté à Planka — boards, listes, cartes, drag & drop, checklist |
+| Module            | Route                  | Description                                                                     |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------- |
+| 💰 Budget         | `/budget.php`          | Suivi mensuel, prévisionnel, épargne, import CSV bancaire                       |
+| 📅 Calendrier     | `/family-calendar.php` | Congés (CP/JRA/JA), modes de garde, planning hebdo, vacances scolaires          |
+| 🗓️ Calendrier iOS | `/calendar-ios.php`    | Synchronisation CalDAV avec iPhone/iPad                                         |
+| 🏖️ Voyages        | `/holidays.php`        | Roadtrips, cartographie Leaflet, itinéraires OSRM, météo Open-Meteo             |
+| 🎁 Cadeaux        | `/gift-list.php`       | Listes Noël / anniversaires, intégration Tricount                               |
+| 🚗 Garage         | `/garage.php`          | Véhicules, historique entretiens, pièces détachées                              |
+| 🛒 Courses        | `/groceries.php`       | Liste de courses partagée en temps réel                                         |
+| ✅ Todo           | `/todo.php`            | Listes de tâches avec rappels quotidiens via Discord webhook                    |
+| 📝 Mémo           | `/memo.php`            | Notes personnelles / familiales avec éditeur riche                              |
+| 🖨️ PrintVault     | `/printvault.php`      | Gestionnaire de fichiers d'impression 3D (STL, 3MF, GCode) avec viewer Three.js |
+| 📋 Planka         | `/planka.php`          | Kanban natif connecté à Planka — boards, listes, cartes, drag & drop, checklist |
 
 ---
 
@@ -117,28 +120,54 @@ Le cron tourne chaque minute et envoie une notification Discord à l'heure exact
 
 ## 🛠️ Stack technique
 
-| Composant | Technologie |
-|-----------|-------------|
-| Backend | PHP 8.2 (Apache) |
-| Base de données | MariaDB 11 |
-| Frontend | Vanilla JS, CSS custom (dark mode natif) |
-| Viewer 3D | Three.js (ES modules via importmap CDN) |
-| Cartographie | Leaflet + OSRM |
-| Conteneurisation | Docker + Docker Compose |
-| Reverse proxy | Traefik |
-| Internationalisation | FR / CA |
+| Composant            | Technologie                              |
+| -------------------- | ---------------------------------------- |
+| Backend              | PHP 8.2 (Apache)                         |
+| Base de données      | MariaDB 11                               |
+| Frontend             | Vanilla JS, CSS custom (dark mode natif) |
+| Viewer 3D            | Three.js (ES modules via importmap CDN)  |
+| Cartographie         | Leaflet + OSRM                           |
+| Conteneurisation     | Docker + Docker Compose                  |
+| Reverse proxy        | Traefik                                  |
+| Internationalisation | FR / CA                                  |
+
+---
+
+## 🗺️ Roadmap de Variabilisation (Migration Multi-Tenant)
+
+Afin de transformer complètement l'application héritée de Pacha Family en un produit générique et autonome pour chaque espace familial, les chantiers suivants doivent être menés.
+
+🟢 Niveau 1 : Facile (Constantes et configurations globales)
+[ ] Configuration de base : Extraire la devise (CURRENCY) et la zone de vacances scolaires (ZONE_SCOLAIRE) du fichier config.php pour les stocker dans les paramètres d'espace en BDD.
+[ ] Filtres API Éducation Nationale : Rendre dynamique la zone de l'API (zones LIKE '%Zone C%' dans family-calendar.js) pour s'adapter à la région de chaque foyer.
+[ ] Identifiant Planka : Variabiliser le project_id Planka par défaut écrit en dur dans planka/api.php.
+[ ] Suppression des IDs statiques : Supprimer les IDs parents fixes (ID_ALEX = 2, ID_LAIA = 3) dans config.php au profit d'une lecture dynamique basée sur les utilisateurs réels de la famille connectée.
+
+🟡 Niveau 2 : Intermédiaire (Listes et dictionnaires en dur)
+[ ] Gestion des membres (Cadeaux) : Dans gift-list.php, remplacer la liste d'enfants ($children) et d'adultes ($baseAdults, $extraAdults) codée en dur par une lecture dynamique des membres du foyer déclarés en BDD.
+[ ] Occasions festives (Cadeaux) : Rendre configurables les occasions spéciales (TIO, NOEL, ROIS, ANNIV, SANT).
+[ ] Configuration des catégories (Budget) : Dans budget/views/suivi.php, migrer le tableau $categoriesConfig (FMCG, Essence, École, etc.), leurs couleurs et leurs suggestions de magasins associés vers un stockage paramétrable.
+[ ] Déductions du Reste à venir (Budget) : Rendre dynamiques les libellés de catégories ciblés pour le calcul automatique du reste à venir (Estimacio escola, Estimation gasolina, etc.).
+[ ] Types de carburants (Garage) : Variabiliser la liste statique des carburants dans garage.php.
+
+🔴 Niveau 3 : Complexe (Logique métier et Schéma SQL)
+[ ] Refonte relationnelle de la répartition (Budget) : Modifier la structure de la table pf_alloc_values pour supprimer les colonnes figées amount_alex et amount_laia et basculer sur un modèle relationnel (alloc_id, user_id, amount) capable de gérer n'importe quel nombre d'adultes (1, 2, 3 ou plus).
+[ ] Destinations de transferts (Budget) : Rendre dynamiques les cibles de virements prévisionnels (vers L.Pol, vers L.Pep, etc.) en fonction des comptes épargne créés par la famille.
+[ ] Onglets d'Épargne : Générer dynamiquement les sous-onglets de la vue epargne.php à partir des membres réels au lieu des blocs statiques Alex, Laia et Nens.
+[ ] Types de Garde (Calendrier) : Supprimer les types d'événements et compteurs codés en dur (OFF_CAROLE, EXTRA_OFF_CAROLE, CENTRE, AVIS, PEP_SICK) pour permettre à chaque foyer de définir ses propres modalités de garde et compteurs de congés associés.
+[ ] Cycles de Congés : Rendre configurables les mois de début de calcul des droits aux congés (Août pour les CP, date d'anniversaire personnalisée pour les JA) par profil utilisateur.
 
 ---
 
 ## 📌 Versioning
 
-| Version | Changements |
-|---------|-------------|
-| v2.1.0 | Module Planka : Kanban natif connecté à Planka via API proxy PHP |
-| v2.0.0 | Module PrintVault : viewer 3D STL/3MF/GCode, stockage local, trajectoires GCode illimitées |
-| v1.5.0 | Modules Todo (rappels Discord), Mémo, Courses (liste partagée) |
-| v1.4.0 | Synchronisation CalDAV iOS |
-| v1.3.0 | Optimisation SQL — suppression des requêtes N+1, temps de réponse ÷3 |
-| v1.2.0 | Modernisation UI — Toasts, confirmations sur-mesure |
-| v1.1.0 | Refonte expérience mobile (Bottom Sheets) |
-| v1.0.0 | Version stable initiale — Budget, Calendrier, Voyages, Cadeaux, Garage |
+| Version | Changements                                                                                |
+| ------- | ------------------------------------------------------------------------------------------ |
+| v2.1.0  | Module Planka : Kanban natif connecté à Planka via API proxy PHP                           |
+| v2.0.0  | Module PrintVault : viewer 3D STL/3MF/GCode, stockage local, trajectoires GCode illimitées |
+| v1.5.0  | Modules Todo (rappels Discord), Mémo, Courses (liste partagée)                             |
+| v1.4.0  | Synchronisation CalDAV iOS                                                                 |
+| v1.3.0  | Optimisation SQL — suppression des requêtes N+1, temps de réponse ÷3                       |
+| v1.2.0  | Modernisation UI — Toasts, confirmations sur-mesure                                        |
+| v1.1.0  | Refonte expérience mobile (Bottom Sheets)                                                  |
+| v1.0.0  | Version stable initiale — Budget, Calendrier, Voyages, Cadeaux, Garage                     |
