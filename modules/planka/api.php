@@ -127,12 +127,14 @@ if ($action === 'update_card') {
     $id = $_GET['id'] ?? null; if (!$id) tErr('ID manquant');
     $d = tBody();
     $payload = [];
-    if (isset($d['name']))        $payload['name']        = $d['name'];
-    if (isset($d['description']))  $payload['description']  = $d['description'];
-    if (array_key_exists('dueDate', $d)) $payload['dueDate'] = $d['dueDate'];
-    if (isset($d['listId']))       $payload['listId']       = $d['listId'];
+    if (isset($d['name']))               $payload['name']        = $d['name'];
+    if (isset($d['description']))        $payload['description'] = $d['description'];
+    if (array_key_exists('dueDate', $d)) $payload['dueDate']     = $d['dueDate'];
+    if (isset($d['listId']))             $payload['listId']      = $d['listId'];
+    if (isset($d['position']))           $payload['position']    = (float)$d['position'];
     $resp = planka_api('PATCH', '/api/cards/' . $id, $payload, $token);
-    tOk($resp['item'] ?? []);
+    if (empty($resp['item'])) tErr($resp['message'] ?? ($resp['problems'][0] ?? 'Planka a rejeté la mise à jour'), 502);
+    tOk($resp['item']);
 }
 
 if ($action === 'delete_card') {

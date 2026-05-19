@@ -218,7 +218,7 @@ function renderCard(card, prevCard) {
     const labels = (state.cardLabels || []).filter(cl => cl.cardId === card.id).map(cl => {
         const lbl = (state.labels || []).find(l => l.id === cl.labelId);
         if (!lbl) return '';
-        return `<span class="pk-label pk-label-color--${lbl.color || 'morning-sky'}" title="${esc(lbl.name || '')}"></span>`;
+        return `<span class="pk-label pk-label-color--${lbl.color || 'morning-sky'}">${esc(lbl.name || '')}</span>`;
     }).join('');
     const cardTasks = (state.tasks || []).filter(t => t.cardId === card.id);
     const doneCount = cardTasks.filter(t => t.isCompleted).length;
@@ -296,22 +296,29 @@ function closeCardModal() {
 
 async function saveCard() {
     if (!editingCard) return;
-    const name = document.getElementById('pk-card-name').value.trim();
+    const name   = document.getElementById('pk-card-name').value.trim();
     if (!name) { showToast('Titre requis', 'error'); return; }
-    const due  = document.getElementById('pk-card-due').value;
-    const body = {
+    const due    = document.getElementById('pk-card-due').value;
+    const listId = document.getElementById('pk-card-list').value;
+    const body   = {
         name,
         description: document.getElementById('pk-card-desc').value,
         dueDate: due ? due + 'T00:00:00.000Z' : null,
-        listId: document.getElementById('pk-card-list').value,
     };
+    // Planka requires position whenever listId is sent — only include if list changed
+    if (listId !== editingCard.listId) {
+        body.listId = listId;
+        const targetCards = state.cards.filter(c => c.listId === listId);
+        const maxPos = targetCards.reduce((m, c) => Math.max(m, c.position || 0), 0);
+        body.position = maxPos + 65535;
+    }
     const res = await apiFetch('update_card', { id: editingCard.id }, 'PATCH', body);
-    if (!res.ok) { showToast('Erreur: ' + res.error, 'error'); return; }
+    if (!res.ok) { showToast('Erreur : ' + (res.error || 'sauvegarde impossible'), 'error'); return; }
     const idx = state.cards.findIndex(c => c.id === editingCard.id);
-    if (idx >= 0) state.cards[idx] = { ...state.cards[idx], ...res.data };
+    if (idx >= 0) state.cards[idx] = { ...state.cards[idx], ...res.data, listId: listId };
     closeCardModal();
     renderBoard();
-    showToast('Carte enregistrée');
+    showToast('Carte enregistrée ✓');
 }
 
 async function deleteCard() {
