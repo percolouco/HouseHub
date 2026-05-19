@@ -37,9 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update_family_info') {
         require_once __DIR__ . '/includes/db.php';
-        $currency = trim($_POST['currency'] ?? '€');
-        $zone = trim($_POST['zone_scolaire'] ?? 'C');
-
+        
+        $foyer = $pdo->query("SELECT currency, zone_scolaire FROM pf_foyer_settings WHERE id = 1")->fetch();
+        $currency = isset($_POST['currency']) ? trim($_POST['currency']) : ($foyer['currency'] ?? '€');
+        $zone = isset($_POST['zone_scolaire']) ? trim($_POST['zone_scolaire']) : ($foyer['zone_scolaire'] ?? 'C');
         $stmtSave = $pdo->prepare("UPDATE pf_foyer_settings SET currency = ?, zone_scolaire = ? WHERE id = 1");
         $stmtSave->execute([$currency, $zone]);
         $success = "Paramètres du foyer mis à jour avec succès.";
@@ -453,23 +454,36 @@ require __DIR__ . '/header.php';
 
   <!-- ── Famille ──────────────────────────────────────────────────────────── -->
    <?php
-    $currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
-    $currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
+    $enabledMods = $_SESSION['enabled_modules'] ?? [];
+    
+    // On cible précisément qui a besoin de quoi
+    $showCurrency = count(array_intersect(['budget', 'holidays', 'gifts', 'garage'], $enabledMods)) > 0;
+    $showZone = in_array('calendar', $enabledMods);
+
+    // Si au moins un des champs doit être affiché, on rend la section visible
+    if ($family_id && ($showCurrency || $showZone)): 
+        $currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
+        $currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
   ?>
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">👪 Configuration du foyer</h2>
-    <p class="pf-muted-note">Configurez les informations partagées par l'ensemble de votre foyer.</p>
+    <p class="pf-muted-note">Configurez les indicateurs partagés par votre foyer.</p>
     
     <form method="post" class="pf-stack-md">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="update_family_info">
       
       <div class="form-row">
-        <div class="form-group">
+        
+        <?php if ($showCurrency): ?>
+        <div class="pf-form-group">
           <label class="pf-label">Devise monétaire</label>
           <input type="text" name="currency" class="pf-input" value="<?= htmlspecialchars($currentCurrency) ?>" placeholder="ex: €, $, CHF" required maxlength="10">
         </div>
-        <div class="form-group">
+        <?php endif; ?>
+
+        <?php if ($showZone): ?>
+        <div class="pf-form-group">
           <label class="pf-label">Zone de vacances scolaires (France)</label>
           <select name="zone_scolaire" class="pf-input" style="background:var(--bg-panel);">
             <option value="A" <?= $currentZone === 'A' ? 'selected' : '' ?>>Zone A</option>
@@ -478,11 +492,14 @@ require __DIR__ . '/header.php';
             <option value="Autre" <?= $currentZone === 'Autre' ? 'selected' : '' ?>>Hors France / Autre</option>
           </select>
         </div>
+        <?php endif; ?>
+        
       </div>
       
-      <button type="submit" class="pf-btn">Enregistrer</button>
+      <button type="submit" class="pf-btn">Enregistrer les paramètres du foyer</button>
     </form>
   </section>
+  <?php endif; ?>
 
 
   <!-- ── Profil ──────────────────────────────────────────────────────────── -->
