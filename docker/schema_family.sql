@@ -374,9 +374,11 @@ CREATE TABLE IF NOT EXISTS pf_todos (
 
 -- ─── Module Liste (multi-listes) ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_lists (
-  id       INT AUTO_INCREMENT PRIMARY KEY,
-  name     VARCHAR(255) NOT NULL DEFAULT 'Ma liste',
-  position INT NOT NULL DEFAULT 0,
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  name      VARCHAR(255) NOT NULL DEFAULT 'Ma liste',
+  color     VARCHAR(20) DEFAULT NULL,
+  list_type VARCHAR(50) DEFAULT NULL,
+  position  INT NOT NULL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

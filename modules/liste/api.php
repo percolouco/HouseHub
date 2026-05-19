@@ -15,6 +15,7 @@ require_once dirname(__DIR__, 2) . '/includes/db.php';
 // ── Auto-create tables ────────────────────────────────────────────────────────
 $pdo->exec("CREATE TABLE IF NOT EXISTS pf_lists (
   id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL DEFAULT 'Ma liste',
+  color VARCHAR(20) DEFAULT NULL, list_type VARCHAR(50) DEFAULT NULL,
   position INT NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -48,6 +49,8 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS pf_item_category_rules (
 try { $pdo->exec("ALTER TABLE pf_grocery_items ADD COLUMN list_id INT NOT NULL DEFAULT 1 AFTER id"); } catch (\Exception $e) {}
 try { $pdo->exec("ALTER TABLE pf_grocery_items ADD COLUMN category_id INT DEFAULT NULL AFTER list_id"); } catch (\Exception $e) {}
 try { $pdo->exec("ALTER TABLE pf_grocery_items ADD KEY idx_items_list (list_id)"); } catch (\Exception $e) {}
+try { $pdo->exec("ALTER TABLE pf_lists ADD COLUMN color VARCHAR(20) DEFAULT NULL AFTER name"); } catch (\Exception $e) {}
+try { $pdo->exec("ALTER TABLE pf_lists ADD COLUMN list_type VARCHAR(50) DEFAULT NULL AFTER color"); } catch (\Exception $e) {}
 
 // ── Seed categories if empty ──────────────────────────────────────────────────
 if ((int)$pdo->query("SELECT COUNT(*) FROM pf_list_categories")->fetchColumn() === 0) {
@@ -313,23 +316,32 @@ if ($action === 'set_category' && $method === 'POST') {
 if ($action === 'lists') {
     if ($method === 'GET') {
         $firstId = liste_ensure_default($pdo);
-        $rows = $pdo->query("SELECT id, name, position FROM pf_lists ORDER BY position, id")->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $pdo->query("SELECT id, name, color, list_type, position FROM pf_lists ORDER BY position, id")->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode(['lists' => $rows, 'default_id' => $firstId]);
         exit;
     }
     if ($method === 'POST') {
-        $name = mb_substr(trim($body['name'] ?? ''), 0, 100);
+        $name      = mb_substr(trim($body['name'] ?? ''), 0, 100);
+        $color     = mb_substr(trim($body['color'] ?? ''), 0, 20) ?: null;
+        $list_type = mb_substr(trim($body['list_type'] ?? ''), 0, 50) ?: null;
         if (!$name) { http_response_code(400); echo json_encode(['error' => 'name required']); exit; }
         $pos = (int)$pdo->query("SELECT COALESCE(MAX(position),0)+1 FROM pf_lists")->fetchColumn();
-        $pdo->prepare("INSERT INTO pf_lists (name, position) VALUES (?,?)")->execute([$name, $pos]);
-        echo json_encode(['id' => (int)$pdo->lastInsertId(), 'name' => $name, 'position' => $pos]);
+        $pdo->prepare("INSERT INTO pf_lists (name, color, list_type, position) VALUES (?,?,?,?)")->execute([$name, $color, $list_type, $pos]);
+        echo json_encode(['id' => (int)$pdo->lastInsertId(), 'name' => $name, 'color' => $color, 'list_type' => $list_type, 'position' => $pos]);
         exit;
     }
     if ($method === 'PUT') {
-        $id = (int)($_GET['id'] ?? 0);
-        $name = mb_substr(trim($body['name'] ?? ''), 0, 100);
+        $id        = (int)($_GET['id'] ?? 0);
+        $name      = mb_substr(trim($body['name'] ?? ''), 0, 100);
+        $color     = array_key_exists('color', $body) ? (mb_substr(trim($body['color'] ?? ''), 0, 20) ?: null) : false;
+        $list_type = array_key_exists('list_type', $body) ? (mb_substr(trim($body['list_type'] ?? ''), 0, 50) ?: null) : false;
         if (!$id || !$name) { http_response_code(400); echo json_encode(['error' => 'invalid']); exit; }
-        $pdo->prepare("UPDATE pf_lists SET name=? WHERE id=?")->execute([$name, $id]);
+        $sets = ['name=?'];
+        $vals = [$name];
+        if ($color !== false)     { $sets[] = 'color=?';     $vals[] = $color; }
+        if ($list_type !== false) { $sets[] = 'list_type=?'; $vals[] = $list_type; }
+        $vals[] = $id;
+        $pdo->prepare("UPDATE pf_lists SET " . implode(', ', $sets) . " WHERE id=?")->execute($vals);
         echo json_encode(['ok' => true]); exit;
     }
     if ($method === 'DELETE') {
