@@ -361,14 +361,25 @@ CREATE TABLE IF NOT EXISTS pf_todos (
   FOREIGN KEY (list_id) REFERENCES pf_todo_lists(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ─── Liste de courses ─────────────────────────────────────────────────────────
+-- ─── Module Liste (multi-listes) ──────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_lists (
+  id       INT AUTO_INCREMENT PRIMARY KEY,
+  name     VARCHAR(255) NOT NULL DEFAULT 'Ma liste',
+  position INT NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO pf_lists (id, name, position) VALUES (1, 'Ma liste', 0);
+
 CREATE TABLE IF NOT EXISTS pf_grocery_items (
   id         INT AUTO_INCREMENT PRIMARY KEY,
+  list_id    INT NOT NULL DEFAULT 1,
   label      VARCHAR(500) NOT NULL,
   in_cart    TINYINT(1) NOT NULL DEFAULT 0,
   position   INT NOT NULL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_items_list (list_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_grocery_history (

@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'set_modules' && $family_id) {
-        $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'groceries', 'calendar_ios', 'printvault', 'planka'];
+        $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka'];
         $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
         if (empty($enabled)) {
             $error = "Vous devez garder au moins un module actif.";
@@ -307,7 +307,7 @@ require __DIR__ . '/header.php';
           'garage'   => ['icon' => '🚗', 'label' => tr('menu_garage')],
           'memo'     => ['icon' => '📝', 'label' => tr('menu_memo')],
           'todo'     => ['icon' => '✅', 'label' => tr('menu_todo')],
-          'groceries' => ['icon' => '🛒', 'label' => tr('menu_groceries')],
+          'liste'     => ['icon' => '📝', 'label' => tr('menu_liste')],
           'calendar_ios' => ['icon' => '📱', 'label' => tr('menu_calendar_ios')],
           'printvault'  => ['icon' => '🖨️', 'label' => tr('menu_printvault')],
           'planka'      => ['icon' => '📋', 'label' => tr('menu_planka')],
@@ -331,24 +331,24 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
   <?php
-    $enabledModsForGrocery = $_SESSION['enabled_modules'] ?? [];
-    if ($family_id && in_array('groceries', $enabledModsForGrocery, true)):
+    $enabledModsForListe = $_SESSION['enabled_modules'] ?? [];
+    if ($family_id && in_array('liste', $enabledModsForListe, true)):
   ?>
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2 pf-card-h2--tight">🛒 <?= htmlspecialchars(tr('groceries_settings_title')) ?></h2>
-    <p class="pf-muted-note"><?= htmlspecialchars(tr('groceries_settings_intro')) ?></p>
+    <h2 class="pf-card-h2 pf-card-h2--tight">📝 <?= htmlspecialchars(tr('liste_settings_title')) ?></h2>
+    <p class="pf-muted-note"><?= htmlspecialchars(tr('liste_settings_intro')) ?></p>
     <form method="post" class="pf-stack-md" style="margin-top:1rem">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="grocery_history_max">
       <div class="pf-form-group">
-        <label class="pf-label" for="history_max"><?= htmlspecialchars(tr('groceries_settings_history_max')) ?></label>
+        <label class="pf-label" for="history_max"><?= htmlspecialchars(tr('liste_settings_history_max')) ?></label>
         <input type="number" name="history_max" id="history_max" class="pf-input" style="max-width:120px" min="1" max="50" step="1" value="<?= (int) $groceryHistoryMaxSetting ?>" required>
-        <p class="pf-muted-note" style="margin-top:0.35rem"><?= htmlspecialchars(tr('groceries_settings_history_hint')) ?></p>
+        <p class="pf-muted-note" style="margin-top:0.35rem"><?= htmlspecialchars(tr('liste_settings_history_hint')) ?></p>
       </div>
       <button type="submit" class="pf-btn"><?= htmlspecialchars(tr('btn_save')) ?></button>
     </form>
     <p class="pf-muted-note" style="margin-top:1rem">
-      <a href="/groceries.php" style="color:var(--primary);font-weight:600;"><?= htmlspecialchars(tr('mod_groceries_name')) ?></a>
+      <a href="/liste.php" style="color:var(--primary);font-weight:600;"><?= htmlspecialchars(tr('mod_liste_name')) ?></a>
     </p>
   </section>
   <?php endif; ?>
