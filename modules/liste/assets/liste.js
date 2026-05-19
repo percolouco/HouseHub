@@ -1,4 +1,4 @@
-/* invraw — Liste module JS */
+/* Liste module JS */
 const API = '/modules/liste/api.php';
 const T   = window.LISTE_TRANSLATIONS || {};
 
@@ -7,9 +7,11 @@ const state = {
   currentListId: null,
   items: [],
   history: [],
+  categories: [],
+  catMap: {},
 };
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+// ── Utilities ──────────────────────────────────────────────────────────────────
 
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -40,7 +42,67 @@ async function api(action, method = 'GET', body = null, params = {}) {
   return r.json();
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
+// ── Categories ─────────────────────────────────────────────────────────────────
+
+async function loadCategories() {
+  if (state.categories.length) return;
+  const r = await api('categories');
+  state.categories = r.categories || [];
+  state.catMap = {};
+  state.categories.forEach(c => { state.catMap[c.id] = c; });
+}
+
+let activePicker = null;
+
+function openCategoryPicker(itemId, anchorEl) {
+  closeCategoryPicker();
+  const item = state.items.find(i => i.id === itemId);
+  if (!item) return;
+
+  const picker = document.createElement('div');
+  picker.className = 'liste-cat-picker';
+  picker.innerHTML = `
+    <div class="liste-cat-picker-title">Catégorie</div>
+    <div class="liste-cat-picker-list">
+      <button class="liste-cat-picker-item${!item.category_id ? ' active' : ''}" data-cat="0">🏷️ Non classé</button>
+      ${state.categories.map(c =>
+        `<button class="liste-cat-picker-item${item.category_id == c.id ? ' active' : ''}" data-cat="${c.id}">${esc(c.icon)} ${esc(c.name)}</button>`
+      ).join('')}
+    </div>`;
+
+  const rect = anchorEl.getBoundingClientRect();
+  let top  = rect.bottom + 4;
+  let left = rect.left;
+  if (left + 220 > window.innerWidth) left = window.innerWidth - 228;
+  if (top + 340 > window.innerHeight) top = rect.top - Math.min(340, top + 340 - window.innerHeight) - 4;
+  picker.style.top  = top  + 'px';
+  picker.style.left = left + 'px';
+
+  document.body.appendChild(picker);
+  activePicker = picker;
+
+  picker.querySelectorAll('.liste-cat-picker-item').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const catId = parseInt(btn.dataset.cat) || null;
+      await api('set_category', 'POST', { item_id: itemId, category_id: catId });
+      const it = state.items.find(i => i.id === itemId);
+      if (it) it.category_id = catId;
+      closeCategoryPicker();
+      renderItems();
+    });
+  });
+
+  setTimeout(() => {
+    document.addEventListener('click', closeCategoryPicker, { once: true });
+  }, 0);
+}
+
+function closeCategoryPicker() {
+  if (activePicker) { activePicker.remove(); activePicker = null; }
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────────
 
 function renderTabs() {
   const container = document.getElementById('liste-tabs');
@@ -64,11 +126,9 @@ function renderTabs() {
     container.appendChild(tab);
   });
 
-  // Rename button
   container.querySelectorAll('.liste-tab-rename').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); startRename(parseInt(btn.dataset.id)); });
   });
-  // Delete button
   container.querySelectorAll('.liste-tab-delete').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); deleteList(parseInt(btn.dataset.id)); });
   });
@@ -101,7 +161,7 @@ async function deleteList(listId) {
   toast(T.list_deleted || 'Liste supprimée');
 }
 
-// ── List management ────────────────────────────────────────────────────────────
+// ── List management ─────────────────────────────────────────────────────────────
 
 document.getElementById('btn-add-list')?.addEventListener('click', () => {
   document.getElementById('liste-new-form')?.classList.remove('hidden');
@@ -136,7 +196,7 @@ async function confirmNewList() {
   }
 }
 
-// ── Switch list ────────────────────────────────────────────────────────────────
+// ── Switch list ─────────────────────────────────────────────────────────────────
 
 async function switchList(listId) {
   state.currentListId = listId;
@@ -144,7 +204,7 @@ async function switchList(listId) {
   renderTabs();
 }
 
-// ── Items ──────────────────────────────────────────────────────────────────────
+// ── Items ───────────────────────────────────────────────────────────────────────
 
 async function loadItems() {
   if (!state.currentListId) {
@@ -168,12 +228,44 @@ function renderItems() {
     return;
   }
   if (toolbar) toolbar.style.display = '';
+
   const pending = state.items.filter(i => !i.in_cart);
   const inCart  = state.items.filter(i =>  i.in_cart);
+  const hasCategories = pending.some(i => i.category_id);
+
   let html = '';
-  if (pending.length) html += pending.map(rowHtml).join('');
-  if (inCart.length)  html += `<div class="liste-cart-divider">Dans le panier (${inCart.length})</div>` + inCart.map(rowHtml).join('');
+
+  if (hasCategories && state.categories.length) {
+    // Group pending items by category
+    const groups = new Map();
+    pending.forEach(item => {
+      const key = item.category_id ?? 0;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(item);
+    });
+
+    // Render in category order, uncategorized last
+    const catIds = state.categories.map(c => parseInt(c.id));
+    const orderedKeys = catIds.filter(id => groups.has(id));
+    if (groups.has(0)) orderedKeys.push(0);
+
+    orderedKeys.forEach(key => {
+      const items = groups.get(key);
+      const cat = key ? state.catMap[key] : null;
+      const label = cat ? `${cat.icon} ${cat.name}` : '🏷️ Non classé';
+      html += `<div class="liste-cat-section-header">${esc(label)} <span class="liste-cat-section-count">${items.length}</span></div>`;
+      html += items.map(rowHtml).join('');
+    });
+  } else {
+    html = pending.map(rowHtml).join('');
+  }
+
+  if (inCart.length) {
+    html += `<div class="liste-cart-divider">Dans le panier (${inCart.length})</div>` + inCart.map(rowHtml).join('');
+  }
+
   root.innerHTML = html;
+
   root.querySelectorAll('.liste-check').forEach(cb => {
     cb.addEventListener('change', () => toggleCart(parseInt(cb.dataset.id), cb.checked ? 1 : 0));
   });
@@ -183,12 +275,20 @@ function renderItems() {
   root.querySelectorAll('.btn-delete-item').forEach(btn => {
     btn.addEventListener('click', () => deleteItem(parseInt(btn.dataset.id)));
   });
+  root.querySelectorAll('.liste-cat-badge').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); openCategoryPicker(parseInt(btn.dataset.id), btn); });
+  });
 }
 
 function rowHtml(item) {
   const checked = item.in_cart ? 'checked' : '';
   const cls     = item.in_cart ? 'liste-row in-cart' : 'liste-row';
+  const cat = item.category_id ? state.catMap[item.category_id] : null;
+  const badgeCls = 'liste-cat-badge' + (cat ? '' : ' liste-cat-badge-empty');
+  const badgeIcon = cat ? esc(cat.icon) : '🏷️';
+  const badgeTip  = cat ? esc(cat.name) : 'Non classé';
   return `<div class="${cls}" data-id="${item.id}">
+    <button class="${badgeCls}" data-id="${item.id}" title="${badgeTip}">${badgeIcon}</button>
     <label class="liste-check-label">
       <input type="checkbox" class="liste-check" data-id="${item.id}" ${checked}>
       <span class="liste-label">${esc(item.label)}</span>
@@ -261,7 +361,7 @@ document.getElementById('btn-clear-all')?.addEventListener('click', async () => 
   toast(T.deleted || 'Liste vidée');
 });
 
-// ── Add input ──────────────────────────────────────────────────────────────────
+// ── Add input ───────────────────────────────────────────────────────────────────
 
 document.getElementById('btn-liste-add')?.addEventListener('click', () => {
   const input = document.getElementById('liste-input');
@@ -301,12 +401,12 @@ function renderHistory() {
   });
 }
 
-// ── Init ───────────────────────────────────────────────────────────────────────
+// ── Init ────────────────────────────────────────────────────────────────────────
 
 async function init() {
-  const r = await api('lists');
-  state.lists = r.lists || [];
-  state.currentListId = r.default_id || state.lists[0]?.id || null;
+  const [listsR] = await Promise.all([api('lists'), loadCategories()]);
+  state.lists = listsR.lists || [];
+  state.currentListId = listsR.default_id || state.lists[0]?.id || null;
   renderTabs();
   await Promise.all([loadItems(), loadHistory()]);
 }

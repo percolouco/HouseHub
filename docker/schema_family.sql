@@ -383,13 +383,14 @@ CREATE TABLE IF NOT EXISTS pf_lists (
 INSERT INTO pf_lists (id, name, position) VALUES (1, 'Ma liste', 0);
 
 CREATE TABLE IF NOT EXISTS pf_grocery_items (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  list_id    INT NOT NULL DEFAULT 1,
-  label      VARCHAR(500) NOT NULL,
-  in_cart    TINYINT(1) NOT NULL DEFAULT 0,
-  position   INT NOT NULL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  list_id     INT NOT NULL DEFAULT 1,
+  category_id INT DEFAULT NULL,
+  label       VARCHAR(500) NOT NULL,
+  in_cart     TINYINT(1) NOT NULL DEFAULT 0,
+  position    INT NOT NULL DEFAULT 0,
+  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_items_list (list_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -400,6 +401,20 @@ CREATE TABLE IF NOT EXISTS pf_grocery_history (
   last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_grocery_hist_hash (label_hash),
   KEY idx_hist_last (last_used_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_list_categories (
+  id       INT AUTO_INCREMENT PRIMARY KEY,
+  icon     VARCHAR(10) NOT NULL DEFAULT '🏷️',
+  name     VARCHAR(100) NOT NULL,
+  position INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_item_category_rules (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  keyword     VARCHAR(255) NOT NULL,
+  category_id INT NOT NULL,
+  UNIQUE KEY uq_keyword (keyword)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Calendar iOS ─────────────────────────────────────────────────────────────
