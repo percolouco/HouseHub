@@ -119,7 +119,16 @@ document.addEventListener("DOMContentLoaded", () => {
           options += `<option value="${y}" ${selected}>${y} - ${y + 1}</option>`;
         }
 
-        headerTitle.innerHTML = `🏖️ ${tr("fc_modal_holidays_title")} 
+        // --- NOUVEAU : Récupération de la zone dynamique ---
+        const zoneText =
+          window.CONFIG &&
+          window.CONFIG.ZONE_SCOLAIRE &&
+          window.CONFIG.ZONE_SCOLAIRE !== "Autre"
+            ? `(Zone ${window.CONFIG.ZONE_SCOLAIRE})`
+            : "";
+
+        // Injection du texte de la zone dans le header
+        headerTitle.innerHTML = `🏖️ ${window.I18N["fc_modal_holidays_title"]} ${zoneText}
           <select id="holidayYearSelect" class="pf-input" style="width:auto; display:inline-block; margin-left:10px; padding:4px 10px; height:auto;">
             ${options}
           </select>`;
@@ -332,8 +341,21 @@ document.addEventListener("DOMContentLoaded", () => {
     async fetchAndSaveGovHolidays(yearStart) {
       try {
         const yearStr = `${yearStart}-${yearStart + 1}`;
-        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone C%'&limit=100`;
+        const zone = window.CONFIG?.ZONE_SCOLAIRE || "C";
 
+        if (zone === "Autre") {
+          alert(
+            "L'importation automatique n'est disponible que pour les zones A, B ou C (France).",
+          );
+          const btn = document.getElementById("btnFetchGovHolidays");
+          if (btn) {
+            btn.innerText = "Non disponible";
+            btn.disabled = true;
+          }
+          return;
+        }
+
+        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%'&limit=100`;
         const res = await fetch(url);
         const data = await res.json();
         const rawRecords = data.results || [];

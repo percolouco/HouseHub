@@ -134,7 +134,8 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     window.CONFIG = {
         ID_ALEX: <?php echo defined('ID_ALEX') ? ID_ALEX : 2; ?>,
         ID_LAIA: <?php echo defined('ID_LAIA') ? ID_LAIA : 3; ?>,
-        CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>'
+        CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>',
+        ZONE_SCOLAIRE: '<?php echo defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : "C"; ?>'
     };
     
     function tr(key) {

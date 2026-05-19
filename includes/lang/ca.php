@@ -163,7 +163,7 @@ return [
     'fc_main_header'            => 'Calendari Familiar',
     'fc_btn_correct_balances'   => 'Corregir els saldos',
     'fc_btn_school_holidays'    => 'Vacances escolars',
-    'fc_modal_holidays_title'   => 'Vacances Escolars (Zona C)',
+    'fc_modal_holidays_title'   => 'Vacances Escolars',
     'fc_modal_snap_title'       => 'Ajustar un saldo',
     'fc_col_period'             => 'Període',
     'fc_col_from'               => 'Des del',
