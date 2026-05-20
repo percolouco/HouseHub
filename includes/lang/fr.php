@@ -163,7 +163,7 @@ return [
     'fc_main_header'            => 'Calendrier Familial',
     'fc_btn_correct_balances'   => 'Corriger les soldes',
     'fc_btn_school_holidays'    => 'Vacances scolaires',
-    'fc_modal_holidays_title'   => 'Vacances Scolaires (Zone C)',
+    'fc_modal_holidays_title'   => 'Vacances Scolaires',
     'fc_modal_snap_title'       => 'Ajuster un solde',
     'fc_col_period'             => 'Période',
     'fc_col_from'               => 'Du',

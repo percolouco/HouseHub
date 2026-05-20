@@ -666,18 +666,18 @@ function updateSummaryTable() {
             const laiaSum = dataByTarget[targetName] ? dataByTarget[targetName].laia : 0;
             const globalSum = alexSum + laiaSum;
 
-            row.cells[1].innerText = Math.round(alexSum).toLocaleString(window.appLang) + ' €';
-            row.cells[2].innerText = Math.round(laiaSum).toLocaleString(window.appLang) + ' €';
-            row.cells[3].innerText = Math.round(globalSum).toLocaleString(window.appLang) + ' €';
+            row.cells[1].innerText = Math.round(alexSum).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
+            row.cells[2].innerText = Math.round(laiaSum).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
+            row.cells[3].innerText = Math.round(globalSum).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
 
             grandTotalAlex += alexSum;
             grandTotalLaia += laiaSum;
         });
     }
 
-    document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString(window.appLang) + ' €';
-    document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString(window.appLang) + ' €';
-    document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString(window.appLang) + ' €';
+    document.getElementById('grand_total_alex').innerText = Math.round(grandTotalAlex).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
+    document.getElementById('grand_total_laia').innerText = Math.round(grandTotalLaia).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
+    document.getElementById('grand_total_global').innerText = Math.round(grandTotalAlex + grandTotalLaia).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
 }
 
 function saveData(action, data) {
@@ -788,7 +788,7 @@ function updateSumResult() {
         total += val;
     });
     
-    document.getElementById('sumResultValue').innerText = new Intl.NumberFormat(window.appLang, { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+    document.getElementById('sumResultValue').innerText = Math.round(total).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
 }
 
 async function deleteCategory(id) {

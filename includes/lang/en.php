@@ -164,7 +164,7 @@ return [
     'fc_main_header'            => 'Family Calendar',
     'fc_btn_correct_balances'   => 'Adjust balances',
     'fc_btn_school_holidays'    => 'School holidays',
-    'fc_modal_holidays_title'   => 'School Holidays (Zone C)',
+    'fc_modal_holidays_title'   => 'School Holidays',
     'fc_modal_snap_title'       => 'Adjust a balance',
     'fc_col_period'             => 'Period',
     'fc_col_from'               => 'From',
