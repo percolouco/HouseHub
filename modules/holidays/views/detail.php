@@ -261,6 +261,22 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
         </div>
     </div>
 
+    <?php if (count($mapPoints) >= 2): ?>
+    <div class="hol-summary-card" id="hol-cost-panel" style="margin-top:24px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <h3 style="margin:0; display:flex; align-items:center; gap:8px;">🚗 Coût du trajet</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <label style="font-size:.82rem; color:var(--text-muted);">Conso (L/100km)</label>
+          <input type="number" id="fuel-l100" value="7" min="3" max="30" step="0.5" style="width:65px; padding:.3rem .5rem; border:1px solid var(--border-light); border-radius:8px; font-size:.85rem;">
+          <label style="font-size:.82rem; color:var(--text-muted);">Prix carburant (€/L)</label>
+          <input type="number" id="fuel-price" value="1.85" min="1" max="4" step="0.01" style="width:65px; padding:.3rem .5rem; border:1px solid var(--border-light); border-radius:8px; font-size:.85rem;">
+          <button onclick="estimateTripCost()" class="pf-btn pf-btn-small">Calculer</button>
+        </div>
+      </div>
+      <div id="hol-cost-result" style="color:var(--text-muted); font-size:.9rem;">Cliquez sur Calculer pour estimer le coût du trajet.</div>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($holiday['notes'])): ?>
     <div class="hol-summary-card" style="margin-top: 24px; padding: 25px; border-left: 5px solid #f59e0b;">
         <h3 style="margin: 0 0 15px 0; font-size: 1.2rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
@@ -415,6 +431,49 @@ window.closePlanningModal = window.closePlanningModal || function() {
     if(modal) modal.style.display = 'none';
     document.body.classList.remove('no-scroll');
 };
+
+async function estimateTripCost() {
+  const l100 = parseFloat(document.getElementById('fuel-l100').value) || 7;
+  const price = parseFloat(document.getElementById('fuel-price').value) || 1.85;
+  const result = document.getElementById('hol-cost-result');
+  result.innerHTML = '⏳ Calcul en cours…';
+
+  const stops = (window.MAP_POINTS || []).map(p => ({lat: p.lat, lng: p.lng, name: p.location_name}));
+  if (stops.length < 2) { result.innerHTML = 'Pas assez d\'étapes pour calculer.'; return; }
+
+  try {
+    const resp = await fetch('/modules/voyage/api.php?action=estimate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({stops, fuel_l100: l100, fuel_price: price})
+    });
+    const data = await resp.json();
+    if (!data.ok) { result.innerHTML = 'Erreur : ' + (data.error || 'inconnue'); return; }
+
+    let html = '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;">';
+    html += `<div class="hol-cost-stat"><div class="hol-cost-stat-val">${Math.round(data.total_km)} km</div><div class="hol-cost-stat-label">Distance totale</div></div>`;
+    html += `<div class="hol-cost-stat"><div class="hol-cost-stat-val">${data.total_toll.toFixed(2)} €</div><div class="hol-cost-stat-label">Péages estimés</div></div>`;
+    html += `<div class="hol-cost-stat"><div class="hol-cost-stat-val">${data.fuel_cost.toFixed(2)} €</div><div class="hol-cost-stat-label">Carburant</div></div>`;
+    html += `<div class="hol-cost-stat hol-cost-total"><div class="hol-cost-stat-val">${data.grand_total.toFixed(2)} €</div><div class="hol-cost-stat-label">Total aller</div></div>`;
+    html += '</div>';
+
+    if (data.segments && data.segments.length) {
+      html += '<details style="font-size:.82rem; color:var(--text-muted);"><summary style="cursor:pointer; margin-bottom:8px;">Détail par segment</summary>';
+      data.segments.forEach(s => {
+        html += `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-light);">
+          <span>📍 ${s.from} → ${s.to}</span>
+          <span>${Math.round(s.distance_km)} km · péage: ${s.toll.toFixed(2)} €</span>
+        </div>`;
+      });
+      html += '</details>';
+    }
+
+    result.innerHTML = html;
+  } catch(e) {
+    result.innerHTML = 'Erreur de connexion.';
+    console.error(e);
+  }
+}
 </script>
 
 <script src="/modules/holidays/holidays.js"></script>
