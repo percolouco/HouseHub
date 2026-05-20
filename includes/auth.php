@@ -54,3 +54,8 @@ function verify_csrf(?string $token): bool
     }
     return hash_equals($_SESSION['csrf_token'], $token);
 }
+if (!isset($familyPeople) && !empty($family_id)) {
+    require_once __DIR__ . '/db.php'; 
+    $stmtPeople = $pdo->query("SELECT id, name, user_id FROM pf_people ORDER BY id ASC");
+    $familyPeople = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
+}

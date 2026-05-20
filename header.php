@@ -130,10 +130,12 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
      */
     window.I18N = <?php echo json_encode($current_translations_array ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>;
 
-    // ✅ Injection sécurisée (évite le crash si config.php n'est pas chargé)
+    // ✅ Injection sécurisée
     window.CONFIG = {
-        ID_ALEX: <?php echo defined('ID_ALEX') ? ID_ALEX : 2; ?>,
-        ID_LAIA: <?php echo defined('ID_LAIA') ? ID_LAIA : 3; ?>,
+        // Liste complète des profils de la famille (Membres, Nounou, Enfants)
+        PEOPLE: <?= isset($familyPeople) ? json_encode($familyPeople) : '[]' ?>,
+        // ID du user global connecté (pour savoir "qui" clique)
+        CURRENT_USER_ID: <?= isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 'null' ?>,
         CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>',
         ZONE_SCOLAIRE: '<?php echo defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : "C"; ?>'
     };
