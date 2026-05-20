@@ -2,7 +2,7 @@ name: Deploy HouseHub
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging-perco, staging-fefe]
 
 jobs:
   deploy:
@@ -15,6 +15,21 @@ jobs:
           username: perco
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /opt/container/househub
-            git pull
-            echo "✓ HouseHub mis à jour"
+            BRANCH="${{ github.ref_name }}"
+            case "$BRANCH" in
+              main)
+                cd /opt/container/househub
+                git pull
+                echo "✓ Production mise à jour"
+                ;;
+              staging-perco)
+                cd /opt/container/househub-perco
+                git pull origin staging-perco
+                echo "✓ Staging Perco mis à jour"
+                ;;
+              staging-fefe)
+                cd /opt/container/househub-fefe
+                git pull origin staging-fefe
+                echo "✓ Staging Fefe mis à jour"
+                ;;
+            esac
