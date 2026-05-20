@@ -11,6 +11,35 @@ const state = {
   catMap: {},
 };
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const LIST_COLORS = [
+  { id: 'none',    hex: null },
+  { id: 'blue',    hex: '#3b82f6' },
+  { id: 'red',     hex: '#ef4444' },
+  { id: 'amber',   hex: '#f59e0b' },
+  { id: 'purple',  hex: '#8b5cf6' },
+  { id: 'pink',    hex: '#ec4899' },
+  { id: 'emerald', hex: '#10b981' },
+  { id: 'orange',  hex: '#f97316' },
+  { id: 'cyan',    hex: '#06b6d4' },
+  { id: 'indigo',  hex: '#6366f1' },
+  { id: 'teal',    hex: '#14b8a6' },
+  { id: 'gray',    hex: '#6b7280' },
+];
+
+const LIST_TYPES = [
+  { value: '',        label: '— Aucun —',  emoji: '' },
+  { value: 'courses', label: 'Courses',    emoji: '🛒' },
+  { value: 'todo',    label: 'To-do',      emoji: '✅' },
+  { value: 'voyage',  label: 'Voyage',     emoji: '✈️' },
+  { value: 'travail', label: 'Travail',    emoji: '💼' },
+  { value: 'maison',  label: 'Maison',     emoji: '🏠' },
+  { value: 'sante',   label: 'Santé',      emoji: '💊' },
+  { value: 'loisirs', label: 'Loisirs',    emoji: '🎮' },
+  { value: 'autre',   label: 'Autre',      emoji: '📋' },
+];
+
 // ── Utilities ──────────────────────────────────────────────────────────────────
 
 function esc(s) {
@@ -40,6 +69,116 @@ async function api(action, method = 'GET', body = null, params = {}) {
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(url, opts);
   return r.json();
+}
+
+// ── List modal ─────────────────────────────────────────────────────────────────
+
+let activeModal = null;
+
+function openListModal(listId = null) {
+  if (activeModal) { activeModal.remove(); activeModal = null; }
+  const list = listId ? state.lists.find(l => l.id === listId) : null;
+  const isNew = !listId;
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'liste-modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="liste-modal" role="dialog" aria-modal="true">
+      <div class="liste-modal-header">
+        <h3>${isNew ? 'Nouvelle liste' : 'Modifier la liste'}</h3>
+        <button class="liste-modal-close" aria-label="Fermer">×</button>
+      </div>
+      <div class="liste-modal-body">
+        <div class="liste-form-group">
+          <label class="liste-form-label">Nom</label>
+          <input class="liste-modal-name" type="text" maxlength="100"
+                 value="${esc(list?.name ?? '')}" placeholder="Ma liste…" autocomplete="off">
+        </div>
+        <div class="liste-form-group">
+          <label class="liste-form-label">Couleur</label>
+          <div class="liste-color-picker">
+            ${LIST_COLORS.map(c => {
+              const isActive = (c.hex === null && !list?.color) || (list?.color === c.hex);
+              const cls = 'liste-color-swatch' + (c.hex === null ? ' liste-color-swatch-none' : '') + (isActive ? ' active' : '');
+              const style = c.hex ? `style="--swatch:${c.hex}"` : '';
+              return `<button class="${cls}" data-color="${c.hex ?? ''}" ${style} title="${c.id}"></button>`;
+            }).join('')}
+          </div>
+        </div>
+        <div class="liste-form-group">
+          <label class="liste-form-label">Type de liste</label>
+          <select class="liste-modal-type">
+            ${LIST_TYPES.map(t =>
+              `<option value="${esc(t.value)}" ${list?.list_type === t.value ? 'selected' : ''}>${t.emoji ? t.emoji + ' ' : ''}${esc(t.label)}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="liste-modal-footer">
+        ${!isNew && state.lists.length > 1
+          ? `<button class="btn-tool btn-tool-danger liste-modal-delete">Supprimer</button>`
+          : ''}
+        <button class="btn-tool liste-modal-cancel">Annuler</button>
+        <button class="btn-tool btn-tool-primary liste-modal-save">Enregistrer</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(backdrop);
+  activeModal = backdrop;
+
+  const nameInput = backdrop.querySelector('.liste-modal-name');
+  nameInput.focus();
+  nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
+
+  // Color swatches
+  backdrop.querySelectorAll('.liste-color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+      backdrop.querySelectorAll('.liste-color-swatch').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  const close = () => { backdrop.remove(); activeModal = null; };
+  backdrop.querySelector('.liste-modal-close').addEventListener('click', close);
+  backdrop.querySelector('.liste-modal-cancel').addEventListener('click', close);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) close(); });
+
+  backdrop.querySelector('.liste-modal-delete')?.addEventListener('click', () => { close(); deleteList(listId); });
+  backdrop.querySelector('.liste-modal-save').addEventListener('click', () => saveListModal(backdrop, listId));
+  nameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveListModal(backdrop, listId);
+    if (e.key === 'Escape') close();
+  });
+}
+
+async function saveListModal(backdrop, listId) {
+  const name = backdrop.querySelector('.liste-modal-name').value.trim();
+  if (!name) { backdrop.querySelector('.liste-modal-name').focus(); return; }
+
+  const activeSwatch = backdrop.querySelector('.liste-color-swatch.active');
+  const color     = activeSwatch?.dataset.color || null;
+  const list_type = backdrop.querySelector('.liste-modal-type').value || null;
+
+  if (listId) {
+    const r = await api('lists', 'PUT', { name, color, list_type }, { id: listId });
+    if (r.ok) {
+      const list = state.lists.find(l => l.id === listId);
+      if (list) { list.name = name; list.color = color; list.list_type = list_type; }
+      backdrop.remove(); activeModal = null;
+      renderTabs();
+      toast('Liste mise à jour');
+    }
+  } else {
+    const r = await api('lists', 'POST', { name, color, list_type });
+    if (r.id) {
+      state.lists.push({ id: r.id, name, color: r.color, list_type: r.list_type, position: r.position });
+      state.currentListId = r.id;
+      backdrop.remove(); activeModal = null;
+      await loadItems();
+      renderTabs();
+      toast('Liste créée : ' + name);
+    }
+  }
 }
 
 // ── Categories ─────────────────────────────────────────────────────────────────
@@ -104,49 +243,54 @@ function closeCategoryPicker() {
 
 // ── Tabs ───────────────────────────────────────────────────────────────────────
 
+function typeEmoji(list_type) {
+  return LIST_TYPES.find(t => t.value === list_type)?.emoji || '';
+}
+
 function renderTabs() {
   const container = document.getElementById('liste-tabs');
   if (!container) return;
   container.innerHTML = '';
+
   state.lists.forEach(list => {
+    const isActive = list.id === state.currentListId;
     const tab = document.createElement('div');
-    tab.className = 'liste-tab' + (list.id === state.currentListId ? ' active' : '');
+    tab.className = 'liste-tab' + (isActive ? ' active' : '');
     tab.dataset.id = list.id;
 
-    if (list.id === state.currentListId) {
+    // Apply custom color to entire tab
+    if (list.color) {
+      if (isActive) {
+        tab.style.cssText = `background:${list.color};border-color:${list.color};color:#fff`;
+      } else {
+        tab.style.cssText = `border-color:${list.color};color:${list.color}`;
+      }
+    }
+
+    const emoji = typeEmoji(list.list_type);
+    const prefix = emoji ? `<span class="liste-tab-type">${emoji}</span>` : '';
+
+    if (isActive) {
       tab.innerHTML = `
+        ${prefix}
         <span class="liste-tab-name">${esc(list.name)}</span>
-        <button class="liste-tab-btn liste-tab-rename" title="${esc(T.rename_list)}" data-id="${list.id}">✏</button>
-        ${state.lists.length > 1 ? `<button class="liste-tab-btn liste-tab-delete" title="Supprimer" data-id="${list.id}">×</button>` : ''}
+        <button class="liste-tab-btn liste-tab-edit" title="Modifier" data-id="${list.id}">✏</button>
       `;
     } else {
-      tab.innerHTML = `<span class="liste-tab-name">${esc(list.name)}</span>`;
+      tab.innerHTML = `${prefix}<span class="liste-tab-name">${esc(list.name)}</span>`;
       tab.addEventListener('click', () => switchList(list.id));
     }
     container.appendChild(tab);
   });
 
-  container.querySelectorAll('.liste-tab-rename').forEach(btn => {
-    btn.addEventListener('click', e => { e.stopPropagation(); startRename(parseInt(btn.dataset.id)); });
-  });
-  container.querySelectorAll('.liste-tab-delete').forEach(btn => {
-    btn.addEventListener('click', e => { e.stopPropagation(); deleteList(parseInt(btn.dataset.id)); });
+  container.querySelectorAll('.liste-tab-edit').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); openListModal(parseInt(btn.dataset.id)); });
   });
 }
 
-function startRename(listId) {
-  const list = state.lists.find(l => l.id === listId);
-  if (!list) return;
-  const name = prompt(T.new_name || 'Nouveau nom :', list.name);
-  if (name === null || name.trim() === '') return;
-  api('lists', 'PUT', { name: name.trim() }, { id: listId }).then(r => {
-    if (r.ok) {
-      list.name = name.trim();
-      renderTabs();
-      toast(T.list_renamed || 'Liste renommée');
-    }
-  });
-}
+// ── List management ─────────────────────────────────────────────────────────────
+
+document.getElementById('btn-add-list')?.addEventListener('click', () => openListModal(null));
 
 async function deleteList(listId) {
   if (!confirm(T.confirm_delete_list || 'Supprimer cette liste et tous ses articles ?')) return;
@@ -161,41 +305,6 @@ async function deleteList(listId) {
   toast(T.list_deleted || 'Liste supprimée');
 }
 
-// ── List management ─────────────────────────────────────────────────────────────
-
-document.getElementById('btn-add-list')?.addEventListener('click', () => {
-  document.getElementById('liste-new-form')?.classList.remove('hidden');
-  document.getElementById('btn-add-list')?.classList.add('hidden');
-  document.getElementById('new-list-name')?.focus();
-});
-document.getElementById('btn-cancel-new-list')?.addEventListener('click', cancelNewList);
-document.getElementById('btn-confirm-new-list')?.addEventListener('click', confirmNewList);
-document.getElementById('new-list-name')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') confirmNewList();
-  if (e.key === 'Escape') cancelNewList();
-});
-
-function cancelNewList() {
-  document.getElementById('liste-new-form')?.classList.add('hidden');
-  document.getElementById('btn-add-list')?.classList.remove('hidden');
-  if (document.getElementById('new-list-name')) document.getElementById('new-list-name').value = '';
-}
-
-async function confirmNewList() {
-  const input = document.getElementById('new-list-name');
-  const name = input?.value.trim();
-  if (!name) return;
-  const r = await api('lists', 'POST', { name });
-  if (r.id) {
-    state.lists.push({ id: r.id, name: r.name, position: r.position });
-    state.currentListId = r.id;
-    cancelNewList();
-    await loadItems();
-    renderTabs();
-    toast((T.list_created || 'Liste créée') + ' : ' + r.name);
-  }
-}
-
 // ── Switch list ─────────────────────────────────────────────────────────────────
 
 async function switchList(listId) {
@@ -207,10 +316,7 @@ async function switchList(listId) {
 // ── Items ───────────────────────────────────────────────────────────────────────
 
 async function loadItems() {
-  if (!state.currentListId) {
-    renderItems();
-    return;
-  }
+  if (!state.currentListId) { renderItems(); return; }
   const r = await api('items', 'GET', null, { list_id: state.currentListId });
   state.items = r.items || [];
   renderItems();
@@ -236,15 +342,12 @@ function renderItems() {
   let html = '';
 
   if (hasCategories && state.categories.length) {
-    // Group pending items by category
     const groups = new Map();
     pending.forEach(item => {
       const key = item.category_id ?? 0;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(item);
     });
-
-    // Render in category order, uncategorized last
     const catIds = state.categories.map(c => parseInt(c.id));
     const orderedKeys = catIds.filter(id => groups.has(id));
     if (groups.has(0)) orderedKeys.push(0);
@@ -284,7 +387,7 @@ function rowHtml(item) {
   const checked = item.in_cart ? 'checked' : '';
   const cls     = item.in_cart ? 'liste-row in-cart' : 'liste-row';
   const cat = item.category_id ? state.catMap[item.category_id] : null;
-  const badgeCls = 'liste-cat-badge' + (cat ? '' : ' liste-cat-badge-empty');
+  const badgeCls  = 'liste-cat-badge' + (cat ? '' : ' liste-cat-badge-empty');
   const badgeIcon = cat ? esc(cat.icon) : '🏷️';
   const badgeTip  = cat ? esc(cat.name) : 'Non classé';
   return `<div class="${cls}" data-id="${item.id}">
