@@ -16,6 +16,11 @@ foreach ($families as $f) {
     $family_id = $f['id'];
     echo "<h3>Mise à jour de <strong>{$f['name']}</strong> ($db_name)</h3><ul>";
     
+    // 🟢 SÉCURITÉ : On vide les variables à chaque famille pour éviter les fuites (le bug f2 vers f1)
+    $p1_name = null;
+    $p2_name = null;
+    $parents = [];
+
     try {
         $fam_pdo = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
@@ -36,17 +41,31 @@ foreach ($families as $f) {
             } else { throw $e; }
         }
 
-        // Auto-mapping
-        $stmtUsers = $meta_pdo->prepare("SELECT id, username FROM users WHERE family_id = ?");
+        // 🟢 CORRECTION DE L'AUTO-MAPPING : Si pf_people est vide, on la remplit !
+        $stmtUsers = $meta_pdo->prepare("SELECT id, username, display_name FROM users WHERE family_id = ? ORDER BY id ASC");
         $stmtUsers->execute([$family_id]);
         $users = $stmtUsers->fetchAll();
+        
         $mappedCount = 0;
         foreach ($users as $u) {
-            $stmtUpdate = $fam_pdo->prepare("UPDATE pf_people SET user_id = ? WHERE LOWER(name) = LOWER(?) AND user_id IS NULL");
-            $stmtUpdate->execute([$u['id'], $u['username']]);
-            $mappedCount += $stmtUpdate->rowCount();
+            // On vérifie si l'utilisateur existe déjà dans pf_people (via user_id ou son nom)
+            $stmtCheck = $fam_pdo->prepare("SELECT id FROM pf_people WHERE user_id = ? OR LOWER(name) = LOWER(?)");
+            $stmtCheck->execute([$u['id'], $u['username']]);
+            $exists = $stmtCheck->fetchColumn();
+
+            if ($exists) {
+                // S'il existe, on s'assure que son user_id est bien renseigné
+                $stmtUpdate = $fam_pdo->prepare("UPDATE pf_people SET user_id = ? WHERE id = ?");
+                $stmtUpdate->execute([$u['id'], $exists]);
+                $mappedCount += $stmtUpdate->rowCount();
+            } else {
+                // S'il n'existe pas du tout (base f1 vide), on le crée !
+                $stmtInsert = $fam_pdo->prepare("INSERT INTO pf_people (name, user_id) VALUES (?, ?)");
+                $stmtInsert->execute([$u['display_name'] ?: $u['username'], $u['id']]);
+                $mappedCount++;
+            }
         }
-        echo "<span style='color:blue'>$mappedCount profils liés</span> - ";
+        echo "<span style='color:blue'>$mappedCount profils liés ou créés</span> - ";
         
         // role
         try {
@@ -58,7 +77,7 @@ foreach ($families as $f) {
             } else { throw $e; }
         }
 
-        // 🟢 NOUVEAU : Colonne color
+        // color
         try {
             $fam_pdo->exec("ALTER TABLE pf_people ADD COLUMN color VARCHAR(7) DEFAULT '#0891b2'");
             echo "<span style='color:green'>colonne 'color' ajoutée</span> - ";
@@ -91,17 +110,14 @@ foreach ($families as $f) {
         // ==========================================
         echo "<li><strong>Table pf_alloc_values :</strong> ";
         
-        // Vérification et renommage de amount_alex
         $checkAlex = $fam_pdo->query("SHOW COLUMNS FROM pf_alloc_values LIKE 'amount_alex'")->rowCount();
         if ($checkAlex > 0) {
-            // Utilisation de CHANGE pour compatibilité maximale avec les anciennes versions MySQL
             $fam_pdo->exec("ALTER TABLE pf_alloc_values CHANGE amount_alex amount_p1 FLOAT DEFAULT 0");
             echo "<span style='color:green'>amount_alex -> amount_p1</span> - ";
         } else {
             echo "<span style='color:gray'>amount_p1 OK</span> - ";
         }
 
-        // Vérification et renommage de amount_laia
         $checkLaia = $fam_pdo->query("SHOW COLUMNS FROM pf_alloc_values LIKE 'amount_laia'")->rowCount();
         if ($checkLaia > 0) {
             $fam_pdo->exec("ALTER TABLE pf_alloc_values CHANGE amount_laia amount_p2 FLOAT DEFAULT 0");
@@ -122,7 +138,7 @@ foreach ($families as $f) {
         // 4. GESTION DU BUDGET (pf_salary_config)
         // ==========================================
         echo "<li><strong>Table pf_salary_config :</strong> ";
-        // On récupère les vrais prénoms pour les remplacer dans les configs de salaires
+        // On récupère les vrais prénoms fraîchement créés/mappés
         $stmtParents = $fam_pdo->query("SELECT name FROM pf_people WHERE role = 'parent' ORDER BY id ASC");
         $parents = $stmtParents->fetchAll();
         
