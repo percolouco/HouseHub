@@ -458,14 +458,28 @@ async function estimateTripCost() {
     html += '</div>';
 
     if (data.segments && data.segments.length) {
-      html += '<details style="font-size:.82rem; color:var(--text-muted);"><summary style="cursor:pointer; margin-bottom:8px;">Détail par segment</summary>';
+      html += '<div style="border-top:1px solid var(--border-light); padding-top:12px; margin-top:4px;">';
+      html += '<div style="font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); margin-bottom:10px;">Détail du trajet</div>';
       data.segments.forEach(s => {
-        html += `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-light);">
-          <span>📍 ${s.from} → ${s.to}</span>
-          <span>${Math.round(s.distance_km)} km · péage: ${s.toll.toFixed(2)} €</span>
+        html += `<div style="padding:8px 0; border-bottom:1px solid var(--border-light);">`;
+        html += `<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+          <span style="font-weight:600; font-size:.88rem;">📍 ${esc(s.from)} → ${esc(s.to)}</span>
+          <span style="font-size:.88rem; color:var(--primary);">péage : <strong>${s.toll.toFixed(2)} €</strong></span>
         </div>`;
+        html += `<div style="font-size:.78rem; color:var(--text-muted);">🛣️ ${Math.round(s.distance_km)} km`;
+        if (s.entry_plaza && s.exit_plaza) {
+          html += ` · ${esc(s.entry_plaza)} → ${esc(s.exit_plaza)}`;
+          if (s.op) html += ` <span style="background:var(--bg-page); border:1px solid var(--border-light); border-radius:4px; padding:0 4px; font-size:.7rem;">${esc(s.op)}</span>`;
+        } else if (s.note) {
+          html += ` · <em>${esc(s.note)}</em>`;
+        }
+        html += '</div></div>';
       });
-      html += '</details>';
+      html += '</div>';
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     result.innerHTML = html;
