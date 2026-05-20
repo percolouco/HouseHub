@@ -224,6 +224,7 @@ for ($i = 0; $i < count($stops) - 1; $i++) {
     ];
     if ($entryPlaza) $seg['entry_plaza'] = $entryPlaza;
     if ($exitPlaza)  $seg['exit_plaza']  = $exitPlaza;
+    if ($bestOp)     $seg['op']          = $bestOp;
     if ($tollNote)   $seg['note']        = $tollNote;
 
     $segments[] = $seg;
