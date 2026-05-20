@@ -35,8 +35,11 @@ require __DIR__ . '/header.php';
     <div id="modalHolidays" class="pf-modal">
         <div class="pf-modal-content">
             <div class="pf-modal-header">
-                <h3 class="pf-modal-title"><?= tr('fc_modal_holidays_title') ?></h3>
-                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('open'); document.body.classList.remove('no-scroll');">&times;</button>
+                <h3 class="pf-modal-title">
+                    <?= tr('fc_modal_holidays_title') ?> 
+                    <?php if (defined('ZONE_SCOLAIRE') && ZONE_SCOLAIRE !== 'Autre') echo '(Zone ' . htmlspecialchars(ZONE_SCOLAIRE) . ')'; ?>
+                </h3>
+                <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('active')">&times;</button>
             </div>
             <div class="pf-modal-body" style="padding:0;">
                 <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;">
