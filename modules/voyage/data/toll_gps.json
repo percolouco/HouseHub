@@ -1,0 +1,2072 @@
+{
+  "NŒUX-LES-MINES N°6.1": {
+    "lat": 50.48089,
+    "lng": 2.662089,
+    "city": "NŒUX-LES-MINES N°6.1"
+  },
+  "MÉRU N°13": {
+    "lat": 49.236198,
+    "lng": 2.135509,
+    "city": "MÉRU"
+  },
+  "VIERZON NORD": {
+    "lat": 47.221749,
+    "lng": 2.069142,
+    "city": "VIERZON"
+  },
+  "VATRY N°19": {
+    "lat": 48.82188,
+    "lng": 4.2449,
+    "city": "VATRY"
+  },
+  "TOURNUS": {
+    "lat": 46.561737,
+    "lng": 4.912242,
+    "city": "TOURNUS"
+  },
+  "FAREBERSVILLER N°39": {
+    "lat": 49.118972,
+    "lng": 6.875299,
+    "city": "FAREBERSVILLER"
+  },
+  "ST JULIEN / SANCY": {
+    "lat": 45.661005,
+    "lng": 2.673169,
+    "city": "ST JULIEN / SANCY"
+  },
+  "GARE TGV N°53": {
+    "lat": 43.92159,
+    "lng": 4.780004,
+    "city": "GARE TGV"
+  },
+  "BLOIS": {
+    "lat": 47.587686,
+    "lng": 1.333764,
+    "city": "BLOIS"
+  },
+  "ARRAS EST (A1) N°15": {
+    "lat": 50.291048,
+    "lng": 2.777221,
+    "city": "ARRAS"
+  },
+  "SAINTES": {
+    "lat": 45.746066,
+    "lng": -0.630067,
+    "city": "SAINTES"
+  },
+  "NEMOURS": {
+    "lat": 48.268026,
+    "lng": 2.695308,
+    "city": "NEMOURS"
+  },
+  "VILLEFRANCHE-LIMAS": {
+    "lat": 45.979365,
+    "lng": 4.732366,
+    "city": "VILLEFRANCHE-LIMAS"
+  },
+  "ETAPLES / LE TOUQUET N°26": {
+    "lat": 50.51688,
+    "lng": 1.642372,
+    "city": "ETAPLES / LE TOUQUET"
+  },
+  "MONT-CHOISY N°18": {
+    "lat": 18.095825,
+    "lng": -63.071995,
+    "city": "MONT-CHOISY"
+  },
+  "LA HAIE-TONDUE N°29": {
+    "lat": 49.260223,
+    "lng": 0.108408,
+    "city": "LA HAIE-TONDUE"
+  },
+  "SARRE-UNION N°42": {
+    "lat": 48.940447,
+    "lng": 7.089933,
+    "city": "SARRE-UNION"
+  },
+  "MONT CHOISY": {
+    "lat": 18.095825,
+    "lng": -63.071995,
+    "city": "MONT CHOISY"
+  },
+  "SAINT HILAIRE LES ANDRESIS": {
+    "lat": 48.052818,
+    "lng": 3.013671,
+    "city": "SAINT HILAIRE LES ANDRESIS"
+  },
+  "MACON NORD": {
+    "lat": 46.303668,
+    "lng": 4.832227,
+    "city": "MACON"
+  },
+  "VILLENEUVE-DONDAGRE": {
+    "lat": 48.138559,
+    "lng": 3.136064,
+    "city": "VILLENEUVE-DONDAGRE"
+  },
+  "LAMOTTE-BEUVRON": {
+    "lat": 47.605296,
+    "lng": 2.026735,
+    "city": "LAMOTTE-BEUVRON"
+  },
+  "TORVILLIERS": {
+    "lat": 48.275205,
+    "lng": 3.976063,
+    "city": "TORVILLIERS"
+  },
+  "AMIENS NORD N°20": {
+    "lat": 49.894171,
+    "lng": 2.295695,
+    "city": "AMIENS"
+  },
+  "CHOLET NORD": {
+    "lat": 47.061729,
+    "lng": -0.880136,
+    "city": "CHOLET"
+  },
+  "HARDIVILLERS N°16": {
+    "lat": 49.616409,
+    "lng": 2.222068,
+    "city": "HARDIVILLERS"
+  },
+  "AUXY": {
+    "lat": 46.949471,
+    "lng": 4.403262,
+    "city": "AUXY"
+  },
+  "CHAUMONT-SEMOUTIERS": {
+    "lat": 48.088432,
+    "lng": 5.049445,
+    "city": "CHAUMONT-SEMOUTIERS"
+  },
+  "ORLEANS-CENTRE": {
+    "lat": 47.914386,
+    "lng": 1.884274,
+    "city": "ORLEANS-CENTRE"
+  },
+  "MOIRANS": {
+    "lat": 45.326264,
+    "lng": 5.564719,
+    "city": "MOIRANS"
+  },
+  "ST ETIENNE AU TEMPLE": {
+    "lat": 49.027597,
+    "lng": 4.420182,
+    "city": "ST ETIENNE AU TEMPLE"
+  },
+  "MONTMELIAN": {
+    "lat": 45.500995,
+    "lng": 6.058797,
+    "city": "MONTMELIAN"
+  },
+  "CONNERRE": {
+    "lat": 48.060458,
+    "lng": 0.493392,
+    "city": "CONNERRE"
+  },
+  "ORLEANS NORD": {
+    "lat": 47.902734,
+    "lng": 1.908607,
+    "city": "ORLEANS"
+  },
+  "RUMILLY": {
+    "lat": 50.57651,
+    "lng": 2.01477,
+    "city": "RUMILLY"
+  },
+  "VILLEFRANCHE S/ CHER": {
+    "lat": 47.04491,
+    "lng": 2.888758,
+    "city": "VILLEFRANCHE S/ CHER"
+  },
+  "COURTENAY": {
+    "lat": 45.72941,
+    "lng": 5.379845,
+    "city": "COURTENAY"
+  },
+  "LE MIROIR": {
+    "lat": 46.536244,
+    "lng": 5.335107,
+    "city": "LE MIROIR"
+  },
+  "ECOMMOY": {
+    "lat": 47.828601,
+    "lng": 0.273334,
+    "city": "ECOMMOY"
+  },
+  "FONTENAY LE COMTE": {
+    "lat": 46.466077,
+    "lng": -0.8064,
+    "city": "FONTENAY LE COMTE"
+  },
+  "TIL CHATEL": {
+    "lat": 47.515537,
+    "lng": 5.175363,
+    "city": "TIL CHATEL"
+  },
+  "JANVILLE (ALLAINES)": {
+    "lat": 49.163544,
+    "lng": -0.161581,
+    "city": "JANVILLE"
+  },
+  "SENLIS N°8": {
+    "lat": 50.533161,
+    "lng": 2.152329,
+    "city": "SENLIS"
+  },
+  "LILLERS N°5": {
+    "lat": 50.5606,
+    "lng": 2.47604,
+    "city": "LILLERS"
+  },
+  "JOIGNY": {
+    "lat": 47.981249,
+    "lng": 3.399577,
+    "city": "JOIGNY"
+  },
+  "SAVIGNY /CLAIRIS": {
+    "lat": 48.066278,
+    "lng": 3.103233,
+    "city": "SAVIGNY /CLAIRIS"
+  },
+  "ST-SAËNS N°10 /": {
+    "lat": 49.672412,
+    "lng": 1.28304,
+    "city": "ST-SAËNS"
+  },
+  "VEIGNE": {
+    "lat": 47.286988,
+    "lng": 0.740985,
+    "city": "VEIGNE"
+  },
+  "ST-GERMAIN-LAXIS": {
+    "lat": 48.58197,
+    "lng": 2.710215,
+    "city": "ST-GERMAIN-LAXIS"
+  },
+  "POITIERS SUD": {
+    "lat": 46.58026,
+    "lng": 0.340196,
+    "city": "POITIERS"
+  },
+  "LONGUE-JUMELLES": {
+    "lat": 47.434621,
+    "lng": -0.103453,
+    "city": "LONGUE-JUMELLES"
+  },
+  "STE HERMINE": {
+    "lat": 46.560178,
+    "lng": -1.07181,
+    "city": "STE HERMINE"
+  },
+  "BOURGOIN": {
+    "lat": 45.586044,
+    "lng": 5.277227,
+    "city": "BOURGOIN"
+  },
+  "HERMILLON": {
+    "lat": 45.299115,
+    "lng": 6.362498,
+    "city": "HERMILLON"
+  },
+  "DEUX CHAISES": {
+    "lat": 46.379965,
+    "lng": 3.039513,
+    "city": "DEUX CHAISES"
+  },
+  "EGLETONS": {
+    "lat": 45.406523,
+    "lng": 2.045018,
+    "city": "EGLETONS"
+  },
+  "CHARTRES EST": {
+    "lat": 48.44386,
+    "lng": 1.488143,
+    "city": "CHARTRES"
+  },
+  "SAVERNE N°44": {
+    "lat": 48.741991,
+    "lng": 7.362595,
+    "city": "SAVERNE"
+  },
+  "NANTES": {
+    "lat": 47.218637,
+    "lng": -1.554136,
+    "city": "NANTES"
+  },
+  "BEAUMONT": {
+    "lat": 50.083931,
+    "lng": 2.656739,
+    "city": "BEAUMONT"
+  },
+  "FORET DE TRONCAIS": {
+    "lat": 46.62571,
+    "lng": 2.71747,
+    "city": "FORET DE TRONCAIS"
+  },
+  "DORMANS": {
+    "lat": 49.074566,
+    "lng": 3.638373,
+    "city": "DORMANS"
+  },
+  "CRIMOLOIS": {
+    "lat": 47.27371,
+    "lng": 5.119954,
+    "city": "CRIMOLOIS"
+  },
+  "LE HAVRE N°5 /": {
+    "lat": 49.493898,
+    "lng": 0.107973,
+    "city": "LE HAVRE"
+  },
+  "SEES": {
+    "lat": 48.603378,
+    "lng": 0.173454,
+    "city": "SEES"
+  },
+  "COUTEVROULT N°15": {
+    "lat": 48.862865,
+    "lng": 2.853916,
+    "city": "COUTEVROULT"
+  },
+  "GIDY": {
+    "lat": 47.989943,
+    "lng": 1.836851,
+    "city": "GIDY"
+  },
+  "PEROUGES": {
+    "lat": 45.903428,
+    "lng": 5.179461,
+    "city": "PEROUGES"
+  },
+  "BEAUPONT": {
+    "lat": 46.411199,
+    "lng": 5.264617,
+    "city": "BEAUPONT"
+  },
+  "YERVILLE N°9": {
+    "lat": 49.66887,
+    "lng": 0.897424,
+    "city": "YERVILLE"
+  },
+  "CHATENOIS": {
+    "lat": 48.272548,
+    "lng": 7.401365,
+    "city": "CHATENOIS"
+  },
+  "GROISSIAT": {
+    "lat": 46.222,
+    "lng": 5.60825,
+    "city": "GROISSIAT"
+  },
+  "TULLE NORD": {
+    "lat": 45.267835,
+    "lng": 1.77068,
+    "city": "TULLE"
+  },
+  "LA CROIX-CHALON": {
+    "lat": 46.177696,
+    "lng": 5.554208,
+    "city": "LA CROIX-CHALON"
+  },
+  "OLIVET": {
+    "lat": 47.865098,
+    "lng": 1.901575,
+    "city": "OLIVET"
+  },
+  "LAVAL EST": {
+    "lat": 48.070669,
+    "lng": -0.773402,
+    "city": "LAVAL"
+  },
+  "REIMS SUD N°23": {
+    "lat": 49.257789,
+    "lng": 4.031926,
+    "city": "REIMS"
+  },
+  "MAROLLES-SUR-SEINE": {
+    "lat": 48.386056,
+    "lng": 3.031911,
+    "city": "MAROLLES-SUR-SEINE"
+  },
+  "BERCK N°25": {
+    "lat": 50.405258,
+    "lng": 1.571162,
+    "city": "BERCK"
+  },
+  "ESVRES": {
+    "lat": 47.284582,
+    "lng": 0.786171,
+    "city": "ESVRES"
+  },
+  "SEURRE": {
+    "lat": 46.999579,
+    "lng": 5.148786,
+    "city": "SEURRE"
+  },
+  "CHAMBRAY": {
+    "lat": 49.073845,
+    "lng": 1.309057,
+    "city": "CHAMBRAY"
+  },
+  "LAON N°13": {
+    "lat": 49.564665,
+    "lng": 3.620686,
+    "city": "LAON"
+  },
+  "VILLEFONTAINE": {
+    "lat": 45.614003,
+    "lng": 5.158057,
+    "city": "VILLEFONTAINE"
+  },
+  "MONTMARAULT": {
+    "lat": 46.318564,
+    "lng": 2.954432,
+    "city": "MONTMARAULT"
+  },
+  "ANGERS (CORZE)": {
+    "lat": 47.473988,
+    "lng": -0.551559,
+    "city": "ANGERS"
+  },
+  "LAMOTTE BEUVRON": {
+    "lat": 47.605296,
+    "lng": 2.026735,
+    "city": "LAMOTTE BEUVRON"
+  },
+  "EVRON": {
+    "lat": 48.15606,
+    "lng": -0.402976,
+    "city": "EVRON"
+  },
+  "PARIS (LA FOLIE BESSIN)": {
+    "lat": 48.853495,
+    "lng": 2.348391,
+    "city": "PARIS"
+  },
+  "MONTREUIL (REIMS)": {
+    "lat": 50.463892,
+    "lng": 1.763113,
+    "city": "MONTREUIL"
+  },
+  "PONT-SAINTE-MAXENCE N°9": {
+    "lat": 49.301248,
+    "lng": 2.604584,
+    "city": "PONT-SAINTE-MAXENCE"
+  },
+  "FECAMP N°8": {
+    "lat": 49.757773,
+    "lng": 0.374891,
+    "city": "FECAMP"
+  },
+  "ROMORANTIN": {
+    "lat": 47.359218,
+    "lng": 1.743492,
+    "city": "ROMORANTIN"
+  },
+  "LA ROCHELLE / NIORT SUD": {
+    "lat": 46.3158,
+    "lng": -0.473383,
+    "city": "LA ROCHELLE / NIORT"
+  },
+  "BOURGES": {
+    "lat": 47.081166,
+    "lng": 2.399125,
+    "city": "BOURGES"
+  },
+  "LE MANS ZI NORD": {
+    "lat": 48.015536,
+    "lng": 0.151415,
+    "city": "LE MANS ZI"
+  },
+  "SAINT MARTIN-DU-FRESNE": {
+    "lat": 46.135646,
+    "lng": 5.551392,
+    "city": "SAINT MARTIN-DU-FRESNE"
+  },
+  "TANCARVILLE (A131)": {
+    "lat": 49.486921,
+    "lng": 0.452317,
+    "city": "TANCARVILLE"
+  },
+  "TOURS-C/MONNAIE": {
+    "lat": 47.475507,
+    "lng": 0.776951,
+    "city": "TOURS-C/MONNAIE"
+  },
+  "EPERNAY": {
+    "lat": 49.042561,
+    "lng": 3.952866,
+    "city": "EPERNAY"
+  },
+  "USSEL EST": {
+    "lat": 45.545688,
+    "lng": 2.311858,
+    "city": "USSEL"
+  },
+  "BEAUTOT /": {
+    "lat": 49.642266,
+    "lng": 1.037429,
+    "city": "BEAUTOT /"
+  },
+  "MACON CENTRE": {
+    "lat": 46.303668,
+    "lng": 4.832227,
+    "city": "MACON"
+  },
+  "ESCRENNES": {
+    "lat": 48.13287,
+    "lng": 2.18808,
+    "city": "ESCRENNES"
+  },
+  "BEAUVAIS NORD N°15": {
+    "lat": 49.4301,
+    "lng": 2.082336,
+    "city": "BEAUVAIS"
+  },
+  "LA FOLIE-B/PARIS": {
+    "lat": 48.859972,
+    "lng": 2.386406,
+    "city": "LA FOLIE-B/PARIS"
+  },
+  "REPLONGES": {
+    "lat": 46.30929,
+    "lng": 4.882713,
+    "city": "REPLONGES"
+  },
+  "SOMMESOUS N°20": {
+    "lat": 48.738284,
+    "lng": 4.197652,
+    "city": "SOMMESOUS"
+  },
+  "LA BAUME D'HOSTUN": {
+    "lat": 45.055508,
+    "lng": 5.226177,
+    "city": "LA BAUME D'HOSTUN"
+  },
+  "MONTAIGU": {
+    "lat": 49.535,
+    "lng": 3.83264,
+    "city": "MONTAIGU"
+  },
+  "DRUYE (CANDE)": {
+    "lat": 47.307621,
+    "lng": 0.537,
+    "city": "DRUYE"
+  },
+  "DIJON-CRIMOLOIS": {
+    "lat": 47.275109,
+    "lng": 5.101339,
+    "city": "DIJON-CRIMOLOIS"
+  },
+  "STRASBOURG": {
+    "lat": 48.584614,
+    "lng": 7.750713,
+    "city": "STRASBOURG"
+  },
+  "BEAULIEU": {
+    "lat": 47.72777,
+    "lng": 4.726938,
+    "city": "BEAULIEU"
+  },
+  "CAEN": {
+    "lat": 49.18134,
+    "lng": -0.363561,
+    "city": "CAEN"
+  },
+  "VIERZON EST": {
+    "lat": 47.221749,
+    "lng": 2.069142,
+    "city": "VIERZON"
+  },
+  "CHANTONNAY": {
+    "lat": 46.686812,
+    "lng": -1.050551,
+    "city": "CHANTONNAY"
+  },
+  "BOURGUEIL": {
+    "lat": 47.282769,
+    "lng": 0.178887,
+    "city": "BOURGUEIL"
+  },
+  "RIOM": {
+    "lat": 45.893012,
+    "lng": 3.114058,
+    "city": "RIOM"
+  },
+  "TOURS CENTRE (SAINT CHRISTOPHE)": {
+    "lat": 47.390047,
+    "lng": 0.688927,
+    "city": "TOURS"
+  },
+  "LA BOISSE - MONTLUEL": {
+    "lat": 45.909393,
+    "lng": 5.023381,
+    "city": "LA BOISSE - MONTLUEL"
+  },
+  "HOCHFELDEN N°45": {
+    "lat": 48.7583,
+    "lng": 7.57011,
+    "city": "HOCHFELDEN"
+  },
+  "CHARMONT": {
+    "lat": 48.87046,
+    "lng": 4.86646,
+    "city": "CHARMONT"
+  },
+  "SOIRANS": {
+    "lat": 47.2058,
+    "lng": 5.28839,
+    "city": "SOIRANS"
+  },
+  "VITRE (LA GRAVELLE)": {
+    "lat": 48.12445,
+    "lng": -1.214331,
+    "city": "VITRE"
+  },
+  "TROARN N°31": {
+    "lat": 49.181939,
+    "lng": -0.182062,
+    "city": "TROARN"
+  },
+  "VATRY": {
+    "lat": 48.82188,
+    "lng": 4.2449,
+    "city": "VATRY"
+  },
+  "BALAN": {
+    "lat": 45.833379,
+    "lng": 5.096988,
+    "city": "BALAN"
+  },
+  "CLERMONT": {
+    "lat": 49.378092,
+    "lng": 2.414191,
+    "city": "CLERMONT"
+  },
+  "LAVAL OUEST": {
+    "lat": 48.070669,
+    "lng": -0.773402,
+    "city": "LAVAL"
+  },
+  "VIRIAT": {
+    "lat": 46.253318,
+    "lng": 5.216788,
+    "city": "VIRIAT"
+  },
+  "SAINT GENIX SUR GUIERS": {
+    "lat": 45.597203,
+    "lng": 5.66022,
+    "city": "SAINT GENIX SUR GUIERS"
+  },
+  "ABBEVILLE NORD N°23": {
+    "lat": 50.106083,
+    "lng": 1.833703,
+    "city": "ABBEVILLE"
+  },
+  "CHATEAU-THIERRY": {
+    "lat": 49.045736,
+    "lng": 3.402711,
+    "city": "CHATEAU-THIERRY"
+  },
+  "AVALLON": {
+    "lat": 47.488537,
+    "lng": 3.907066,
+    "city": "AVALLON"
+  },
+  "LA VERRIE": {
+    "lat": 46.961944,
+    "lng": -0.993889,
+    "city": "LA VERRIE"
+  },
+  "PARIGNE-L'EVEQUE": {
+    "lat": 47.9324,
+    "lng": 0.376251,
+    "city": "PARIGNE-L'EVEQUE"
+  },
+  "SAINT MAURICE": {
+    "lat": 48.327525,
+    "lng": 7.336344,
+    "city": "SAINT MAURICE"
+  },
+  "ANGERS": {
+    "lat": 47.473988,
+    "lng": -0.551559,
+    "city": "ANGERS"
+  },
+  "BOURG NORD": {
+    "lat": 45.039469,
+    "lng": -0.559611,
+    "city": "BOURG"
+  },
+  "LA FERTE BERNARD": {
+    "lat": 48.186058,
+    "lng": 0.655451,
+    "city": "LA FERTE BERNARD"
+  },
+  "SALOUËL N°18": {
+    "lat": 49.8709,
+    "lng": 2.24173,
+    "city": "SALOUËL"
+  },
+  "ST-ROMAIN-DE-COLBOSC N°6": {
+    "lat": 49.53136,
+    "lng": 0.357916,
+    "city": "ST-ROMAIN-DE-COLBOSC"
+  },
+  "FORGES": {
+    "lat": 48.419321,
+    "lng": 2.960365,
+    "city": "FORGES"
+  },
+  "FONTENAY SUR LOING": {
+    "lat": 48.107118,
+    "lng": 2.773064,
+    "city": "FONTENAY SUR LOING"
+  },
+  "BERSAILLIN": {
+    "lat": 46.859226,
+    "lng": 5.598555,
+    "city": "BERSAILLIN"
+  },
+  "ABLIS": {
+    "lat": 48.517153,
+    "lng": 1.836876,
+    "city": "ABLIS"
+  },
+  "NEUILLE-PONT-PIERRE": {
+    "lat": 47.548543,
+    "lng": 0.548146,
+    "city": "NEUILLE-PONT-PIERRE"
+  },
+  "ORBEC": {
+    "lat": 49.021081,
+    "lng": 0.405675,
+    "city": "ORBEC"
+  },
+  "LA TOUR DU PIN": {
+    "lat": 45.56662,
+    "lng": 5.442405,
+    "city": "LA TOUR DU PIN"
+  },
+  "NIORT OUEST": {
+    "lat": 46.323923,
+    "lng": -0.464606,
+    "city": "NIORT"
+  },
+  "SOMMESOUS": {
+    "lat": 48.738284,
+    "lng": 4.197652,
+    "city": "SOMMESOUS"
+  },
+  "ARLAY": {
+    "lat": 46.77213,
+    "lng": 5.532932,
+    "city": "ARLAY"
+  },
+  "BESANCON NORD": {
+    "lat": 47.238022,
+    "lng": 6.024362,
+    "city": "BESANCON"
+  },
+  "ANCENIS": {
+    "lat": 47.364814,
+    "lng": -1.181609,
+    "city": "ANCENIS"
+  },
+  "SAINT-QUENTIN SUD N°11": {
+    "lat": 49.846525,
+    "lng": 3.287684,
+    "city": "SAINT-QUENTIN"
+  },
+  "BEAUVAIS CENTRE N°14": {
+    "lat": 49.4301,
+    "lng": 2.082336,
+    "city": "BEAUVAIS"
+  },
+  "REIMS SUD": {
+    "lat": 49.257789,
+    "lng": 4.031926,
+    "city": "REIMS"
+  },
+  "VINAY": {
+    "lat": 49.01061,
+    "lng": 3.900455,
+    "city": "VINAY"
+  },
+  "BEAUREPAIRE": {
+    "lat": 49.293805,
+    "lng": 2.571627,
+    "city": "BEAUREPAIRE"
+  },
+  "AUVOURS (LE MANS ZI SUD)": {
+    "lat": 48.017001,
+    "lng": 0.305451,
+    "city": "AUVOURS"
+  },
+  "DOZULÉ N°30": {
+    "lat": 49.23146,
+    "lng": -0.044746,
+    "city": "DOZULÉ"
+  },
+  "CRIQUEBEUF N°20 à MAISON-BRÛLEE N°24 / ROUEN LES ESSARTS (A139)": {
+    "lat": 49.74033,
+    "lng": 0.33204,
+    "city": "CRIQUEBEUF"
+  },
+  "FONTENAY /LOING": {
+    "lat": 48.107118,
+    "lng": 2.773064,
+    "city": "FONTENAY /LOING"
+  },
+  "METZ (A31)": {
+    "lat": 49.119696,
+    "lng": 6.176355,
+    "city": "METZ"
+  },
+  "POISSY / ORGEVAL N°7 à MANTES-SUD N°12": {
+    "lat": 48.924783,
+    "lng": 1.995925,
+    "city": "POISSY / ORGEVAL"
+  },
+  "ATHIES N°54": {
+    "lat": 50.301405,
+    "lng": 2.837388,
+    "city": "ATHIES"
+  },
+  "BAPAUME N°14": {
+    "lat": 50.103598,
+    "lng": 2.849369,
+    "city": "BAPAUME"
+  },
+  "DOLE": {
+    "lat": 47.092105,
+    "lng": 5.492546,
+    "city": "DOLE"
+  },
+  "SALBRIS": {
+    "lat": 47.42648,
+    "lng": 2.052554,
+    "city": "SALBRIS"
+  },
+  "ST MARTIN BELLEVUE A410": {
+    "lat": 45.973566,
+    "lng": 6.139014,
+    "city": "ST MARTIN BELLEVUE A410"
+  },
+  "SAINT GIBRIEN": {
+    "lat": 48.973117,
+    "lng": 4.299613,
+    "city": "SAINT GIBRIEN"
+  },
+  "GANNAT": {
+    "lat": 46.099607,
+    "lng": 3.199525,
+    "city": "GANNAT"
+  },
+  "CAMBRAI N°14": {
+    "lat": 50.175755,
+    "lng": 3.234615,
+    "city": "CAMBRAI"
+  },
+  "ISLE D'ABEAU CENTRE": {
+    "lat": 45.627812,
+    "lng": 5.207286,
+    "city": "ISLE D'ABEAU"
+  },
+  "REIMS NORD (ORMES)": {
+    "lat": 49.257789,
+    "lng": 4.031926,
+    "city": "REIMS"
+  },
+  "L ISLE-S/LE-DOUBS": {
+    "lat": 47.395575,
+    "lng": 6.581871,
+    "city": "L ISLE-S/LE-DOUBS"
+  },
+  "GYE": {
+    "lat": 48.6209,
+    "lng": 5.8766,
+    "city": "GYE"
+  },
+  "FUTUROSCOPE": {
+    "lat": 46.670389,
+    "lng": 0.370111,
+    "city": "FUTUROSCOPE"
+  },
+  "FONTAINEBLEAU": {
+    "lat": 48.404938,
+    "lng": 2.701587,
+    "city": "FONTAINEBLEAU"
+  },
+  "MACON SUD": {
+    "lat": 46.303668,
+    "lng": 4.832227,
+    "city": "MACON"
+  },
+  "POUILLY-EN-AUXOIS": {
+    "lat": 47.262242,
+    "lng": 4.556196,
+    "city": "POUILLY-EN-AUXOIS"
+  },
+  "BEUZEVILLE N°28": {
+    "lat": 49.345553,
+    "lng": 0.342725,
+    "city": "BEUZEVILLE"
+  },
+  "BROU": {
+    "lat": 48.211051,
+    "lng": 1.166258,
+    "city": "BROU"
+  },
+  "AUMALE N°12": {
+    "lat": 49.7705,
+    "lng": 1.75454,
+    "city": "AUMALE"
+  },
+  "CHARMONT-SOUS-BARBUISE N°22": {
+    "lat": 48.410407,
+    "lng": 4.171808,
+    "city": "CHARMONT-SOUS-BARBUISE"
+  },
+  "MASNIÈRES N°9": {
+    "lat": 50.114733,
+    "lng": 3.207531,
+    "city": "MASNIÈRES"
+  },
+  "BOURGES (LIM.CONC.)": {
+    "lat": 47.081166,
+    "lng": 2.399125,
+    "city": "BOURGES"
+  },
+  "MONTLUCON": {
+    "lat": 46.34003,
+    "lng": 2.607396,
+    "city": "MONTLUCON"
+  },
+  "USSEL OUEST": {
+    "lat": 45.545688,
+    "lng": 2.311858,
+    "city": "USSEL"
+  },
+  "BIERRE-LES-SEMUR": {
+    "lat": 47.423663,
+    "lng": 4.298894,
+    "city": "BIERRE-LES-SEMUR"
+  },
+  "CHATEAU-RENAULT": {
+    "lat": 47.590492,
+    "lng": 0.908417,
+    "city": "CHATEAU-RENAULT"
+  },
+  "CHALON CENTRE": {
+    "lat": 45.445833,
+    "lng": 4.931076,
+    "city": "CHALON"
+  },
+  "ORLEANS-NORD": {
+    "lat": 47.886494,
+    "lng": 1.909966,
+    "city": "ORLEANS-NORD"
+  },
+  "BELLEVILLE SUR SAONE": {
+    "lat": 46.109014,
+    "lng": 4.748464,
+    "city": "BELLEVILLE SUR SAONE"
+  },
+  "ST PIERRE BELLEVILLE": {
+    "lat": 48.696677,
+    "lng": 2.132409,
+    "city": "ST PIERRE BELLEVILLE"
+  },
+  "FRESNES EN WOEVRE": {
+    "lat": 49.096322,
+    "lng": 5.630749,
+    "city": "FRESNES EN WOEVRE"
+  },
+  "ST GIBRIEN": {
+    "lat": 48.973117,
+    "lng": 4.299613,
+    "city": "ST GIBRIEN"
+  },
+  "RESSONS N°11": {
+    "lat": 49.27213,
+    "lng": 3.638299,
+    "city": "RESSONS"
+  },
+  "CHALONS MOURMELON": {
+    "lat": 49.117373,
+    "lng": 4.427104,
+    "city": "CHALONS MOURMELON"
+  },
+  "STE MENEHOULD": {
+    "lat": 49.090419,
+    "lng": 4.896764,
+    "city": "STE MENEHOULD"
+  },
+  "ST ROMAIN SUR CHER": {
+    "lat": 47.318039,
+    "lng": 1.398678,
+    "city": "ST ROMAIN SUR CHER"
+  },
+  "ORMES": {
+    "lat": 49.053367,
+    "lng": 0.963433,
+    "city": "ORMES"
+  },
+  "ANNECY NORD": {
+    "lat": 45.899235,
+    "lng": 6.128885,
+    "city": "ANNECY"
+  },
+  "SILLE LE GUILLAUME / MAMERS": {
+    "lat": 48.183191,
+    "lng": -0.12952,
+    "city": "SILLE LE GUILLAUME / MAMERS"
+  },
+  "DIJON-ARC S/TILLE": {
+    "lat": 47.345121,
+    "lng": 5.189082,
+    "city": "DIJON-ARC S/TILLE"
+  },
+  "VIEILLEVILLE": {
+    "lat": 46.091179,
+    "lng": 1.673508,
+    "city": "VIEILLEVILLE"
+  },
+  "BRIONNE": {
+    "lat": 49.194893,
+    "lng": 0.718102,
+    "city": "BRIONNE"
+  },
+  "BOURG-ACHARD N°25": {
+    "lat": 49.35255,
+    "lng": 0.81495,
+    "city": "BOURG-ACHARD"
+  },
+  "PUTTELANGE N°40": {
+    "lat": 49.48548,
+    "lng": 6.267783,
+    "city": "PUTTELANGE"
+  },
+  "SAINTE MENEHOULD": {
+    "lat": 49.090419,
+    "lng": 4.896764,
+    "city": "SAINTE MENEHOULD"
+  },
+  "SAINT AMAND": {
+    "lat": 50.163989,
+    "lng": 2.557766,
+    "city": "SAINT AMAND"
+  },
+  "POITIERS NORD": {
+    "lat": 46.58026,
+    "lng": 0.340196,
+    "city": "POITIERS"
+  },
+  "JARNY": {
+    "lat": 49.156959,
+    "lng": 5.882171,
+    "city": "JARNY"
+  },
+  "VIERZON-EST": {
+    "lat": 47.210538,
+    "lng": 2.116627,
+    "city": "VIERZON-EST"
+  },
+  "VALLÉE DE LA HEM N°2 LA NEUVILLETTE N°15 SURVILLIERS / SAINT-WITZ N°7": {
+    "lat": 50.852022,
+    "lng": 2.099789,
+    "city": "VALLÉE DE LA HEM"
+  },
+  "LES ABRETS": {
+    "lat": 45.539038,
+    "lng": 5.587946,
+    "city": "LES ABRETS"
+  },
+  "AUXERRE SUD": {
+    "lat": 47.796129,
+    "lng": 3.570579,
+    "city": "AUXERRE"
+  },
+  "COMBRONDE": {
+    "lat": 45.9819,
+    "lng": 3.0889,
+    "city": "COMBRONDE"
+  },
+  "JARNY N°31": {
+    "lat": 49.156959,
+    "lng": 5.882171,
+    "city": "JARNY"
+  },
+  "NIORT NORD": {
+    "lat": 46.323923,
+    "lng": -0.464606,
+    "city": "NIORT"
+  },
+  "VULAINES": {
+    "lat": 48.23302,
+    "lng": 3.61952,
+    "city": "VULAINES"
+  },
+  "COMPIÈGNE OUEST N°10": {
+    "lat": 49.41795,
+    "lng": 2.826317,
+    "city": "COMPIÈGNE"
+  },
+  "PONT D AIN": {
+    "lat": 46.052,
+    "lng": 5.34554,
+    "city": "PONT D AIN"
+  },
+  "BESANCON OUEST": {
+    "lat": 47.238022,
+    "lng": 6.024362,
+    "city": "BESANCON"
+  },
+  "ARRAS NORD (A26) N°7": {
+    "lat": 50.291048,
+    "lng": 2.777221,
+    "city": "ARRAS"
+  },
+  "BOURNEVILLE N°26": {
+    "lat": 49.39153,
+    "lng": 0.620685,
+    "city": "BOURNEVILLE"
+  },
+  "TULLINS": {
+    "lat": 45.297771,
+    "lng": 5.482975,
+    "city": "TULLINS"
+  },
+  "MONTIGNY-LE-ROI": {
+    "lat": 47.998394,
+    "lng": 5.497207,
+    "city": "MONTIGNY-LE-ROI"
+  },
+  "AIX SUD": {
+    "lat": 50.491284,
+    "lng": 3.29071,
+    "city": "AIX"
+  },
+  "SAINTE-MARIE-AUX-CHÊNES N°32": {
+    "lat": 49.192106,
+    "lng": 5.998794,
+    "city": "SAINTE-MARIE-AUX-CHÊNES"
+  },
+  "ALLAINES": {
+    "lat": 49.96177,
+    "lng": 2.9443,
+    "city": "ALLAINES"
+  },
+  "BEAUNE SUD": {
+    "lat": 47.023906,
+    "lng": 4.838043,
+    "city": "BEAUNE"
+  },
+  "VIRSAC": {
+    "lat": 45.025531,
+    "lng": -0.435276,
+    "city": "VIRSAC"
+  },
+  "ESSERTAUX N°17": {
+    "lat": 49.740947,
+    "lng": 2.245253,
+    "city": "ESSERTAUX"
+  },
+  "L'ISLE-SUR-LE-DOUBS": {
+    "lat": 47.447905,
+    "lng": 6.583752,
+    "city": "L'ISLE-SUR-LE-DOUBS"
+  },
+  "LA BOISSE": {
+    "lat": 45.84169,
+    "lng": 5.032881,
+    "city": "LA BOISSE"
+  },
+  "ARTENAY": {
+    "lat": 48.082579,
+    "lng": 1.878582,
+    "city": "ARTENAY"
+  },
+  "ORLEANS CENTRE": {
+    "lat": 47.902734,
+    "lng": 1.908607,
+    "city": "ORLEANS"
+  },
+  "MOIRANS NORD": {
+    "lat": 45.326264,
+    "lng": 5.564719,
+    "city": "MOIRANS"
+  },
+  "REIMS - TINQUEUX": {
+    "lat": 49.255316,
+    "lng": 3.976075,
+    "city": "REIMS - TINQUEUX"
+  },
+  "POIX-DE-PICARDIE N°13": {
+    "lat": 49.774969,
+    "lng": 1.981851,
+    "city": "POIX-DE-PICARDIE"
+  },
+  "AMIENS OUEST N°19": {
+    "lat": 49.894171,
+    "lng": 2.295695,
+    "city": "AMIENS"
+  },
+  "SAINT-OMER N°3": {
+    "lat": 50.751577,
+    "lng": 2.253418,
+    "city": "SAINT-OMER"
+  },
+  "MARQUION N°8": {
+    "lat": 50.210242,
+    "lng": 3.085322,
+    "city": "MARQUION"
+  },
+  "DEUX-CHAISES": {
+    "lat": 46.379965,
+    "lng": 3.039513,
+    "city": "DEUX-CHAISES"
+  },
+  "AIX NORD": {
+    "lat": 50.491284,
+    "lng": 3.29071,
+    "city": "AIX"
+  },
+  "CHEMILLE": {
+    "lat": 47.230053,
+    "lng": -0.73237,
+    "city": "CHEMILLE"
+  },
+  "MAGNANT": {
+    "lat": 48.1694,
+    "lng": 4.4219,
+    "city": "MAGNANT"
+  },
+  "NEUFCHÂTEL-EN-BRAY (A28)": {
+    "lat": 49.735003,
+    "lng": 1.442141,
+    "city": "NEUFCHÂTEL-EN-BRAY"
+  },
+  "ARGENTAN": {
+    "lat": 48.74289,
+    "lng": -0.022339,
+    "city": "ARGENTAN"
+  },
+  "BULGNEVILLE": {
+    "lat": 48.207801,
+    "lng": 5.835093,
+    "city": "BULGNEVILLE"
+  },
+  "GUIGNICOURT N°14": {
+    "lat": 49.444124,
+    "lng": 3.961816,
+    "city": "GUIGNICOURT"
+  },
+  "ALLONZIER": {
+    "lat": 46.000147,
+    "lng": 6.118553,
+    "city": "ALLONZIER"
+  },
+  "TULLE EST": {
+    "lat": 45.267835,
+    "lng": 1.77068,
+    "city": "TULLE"
+  },
+  "DURTAL": {
+    "lat": 47.670519,
+    "lng": -0.245379,
+    "city": "DURTAL"
+  },
+  "MIRAMBEAU": {
+    "lat": 43.4028,
+    "lng": 0.866867,
+    "city": "MIRAMBEAU"
+  },
+  "DOURDAN": {
+    "lat": 48.528844,
+    "lng": 2.015369,
+    "city": "DOURDAN"
+  },
+  "CHALON SUD": {
+    "lat": 45.445833,
+    "lng": 4.931076,
+    "city": "CHALON"
+  },
+  "SAINT JEAN D'ANGELY": {
+    "lat": 45.944596,
+    "lng": -0.519576,
+    "city": "SAINT JEAN D'ANGELY"
+  },
+  "MONTREUIL-AUX-LIONS N°19": {
+    "lat": 49.021865,
+    "lng": 3.194983,
+    "city": "MONTREUIL-AUX-LIONS"
+  },
+  "LE TOUVET": {
+    "lat": 45.359232,
+    "lng": 5.951598,
+    "city": "LE TOUVET"
+  },
+  "LA FÈRE N°12": {
+    "lat": 49.663287,
+    "lng": 3.366167,
+    "city": "LA FÈRE"
+  },
+  "DIJON SUD": {
+    "lat": 47.321581,
+    "lng": 5.04147,
+    "city": "DIJON"
+  },
+  "FLEURY-EN-BIERE": {
+    "lat": 48.45161,
+    "lng": 2.548426,
+    "city": "FLEURY-EN-BIERE"
+  },
+  "ELOISE": {
+    "lat": 46.07941,
+    "lng": 5.858343,
+    "city": "ELOISE"
+  },
+  "SAINT GERMAIN-LAXIS": {
+    "lat": 48.58197,
+    "lng": 2.710215,
+    "city": "SAINT GERMAIN-LAXIS"
+  },
+  "NITRY": {
+    "lat": 47.672343,
+    "lng": 3.877916,
+    "city": "NITRY"
+  },
+  "SABLE-LA FLECHE": {
+    "lat": 47.839593,
+    "lng": -0.31174,
+    "city": "SABLE-LA FLECHE"
+  },
+  "LANGRES SUD": {
+    "lat": 47.863961,
+    "lng": 5.333947,
+    "city": "LANGRES"
+  },
+  "CHOLET SUD": {
+    "lat": 47.061729,
+    "lng": -0.880136,
+    "city": "CHOLET"
+  },
+  "JOUE-LES-TOURS": {
+    "lat": 47.351116,
+    "lng": 0.662235,
+    "city": "JOUE-LES-TOURS"
+  },
+  "AIGUEBELETTE": {
+    "lat": 45.537703,
+    "lng": 5.814818,
+    "city": "AIGUEBELETTE"
+  },
+  "NEUFCHÂTEL-HARDELOT N°27": {
+    "lat": 50.618849,
+    "lng": 1.630616,
+    "city": "NEUFCHÂTEL-HARDELOT"
+  },
+  "CHOISEY": {
+    "lat": 47.062964,
+    "lng": 5.460466,
+    "city": "CHOISEY"
+  },
+  "LA TOUR DU PIN EST": {
+    "lat": 45.56662,
+    "lng": 5.442405,
+    "city": "LA TOUR DU PIN"
+  },
+  "MONTREUIL AUX LIONS": {
+    "lat": 49.021865,
+    "lng": 3.194983,
+    "city": "MONTREUIL AUX LIONS"
+  },
+  "SAINT THIBAULT": {
+    "lat": 47.372667,
+    "lng": 4.471242,
+    "city": "SAINT THIBAULT"
+  },
+  "LA ROCHE SUR YON": {
+    "lat": 46.670558,
+    "lng": -1.426959,
+    "city": "LA ROCHE SUR YON"
+  },
+  "NUITS-SAINT-GEORGES": {
+    "lat": 47.13676,
+    "lng": 4.948906,
+    "city": "NUITS-SAINT-GEORGES"
+  },
+  "TOURS CENTRE (CANDE)": {
+    "lat": 47.390047,
+    "lng": 0.688927,
+    "city": "TOURS"
+  },
+  "ABBEVILLE EST N°22": {
+    "lat": 50.106083,
+    "lng": 1.833703,
+    "city": "ABBEVILLE"
+  },
+  "SELLES SUR CHER": {
+    "lat": 47.2769,
+    "lng": 1.56301,
+    "city": "SELLES SUR CHER"
+  },
+  "LANGRES NORD": {
+    "lat": 47.863961,
+    "lng": 5.333947,
+    "city": "LANGRES"
+  },
+  "DORMANS N°21": {
+    "lat": 49.074566,
+    "lng": 3.638373,
+    "city": "DORMANS"
+  },
+  "SAINTE MAURE": {
+    "lat": 48.342598,
+    "lng": 4.066877,
+    "city": "SAINTE MAURE"
+  },
+  "CHAUFOUR N°15 à GAILLON N°17": {
+    "lat": 45.288684,
+    "lng": 0.272422,
+    "city": "CHAUFOUR"
+  },
+  "STE MARIE DE CUINES": {
+    "lat": 45.33957,
+    "lng": 6.302351,
+    "city": "STE MARIE DE CUINES"
+  },
+  "VOIRON": {
+    "lat": 45.363139,
+    "lng": 5.591075,
+    "city": "VOIRON"
+  },
+  "ST-JEAN-LES-DEUX-JUMEAUX N°18": {
+    "lat": 48.951811,
+    "lng": 3.01868,
+    "city": "ST-JEAN-LES-DEUX-JUMEAUX"
+  },
+  "YVETOT /": {
+    "lat": 49.617938,
+    "lng": 0.753887,
+    "city": "YVETOT /"
+  },
+  "RIVES": {
+    "lat": 45.350129,
+    "lng": 5.504741,
+    "city": "RIVES"
+  },
+  "SAVIGNY SUR CLAIRIS": {
+    "lat": 48.075558,
+    "lng": 3.09523,
+    "city": "SAVIGNY SUR CLAIRIS"
+  },
+  "VILLEFRANCHE-NORD": {
+    "lat": 46.004944,
+    "lng": 4.695677,
+    "city": "VILLEFRANCHE-NORD"
+  },
+  "VILLE SOUS LA FERTE": {
+    "lat": 48.119982,
+    "lng": 4.788971,
+    "city": "VILLE SOUS LA FERTE"
+  },
+  "AUXERRE NORD": {
+    "lat": 47.796129,
+    "lng": 3.570579,
+    "city": "AUXERRE"
+  },
+  "BLERE": {
+    "lat": 47.327975,
+    "lng": 0.991823,
+    "city": "BLERE"
+  },
+  "BESANCON EST": {
+    "lat": 47.238022,
+    "lng": 6.024362,
+    "city": "BESANCON"
+  },
+  "ANNECY CENTRE": {
+    "lat": 45.899235,
+    "lng": 6.128885,
+    "city": "ANNECY"
+  },
+  "LES HERBIERS": {
+    "lat": 46.871379,
+    "lng": -1.015065,
+    "city": "LES HERBIERS"
+  },
+  "BÉTHUNE N°6": {
+    "lat": 50.530935,
+    "lng": 2.638911,
+    "city": "BÉTHUNE"
+  },
+  "GACE": {
+    "lat": 48.79436,
+    "lng": 0.295459,
+    "city": "GACE"
+  },
+  "PLATEAU N°2 (A29)": {
+    "lat": 48.714688,
+    "lng": 2.216106,
+    "city": "PLATEAU"
+  },
+  "RESTIGNE": {
+    "lat": 47.280948,
+    "lng": 0.228576,
+    "city": "RESTIGNE"
+  },
+  "CHATELLERAULT NORD": {
+    "lat": 46.818005,
+    "lng": 0.545812,
+    "city": "CHATELLERAULT"
+  },
+  "ST AMAND-MONTROND": {
+    "lat": 46.722706,
+    "lng": 2.50465,
+    "city": "ST AMAND-MONTROND"
+  },
+  "VAL DE LOING-SOUPPES": {
+    "lat": 48.168749,
+    "lng": 2.754539,
+    "city": "VAL DE LOING-SOUPPES"
+  },
+  "ALENCON NORD": {
+    "lat": 48.431206,
+    "lng": 0.091137,
+    "city": "ALENCON"
+  },
+  "CLERMONT EN ARGONNE": {
+    "lat": 49.10683,
+    "lng": 5.07115,
+    "city": "CLERMONT EN ARGONNE"
+  },
+  "VERDUN N°29": {
+    "lat": 49.158928,
+    "lng": 5.386728,
+    "city": "VERDUN"
+  },
+  "SAINT AIGNAN SUR CHER": {
+    "lat": 47.267877,
+    "lng": 1.369187,
+    "city": "SAINT AIGNAN SUR CHER"
+  },
+  "HEUDEBOUVILLE N°18": {
+    "lat": 49.193518,
+    "lng": 1.240638,
+    "city": "HEUDEBOUVILLE"
+  },
+  "SAINT-AVOLD N°37": {
+    "lat": 49.10434,
+    "lng": 6.707175,
+    "city": "SAINT-AVOLD"
+  },
+  "ALLAINVILLE": {
+    "lat": 48.722462,
+    "lng": 1.299783,
+    "city": "ALLAINVILLE"
+  },
+  "BEAUNE NORD": {
+    "lat": 47.023906,
+    "lng": 4.838043,
+    "city": "BEAUNE"
+  },
+  "CHARMONT (LIM.CONC)": {
+    "lat": 48.87046,
+    "lng": 4.86646,
+    "city": "CHARMONT"
+  },
+  "VIRY": {
+    "lat": 46.472464,
+    "lng": 4.334351,
+    "city": "VIRY"
+  },
+  "ST GERMAIN LES VERGNES": {
+    "lat": 45.273021,
+    "lng": 1.635162,
+    "city": "ST GERMAIN LES VERGNES"
+  },
+  "ROYE N°12": {
+    "lat": 49.698619,
+    "lng": 2.793076,
+    "city": "ROYE"
+  },
+  "FEILLENS": {
+    "lat": 46.336015,
+    "lng": 4.887567,
+    "city": "FEILLENS"
+  },
+  "REIMS EST (TAISSY)": {
+    "lat": 49.257789,
+    "lng": 4.031926,
+    "city": "REIMS"
+  },
+  "PONT D'AIN": {
+    "lat": 46.052,
+    "lng": 5.34554,
+    "city": "PONT D'AIN"
+  },
+  "NUITS-ST-GEORGES": {
+    "lat": 47.13676,
+    "lng": 4.948906,
+    "city": "NUITS-ST-GEORGES"
+  },
+  "BELLEGARDE": {
+    "lat": 43.425556,
+    "lng": 0.624444,
+    "city": "BELLEGARDE"
+  },
+  "ST-DENIS-LES-SENS": {
+    "lat": 48.228264,
+    "lng": 3.265628,
+    "city": "ST-DENIS-LES-SENS"
+  },
+  "ST JULIEN SANCY": {
+    "lat": 45.661005,
+    "lng": 2.673169,
+    "city": "ST JULIEN SANCY"
+  },
+  "AMBERIEU": {
+    "lat": 45.958431,
+    "lng": 5.35951,
+    "city": "AMBERIEU"
+  },
+  "TOURS NORD": {
+    "lat": 47.390047,
+    "lng": 0.688927,
+    "city": "TOURS"
+  },
+  "SAINT MARCELLIN": {
+    "lat": 45.153971,
+    "lng": 5.320347,
+    "city": "SAINT MARCELLIN"
+  },
+  "ST HILAIRE": {
+    "lat": 43.423004,
+    "lng": 1.277992,
+    "city": "ST HILAIRE"
+  },
+  "SAINT-QUENTIN NORD N°10": {
+    "lat": 49.846525,
+    "lng": 3.287684,
+    "city": "SAINT-QUENTIN"
+  },
+  "BEAUMONT SUR SARTHE": {
+    "lat": 48.22648,
+    "lng": 0.132823,
+    "city": "BEAUMONT SUR SARTHE"
+  },
+  "BONNIÈRES-SUR-SEINE (A13a)": {
+    "lat": 49.037481,
+    "lng": 1.580977,
+    "city": "BONNIÈRES-SUR-SEINE"
+  },
+  "ALENCON SUD": {
+    "lat": 48.431206,
+    "lng": 0.091137,
+    "city": "ALENCON"
+  },
+  "VILLERS-BRETONNEUX N°52": {
+    "lat": 49.868088,
+    "lng": 2.518383,
+    "city": "VILLERS-BRETONNEUX"
+  },
+  "BOURG SUD": {
+    "lat": 45.039469,
+    "lng": -0.559611,
+    "city": "BOURG"
+  },
+  "CHEMERY": {
+    "lat": 47.345633,
+    "lng": 1.478572,
+    "city": "CHEMERY"
+  },
+  "GENDREY": {
+    "lat": 47.2047,
+    "lng": 5.68505,
+    "city": "GENDREY"
+  },
+  "PHALSBOURG N°43": {
+    "lat": 48.767098,
+    "lng": 7.258621,
+    "city": "PHALSBOURG"
+  },
+  "BERNAY": {
+    "lat": 49.090228,
+    "lng": 0.598916,
+    "city": "BERNAY"
+  },
+  "BEAUFORT EN VALLEE": {
+    "lat": 47.431256,
+    "lng": -0.212456,
+    "city": "BEAUFORT EN VALLEE"
+  },
+  "BOULOGNE SUD N°28": {
+    "lat": 46.794722,
+    "lng": -1.321039,
+    "city": "BOULOGNE"
+  },
+  "VALLÉE DE LA NIÈVRE N°21": {
+    "lat": 47.23449,
+    "lng": 3.781534,
+    "city": "VALLÉE DE LA NIÈVRE"
+  },
+  "MANZAT": {
+    "lat": 45.961559,
+    "lng": 2.940619,
+    "city": "MANZAT"
+  },
+  "ST MARTIN-DU-FRESNE": {
+    "lat": 46.135646,
+    "lng": 5.551392,
+    "city": "ST MARTIN-DU-FRESNE"
+  },
+  "REIMS OUEST (THILLOIS)": {
+    "lat": 49.257789,
+    "lng": 4.031926,
+    "city": "REIMS"
+  },
+  "CHAMBERY NORD": {
+    "lat": 45.566267,
+    "lng": 5.920364,
+    "city": "CHAMBERY"
+  },
+  "TOURS CENTRE": {
+    "lat": 47.390047,
+    "lng": 0.688927,
+    "city": "TOURS"
+  },
+  "CHÂTEAU-THIERRY N°20": {
+    "lat": 49.045736,
+    "lng": 3.402711,
+    "city": "CHÂTEAU-THIERRY"
+  },
+  "PONS": {
+    "lat": 45.579228,
+    "lng": -0.54719,
+    "city": "PONS"
+  },
+  "AIRE-SUR-LA-LYS N°4": {
+    "lat": 50.638372,
+    "lng": 2.39557,
+    "city": "AIRE-SUR-LA-LYS"
+  },
+  "CHENARD N°1 (A29)": {
+    "lat": 47.862945,
+    "lng": 3.451885,
+    "city": "CHENARD"
+  },
+  "FRESNES-EN-WOËVRE N°30": {
+    "lat": 49.096322,
+    "lng": 5.630749,
+    "city": "FRESNES-EN-WOËVRE"
+  },
+  "VOUILLE": {
+    "lat": 46.314256,
+    "lng": -0.367743,
+    "city": "VOUILLE"
+  },
+  "MER": {
+    "lat": 47.708364,
+    "lng": 1.506271,
+    "city": "MER"
+  },
+  "SAINT JEAN DE LINIERES": {
+    "lat": 47.457971,
+    "lng": -0.658493,
+    "city": "SAINT JEAN DE LINIERES"
+  },
+  "LILLE / DOURGES (péage de Fresnes)": {
+    "lat": 50.432001,
+    "lng": 2.986401,
+    "city": "LILLE / DOURGES"
+  },
+  "VALLEE DE L'AUBE": {
+    "lat": 48.528854,
+    "lng": 4.181186,
+    "city": "VALLEE DE L'AUBE"
+  },
+  "REIMS NORD (péage d'Ormes)": {
+    "lat": 49.257789,
+    "lng": 4.031926,
+    "city": "REIMS"
+  },
+  "BEYNOST": {
+    "lat": 45.840018,
+    "lng": 5.000924,
+    "city": "BEYNOST"
+  },
+  "CHATELLERAULT SUD": {
+    "lat": 46.818005,
+    "lng": 0.545812,
+    "city": "CHATELLERAULT"
+  },
+  "CAGNY (A813)": {
+    "lat": 49.862289,
+    "lng": 2.34145,
+    "city": "CAGNY"
+  },
+  "VILLEFRANCHE-VILLE": {
+    "lat": 45.874773,
+    "lng": 4.711409,
+    "city": "VILLEFRANCHE-VILLE"
+  },
+  "THENNELIERES": {
+    "lat": 48.289056,
+    "lng": 4.177107,
+    "city": "THENNELIERES"
+  },
+  "BELLEVILLE S/SAONE": {
+    "lat": 46.109014,
+    "lng": 4.748464,
+    "city": "BELLEVILLE S/SAONE"
+  },
+  "TOURS CENTRE (SORIGNY)": {
+    "lat": 47.390047,
+    "lng": 0.688927,
+    "city": "TOURS"
+  },
+  "VAL DE SAONE": {
+    "lat": 45.905758,
+    "lng": 4.819077,
+    "city": "VAL DE SAONE"
+  },
+  "LE MANS SUD": {
+    "lat": 48.007385,
+    "lng": 0.196785,
+    "city": "LE MANS"
+  },
+  "CHARTRES-THIVARS": {
+    "lat": 48.372119,
+    "lng": 1.4644,
+    "city": "CHARTRES-THIVARS"
+  },
+  "SAINT-ÉTIENNE-AU-TEMPLE N°25": {
+    "lat": 49.027597,
+    "lng": 4.420182,
+    "city": "SAINT-ÉTIENNE-AU-TEMPLE"
+  },
+  "URY": {
+    "lat": 48.342555,
+    "lng": 2.60487,
+    "city": "URY"
+  },
+  "MEUNG": {
+    "lat": 47.412494,
+    "lng": 3.042613,
+    "city": "MEUNG"
+  },
+  "AMIENS SUD (péage de Dury)": {
+    "lat": 49.894171,
+    "lng": 2.295695,
+    "city": "AMIENS"
+  },
+  "BOULAY N°36": {
+    "lat": 49.184224,
+    "lng": 6.493512,
+    "city": "BOULAY"
+  },
+  "SAINT AUBIN-DE-BLAYE": {
+    "lat": 45.266287,
+    "lng": -0.564182,
+    "city": "SAINT AUBIN-DE-BLAYE"
+  },
+  "LA CÔTE PICARDE N°24": {
+    "lat": 50.22254,
+    "lng": 1.634408,
+    "city": "LA CÔTE PICARDE"
+  },
+  "SAINTE-MENEHOULD N°26": {
+    "lat": 49.090419,
+    "lng": 4.896764,
+    "city": "SAINTE-MENEHOULD"
+  },
+  "SEICHES": {
+    "lat": 47.576587,
+    "lng": -0.361943,
+    "city": "SEICHES"
+  },
+  "INCARVILLE N°19 /": {
+    "lat": 49.238975,
+    "lng": 1.178996,
+    "city": "INCARVILLE"
+  },
+  "LES ESSARTS": {
+    "lat": 48.880997,
+    "lng": 0.992121,
+    "city": "LES ESSARTS"
+  },
+  "SAINT GENIS": {
+    "lat": 44.375468,
+    "lng": 5.828374,
+    "city": "SAINT GENIS"
+  },
+  "SAINT PIERRE D'ALBIGNY": {
+    "lat": 45.569016,
+    "lng": 6.154827,
+    "city": "SAINT PIERRE D'ALBIGNY"
+  },
+  "CHALON NORD": {
+    "lat": 45.445833,
+    "lng": 4.931076,
+    "city": "CHALON"
+  },
+  "SEYNOD SUD": {
+    "lat": 45.88804,
+    "lng": 6.099278,
+    "city": "SEYNOD"
+  },
+  "FREYMING-MERLEBACH (A320)": {
+    "lat": 49.146944,
+    "lng": 6.818483,
+    "city": "FREYMING-MERLEBACH"
+  },
+  "ROUMOIS": {
+    "lat": 49.379356,
+    "lng": 0.692371,
+    "city": "ROUMOIS"
+  },
+  "AIGREFEUILLE": {
+    "lat": 43.568091,
+    "lng": 1.589143,
+    "city": "AIGREFEUILLE"
+  },
+  "SAINT DENIS-LES-SENS": {
+    "lat": 48.228264,
+    "lng": 3.265628,
+    "city": "SAINT DENIS-LES-SENS"
+  },
+  "PONTCHARRA": {
+    "lat": 45.432754,
+    "lng": 6.020423,
+    "city": "PONTCHARRA"
+  },
+  "TOURS CENTRE (MONNAIE)": {
+    "lat": 47.390047,
+    "lng": 0.688927,
+    "city": "TOURS"
+  },
+  "SAUMUR (VIVY)": {
+    "lat": 47.259622,
+    "lng": -0.078518,
+    "city": "SAUMUR"
+  },
+  "BAUME-LES-DAMES": {
+    "lat": 47.352671,
+    "lng": 6.361462,
+    "city": "BAUME-LES-DAMES"
+  },
+  "ROBECOURT": {
+    "lat": 48.141672,
+    "lng": 5.696625,
+    "city": "ROBECOURT"
+  },
+  "SAINT ETIENNE AU TEMPLE": {
+    "lat": 49.027597,
+    "lng": 4.420182,
+    "city": "SAINT ETIENNE AU TEMPLE"
+  },
+  "LA COTIERE": {
+    "lat": 45.871398,
+    "lng": 5.130525,
+    "city": "LA COTIERE"
+  },
+  "VERDUN": {
+    "lat": 49.158928,
+    "lng": 5.386728,
+    "city": "VERDUN"
+  },
+  "BOLBEC N°7": {
+    "lat": 49.573909,
+    "lng": 0.474245,
+    "city": "BOLBEC"
+  },
+  "AITON": {
+    "lat": 45.5606,
+    "lng": 6.25655,
+    "city": "AITON"
+  },
+  "CHIGNIN LES MARCHES": {
+    "lat": 45.500835,
+    "lng": 6.000762,
+    "city": "CHIGNIN LES MARCHES"
+  },
+  "COLOMBEY-LES-BELLES": {
+    "lat": 48.52832,
+    "lng": 5.898037,
+    "city": "COLOMBEY-LES-BELLES"
+  },
+  "DIJON-ARC SUR TILLE": {
+    "lat": 47.347309,
+    "lng": 5.185401,
+    "city": "DIJON-ARC SUR TILLE"
+  },
+  "SARREGUEMINES N°41": {
+    "lat": 49.109484,
+    "lng": 7.070887,
+    "city": "SARREGUEMINES"
+  },
+  "ALBERT N°13.1": {
+    "lat": 50.001802,
+    "lng": 2.650922,
+    "city": "ALBERT N°13.1"
+  },
+  "CHATEAU DU LOIR (MONTABON)": {
+    "lat": 47.69954,
+    "lng": 0.431149,
+    "city": "CHATEAU DU LOIR"
+  },
+  "GERZAT": {
+    "lat": 45.82504,
+    "lng": 3.143518,
+    "city": "GERZAT"
+  },
+  "LA RIVIÈRE-SAINT-SAUVEUR N°3 (A29)": {
+    "lat": 49.407611,
+    "lng": 0.271635,
+    "city": "LA RIVIÈRE-SAINT-SAUVEUR"
+  },
+  "LE BIGNON": {
+    "lat": 47.098212,
+    "lng": -1.490708,
+    "city": "LE BIGNON"
+  },
+  "AMBERIEU EN BUGEY": {
+    "lat": 45.958431,
+    "lng": 5.35951,
+    "city": "AMBERIEU EN BUGEY"
+  },
+  "VALLÉE DE L'AUBE N°21": {
+    "lat": 48.528854,
+    "lng": 4.181186,
+    "city": "VALLÉE DE L'AUBE"
+  },
+  "MEUNG SUR LOIRE": {
+    "lat": 47.826897,
+    "lng": 1.696805,
+    "city": "MEUNG SUR LOIRE"
+  },
+  "SYLANS": {
+    "lat": 46.1536,
+    "lng": 5.645059,
+    "city": "SYLANS"
+  },
+  "NIORT EST": {
+    "lat": 46.323923,
+    "lng": -0.464606,
+    "city": "NIORT"
+  },
+  "SAINT-GIBRIEN N°17": {
+    "lat": 48.973117,
+    "lng": 4.299613,
+    "city": "SAINT-GIBRIEN"
+  },
+  "CLERMONT-EN-ARGONNE N°27": {
+    "lat": 49.10683,
+    "lng": 5.07115,
+    "city": "CLERMONT-EN-ARGONNE"
+  }
+}
