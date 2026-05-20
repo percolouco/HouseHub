@@ -93,7 +93,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   
   <div class="pf-mobile-menu" id="mobileMenu">
     <div class="pf-mobile-menu-header">
-        <span class="pf-logo">HouseHub</span>
+        <span class="pf-logo">HouseHubFeFe</span>
         <button class="pf-mobile-close-btn" id="closeMobileMenu">&times;</button>
     </div>
     
