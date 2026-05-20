@@ -42,7 +42,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
 <body data-page="<?= htmlspecialchars($activePage ?? '') ?>">
 
   <header class="pf-header">
-    <a href="/index.php" class="pf-logo">HouseHub perco</a>
+    <a href="/index.php" class="pf-logo">HouseHub</a>
 
     <?php if (isset($_SESSION['user'])): ?>
     <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','calendar_ios']; ?>
@@ -93,7 +93,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   
   <div class="pf-mobile-menu" id="mobileMenu">
     <div class="pf-mobile-menu-header">
-        <span class="pf-logo">HouseHub perco</span>
+        <span class="pf-logo">HouseHub</span>
         <button class="pf-mobile-close-btn" id="closeMobileMenu">&times;</button>
     </div>
     
