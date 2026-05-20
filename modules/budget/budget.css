@@ -1,7 +1,6 @@
 /* modules/budget/budget.css */
 
 /* --- 1. VARIABLES & BASE --- */
-/* Le root garde les couleurs sémantiques dont le JS/PHP a besoin localement */
 .budget-view {
   font-family:
     "Segoe UI",
@@ -128,7 +127,7 @@
 
 /* --- 3. BOUTONS SPÉCIFIQUES & ACTIONS --- */
 .pf-btn {
-  border-radius: 50px; /* Surcharge le global pour le budget */
+  border-radius: 50px;
 }
 .btn-icon {
   background: transparent;
@@ -263,7 +262,6 @@ td:hover .btn-cell-delete {
   border-top: 1px solid #e2e8f0;
 }
 
-/* Inputs modifiés */
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -346,19 +344,93 @@ input[type="number"] {
   gap: 30px;
 }
 .prev-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e2e8f0;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  width: 100% !important;
+  box-sizing: border-box;
 }
 .prev-section-header h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.025em;
+}
+.prev-header-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.prev-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Configuration Chromatique Parent 1 */
+.txt-p1,
+.txt-alex {
+  color: color-mix(in srgb, var(--p1-main, #0891b2) 85%, #000000) !important;
+  font-weight: bold;
+  text-align: center;
+}
+.col-p1,
+.col-alex {
+  color: color-mix(in srgb, var(--p1-main, #0891b2) 85%, #000000) !important;
+  text-align: center;
+}
+th.col-p1,
+td.col-p1 {
+  background-color: color-mix(
+    in srgb,
+    var(--p1-main, #0891b2) 8%,
+    #ffffff
+  ) !important;
+  text-align: center;
+}
+input.txt-p1 {
+  color: color-mix(in srgb, var(--p1-main, #0891b2) 85%, #000000) !important;
+  text-align: center;
+  font-weight: 600;
+}
+input.txt-p1:focus {
+  border-color: var(--p1-main, #0891b2) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p1-main, #0891b2) 10%, #ffffff) !important;
+}
+
+/* Configuration Chromatique Parent 2 */
+.txt-p2 {
+  color: color-mix(in srgb, var(--p2-main, #f59e0b) 85%, #000000) !important;
+  font-weight: bold;
+  text-align: center;
+}
+.col-p2 {
+  color: color-mix(in srgb, var(--p2-main, #f59e0b) 85%, #000000) !important;
+  text-align: center;
+}
+th.col-p2,
+td.col-p2 {
+  background-color: color-mix(
+    in srgb,
+    var(--p2-main, #f59e0b) 8%,
+    #ffffff
+  ) !important;
+  text-align: center;
+}
+input.txt-p2 {
+  color: color-mix(in srgb, var(--p2-main, #f59e0b) 85%, #000000) !important;
+  text-align: center;
+  font-weight: 600;
+}
+input.txt-p2:focus {
+  border-color: var(--p2-main, #f59e0b) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p2-main, #f59e0b) 10%, #ffffff) !important;
 }
 
 .prev-input {
@@ -385,19 +457,6 @@ input[type="number"] {
   font-weight: 700;
 }
 
-.prev-section-header,
-.view-header,
-.budget-view > div[style*="justify-content: space-between"] {
-  display: flex !important;
-  flex-direction: row !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  float: none !important;
-  position: relative !important;
-  width: 100% !important;
-  gap: 15px !important;
-}
-
 .prev-salary-table {
   width: 100%;
   max-width: 900px;
@@ -419,6 +478,15 @@ input[type="number"] {
   text-align: center;
   border-bottom: 1px solid #e2e8f0;
 }
+.prev-salary-table th small {
+  font-weight: normal;
+  text-transform: none;
+}
+.prev-salary-table th.th-family-savings,
+.prev-salary-table td.td-family-savings {
+  background: #f0f9ff !important;
+  color: #0284c7 !important;
+}
 .prev-salary-table th:first-child {
   text-align: left;
 }
@@ -426,6 +494,22 @@ input[type="number"] {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-light);
   text-align: center;
+  vertical-align: middle;
+}
+
+.prev-salary-table tbody tr:nth-child(1) td:first-child {
+  text-align: left !important;
+  font-weight: bold !important;
+  color: var(--text-main) !important;
+  border-left: 4px solid var(--p1-main, #0891b2) !important;
+}
+
+/* Parent 2 (Ligne 2, ex: Laia) */
+.prev-salary-table tbody tr:nth-child(2) td:first-child {
+  text-align: left !important;
+  font-weight: bold !important;
+  color: var(--text-main) !important;
+  border-left: 4px solid var(--p2-main, #f59e0b) !important;
 }
 
 .prev-timeline-wrapper {
@@ -455,7 +539,7 @@ input[type="number"] {
   border-right: 1px solid var(--border-light);
   white-space: nowrap;
   text-align: center;
-  font-size: 0.9rem;
+  vertical-align: middle;
 }
 
 .col-sticky {
@@ -490,6 +574,15 @@ input[type="number"] {
   border-left: 2px solid white;
   padding: 8px !important;
 }
+.th-month span {
+  text-transform: capitalize;
+}
+.th-month .cycle-start-label {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: #64748b;
+  margin-top: 2px;
+}
 .th-month.current {
   background: var(--primary) !important;
 }
@@ -511,16 +604,42 @@ input[type="number"] {
   font-weight: 700;
   border-bottom: 2px solid #bfdbfe;
 }
-.txt-alex {
-  color: #0891b2;
+.row-restant td.td-separator {
+  border-left: 2px solid #cbd5e1;
+  background: #e2e8f0;
 }
-.txt-laia {
-  color: #f59e0b;
+.row-indicative {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+.row-indicative .col-sticky {
+  opacity: 0.8;
+}
+.cat-name-label {
+  font-weight: 600;
+  color: var(--text-main);
+}
+.row-indicative .cat-name-label {
+  color: #64748b;
+}
+.row-indicative .cat-name-label span {
+  font-size: 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 0 4px;
+  margin-left: 5px;
+}
+.cat-target-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: right;
 }
 .txt-global {
   color: var(--text-muted);
   font-weight: 700;
   background: #f8fafc;
+  border-left: 2px solid #e2e8f0;
 }
 .val-ok {
   color: var(--success);
@@ -594,6 +713,9 @@ tr:hover .row-actions {
   letter-spacing: 0.05em;
   text-align: center;
 }
+.recap-header span {
+  text-transform: capitalize;
+}
 .recap-table {
   width: 100%;
   border-collapse: collapse;
@@ -603,6 +725,7 @@ tr:hover .row-actions {
   padding: 10px 15px;
   border-bottom: 1px solid var(--border-light);
   text-align: center;
+  vertical-align: middle;
   font-size: 0.95rem;
 }
 .recap-table th {
@@ -618,30 +741,68 @@ tr:hover .row-actions {
   font-weight: 600;
   color: #1e293b;
 }
-.col-alex {
-  background-color: #ecfeff;
-  color: #0891b2;
-  border-left: 1px solid #cffafe;
+
+.recap-th-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
 }
-th.col-alex {
-  background-color: #cffafe;
-  border-bottom-color: #a5f3fc;
+.recap-th-content span {
+  text-transform: uppercase;
 }
-.col-laia {
-  background-color: #fffbeb;
-  color: #d97706;
-  border-left: 1px solid #fef3c7;
+.validation-badge {
+  background: #10b981;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-th.col-laia {
-  background-color: #fef3c7;
-  border-bottom-color: #fde68a;
+
+/* --- Style de base du bouton de validation (Générique) --- */
+.recap-table .pf-btn.btn-small {
+  background: #ffffff !important;
+  font-size: 0.7rem !important;
+  padding: 2px 8px !important;
+  height: auto !important;
+  width: auto !important;
+  font-weight: 600;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: all 0.2s ease;
 }
-.col-global {
-  background-color: #f8fafc;
-  color: #475569;
-  font-weight: 700;
-  border-left: 2px solid #e2e8f0;
+
+/* Couleurs dynamiques adaptées au Parent 1 (ex: Féfé) */
+.col-p1 .pf-btn.btn-small {
+  color: var(--p1-main, #0891b2) !important;
+  border: 1px solid var(--p1-main, #0891b2) !important;
 }
+.col-p1 .pf-btn.btn-small:hover {
+  background: color-mix(
+    in srgb,
+    var(--p1-main, #0891b2) 12%,
+    #ffffff
+  ) !important;
+}
+
+/* Couleurs dynamiques adaptées au Parent 2 (ex: Laia) */
+.col-p2 .pf-btn.btn-small {
+  color: var(--p2-main, #f59e0b) !important;
+  border: 1px solid var(--p2-main, #f59e0b) !important;
+}
+.col-p2 .pf-btn.btn-small:hover {
+  background: color-mix(
+    in srgb,
+    var(--p2-main, #f59e0b) 12%,
+    #ffffff
+  ) !important;
+}
+
+/* Grand Totaux Structuraux */
 .row-grand-total td {
   background-color: #1e293b;
   color: white;
@@ -649,14 +810,22 @@ th.col-laia {
   border: none;
   padding: 12px 15px;
 }
-.row-grand-total .col-alex {
-  background: #164e63;
-  color: #67e8f9;
+.row-grand-total .col-p1 {
+  background: color-mix(
+    in srgb,
+    var(--p1-main, #0891b2) 65%,
+    #000000
+  ) !important;
+  color: color-mix(in srgb, var(--p1-main, #0891b2) 20%, #ffffff) !important;
   border: none;
 }
-.row-grand-total .col-laia {
-  background: #78350f;
-  color: #fcd34d;
+.row-grand-total .col-p2 {
+  background: color-mix(
+    in srgb,
+    var(--p2-main, #f59e0b) 65%,
+    #000000
+  ) !important;
+  color: color-mix(in srgb, var(--p2-main, #f59e0b) 20%, #ffffff) !important;
   border: none;
 }
 .row-grand-total .col-global {
@@ -665,7 +834,7 @@ th.col-laia {
   border: none;
 }
 
-/* --- 9. STYLES SPÉCIFIQUES AU SUIVI MENSUEL --- */
+/* --- 9. STYLES DU SUIVI MENSUEL --- */
 .cat-card {
   background: var(--bg-panel);
   border-radius: var(--radius);
@@ -675,20 +844,17 @@ th.col-laia {
   overflow: hidden;
   position: relative;
 }
-
 .cat-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px; /* Padding interne à l'encart coloré */
+  padding: 15px;
   width: 100%;
 }
-
 .cat-card-title-group {
   display: flex;
   flex-direction: column;
 }
-
 .cat-card-subtitle {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -768,7 +934,52 @@ input[type="month"].pf-input {
   border-radius: 6px;
 }
 
-/* --- 10. EPARGNE --- */
+/* --- 10. SECTION NOTES BUDGETAIRES --- */
+.budget-notes-section {
+  margin: 20px 0;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #e2e8f0;
+}
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.notes-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1e293b;
+}
+.notes-header h3 span {
+  text-transform: capitalize;
+}
+.note-save-indicator {
+  font-size: 0.85rem;
+  color: #10b981;
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#monthNoteArea {
+  width: 100%;
+  resize: vertical;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  margin-bottom: 10px;
+}
+.notes-footer {
+  text-align: right;
+}
+.notes-footer .pf-btn {
+  width: auto;
+  display: inline-flex;
+}
+
+/* --- 11. EPARGNE --- */
 .epargne-inline-input {
   width: 100%;
   min-width: 60px;
@@ -793,7 +1004,7 @@ input[type="month"].pf-input {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
-/* --- 11. CALCULATRICE FLOTTANTE --- */
+/* --- 12. CALCULATRICE FLOTTANTE --- */
 .pf-fab-sum {
   position: fixed;
   right: 30px;
@@ -883,7 +1094,7 @@ body.sum-mode-active .sum-target {
   transition: background-color 0.2s;
 }
 
-/* --- 12. RESPONSIVE MOBILE BUDGET --- */
+/* --- 13. RESPONSIVE MOBILE BUDGET --- */
 @media (max-width: 768px) {
   .budget-view {
     padding: 10px !important;
@@ -916,11 +1127,6 @@ body.sum-mode-active .sum-target {
   }
   .budget-view .categories-grid > .cat-card {
     padding: 0 !important;
-  }
-  .budget-view
-    > div[style*="justify-content: space-between"]:not(.view-header) {
-    flex-direction: column !important;
-    align-items: stretch !important;
   }
   .budget-view
     > div[style*="justify-content: space-between"]:not(.view-header) {
@@ -1021,7 +1227,6 @@ body.sum-mode-active .sum-target {
     justify-content: flex-start;
     width: auto !important;
   }
-
   .col-sticky,
   .sticky-col {
     min-width: 120px !important;
@@ -1059,8 +1264,7 @@ body.sum-mode-active .sum-target {
     right: auto;
     top: auto;
   }
-
   .cat-card-header {
-    padding: 12px 10px; /* Plus serré sur mobile */
+    padding: 12px 10px;
   }
 }

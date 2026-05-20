@@ -8,6 +8,12 @@ require_login();
 require __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/i18n.php';
 
+$stmtPeople = $pdo->query("SELECT id, name, user_id, role FROM pf_people ORDER BY id ASC");
+$familyPeople = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
+$parents = array_values(array_filter($familyPeople, function($p) {
+    return strtolower($p['role'] ?? '') === 'parent';
+}));
+
 $pageTitle  = tr('fc_page_title');
 $activePage = "family-calendar";
 $mainClass  = "pf-family-calendar";
@@ -70,8 +76,12 @@ require __DIR__ . '/header.php';
                         <div class="pf-form-group">
                             <label class="pf-label"><?= tr('fc_label_person') ?></label>
                             <select id="snapPerson" class="pf-input" required>
-                                <option value="2">Alex</option>
-                                <option value="3">Laia</option>
+                                <option value="" disabled selected>-- <?= tr('fc_choose_person') ?> --</option>
+                                <?php foreach ($familyPeople as $person): ?>
+                                    <option value="<?= htmlspecialchars($person['id']) ?>">
+                                        <?= htmlspecialchars($person['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="pf-form-group">
@@ -169,20 +179,24 @@ require __DIR__ . '/header.php';
               <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_avis') ?></span></th>
               <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_pep_sick') ?></span></th>
               <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_presence') ?></span></th>
-              <th colspan="6" class="col-alex header-group">ALEX</th>
-              <th colspan="6" class="col-laia header-group">LAIA</th>
+              <th colspan="6" class="col-alex header-group"><?= htmlspecialchars(strtoupper($parents[0]['name'] ?? 'PARENT 1')) ?></th>
+              <th colspan="6" class="col-laia header-group"><?= htmlspecialchars(strtoupper($parents[1]['name'] ?? 'PARENT 2')) ?></th>
             </tr>
             <tr>
               <th colspan="2" class="col-alex-sub">CP</th><th colspan="2" class="col-alex-sub">JRA</th><th colspan="2" class="col-alex-sub">JA</th>
               <th colspan="2" class="col-laia-sub">CP</th><th colspan="2" class="col-laia-sub">JRA</th><th colspan="2" class="col-laia-sub">JA</th>
             </tr>
             <tr>
-                <th class="col-alex-sub col-alex-av"><?= tr('fc_col_av') ?></th><th class="col-alex-sub col-alex-use"><?= tr('fc_col_use') ?></th>
-                <th class="col-alex-sub col-alex-av"><?= tr('fc_col_av') ?></th><th class="col-alex-sub col-alex-use"><?= tr('fc_col_use') ?></th>
-                <th class="col-alex-sub col-alex-av"><?= tr('fc_col_av') ?></th><th class="col-alex-sub col-alex-use"><?= tr('fc_col_use') ?></th>
-                <th class="col-laia-sub col-laia-av"><?= tr('fc_col_av') ?></th><th class="col-laia-sub col-laia-use"><?= tr('fc_col_use') ?></th>
-                <th class="col-laia-sub col-laia-av"><?= tr('fc_col_av') ?></th><th class="col-laia-sub col-laia-use"><?= tr('fc_col_use') ?></th>
-                <th class="col-laia-sub col-laia-av"><?= tr('fc_col_av') ?></th><th class="col-laia-sub col-laia-use"><?= tr('fc_col_use') ?></th>
+                <?php foreach ($parents as $index => $parent): 
+                    $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
+                ?>
+                    <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-av"><?= tr('fc_col_av') ?></th>
+                    <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-use"><?= tr('fc_col_use') ?></th>
+                    <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-av"><?= tr('fc_col_av') ?></th>
+                    <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-use"><?= tr('fc_col_use') ?></th>
+                    <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-av"><?= tr('fc_col_av') ?></th>
+                    <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-use"><?= tr('fc_col_use') ?></th>
+                <?php endforeach; ?>
             </tr>
           </thead>
           <tbody id="planningBody"></tbody>
