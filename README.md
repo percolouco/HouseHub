@@ -151,12 +151,15 @@ L'architecture de HouseHub isole chaque foyer dans sa propre base de données (`
 Afin de transformer complètement l'application héritée de Pacha Family en un produit générique et autonome pour chaque espace familial, les chantiers suivants doivent être menés.
 
 🟢 Niveau 1 : Facile (Constantes et configurations globales)
+
 [x] Configuration de base : Extraire la devise (CURRENCY) et la zone de vacances scolaires (ZONE_SCOLAIRE) du fichier config.php pour les stocker dans les paramètres d'espace en BDD.
+[x] Suppression des IDs statiques : Supprimer les IDs parents fixes (ID_ALEX = 2, ID_LAIA = 3) dans config.php au profit d'une lecture dynamique basée sur les utilisateurs réels de la famille connectée (liens via la table pf_people).
+[x] Charte graphique dynamique : Remplacer les couleurs codées en dur (bleu/orange) par des sélecteurs natifs dans l'espace "Paramètres", en générant les variables CSS et leurs nuances (via color-mix()) à la volée.
 [ ] Filtres API Éducation Nationale : Rendre dynamique la zone de l'API (zones LIKE '%Zone C%' dans family-calendar.js) pour s'adapter à la région de chaque foyer.
 [ ] Identifiant Planka : Variabiliser le project_id Planka par défaut écrit en dur dans planka/api.php.
-[ ] Suppression des IDs statiques : Supprimer les IDs parents fixes (ID_ALEX = 2, ID_LAIA = 3) dans config.php au profit d'une lecture dynamique basée sur les utilisateurs réels de la famille connectée.
 
 🟡 Niveau 2 : Intermédiaire (Listes et dictionnaires en dur)
+
 [ ] Gestion des membres (Cadeaux) : Dans gift-list.php, remplacer la liste d'enfants ($children) et d'adultes ($baseAdults, $extraAdults) codée en dur par une lecture dynamique des membres du foyer déclarés en BDD.
 [ ] Occasions festives (Cadeaux) : Rendre configurables les occasions spéciales (TIO, NOEL, ROIS, ANNIV, SANT).
 [ ] Configuration des catégories (Budget) : Dans budget/views/suivi.php, migrer le tableau $categoriesConfig (FMCG, Essence, École, etc.), leurs couleurs et leurs suggestions de magasins associés vers un stockage paramétrable.
@@ -164,7 +167,9 @@ Afin de transformer complètement l'application héritée de Pacha Family en un 
 [ ] Types de carburants (Garage) : Variabiliser la liste statique des carburants dans garage.php.
 
 🔴 Niveau 3 : Complexe (Logique métier et Schéma SQL)
-[ ] Refonte relationnelle de la répartition (Budget) : Modifier la structure de la table pf_alloc_values pour supprimer les colonnes figées amount_alex et amount_laia et basculer sur un modèle relationnel (alloc_id, user_id, amount) capable de gérer n'importe quel nombre d'adultes (1, 2, 3 ou plus).
+
+[x] Refonte relationnelle du Budget (Prévisionnel) : Refonte totale de budget_prev.php. Modification de la table pf_alloc_values pour basculer sur des colonnes génériques (amount_p1, amount_p2) et suppression définitive de toute logique conditionnelle liée aux prénoms des concepteurs originaux.
+[ ] Refonte globale de la répartition (Budget) : Étendre le modèle relationnel (alloc_id, user_id, amount) au reste de l'application pour gérer n'importe quel nombre d'adultes (1, 2, 3 ou plus).
 [ ] Destinations de transferts (Budget) : Rendre dynamiques les cibles de virements prévisionnels (vers L.Pol, vers L.Pep, etc.) en fonction des comptes épargne créés par la famille.
 [ ] Onglets d'Épargne : Générer dynamiquement les sous-onglets de la vue epargne.php à partir des membres réels au lieu des blocs statiques Alex, Laia et Nens.
 [ ] Types de Garde (Calendrier) : Supprimer les types d'événements et compteurs codés en dur (OFF_CAROLE, EXTRA_OFF_CAROLE, CENTRE, AVIS, PEP_SICK) pour permettre à chaque foyer de définir ses propres modalités de garde et compteurs de congés associés.
@@ -174,14 +179,15 @@ Afin de transformer complètement l'application héritée de Pacha Family en un 
 
 ## 📌 Versioning
 
-| Version | Changements                                                                                |
-| ------- | ------------------------------------------------------------------------------------------ |
-| v2.2.0  | Multi-tenant (p.1) : Paramètres dynamiques du foyer (€, Zone) via BDD + script migration   |
-| v2.1.0  | Module Planka : Kanban natif connecté à Planka via API proxy PHP                           |
-| v2.0.0  | Module PrintVault : viewer 3D STL/3MF/GCode, stockage local, trajectoires GCode illimitées |
-| v1.5.0  | Modules Todo (rappels Discord), Mémo, Courses (liste partagée)                             |
-| v1.4.0  | Synchronisation CalDAV iOS                                                                 |
-| v1.3.0  | Optimisation SQL — suppression des requêtes N+1, temps de réponse ÷3                       |
-| v1.2.0  | Modernisation UI — Toasts, confirmations sur-mesure                                        |
-| v1.1.0  | Refonte expérience mobile (Bottom Sheets)                                                  |
-| v1.0.0  | Version stable initiale — Budget, Calendrier, Voyages, Cadeaux, Garage                     |
+| Version | Changements                                                                                                               |
+| ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v2.3.0  | Multi-tenant (p.2) : Refonte BDD Budget (p1, p2), suppression IDs statiques et thèmes de profils dynamiques (color-mix()) |
+| v2.2.0  | Multi-tenant (p.1) : Paramètres dynamiques du foyer (€, Zone) via BDD + script migration                                  |
+| v2.1.0  | Module Planka : Kanban natif connecté à Planka via API proxy PHP                                                          |
+| v2.0.0  | Module PrintVault : viewer 3D STL/3MF/GCode, stockage local, trajectoires GCode illimitées                                |
+| v1.5.0  | Modules Todo (rappels Discord), Mémo, Courses (liste partagée)                                                            |
+| v1.4.0  | Synchronisation CalDAV iOS                                                                                                |
+| v1.3.0  | Optimisation SQL — suppression des requêtes N+1, temps de réponse ÷3                                                      |
+| v1.2.0  | Modernisation UI — Toasts, confirmations sur-mesure                                                                       |
+| v1.1.0  | Refonte expérience mobile (Bottom Sheets)                                                                                 |
+| v1.0.0  | Version stable initiale — Budget, Calendrier, Voyages, Cadeaux, Garage                                                    |
