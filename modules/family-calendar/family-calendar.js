@@ -5,31 +5,41 @@ document.addEventListener("DOMContentLoaded", () => {
   const CONGE_TYPES = ["OFF_CAROLE", "EXTRA_OFF_CAROLE"];
   const GUARDE_TYPES = ["CENTRE", "AVIS"];
   const PEP_TYPES = ["PEP_SICK"];
-  const FAMILY = {
-    ALEX: { id: 2, prefix: "alex" },
-    LAIA: { id: 3, prefix: "laia" },
-  };
+
+  // 🟢 Liste globale dynamique des personnes (fini les IDs en dur !)
+  const peopleList = window.CONFIG.PEOPLE || [];
+
+  // On filtre pour ne garder que les parents pour la logique principale des congés
+  const parents = peopleList.filter(
+    (p) => p.role && p.role.toLowerCase() === "parent",
+  );
+
   const LEAVES_CONFIG = {
     CP: {
-      startMonth: 8, // Le cycle commence en août (après la tolérance de juillet)
+      startMonth: 8,
       defaultBalance: 25,
     },
     JRA: {
-      // Tu pourras ajouter les années suivantes ici
       yearlyTotals: {
-        2024: 10, // ex: 0.83 * 12 arrondi
+        2024: 10,
         2025: 10,
-        2026: 11, // ex: 0.9 * 12 arrondi
+        2026: 11,
       },
       defaultBalance: 10,
-      toleranceMonths: 2, // Janvier et Février
+      toleranceMonths: 2,
       maxReport: 2,
     },
-    JA: {
-      [FAMILY.ALEX.id]: { startMonth: 4, startDay: 29, defaultBalance: 4 },
-      [FAMILY.LAIA.id]: { startMonth: 10, startDay: 1, defaultBalance: 4 }, // Date de Laia à adapter
-    },
+    JA: {}, // Ce tableau est maintenant vide par défaut, on le remplit dynamiquement juste en dessous
   };
+
+  // 🟢 INITIALISATION DYNAMIQUE DES JOURS D'ANNIVERSAIRE (JA)
+  parents.forEach((parent) => {
+    LEAVES_CONFIG.JA[parent.id] = {
+      startMonth: 4, // Mois par défaut (à faire évoluer en BDD au Niveau 3)
+      startDay: 29, // Jour par défaut
+      defaultBalance: 4,
+    };
+  });
 
   class FamilyCalendar {
     constructor() {
@@ -455,12 +465,17 @@ document.addEventListener("DOMContentLoaded", () => {
           const d = new Date(l.leave_date + "T00:00:00");
           if (d >= w.dayDates.mon && d <= w.dayDates.fri) {
             const dur = parseFloat(l.duration) || 1;
-            const prefix =
-              l.person_id === FAMILY.ALEX.id
-                ? FAMILY.ALEX.prefix
-                : l.person_id === FAMILY.LAIA.id
-                  ? FAMILY.LAIA.prefix
-                  : null;
+
+            // 🟢 Correspondance dynamique pour le stockage des totaux de la semaine
+            let prefix = null;
+            if (parents[0] && parseInt(l.person_id) === parseInt(parents[0].id))
+              prefix = "alex";
+            else if (
+              parents[1] &&
+              parseInt(l.person_id) === parseInt(parents[1].id)
+            )
+              prefix = "laia";
+
             if (prefix) w.totals[`${prefix}${l.leave_type}`] += dur;
           }
         });
@@ -479,17 +494,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     calculateMonthlyBalances() {
-      const balances = {
-        [FAMILY.ALEX.id]: { CP: {}, JRA: {}, JA: {} },
-        [FAMILY.LAIA.id]: { CP: {}, JRA: {}, JA: {} },
-      };
+      const balances = {};
+      // 🟢 On initialise le tableau des soldes pour chaque parent trouvé
+      parents.forEach((p) => {
+        balances[p.id] = { CP: {}, JRA: {}, JA: {} };
+      });
 
-      // Liste des mois actuellement affichés dans le planning
       const ymSet = new Set();
       this.weeks.forEach((w) => ymSet.add(w.monthKey));
       const ymList = Array.from(ymSet).sort();
 
-      // Pré-calcul de l'utilisation par mois
       const usageByMonth = {};
       this.leaves.forEach((l) => {
         const pid = l.person_id;
@@ -502,7 +516,8 @@ document.addEventListener("DOMContentLoaded", () => {
           (usageByMonth[pid][type][ym] || 0) + parseFloat(l.duration);
       });
 
-      [FAMILY.ALEX.id, FAMILY.LAIA.id].forEach((pid) => {
+      parents.forEach((parent) => {
+        const pid = parent.id;
         ["CP", "JRA", "JA"].forEach((type) => {
           ymList.forEach((ym) => {
             const [currYear, currMonth] = ym.split("-").map(Number);
@@ -510,8 +525,6 @@ document.addEventListener("DOMContentLoaded", () => {
             let cycleStartStr = "";
             let initialBalance = 0;
 
-            // --- 1. RECHERCHE D'UN CORRECTIF MANUEL (SNAPSHOT) ---
-            // On cherche le snapshot le plus récent qui est inférieur ou égal au mois en cours de calcul
             const latestSnapshot = (this.leaveSnapshots || [])
               .filter(
                 (s) =>
@@ -519,18 +532,14 @@ document.addEventListener("DOMContentLoaded", () => {
                   s.leave_type == type &&
                   s.snapshot_date.substring(0, 7) <= ym,
               )
-              // On trie du plus récent au plus ancien pour prendre le premier
               .sort((a, b) =>
                 b.snapshot_date.localeCompare(a.snapshot_date),
               )[0];
 
             if (latestSnapshot) {
-              // Si on trouve un correctif, il devient notre nouveau "point zéro"
               cycleStartStr = latestSnapshot.snapshot_date.substring(0, 7);
-              initialBalance = parseFloat(latestSnapshot.remaining_balance); // Utilisation de VOTRE nom de colonne
-            }
-            // --- 2. SINON, CALCUL CLASSIQUE PAR DÉFAUT ---
-            else {
+              initialBalance = parseFloat(latestSnapshot.remaining_balance);
+            } else {
               if (type === "CP") {
                 const refYear =
                   currMonth >= LEAVES_CONFIG.CP.startMonth
@@ -552,7 +561,6 @@ document.addEventListener("DOMContentLoaded", () => {
                   LEAVES_CONFIG.JRA.yearlyTotals[currYear] ||
                   LEAVES_CONFIG.JRA.defaultBalance;
 
-                // Logique de report du reliquat de l'année N-1
                 if (currMonth <= LEAVES_CONFIG.JRA.toleranceMonths) {
                   const prevYear = currYear - 1;
                   const prevInitial =
@@ -569,13 +577,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     0,
                     prevInitial - usedPrevYear,
                   );
-                  // Ajout du report plafonné à 2 jours
                   initialBalance += Math.min(
                     remainingPrevYear,
                     LEAVES_CONFIG.JRA.maxReport,
-                  );
-                  console.log(
-                    `[JRA] Personne ${pid}, Année ${currYear}: Report de ${Math.min(remainingPrevYear, LEAVES_CONFIG.JRA.maxReport)}j inclus.`,
                   );
                 }
               } else if (type === "JA") {
@@ -598,11 +602,8 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             }
 
-            // --- 3. DÉDUCTION DES CONGÉS PRIS DEPUIS LE POINT ZÉRO ---
             let usedBeforeCurrentMonth = 0;
-
             Object.keys(usageByMonth[pid]?.[type] || {}).forEach((usedYm) => {
-              // On ne déduit que ce qui a été posé entre le début du cycle (ou la date du snapshot) et le mois en cours
               if (usedYm >= cycleStartStr && usedYm < ym) {
                 usedBeforeCurrentMonth += usageByMonth[pid][type][usedYm];
               }
@@ -688,10 +689,28 @@ document.addEventListener("DOMContentLoaded", () => {
           const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
           if (dayLeaves.length) {
             let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; line-height:1; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
-            if (dayLeaves.some((l) => l.person_id === window.CONFIG.ID_ALEX))
-              html += `<span style="color:#0f766e; font-weight:800;">A</span>`;
-            if (dayLeaves.some((l) => l.person_id === window.CONFIG.ID_LAIA))
-              html += `<span style="color:#b45309; font-weight:800;">L</span>`;
+
+            const colors = [
+              "#0f766e",
+              "#b45309",
+              "#047857",
+              "#4338ca",
+              "#b91c1c",
+            ];
+            if (window.CONFIG.PEOPLE && window.CONFIG.PEOPLE.length > 0) {
+              window.CONFIG.PEOPLE.forEach((person, index) => {
+                if (
+                  dayLeaves.some(
+                    (l) => parseInt(l.person_id) === parseInt(person.id),
+                  )
+                ) {
+                  const color = colors[index % colors.length];
+                  const initial = person.name.charAt(0).toUpperCase();
+                  html += `<span style="color:${color}; font-weight:800; margin: 0 1px;">${initial}</span>`;
+                }
+              });
+            }
+
             html += `</div>`;
             td.innerHTML += html;
           }
@@ -731,8 +750,10 @@ document.addEventListener("DOMContentLoaded", () => {
               tr.appendChild(tdUse);
             });
           };
-          renderPersonCols(FAMILY.ALEX.id, `col-${FAMILY.ALEX.prefix}`);
-          renderPersonCols(FAMILY.LAIA.id, `col-${FAMILY.LAIA.prefix}`);
+          parents.forEach((parent, index) => {
+            const cssPrefix = index % 2 === 0 ? "col-alex" : "col-laia";
+            renderPersonCols(parent.id, cssPrefix);
+          });
         }
         this.planningBody.appendChild(tr);
       });
@@ -845,9 +866,9 @@ document.addEventListener("DOMContentLoaded", () => {
       container.style.display = "flex";
       let html = "";
 
-      [FAMILY.ALEX, FAMILY.LAIA].forEach((person) => {
+      parents.forEach((person) => {
         html += `<div class="fc-minimal-balance-card">
-                  <strong class="${person.prefix}">${person.prefix.toUpperCase()}</strong>
+                  <strong class="col-alex">${person.name.toUpperCase()}</strong>
                   <div class="fc-minimal-chips">`;
 
         ["CP", "JRA", "JA"].forEach((type) => {
@@ -989,10 +1010,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
         if (dayLeaves.length) {
           content += `<div style="position:absolute; bottom:2px; left:2px; font-size:10px; font-weight:bold;">`;
-          if (dayLeaves.some((l) => l.person_id === 2))
-            content += `<span style="color:#0f766e">A</span> `;
-          if (dayLeaves.some((l) => l.person_id === 3))
-            content += `<span style="color:#b45309">L</span>`;
+
+          parents.forEach((parent, index) => {
+            if (
+              dayLeaves.some(
+                (l) => parseInt(l.person_id) === parseInt(parent.id),
+              )
+            ) {
+              const color = index % 2 === 0 ? "#0f766e" : "#b45309";
+              const initial = parent.name.charAt(0).toUpperCase();
+              content += `<span style="color:${color}">${initial}</span> `;
+            }
+          });
+
           content += `</div>`;
         }
         content += `</div>`;
@@ -1557,7 +1587,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (dates.includes(e.date)) activeEvents.add(e.type);
       });
 
-      const activeLeaves = { 2: new Set(), 3: new Set() };
+      const activeLeaves = {};
+      parents.forEach((p) => (activeLeaves[p.id] = new Set()));
+
       this.leaves.forEach((l) => {
         if (dates.includes(l.leave_date)) {
           if (activeLeaves[l.person_id])
@@ -1623,32 +1655,33 @@ document.addEventListener("DOMContentLoaded", () => {
                  <button class="fc-menu-btn ${getBtnClass("PEP_SICK")}" data-action="add" data-type="PEP_SICK" style="width:100%">${getBtnIcon("PEP_SICK")}${tr("leg_pep_sick")} 🤒</button>
                </div>`;
 
-      // 5. Section Enfants
+      // 5. Section Parents (Congés)
       html += `<div class="fc-menu-section">
                  ${buildHeader(tr("fc_menu_kids_leaves"), null, null)}
                  <div class="fc-menu-leaves-table">
                    <table>
                      <thead>
-                       <tr>
-                         <th>
-                            <div class="fc-th-inline">
-                              Alex <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="2" title="${tr("fc_clear")} Alex">${trashSvg}</button>
-                            </div>
-                         </th>
-                         <th>
-                            <div class="fc-th-inline">
-                              Laia <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="3" title="${tr("fc_clear")} Laia">${trashSvg}</button>
-                            </div>
-                         </th>
-                       </tr>
+                       <tr>`;
+
+      // En-têtes dynamiques (Noms + Bouton Poubelle)
+      parents.forEach((parent) => {
+        html += `<th>
+                   <div class="fc-th-inline">
+                     ${parent.name} <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="${parent.id}" title="${tr("fc_clear")} ${parent.name}">${trashSvg}</button>
+                   </div>
+                 </th>`;
+      });
+      html += `        </tr>
                      </thead>
                      <tbody>`;
 
+      // Lignes de congés (CP, JRA, JA)
       ["CP", "JRA", "JA"].forEach((t) => {
-        html += `<tr>
-                   <td><button class="fc-menu-btn ${getBtnClass(t, 2)}" data-action="add-leave" data-pid="2" data-type="${t}">${getBtnIcon(t, 2)}${t}</button></td>
-                   <td><button class="fc-menu-btn ${getBtnClass(t, 3)}" data-action="add-leave" data-pid="3" data-type="${t}">${getBtnIcon(t, 3)}${t}</button></td>
-                 </tr>`;
+        html += `<tr>`;
+        parents.forEach((parent) => {
+          html += `<td><button class="fc-menu-btn ${getBtnClass(t, parent.id)}" data-action="add-leave" data-pid="${parent.id}" data-type="${t}">${getBtnIcon(t, parent.id)}${t}</button></td>`;
+        });
+        html += `</tr>`;
       });
 
       html += `      </tbody>
@@ -1743,22 +1776,18 @@ document.addEventListener("DOMContentLoaded", () => {
             },
           );
         } else if (action === "clear-leaves") {
-          await this.postApi(
-            "/modules/family-calendar/includes/api/manage-leaf.php",
-            {
-              action: "bulk_delete_day_person",
-              dates,
-              person_id: window.CONFIG.ID_ALEX,
-            },
-          );
-          await this.postApi(
-            "/modules/family-calendar/includes/api/manage-leaf.php",
-            {
-              action: "bulk_delete_day_person",
-              dates,
-              person_id: window.CONFIG.ID_LAIA,
-            },
-          );
+          if (window.CONFIG.PEOPLE && window.CONFIG.PEOPLE.length > 0) {
+            for (const person of window.CONFIG.PEOPLE) {
+              await this.postApi(
+                "/modules/family-calendar/includes/api/manage-leaf.php",
+                {
+                  action: "bulk_delete_day_person",
+                  dates,
+                  person_id: person.id,
+                },
+              );
+            }
+          }
         }
 
         await this.refreshAllData();

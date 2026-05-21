@@ -69,13 +69,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // 🟢 ENRICHISSEMENT : Prise en compte de la couleur du profil
     if ($action === 'update_profile') {
         $display_name = trim($_POST['display_name'] ?? '');
+        $color        = trim($_POST['color'] ?? '#0891b2');
+
         if (!$display_name) {
             $error = "Le prénom ne peut pas être vide.";
         } else {
+            // MÀJ dans la base Meta (users)
             $meta_pdo->prepare("UPDATE users SET display_name = ? WHERE id = ?")
                      ->execute([$display_name, $user_id]);
+            
+            // MÀJ dans la base locale Foyer (pf_people) via le user_id mappé
+            require_once __DIR__ . '/includes/db.php';
+            if (isset($pdo)) {
+                $stmtPeopleColor = $pdo->prepare("UPDATE pf_people SET color = ? WHERE user_id = ?");
+                $stmtPeopleColor->execute([$color, $user_id]);
+            }
+
             $_SESSION['user']['display_name'] = $display_name;
             $success = "Profil mis à jour.";
         }
@@ -129,7 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error = "Format non supporté (jpg, png, webp).";
             } else {
                 $dest = $upload_dir . 'home_bg_' . $family_id . '.' . $ext;
-                // Supprimer anciens fichiers de ce family
                 foreach (glob($upload_dir . 'home_bg_' . $family_id . '.*') as $old) @unlink($old);
                 if (move_uploaded_file($file['tmp_name'], $dest)) {
                     $success = "Image d'accueil mise à jour.";
@@ -225,9 +236,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ─── Chargement données ───────────────────────────────────────────────────────
-$user = $meta_pdo->prepare("SELECT * FROM users WHERE id = ?");
-$user->execute([$user_id]);
-$user = $user->fetch();
+
+// 1. On charge la base locale AVANT pour que son $user n'écrase pas le nôtre
+if ($family_id) {
+    require_once __DIR__ . '/includes/db.php';
+}
+
+// 2. Maintenant on peut charger ton profil en toute sécurité
+$stmtUser = $meta_pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmtUser->execute([$user_id]);
+$user = $stmtUser->fetch();
+
+// 3. Récupération de la couleur actuelle depuis pf_people
+$user_color = '#0891b2'; // Fallback par défaut
+if ($family_id && isset($pdo)) {
+    $stmtColorFetch = $pdo->prepare("SELECT color FROM pf_people WHERE user_id = ?");
+    $stmtColorFetch->execute([$user_id]);
+    $fetched_color = $stmtColorFetch->fetchColumn();
+    if ($fetched_color) {
+        $user_color = $fetched_color;
+    }
+}
 
 $family = null;
 $members = [];
@@ -276,7 +305,6 @@ require __DIR__ . '/header.php';
     <div class="pf-alert pf-alert--error">✗ <?= htmlspecialchars($error) ?></div>
   <?php endif; ?>
 
-  <!-- ── Langue ─────────────────────────────────────────────────────────── -->
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">🌐 Langue / Language</h2>
     <form method="post" class="pf-lang-form">
@@ -303,7 +331,6 @@ require __DIR__ . '/header.php';
     </form>
   </section>
 
-  <!-- ── Modules ────────────────────────────────────────────────────────── -->
   <?php if ($family_id): ?>
   <section class="pf-panel-card">
     <h2 class="pf-card-h2 pf-card-h2--tight">🧩 Modules actifs</h2>
@@ -413,7 +440,6 @@ require __DIR__ . '/header.php';
     <?php endif; ?>
   </section>
 
-  <!-- ── Fond page d'accueil ───────────────────────────────────────────── -->
   <?php if ($family_id):
     $bg_file = null;
     foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $f) { $bg_file = $f; break; }
@@ -452,15 +478,12 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
 
-  <!-- ── Famille ──────────────────────────────────────────────────────────── -->
-   <?php
+  <?php
     $enabledMods = $_SESSION['enabled_modules'] ?? [];
     
-    // On cible précisément qui a besoin de quoi
     $showCurrency = count(array_intersect(['budget', 'holidays', 'gifts', 'garage'], $enabledMods)) > 0;
     $showZone = in_array('calendar', $enabledMods);
 
-    // Si au moins un des champs doit être affiché, on rend la section visible
     if ($family_id && ($showCurrency || $showZone)): 
         $currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
         $currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
@@ -502,7 +525,6 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
 
-  <!-- ── Profil ──────────────────────────────────────────────────────────── -->
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">👤 Mon profil</h2>
     <form method="post">
@@ -516,11 +538,19 @@ require __DIR__ . '/header.php';
         <label class="pf-label">Prénom / Pseudo affiché</label>
         <input type="text" name="display_name" class="pf-input" value="<?= htmlspecialchars($user['display_name']) ?>" required>
       </div>
+      
+      <div class="pf-form-group">
+        <label class="pf-label" for="profile_color">Couleur thématique de mon profil</label>
+        <div class="pf-color-picker-group">
+          <input type="color" name="color" id="profile_color" class="pf-input-color" value="<?= htmlspecialchars($user_color) ?>">
+          <span class="pf-muted-note">Cette couleur sera utilisée pour vos grilles de budget, calendriers et indicateurs personnels.</span>
+        </div>
+      </div>
+      
       <button type="submit" class="pf-btn">Enregistrer</button>
     </form>
   </section>
 
-  <!-- ── Mot de passe ────────────────────────────────────────────────────── -->
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">🔒 Changer le mot de passe</h2>
     <form method="post">
@@ -543,7 +573,6 @@ require __DIR__ . '/header.php';
   </section>
 
   <?php if ($family): ?>
-  <!-- ── Espace familial ─────────────────────────────────────────────────── -->
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">🏠 Mon espace familial</h2>
 
@@ -559,7 +588,6 @@ require __DIR__ . '/header.php';
       </div>
     </form>
 
-    <!-- Code d'invitation -->
     <div class="pf-dashed-panel">
       <p class="pf-muted-note pf-muted-note--tight">Code d'invitation — partagez-le pour inviter quelqu'un</p>
       <div class="pf-invite-row">
@@ -582,7 +610,6 @@ require __DIR__ . '/header.php';
       </p>
     </div>
 
-    <!-- Membres -->
     <h3 class="pf-members-heading">Membres (<?= count($members) ?>)</h3>
     <div class="pf-stack-sm">
       <?php foreach ($members as $m): ?>

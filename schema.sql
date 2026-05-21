@@ -13,10 +13,13 @@ CREATE TABLE IF NOT EXISTS pf_users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Personnes ────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS pf_people (
-  id   INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE `pf_people` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,    
+  `role` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- ─── Calendrier familial ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_events (
@@ -232,9 +235,6 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT IGNORE INTO pf_users (id, username, password_hash, display_name)
 VALUES (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin');
 
--- Personnes (IDs fixes correspondant aux constantes dans config.php)
-INSERT IGNORE INTO pf_people (id, name) VALUES (2, 'Alex');
-INSERT IGNORE INTO pf_people (id, name) VALUES (3, 'Laia');
 
 -- ─── Calendar iOS ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_calendar_events (
