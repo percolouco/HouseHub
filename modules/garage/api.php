@@ -259,7 +259,8 @@ if ($action === 'maintenances') {
         $photo = handleUpload('invoice_photo', $UPLOAD_DIR); $d = $_POST ?: gBody();
         if (!($d['vehicle_id'] ?? null)) gErr('vehicle_id manquant');
         $stmt = $pdo->prepare("INSERT INTO pf_maintenances (vehicle_id,type,description,date,km,cost,mechanic,garage_name,next_km,next_date,invoice_photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$d['vehicle_id'], $d['type']??'', $d['description']??null, $d['date']??date('Y-m-d'), $d['km']??null, $d['cost']??0, $d['mechanic']??null, $d['garage_name']??null, $d['next_km']??null, $d['next_date']??null, $photo, $d['notes']??null]);
+        $cost = ($d['cost'] ?? '') !== '' ? (float)$d['cost'] : null;
+        $stmt->execute([$d['vehicle_id'], $d['type']??'', $d['description']??null, $d['date']??date('Y-m-d'), $d['km']??null, $cost, $d['mechanic']??null, $d['garage_name']??null, $d['next_km']??null, $d['next_date']??null, $photo, $d['notes']??null]);
         $mid = $pdo->lastInsertId();
         if (!empty($d['km'])) { $pdo->prepare("UPDATE pf_vehicles SET current_km = GREATEST(current_km, ?), updated_at = NOW() WHERE id = ?")->execute([$d['km'], $d['vehicle_id']]); }
         gOk(['id' => $mid]);
