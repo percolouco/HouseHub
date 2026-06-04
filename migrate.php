@@ -200,11 +200,14 @@ foreach ($families as $f) {
         // ==========================================
         echo "<li><strong>Table pf_alloc_categories (Récupération des données) :</strong> ";
         try {
-            // Déplacer les textes (qui commencent par "vers") dans transfer_dest
-            $updated = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = target, target = '0' WHERE target LIKE 'vers %'");
-            echo "<span style='color:green'>$updated destinations récupérées et déplacées proprement.</span></li>";
+            $updated1 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = target, target = '0' WHERE target LIKE 'vers %'");
             
-            // Remettre la colonne target en format numérique maintenant qu'elle est propre
+            $updated2 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = 'SYSTEM', target = '0' WHERE target = 'SYSTEM'");
+            
+            $fam_pdo->exec("UPDATE pf_alloc_categories SET target = '0' WHERE target NOT REGEXP '^[0-9]+(\.[0-9]+)?$'");
+
+            echo "<span style='color:green'>" . ($updated1 + $updated2) . " destinations récupérées et déplacées.</span></li>";
+            
             $fam_pdo->exec("ALTER TABLE pf_alloc_categories MODIFY target DECIMAL(10,2) DEFAULT 0.00");
             echo "<li><span style='color:green'>Colonne 'target' re-sécurisée en format monétaire DECIMAL(10,2).</span></li>";
         } catch (\PDOException $e) {
