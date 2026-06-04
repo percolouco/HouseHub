@@ -5,7 +5,6 @@ require __DIR__ . '/../../../../includes/auth.php';
 require __DIR__ . '/../../../../includes/db.php';
 require_login();
 
-
 $action = $_POST['action'] ?? '';
 
 // =================================================================
@@ -42,7 +41,7 @@ if ($action === 'save_note') {
 
 // 1. MISE A JOUR TABLEAU SALAIRES (AJAX)
 if ($action === 'update_salary_config') {
-    header('Content-Type: application/json'); // On précise JSON ici
+    header('Content-Type: application/json');
     $year = $_POST['year'];
     $person = $_POST['person'];
     $field = $_POST['field']; // salary, mensualite, etc.
@@ -50,7 +49,10 @@ if ($action === 'update_salary_config') {
 
     // Liste des champs autorisés pour éviter les injections
     $allowed = ['salary', 'mensualite', 'frais_func', 'eco_perso', 'eco_family'];
-    if (!in_array($field, $allowed)) { echo json_encode(['error'=>'Champ invalide']); exit; }
+    if (!in_array($field, $allowed)) { 
+        echo json_encode(['success' => false, 'error' => 'Champ invalide']); 
+        exit; 
+    }
 
     $stmt = $pdo->prepare("INSERT INTO pf_salary_config (year, person, $field) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE $field = VALUES($field)");
     $stmt->execute([$year, $person, $value]);
@@ -63,7 +65,7 @@ if ($action === 'update_allocation') {
     header('Content-Type: application/json');
     $date     = $_POST['month_date'];
     $catId    = (int)$_POST['cat_id'];
-    $personId = (int)$_POST['person_id']; // 🟢 Reçoit l'ID de la personne directement !
+    $personId = (int)$_POST['person_id']; 
     $value    = floatval($_POST['value']);
 
     if ($catId <= 0 || $personId <= 0) {
@@ -269,6 +271,93 @@ if ($action === 'validate_transfers') {
 
     } catch (Exception $e) {
         $pdo->rollBack();
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// =================================================================
+// 7. GESTION DES AVANCES / TRICOUNT (pf_advances)
+// =================================================================
+
+if ($action === 'save_advance') {
+    header('Content-Type: application/json');
+    try {
+        $payer        = trim($_POST['payer'] ?? '');
+        $advance_date = $_POST['advance_date'] ?? date('Y-m-d');
+        $description  = trim($_POST['description'] ?? '');
+        $amount       = abs((float)($_POST['amount'] ?? 0));
+        $from_savings = isset($_POST['from_savings']) ? 1 : 0;
+
+        if (empty($payer) || empty($description) || $amount <= 0) {
+            throw new Exception("Champs obligatoires manquants ou invalides.");
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO pf_advances (advance_date, payer, description, amount, from_savings) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$advance_date, $payer, $description, $amount, $from_savings]);
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'update_advance') {
+    header('Content-Type: application/json');
+    try {
+        $id           = (int)($_POST['id'] ?? 0);
+        $payer        = trim($_POST['payer'] ?? '');
+        $advance_date = $_POST['advance_date'] ?? date('Y-m-d');
+        $description  = trim($_POST['description'] ?? '');
+        $amount       = abs((float)($_POST['amount'] ?? 0));
+        $from_savings = isset($_POST['from_savings']) ? 1 : 0;
+
+        if ($id <= 0 || empty($payer) || empty($description) || $amount <= 0) {
+            throw new Exception("Paramètres invalides fournis.");
+        }
+
+        $stmt = $pdo->prepare("UPDATE pf_advances SET advance_date = ?, payer = ?, description = ?, amount = ?, from_savings = ? WHERE id = ?");
+        $stmt->execute([$advance_date, $payer, $description, $amount, $from_savings, $id]);
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'resolve_advance') {
+    header('Content-Type: application/json');
+    try {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) throw new Exception("ID invalide fourni.");
+
+        $stmt = $pdo->prepare("UPDATE pf_advances SET is_resolved = 1 WHERE id = ?");
+        $stmt->execute([$id]);
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+if ($action === 'delete_advance') {
+    header('Content-Type: application/json');
+    try {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id <= 0) throw new Exception("ID invalide.");
+
+        $stmt = $pdo->prepare("DELETE FROM pf_advances WHERE id = ?");
+        $stmt->execute([$id]);
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(400);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;

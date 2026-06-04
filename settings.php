@@ -31,9 +31,49 @@ CREATE TABLE IF NOT EXISTS user_calendar_integrations (
 // ─── Actions ──────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
+        // Fallback JSON pour les requêtes AJAX qui échouent au CSRF
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Session invalide (CSRF). Rechargez la page.']);
+            exit;
+        }
         $error = "Session invalide (CSRF). Rechargez la page.";
     } else {
     $action = $_POST['action'] ?? '';
+
+    // 🟢 GESTION AJAX : ENFANTS DU FOYER
+    if ($action === 'add_child') {
+        header('Content-Type: application/json');
+        try {
+            $name = trim($_POST['child_name'] ?? '');
+            if (empty($name)) throw new Exception(tr('set_err_kid_name'));
+            
+            require_once __DIR__ . '/includes/db.php';
+            $stmt = $pdo->prepare("INSERT INTO pf_people (name, role) VALUES (?, 'enfant')");
+            $stmt->execute([$name]);
+            
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+    
+    if ($action === 'delete_child') {
+        header('Content-Type: application/json');
+        try {
+            $id = (int)($_POST['child_id'] ?? 0);
+            if ($id > 0) {
+                require_once __DIR__ . '/includes/db.php';
+                $stmt = $pdo->prepare("DELETE FROM pf_people WHERE id = ? AND role = 'enfant'");
+                $stmt->execute([$id]);
+            }
+            echo json_encode(['success' => true]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
 
     if ($action === 'update_family_info') {
         require_once __DIR__ . '/includes/db.php';
@@ -256,6 +296,13 @@ if ($family_id && isset($pdo)) {
     if ($fetched_color) {
         $user_color = $fetched_color;
     }
+}
+
+// 4. Récupération de la liste des enfants du foyer
+$kidsList = [];
+if ($family_id && isset($pdo)) {
+    $stmtKids = $pdo->query("SELECT id, name FROM pf_people WHERE role = 'enfant' ORDER BY id ASC");
+    $kidsList = $stmtKids->fetchAll(PDO::FETCH_ASSOC);
 }
 
 $family = null;
@@ -484,15 +531,16 @@ require __DIR__ . '/header.php';
     $showCurrency = count(array_intersect(['budget', 'holidays', 'gifts', 'garage'], $enabledMods)) > 0;
     $showZone = in_array('calendar', $enabledMods);
 
-    if ($family_id && ($showCurrency || $showZone)): 
+    if ($family_id): 
         $currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
         $currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
   ?>
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">👪 Configuration du foyer</h2>
-    <p class="pf-muted-note">Configurez les indicateurs partagés par votre foyer.</p>
+    <p class="pf-muted-note">Configurez les indicateurs et les membres partagés par votre foyer.</p>
     
-    <form method="post" class="pf-stack-md">
+    <?php if ($showCurrency || $showZone): ?>
+    <form method="post" class="pf-stack-md" style="margin-bottom: 24px;">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="update_family_info">
       
@@ -519,8 +567,33 @@ require __DIR__ . '/header.php';
         
       </div>
       
-      <button type="submit" class="pf-btn">Enregistrer les paramètres du foyer</button>
+      <button type="submit" class="pf-btn">Enregistrer les paramètres</button>
     </form>
+    <?php endif; ?>
+
+    <div style="border-top: 1px solid var(--border-light); margin: 24px 0;"></div>
+
+    <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px;">👶 <?= tr('set_kids_title') ?></h3>
+    <p class="pf-muted-note"><?= tr('set_kids_desc') ?></p>
+
+    <ul class="pf-stack-sm" style="list-style: none; padding: 0; margin-bottom: 20px; margin-top: 15px;">
+        <?php if (empty($kidsList)): ?>
+            <li class="pf-muted-note" style="font-style: italic;"><?= tr('set_no_kids') ?></li>
+        <?php else: ?>
+            <?php foreach ($kidsList as $kid): ?>
+                <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 8px;">
+                    <strong><?= htmlspecialchars($kid['name']) ?></strong>
+                    <button type="button" class="btn-icon-action delete" onclick="deleteChild(<?= $kid['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
+                </li>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </ul>
+
+    <form id="formAddChild" style="display: flex; gap: 10px;">
+        <input type="text" id="newChildName" class="pf-input" placeholder="<?= tr('set_add_kid_placeholder') ?>" required autocomplete="off">
+        <button type="submit" class="pf-btn pf-shrink-0">➕ <?= tr('set_btn_add_kid') ?></button>
+    </form>
+
   </section>
   <?php endif; ?>
 
@@ -654,6 +727,71 @@ function copyCode() {
     msg.classList.add('is-visible');
     setTimeout(() => msg.classList.remove('is-visible'), 2000);
   });
+}
+
+// Injection des traductions dynamiques pour JS
+window.I18N = {
+    ...(window.I18N || {}),
+    'set_confirm_del_kid': "<?= tr('set_confirm_del_kid') ?>",
+    'delete': "<?= tr('delete') ?>",
+    'error_occured': "<?= tr('error_occured') ?>"
+};
+
+// Gestion de l'ajout d'enfant
+const formAddChild = document.getElementById('formAddChild');
+if (formAddChild) {
+    formAddChild.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('newChildName');
+        const name = input.value.trim();
+        if (!name) return;
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '...';
+        btn.disabled = true;
+
+        const fd = new FormData();
+        fd.append('action', 'add_child');
+        fd.append('child_name', name);
+        fd.append('csrf_token', window.CSRF_TOKEN); // Important: CSRF
+
+        try {
+            const res = await pachaFetch('settings.php', { method: 'POST', body: fd });
+            if (res.success) {
+                window.location.reload();
+            } else {
+                showToast(res.error || window.I18N['error_occured'], 'error');
+            }
+        } catch (err) {
+            showToast(window.I18N['error_occured'], 'error');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    });
+}
+
+// Gestion de la suppression d'enfant
+async function deleteChild(id) {
+    const confirmed = await pachaConfirm(window.I18N['delete'], window.I18N['set_confirm_del_kid']);
+    if (!confirmed) return;
+
+    const fd = new FormData();
+    fd.append('action', 'delete_child');
+    fd.append('child_id', id);
+    fd.append('csrf_token', window.CSRF_TOKEN); // Important: CSRF
+
+    try {
+        const res = await pachaFetch('settings.php', { method: 'POST', body: fd });
+        if (res.success) {
+            window.location.reload();
+        } else {
+            showToast(res.error || window.I18N['error_occured'], 'error');
+        }
+    } catch (err) {
+        showToast(window.I18N['error_occured'], 'error');
+    }
 }
 </script>
 
