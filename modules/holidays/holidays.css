@@ -1398,3 +1398,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 #tripMap {
   touch-action: none;
 }
+
+/* --- Toll cost estimator panel --- */
+.hol-cost-stat { background: var(--bg-page, #f8fafc); border: 1px solid var(--border-light, #e2e8f0); border-radius: 10px; padding: .75rem 1rem; text-align: center; }
+.hol-cost-stat-val { font-size: 1.2rem; font-weight: 700; color: var(--text-main, #0f172a); }
+.hol-cost-stat-label { font-size: .72rem; color: var(--text-muted, #64748b); margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.hol-cost-total { border-color: var(--primary, #4361ee); }
+.hol-cost-total .hol-cost-stat-val { color: var(--primary, #4361ee); }
