@@ -57,12 +57,11 @@ if (isset($_POST['action']) && $_POST['action'] === 'reopen_month') {
     exit;
 }
 
-
-
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
     $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category) VALUES (?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category)");
+    // Mémorisation du mapping étendu (incluant budget_item_id)
+    $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category, budget_item_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category), budget_item_id = VALUES(budget_item_id)");
 
     if (isset($_POST['lines']) && is_array($_POST['lines'])) {
         foreach ($_POST['lines'] as $line) {
@@ -81,7 +80,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
 
                 try {
                     $stmtExp->execute([$dateToSave, $gestionMonthLine, $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId, $holidayId]);
-                    $stmtRule->execute([$line['label'], $cat]);
+                    $stmtRule->execute([$line['label'], $cat, $budgetItemId]);
                     $count++;
                 } catch (Exception $e) { continue; }
             }
@@ -110,7 +109,15 @@ $showPreview = false;
 if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
     $file = $_FILES['csv_file']['tmp_name'];
     $handle = fopen($file, "r");
-    $rules = []; try { $rules = $pdo->query("SELECT keyword, category FROM pf_import_rules")->fetchAll(PDO::FETCH_KEY_PAIR); } catch(Exception $e){}
+    
+    $rules = []; 
+    try { 
+        $stmtRules = $pdo->query("SELECT keyword, category, budget_item_id FROM pf_import_rules");
+        while ($r = $stmtRules->fetch(PDO::FETCH_ASSOC)) {
+            $rules[$r['keyword']] = ['cat' => $r['category'], 'budget_item_id' => $r['budget_item_id']];
+        }
+    } catch(Exception $e){}
+    
     $existingRefs = []; try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
     fgetcsv($handle, 1000, ";", "\"", "\\"); 
     
@@ -129,9 +136,16 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
         $isDuplicate = in_array($uniqueKey, $existingRefs);
         
         $suggestedCat = '';
-        foreach ($rules as $kw => $c) { if (stripos($label, $kw) !== false) { $suggestedCat = $c; break; } }
+        $suggestedItemId = null;
+        foreach ($rules as $kw => $ruleData) { 
+            if (stripos($label, $kw) !== false) { 
+                $suggestedCat = $ruleData['cat']; 
+                $suggestedItemId = $ruleData['budget_item_id'];
+                break; 
+            } 
+        }
         
-        $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
+        $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'suggested_item_id'=>$suggestedItemId, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
     }
     fclose($handle);
     $showPreview = true;
@@ -224,6 +238,7 @@ $categoriesConfig = [
     'School'  => ['type'=>'debit',  'label'=>tr('cat_school'), 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
     'Frais'   => ['type'=>'debit',  'label'=>tr('cat_fixed'),  'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>[]],
     'Autres'  => ['type'=>'debit',  'label'=>tr('cat_others'), 'budget'=>$budget_autres, 'color'=>'#64748b', 'suggestions'=>['Restaurant', 'Cadeau']],
+    'Apports' => ['type'=>'debit',  'label'=>tr('cat_contributions') ?? 'Apports & Projets', 'budget'=>0, 'color'=>'#0ea5e9', 'suggestions'=>['Alex', 'Laia', 'Remboursement']],
     'LivretA' => ['type'=>'debit',  'label'=>tr('cat_savings'),'budget'=>0, 'color'=>'#8b5cf6', 'suggestions'=>['Virement']]
 ];
 
@@ -695,11 +710,15 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                                         </select>
                                         <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="display:none; padding:4px; font-size:0.85rem; flex:1;" disabled>
                                             <option value="">-- <?= tr('bud_is_charge') ?> --</option>
-                                            <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
+                                            <?php foreach ($fixedChargesList as $fc): ?>
+                                                <option value="<?= $fc['id'] ?>" <?= ($row['suggested_item_id'] == $fc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($fc['name']) ?></option>
+                                            <?php endforeach; ?>
                                         </select>
                                         <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-income" onchange="checkValidation()" style="display:none; padding:4px; font-size:0.85rem; flex:1;" disabled>
                                             <option value="">-- <?= tr('bud_is_income') ?> --</option>
-                                            <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
+                                            <?php foreach ($incomeList as $inc): ?>
+                                                <option value="<?= $inc['id'] ?>" <?= ($row['suggested_item_id'] == $inc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($inc['name']) ?></option>
+                                            <?php endforeach; ?>
                                         </select>
                                     </div>
                                 </td>
@@ -792,10 +811,14 @@ function openEditModal(e) {
     else if (e.category === 'Income') document.getElementById('incomeSelect').value = e.budget_item_id;
 }
 
-function handleLineCatChange(select) {
+function handleLineCatChange(select, isInit = false) {
     const row = select.closest('tr');
     const fSel = row.querySelector('.select-frais'); const iSel = row.querySelector('.select-income');
-    fSel.style.display = 'none'; iSel.style.display = 'none'; fSel.value = ''; iSel.value = ''; fSel.disabled = true; iSel.disabled = true;
+    
+    fSel.style.display = 'none'; iSel.style.display = 'none'; 
+    if (!isInit) { fSel.value = ''; iSel.value = ''; }
+    fSel.disabled = true; iSel.disabled = true;
+
     if (select.value === 'Frais') { fSel.style.display = 'block'; fSel.disabled = false; } 
     else if (select.value === 'Income') { iSel.style.display = 'block'; iSel.disabled = false; }
     checkValidation();
@@ -815,7 +838,10 @@ function checkValidation() {
     else { btn.disabled = false; btn.style.opacity=1; msg.style.display='none'; }
 }
 
-if(document.getElementById('formMapping')) { document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s)); checkValidation(); }
+if(document.getElementById('formMapping')) { 
+    document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s, true)); 
+    checkValidation(); 
+}
 
 window.addEventListener('click', (e) => {
     if (e.target.classList.contains('pf-modal')) {
@@ -826,7 +852,7 @@ window.addEventListener('click', (e) => {
 
 // --- 2. SUPPRESSION ASYNCHRONE ---
 async function deleteExpense(id) {
-    const confirmed = await pachaConfirm("Suppression", tr('bud_confirm_delete'));
+    const confirmed = await pachaConfirm("Suppression", window.I18N['bud_confirm_delete']);
     if (!confirmed) return;
 
     const formData = new FormData();
