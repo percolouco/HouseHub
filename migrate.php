@@ -225,6 +225,34 @@ foreach ($families as $f) {
         } catch (\PDOException $e) {
             echo "<span style='color:red'>Erreur : " . $e->getMessage() . "</span></li>";
         }
+
+        try {
+    // Récupération de toutes les bases de données de familles via la base meta
+    $stmtFamilies = $meta_pdo->query("SELECT id, db_name FROM families WHERE is_active = 1");
+    while ($fam = $stmtFamilies->fetch(PDO::FETCH_ASSOC)) {
+        error_log("Migration de la base familiale : " . $fam['db_name']);
+        
+        $fam_dsn = "mysql:host=" . DB_HOST . ";dbname=" . $fam['db_name'] . ";charset=utf8mb4";
+        $fam_pdo = new PDO($fam_dsn, DB_USER, DB_PASS, $options);
+        
+        // Injection incrémentale sécurisée
+        $fam_pdo->exec("
+            CREATE TABLE IF NOT EXISTS `pf_advances` (
+              `id` INT AUTO_INCREMENT PRIMARY KEY,
+              `advance_date` DATE NOT NULL,
+              `payer` VARCHAR(100) NOT NULL,
+              `description` VARCHAR(255) NOT NULL,
+              `amount` DECIMAL(10,2) DEFAULT 0.00,
+              `from_savings` TINYINT(1) DEFAULT 0,
+              `is_resolved` TINYINT(1) DEFAULT 0,
+              `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    }
+    error_log("✅ Migration de la table pf_advances terminée sur tous les tenants.");
+} catch (Exception $e) {
+    die("❌ Erreur critique lors de la migration : " . $e->getMessage());
+}
 }
 
 

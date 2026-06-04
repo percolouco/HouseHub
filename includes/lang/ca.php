@@ -156,6 +156,15 @@ return [
     'mod_planka_desc'    => 'Gestioneu els vostres projectes en mode Kanban amb Planka.',
     'menu_planka'        => 'Planka',
 
+    // --- SETTINGS : ENFANTS ---
+    'set_kids_title'          => 'Nens de la llar',
+    'set_kids_desc'           => 'Gestioneu la llista de nens per associar-los a l\'estalvi, als regals, etc.',
+    'set_add_kid_placeholder' => 'Nom del nen',
+    'set_btn_add_kid'         => 'Afegir',
+    'set_err_kid_name'        => 'El nom és obligatori.',
+    'set_confirm_del_kid'     => 'Vols eliminar aquest nen? (El seu historial financer es conservarà als arxius).',
+    'set_no_kids'             => 'Cap nen configurat per a aquesta llar.',
+
     // ==========================================
     // FAMILY CALENDAR
     // ==========================================
@@ -385,6 +394,7 @@ return [
     'cat_fixed'                 => 'Despeses Fixes',
     'cat_others'                => 'Altres / Imprevistos',
     'cat_savings'               => 'Estalvis',
+    'budget_tab_kids'           => 'Nens',
 
     // --- BUDGET : SUIVI ---
     'bud_rem_school'            => 'Escola (Resta estimada)',
@@ -564,6 +574,24 @@ return [
     'bud_prev_err_no_history'    => 'Impossible: no hi ha historial disponible per copiar.',
     'bud_prev_confirm_copy'      => "Vols copiar les dades de %s a %t?\n\n⚠️ Això sobreescriurà tots els valors ja presents per a %t.",
     'bud_prev_confirm_transfers' => "Confirmes que %p ha fet totes les transferències per a %m?\n\nAixò actualitzarà l'Estalvi automàticament.",
+
+    // --- MODULE BUDGET : AVANCES & TRICOUNT ---
+    'bud_adv_title' => 'Avançaments i Tricount Familiar',
+    'bud_adv_add' => 'Afegir un avançament',
+    'bud_adv_edit' => 'Modificar l\'avançament',
+    'bud_adv_who_paid' => 'Qui ha pagat?',
+    'bud_adv_payer' => 'Pagador',
+    'bud_adv_has_advanced' => '%s ha avançat:',
+    'bud_adv_cc_label' => 'al compte comú',
+    'bud_adv_livret_label' => 'des del seu llibre d\'estalvis',
+    'bud_adv_cc_balance_title' => 'Equilibri del Compte Comú',
+    'bud_adv_owed_to' => 'S\'han de pagar **%s €** a **%s**',
+    'bud_adv_balanced' => 'Els comptes estan perfectament equilibrats!',
+    'bud_adv_saved_badge' => 'Estalvis',
+    'bud_adv_already_saved' => 'Aquests diners provenen d\'un llibre d\'estalvis',
+    'bud_adv_ph_desc' => 'Ex: Compres, Factura d\'electricitat...',
+    'bud_adv_confirm_resolve' => 'Confirmar el reemborsament complet d\'aquest avançament?',
+    'bud_adv_confirm_delete' => 'Eliminar definitivament aquest avançament?',
 
     // ==========================================
     // CADEAUX (GIFTS)

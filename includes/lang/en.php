@@ -157,6 +157,15 @@ return [
     'mod_planka_desc'    => 'Manage your projects in Kanban mode with Planka.',
     'menu_planka'        => 'Planka',
 
+    // --- SETTINGS : KIDS ---
+    'set_kids_title'          => 'Household Kids',
+    'set_kids_desc'           => 'Manage the list of kids to associate them with savings, gifts, etc.',
+    'set_add_kid_placeholder' => 'Kid\'s first name',
+    'set_btn_add_kid'         => 'Add',
+    'set_err_kid_name'        => 'The first name is required.',
+    'set_confirm_del_kid'     => 'Delete this kid? (Their financial history will remain visible in the archives).',
+    'set_no_kids'             => 'No kids configured for this household.',
+
     // ==========================================
     // FAMILY CALENDAR
     // ==========================================
@@ -383,6 +392,7 @@ return [
     'cat_fixed'                 => 'Fixed costs',
     'cat_others'                => 'Other / Unexpected',
     'cat_savings'               => 'Savings',
+    'budget_tab_kids'           => 'Kids',
 
     // --- BUDGET: TRACKING ---
     'bud_rem_school'            => 'School (estimated remaining)',
@@ -548,6 +558,30 @@ return [
     'bud_prev_confirm_copy'      => "Do you want to copy data from %s to %t?\n\n⚠️ This will overwrite all values already present for %t.",
     'bud_prev_confirm_transfers' => "Confirm that %p has made all their transfers for %m?\n\nThis will automatically update Savings.",
     'bud_prev_label_name'        => 'Name',
+    'bud_adv_title' => 'Advances & Family Tricount',
+    'bud_adv_add' => 'Add an Advance',
+    'bud_adv_edit' => 'Edit Advance',
+    'bud_adv_who_paid' => 'Who paid?',
+    'bud_adv_payer' => 'Payer',
+    'bud_adv_has_advanced' => '%s advanced:',
+    'bud_adv_cc_label' => 'on the joint account',
+    'bud_adv_livret_label' => 'from their savings account',
+    'bud_adv_cc_balance_title' => 'Joint Account Balance',
+    'bud_adv_owed_to' => '<strong>%s €</strong> are owed to <strong>%s</strong>',
+    'bud_adv_balanced' => 'Accounts are perfectly balanced!',
+    'bud_adv_saved_badge' => 'Savings',
+    'bud_adv_already_saved' => 'This money comes from a savings account',
+    'bud_adv_ph_desc' => 'e.g., Groceries, Electricity bill...',
+    'bud_adv_confirm_resolve' => 'Confirm the complete reimbursement of this advance?',
+    'bud_adv_confirm_delete' => 'Permanently delete this advance?',
+    'date' => 'Date',
+    'bud_label_name' => 'Description',
+    'bud_amount' => 'Amount',
+    'actions' => 'Actions',
+    'edit' => 'Edit',
+    'delete' => 'Delete',
+    'btn_cancel' => 'Cancel',
+    'btn_save' => 'Save',
 
     // ==========================================
     // GIFTS
