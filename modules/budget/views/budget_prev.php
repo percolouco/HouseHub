@@ -16,7 +16,6 @@ foreach ($budgetParents as $index => $parent) {
     $parentMapping[] = [
         'id'        => (int)$parent['id'],
         'name'      => $parent['name'],
-        'db_field'  => 'amount_p' . $num,
         'css'       => 'p' . $num,
         'color'     => $parent['color'] ?? (($num === 1) ? '#0891b2' : '#f59e0b')
     ];
@@ -52,7 +51,6 @@ for ($i = 0; $i < 6; $i++) {
 $prevMonthLink = date('Y-m-01', strtotime("-1 month", $focusTs));
 $nextMonthLink = date('Y-m-01', strtotime("+1 month", $focusTs));
 
-// Récupération des Cycles configurés dans pf_notes
 $cycleConfigs = [];
 $stmtNotes = $pdo->query("SELECT reference_id, content FROM pf_notes WHERE note_type = 'month_config'");
 while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
@@ -63,14 +61,14 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// 5. Récupération Valeurs Répartition
+// 5. Récupération Valeurs Répartition Relationnelles
 $inQuery = implode(',', array_fill(0, count($months), '?'));
 $stmt = $pdo->prepare("SELECT * FROM pf_alloc_values WHERE month_date IN ($inQuery)");
 $stmt->execute($months);
 
 $allocs = [];
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    $allocs[$row['month_date']][$row['cat_id']] = $row;
+    $allocs[$row['month_date']][$row['cat_id']][$row['person_id']] = (float)$row['amount'];
 }
 
 // 6. Récupération de l'ID de la catégorie système
@@ -78,7 +76,7 @@ $sysCatId = null;
 foreach ($cats as $key => $c) {
     if ($c['name'] === 'SYSTEM_VALIDATION') {
         $sysCatId = $c['id'];
-        unset($cats[$key]); 
+        unset($cats[$key]);
         break;
     }
 }
@@ -86,14 +84,10 @@ foreach ($cats as $key => $c) {
 // Statuts de validation
 $focusDate = $months[0];
 $isValidated = [];
-if ($sysCatId && isset($allocs[$focusDate][$sysCatId])) {
-    $row = $allocs[$focusDate][$sysCatId];
-    foreach ($parentMapping as $map) {
-        $isValidated[$map['css']] = ($row[$map['db_field']] == 1);
-    }
-} else {
-    foreach ($parentMapping as $map) {
-        $isValidated[$map['css']] = false;
+foreach ($parentMapping as $map) {
+    $isValidated[$map['css']] = false;
+    if ($sysCatId && isset($allocs[$focusDate][$sysCatId][$map['id']])) {
+        $isValidated[$map['css']] = ($allocs[$focusDate][$sysCatId][$map['id']] == 1);
     }
 }
 
@@ -110,13 +104,13 @@ function getTranslatedMonthName($dateString) {
 }
 ?>
 
-<div class="prev-container" style="--p1-main: <?= $parentMapping[0]['color'] ?>; --p2-main: <?= $parentMapping[1]['color'] ?>;">
+<div class="prev-container" style="--p1-main: <?= $parentMapping[0]['color'] ?>; --p2-main: <?= $parentMapping[1]['color'] ?? '#f59e0b' ?>;">
 
     <div>
         <div class="prev-section-header">
             <h2><?= tr('bud_prev_incomes') ?> <?= $currentYear ?></h2>
         </div>
-        
+
         <table class="prev-salary-table">
             <thead>
                 <tr>
@@ -130,9 +124,9 @@ function getTranslatedMonthName($dateString) {
                 </tr>
             </thead>
             <tbody>
-                <?php 
-                foreach ($parentMapping as $map): 
-                    $d = $salaryConfig[$map['name']]; 
+                <?php
+                foreach ($parentMapping as $map):
+                    $d = $salaryConfig[$map['name']];
                     $restant = $d['salary'] - ($d['mensualite'] + $d['frais_func'] + $d['eco_perso'] + $d['eco_family']);
                 ?>
                 <tr data-person="<?= htmlspecialchars($map['name']) ?>">
@@ -180,14 +174,14 @@ function getTranslatedMonthName($dateString) {
                 <thead>
                     <tr>
                         <th class="col-sticky header-cell"></th>
-                        <?php foreach ($months as $month): 
+                        <?php foreach ($months as $month):
                             $isCurrent = ($month == date('Y-m-01'));
                             $cls = $isCurrent ? 'current' : '';
                             $colspan = count($parentMapping) + 1;
                         ?>
                             <th colspan="<?= $colspan ?>" class="th-month <?= $cls ?>">
                                 <span><?= getTranslatedMonthName($month) ?></span>
-                                <?php 
+                                <?php
                                 if (isset($cycleConfigs[$month]) && !empty($cycleConfigs[$month]['start_date'])) {
                                     $cStart = date('d/m', strtotime($cycleConfigs[$month]['start_date']));
                                     echo "<div class='cycle-start-label'>" . sprintf(tr('bud_sav_from_date'), $cStart) . "</div>";
@@ -227,11 +221,11 @@ function getTranslatedMonthName($dateString) {
                         <?php endforeach; ?>
                     </tr>
 
-                    <?php foreach ($cats as $cat): 
+                    <?php foreach ($cats as $cat):
                         $isIndicative = (strpos($cat['name'], 'Eco P') === 0);
                         $rowClass = $isIndicative ? 'row-indicative' : '';
-                        $inputClass = $isIndicative ? 'ignore-calc' : ''; 
-                        
+                        $inputClass = $isIndicative ? 'ignore-calc' : '';
+
                         $catDisplayName = $cat['name'];
                         if ($catDisplayName === 'Eco P1') $catDisplayName = 'Eco ' . $p1_name;
                         if ($catDisplayName === 'Eco P2') $catDisplayName = 'Eco ' . $p2_name;
@@ -239,34 +233,38 @@ function getTranslatedMonthName($dateString) {
                 <tr class="<?= $rowClass ?>">
                     <td class="col-sticky">
                         <div class="cat-name-label">
-                            <?= htmlspecialchars($catDisplayName) ?> 
+                            <?= htmlspecialchars($catDisplayName) ?>
                             <?php if(!empty($cat['holiday_id'])) echo " 🌴"; ?>
                             <?php if($isIndicative): ?><span>Info</span><?php endif; ?>
                         </div>
                         <div class="cat-target-label">
-                            <?= htmlspecialchars($cat['target']) ?>
+                            <?php if((float)$cat['target'] > 0) echo 'Obj: ' . round((float)$cat['target']) . '€ '; ?>
+                            <?php if(!empty($cat['transfer_dest'])) echo '➔ ' . htmlspecialchars($cat['transfer_dest']); ?>
                         </div>
-                        
+
                         <div class="row-actions">
-                            <button type="button" class="btn-icon-action edit" title="<?= tr('edit') ?>" data-id="<?= $cat['id'] ?>" data-name="<?= htmlspecialchars($cat['name']) ?>" data-target="<?= htmlspecialchars($cat['target']) ?>" data-holiday="<?= $cat['holiday_id'] ?? '' ?>" onclick="openEditModal(this)">✎</button>
+                            <button type="button" class="btn-icon-action edit" title="<?= tr('edit') ?>" 
+                                    data-id="<?= $cat['id'] ?>" 
+                                    data-name="<?= htmlspecialchars($cat['name']) ?>" 
+                                    data-target="<?= htmlspecialchars($cat['target'] ?? 0) ?>" 
+                                    data-transfer-dest="<?= htmlspecialchars($cat['transfer_dest'] ?? '') ?>" 
+                                    data-holiday="<?= $cat['holiday_id'] ?? '' ?>" 
+                                    onclick="openEditModal(this)">✎</button>
                             <button type="button" onclick="deleteCategory(<?= $cat['id'] ?>)" class="btn-icon-action delete" title="<?= tr('delete') ?>">🗑️</button>
                         </div>
                     </td>
-                    <?php foreach ($months as $m): 
-                        $val = $allocs[$m][$cat['id']] ?? [];
-                    ?>
+                    <?php foreach ($months as $m): ?>
                         <td class="txt-global sum-target" id="g_<?= $m ?>_<?= $cat['id'] ?>">0</td>
-                        
-                        <?php foreach ($parentMapping as $map): 
-                            $dbField = $map['db_field'];
-                            $cellValue = isset($val[$dbField]) ? $val[$dbField] : 0;
+
+                        <?php foreach ($parentMapping as $map):
+                            $cellValue = $allocs[$m][$cat['id']][$map['id']] ?? 0;
                         ?>
                         <td>
-                            <input type="number" step="1" class="prev-input txt-<?= $map['css'] ?> inp-<?= $map['css'] ?>-<?= $m ?> <?= $inputClass ?>" 
-                                   value="<?= $cellValue == 0 ? '' : round($cellValue) ?>" 
+                            <input type="number" step="1" class="prev-input txt-<?= $map['css'] ?> inp-<?= $map['css'] ?>-<?= $m ?> <?= $inputClass ?>"
+                                   value="<?= $cellValue == 0 ? '' : round($cellValue) ?>"
                                    placeholder="-"
-                                   data-target="<?= htmlspecialchars($cat['target']) ?>"
-                                   onchange="updateAlloc('<?= $m ?>', <?= $cat['id'] ?>, '<?= $dbField ?>', this)">
+                                   data-transfer-dest="<?= htmlspecialchars($cat['transfer_dest'] ?? '') ?>"
+                                   onchange="updateAlloc('<?= $m ?>', <?= $cat['id'] ?>, <?= $map['id'] ?>, this)">
                         </td>
                         <?php endforeach; ?>
                     <?php endforeach; ?>
@@ -282,21 +280,24 @@ function getTranslatedMonthName($dateString) {
             <h3>📝 <?= tr('bud_prev_notes_for') ?> <span><?= getTranslatedMonthName($focusDate) ?></span></h3>
             <span id="note-save-indicator" class="note-save-indicator">✓ <?= tr('bud_prev_saved') ?></span>
         </div>
-        
+
         <textarea id="monthNoteArea" class="pf-input" rows="3" placeholder="<?= tr('bud_prev_notes_ph') ?>"><?= htmlspecialchars((string)$currentNote) ?></textarea>
-        
+
         <div class="notes-footer">
             <button type="button" class="pf-btn" onclick="saveGenericNote('budget_prev', '<?= $focusDate ?>', document.getElementById('monthNoteArea').value)"><?= tr('bud_prev_save_note') ?></button>
         </div>
     </div>
 
     <?php
-    $focusMonth = $months[0]; 
+    $focusMonth = $months[0];
     $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
+    
     $allTargets = $targetsOrder;
     foreach($cats as $c) {
-        $t = trim($c['target']);
-        if(!empty($t) && !in_array($t, $allTargets)) { $allTargets[] = $t; }
+        $t = trim($c['transfer_dest'] ?? '');
+        if(!empty($t) && !in_array($t, $allTargets)) {
+            $allTargets[] = $t;
+        }
     }
     $allTargets = array_unique($allTargets);
     ?>
@@ -306,7 +307,7 @@ function getTranslatedMonthName($dateString) {
             <div class="recap-header">
                 <?= tr('bud_prev_transfers_to_make') ?> - <span><?= getTranslatedMonthName($focusMonth) ?></span>
             </div>
-            
+
             <table class="recap-table">
                 <thead>
                     <tr>
@@ -364,9 +365,13 @@ function getTranslatedMonthName($dateString) {
                 <input type="text" name="name" class="pf-input" required>
             </div>
             <div class="form-group">
-                <label class="pf-label"><?= tr('bud_prev_label_target') ?></label>
-                <select name="target" class="pf-input" required>
-                    <option value="" disabled selected>-- <?= tr('bud_prev_choose') ?> --</option>
+                <label class="pf-label">Objectif Mensuel (€)</label>
+                <input type="number" step="1" name="target" class="pf-input" placeholder="Ex: 150">
+            </div>
+            <div class="form-group">
+                <label class="pf-label">Destination Virement (Optionnel)</label>
+                <select name="transfer_dest" class="pf-input">
+                    <option value="" selected>-- Aucune --</option>
                     <option value="vers L.Pol">vers L.Pol</option>
                     <option value="vers L.Pep">vers L.Pep</option>
                     <option value="vers L.Perso">vers L.Perso</option>
@@ -404,8 +409,13 @@ function getTranslatedMonthName($dateString) {
                 <input type="text" name="name" id="edit_cat_name" class="pf-input" required>
             </div>
             <div class="form-group">
-                <label class="pf-label"><?= tr('bud_prev_label_target') ?></label>
-                <select name="target" id="edit_cat_target" class="pf-input" required>
+                <label class="pf-label">Objectif Mensuel (€)</label>
+                <input type="number" step="1" name="target" id="edit_cat_target" class="pf-input" placeholder="Ex: 150">
+            </div>
+            <div class="form-group">
+                <label class="pf-label">Destination Virement (Optionnel)</label>
+                <select name="transfer_dest" id="edit_cat_transfer_dest" class="pf-input">
+                    <option value="">-- Aucune --</option>
                     <option value="vers L.Pol">vers L.Pol</option>
                     <option value="vers L.Pep">vers L.Pep</option>
                     <option value="vers L.Perso">vers L.Perso</option>
@@ -452,6 +462,7 @@ window.I18N = {
 
 window.CONFIG = window.CONFIG || {};
 window.CONFIG.parentMapping = <?= json_encode($parentMapping) ?>;
+window.CONFIG.CURRENCY = '<?= defined('CURRENCY') ? CURRENCY : "€" ?>';
 
 const currentYear = <?= $currentYear ?>;
 const months = <?= json_encode($months) ?>;
@@ -460,7 +471,8 @@ function openEditModal(btn) {
     document.getElementById('edit_cat_id').value = btn.getAttribute('data-id');
     document.getElementById('edit_cat_name').value = btn.getAttribute('data-name');
     document.getElementById('edit_cat_target').value = btn.getAttribute('data-target');
-    document.getElementById('edit_cat_holiday').value = btn.getAttribute('data-holiday'); 
+    document.getElementById('edit_cat_transfer_dest').value = btn.getAttribute('data-transfer-dest');
+    document.getElementById('edit_cat_holiday').value = btn.getAttribute('data-holiday');
     document.getElementById('editCatModal').style.display = 'flex';
     document.body.classList.add('no-scroll');
 }
@@ -474,7 +486,7 @@ function updateSalary(person, input) {
     const ecoF = parseFloat(row.querySelector('[data-field="eco_family"]').value) || 0;
 
     const restant = salary - (mens + frais + ecoP + ecoF);
-    
+
     const parentMap = window.CONFIG.parentMapping.find(m => m.name === person);
     if(parentMap) {
         document.getElementById('restant_' + parentMap.css).innerText = Math.round(restant).toLocaleString(window.appLang) + ' €';
@@ -484,8 +496,8 @@ function updateSalary(person, input) {
     recalcAllAllocations();
 }
 
-function updateAlloc(month, catId, personField, input) {
-    saveData('update_allocation', { month_date: month, cat_id: catId, person: personField, value: input.value || 0 });
+function updateAlloc(month, catId, personId, input) {
+    saveData('update_allocation', { month_date: month, cat_id: catId, person_id: personId, value: input.value || 0 });
     recalcAllAllocations();
 }
 
@@ -504,12 +516,12 @@ function duplicateMonth() {
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
-    const sourceName = formatMonth(sourceDateStr); 
-    const targetName = formatMonth(targetDateStr); 
+    const sourceName = formatMonth(sourceDateStr);
+    const targetName = formatMonth(targetDateStr);
     const message = window.I18N['bud_prev_confirm_copy'].replace('%s', sourceName).replace('%t', targetName);
 
     if(!confirm(message)) return;
-    
+
     const firstCss = parentMap[0].css;
     document.querySelectorAll('.inp-' + firstCss + '-' + sourceDateStr).forEach(sourceInput => {
         const catIdMatch = sourceInput.getAttribute('onchange').match(/, (\d+),/);
@@ -520,9 +532,9 @@ function duplicateMonth() {
         parentMap.forEach(map => {
             const sInp = row.querySelector('.inp-' + map.css + '-' + sourceDateStr);
             const tInp = row.querySelector('.inp-' + map.css + '-' + targetDateStr);
-            if(sInp && tInp) { 
-                tInp.value = sInp.value; 
-                updateAlloc(targetDateStr, catId, map.db_field, tInp); 
+            if(sInp && tInp) {
+                tInp.value = sInp.value;
+                updateAlloc(targetDateStr, catId, map.id, tInp);
             }
         });
     });
@@ -548,7 +560,7 @@ function recalcAllAllocations() {
                 }
                 globalSum += val;
             });
-            
+
             const onchangeStr = inp.getAttribute('onchange');
             const matches = onchangeStr.match(/, (\d+),/);
             if(matches && matches[1]) {
@@ -561,7 +573,7 @@ function recalcAllAllocations() {
         parentMap.forEach(map => {
             const sumEl = document.getElementById('total_' + map.css + '_' + m);
             if(sumEl) sumEl.innerText = Math.round(sums[map.css]) + ' €';
-            
+
             totalGlobal += sums[map.css];
 
             const budget = parseFloat(document.getElementById('eco_family_' + map.css).value) || 0;
@@ -570,16 +582,16 @@ function recalcAllAllocations() {
             const elRest = document.getElementById('restant_alloc_' + map.css + '_' + m);
             if (elRest) {
                 elRest.innerText = Math.round(rest) + ' €';
-                elRest.className = 'val-' + (rest >= 0 ? 'ok' : 'ko') + ' sum-target'; 
+                elRest.className = 'val-' + (rest >= 0 ? 'ok' : 'ko') + ' sum-target';
             }
         });
 
         const globEl = document.getElementById('total_global_' + m);
         if(globEl) globEl.innerText = Math.round(totalGlobal) + ' €';
     });
-    
+
     updateSummaryTable();
-    if(isSumModeActive) updateSumResult(); 
+    if(isSumModeActive) updateSumResult();
 }
 
 function updateSummaryTable() {
@@ -591,12 +603,12 @@ function updateSummaryTable() {
     parentMap.forEach(map => {
         grandTotals[map.css] = 0;
         dataByTarget[map.css] = {};
-        
+
         document.querySelectorAll('.inp-' + map.css + '-' + focusMonth).forEach(inp => {
-            const target = inp.getAttribute('data-target');
-            if(target) {
-                if(!dataByTarget[map.css][target]) dataByTarget[map.css][target] = 0;
-                dataByTarget[map.css][target] += (parseFloat(inp.value) || 0);
+            const dest = inp.getAttribute('data-transfer-dest');
+            if(dest) {
+                if(!dataByTarget[map.css][dest]) dataByTarget[map.css][dest] = 0;
+                dataByTarget[map.css][dest] += (parseFloat(inp.value) || 0);
             }
         });
     });
@@ -604,7 +616,7 @@ function updateSummaryTable() {
     const tbody = document.querySelector('.recap-table tbody');
     if(tbody) {
         Array.from(tbody.rows).forEach(row => {
-            const targetName = row.cells[0].innerText.trim(); 
+            const targetName = row.cells[0].innerText.trim();
             let globalSum = 0;
 
             parentMap.forEach((map, idx) => {
@@ -624,7 +636,7 @@ function updateSummaryTable() {
         if(grandEl) grandEl.innerText = Math.round(grandTotals[map.css]).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
         totalGrandGlobal += grandTotals[map.css];
     });
-    
+
     const globGrandEl = document.getElementById('grand_total_global');
     if(globGrandEl) globGrandEl.innerText = Math.round(totalGrandGlobal).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
 }
@@ -637,17 +649,17 @@ function saveData(action, data) {
 }
 
 function validateTransfers(personCss, month) {
-    const msg = window.I18N['bud_prev_confirm_transfers'].replace('%p', personCss).replace('%m', month);
-    if (!confirm(msg)) return;
-
     const parentMap = window.CONFIG.parentMapping.find(m => m.css === personCss);
-    const dbPersonName = parentMap ? parentMap.name : personCss;
+    if (!parentMap) return;
+
+    const msg = window.I18N['bud_prev_confirm_transfers'].replace('%p', parentMap.name).replace('%m', month);
+    if (!confirm(msg)) return;
 
     const formData = new FormData();
     formData.append('action', 'validate_transfers');
-    formData.append('person', dbPersonName);
+    formData.append('person_id', parentMap.id);
     formData.append('month_date', month);
-    
+
     fetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData })
     .then(r => r.json())
     .then(data => {
@@ -660,9 +672,9 @@ function validateTransfers(personCss, month) {
 function saveGenericNote(noteType, refId, content) {
     const formData = new FormData();
     formData.append('action', 'save_note');
-    formData.append('note_type', noteType);    
-    formData.append('reference_id', refId);    
-    formData.append('content', content);       
+    formData.append('note_type', noteType);
+    formData.append('reference_id', refId);
+    formData.append('content', content);
 
     fetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData })
     .then(async r => {
@@ -723,10 +735,10 @@ async function deleteCategory(id) {
     const formData = new FormData();
     formData.append('action', 'delete_category');
     formData.append('id', id);
-    formData.append('ajax', '1'); 
+    formData.append('ajax', '1');
     try {
         const result = await pachaFetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
-        if (result.success) window.location.reload(); 
+        if (result.success) window.location.reload();
     } catch(e) { console.error(e); }
 }
 
@@ -734,7 +746,7 @@ document.addEventListener('click', function(e) {
     if (!isSumModeActive) return;
     const targetElement = e.target.closest('input[type="number"], .sum-target');
     if (targetElement) {
-        e.preventDefault(); 
+        e.preventDefault();
         if (selectedElementsForSum.has(targetElement)) {
             selectedElementsForSum.delete(targetElement);
             targetElement.classList.remove('sum-selected');
@@ -758,12 +770,12 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
             submitBtn.innerText = '⏳ ...';
             const formData = new FormData(form);
             formData.append('ajax', '1');
-            const actionUrl = form.getAttribute('action'); 
+            const actionUrl = form.getAttribute('action');
             const result = await pachaFetch(actionUrl, { method: 'POST', body: formData });
             if (result.success) {
                 form.closest('.pf-modal').style.display = 'none';
                 document.body.classList.remove('no-scroll');
-                window.location.reload(); 
+                window.location.reload();
             } else {
                 alert((window.I18N['bud_err_tech'] || 'Erreur') + " : " + (result.error || "Inconnue"));
             }

@@ -1,18 +1,8 @@
--- HouseHub — Schéma MySQL
--- Créer la base : CREATE DATABASE househub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
+-- HouseHub — Schéma MySQL (Modèle pour une base famille)
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
--- ─── Utilisateurs ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS pf_users (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  username      VARCHAR(100) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  display_name  VARCHAR(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- ─── Familles ─────────────────────────────────────────────────────────────
+-- ─── Configuration du foyer ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_foyer_settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   currency VARCHAR(10) NOT NULL DEFAULT '€',
@@ -20,17 +10,25 @@ CREATE TABLE IF NOT EXISTS pf_foyer_settings (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Initialisation de la ligne unique par défaut
 INSERT IGNORE INTO pf_foyer_settings (id, currency, zone_scolaire) VALUES (1, '€', 'C');
+
+-- ─── Utilisateurs (Legacy) ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_users (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  username      VARCHAR(100) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  display_name  VARCHAR(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Personnes ────────────────────────────────────────────────────────────────
 CREATE TABLE `pf_people` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  `user_id` int(11) DEFAULT NULL,    
+  `name` varchar(100) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
   `role` varchar(50) DEFAULT NULL,
+  `color` varchar(7) DEFAULT '#0891b2',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Calendrier familial ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_events (
@@ -115,20 +113,22 @@ CREATE TABLE IF NOT EXISTS pf_expenses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_alloc_categories (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  name       VARCHAR(100) NOT NULL,
-  target     DECIMAL(10,2) DEFAULT 0,
-  holiday_id INT DEFAULT NULL,
-  sort_order INT DEFAULT 0
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  name          VARCHAR(100) NOT NULL,
+  target        DECIMAL(10,2) DEFAULT 0.00,
+  transfer_dest VARCHAR(50) DEFAULT NULL,
+  holiday_id    INT DEFAULT NULL,
+  sort_order    INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_alloc_values (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   month_date   VARCHAR(10) NOT NULL,
   cat_id       INT NOT NULL,
-  amount_alex  DECIMAL(10,2) DEFAULT 0,
-  amount_laia  DECIMAL(10,2) DEFAULT 0,
-  UNIQUE KEY uq_alloc (month_date, cat_id)
+  person_id    INT NOT NULL,
+  amount       DECIMAL(10,2) DEFAULT 0.00,
+  UNIQUE KEY uq_alloc_person (month_date, cat_id, person_id),
+  FOREIGN KEY (person_id) REFERENCES pf_people(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_savings (
@@ -161,15 +161,51 @@ CREATE TABLE IF NOT EXISTS pf_salary_config (
 CREATE TABLE IF NOT EXISTS pf_import_rules (
   id       INT AUTO_INCREMENT PRIMARY KEY,
   keyword  VARCHAR(255) NOT NULL UNIQUE,
-  category VARCHAR(100) NOT NULL
+  category VARCHAR(100) NOT NULL,
+  budget_item_id INT(11) NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS pf_advances (
+  id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  advance_date date NOT NULL,
+  payer varchar(50) NOT NULL,
+  description varchar(255) NOT NULL,
+  amount decimal(10,2) DEFAULT 0.00,
+  from_savings tinyint(1) DEFAULT 0,
+  is_resolved tinyint(1) DEFAULT 0,
+  created_at datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Notes / Memo ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_notes (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   note_type    VARCHAR(100) NOT NULL,
   reference_id VARCHAR(100) NOT NULL,
   content      TEXT,
   UNIQUE KEY uq_note (note_type, reference_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_memo_notes (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(255) NOT NULL,
+  content    LONGTEXT DEFAULT '',
+  tags       VARCHAR(1000) DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FULLTEXT KEY ft_notes (title, content, tags)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_memo_attachments (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  note_id       INT NOT NULL,
+  type          ENUM('image','file','url') NOT NULL DEFAULT 'file',
+  filename      VARCHAR(255) DEFAULT NULL,
+  original_name VARCHAR(255) DEFAULT NULL,
+  url           TEXT DEFAULT NULL,
+  label         VARCHAR(255) DEFAULT NULL,
+  size          INT DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (note_id) REFERENCES pf_memo_notes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Voyages / Holidays ───────────────────────────────────────────────────────
@@ -238,14 +274,6 @@ CREATE TABLE IF NOT EXISTS pf_gifts (
   product_link     VARCHAR(500) DEFAULT NULL,
   amount           DECIMAL(8,2) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-SET FOREIGN_KEY_CHECKS = 1;
-
--- ─── Données initiales ────────────────────────────────────────────────────────
--- Utilisateur admin (mot de passe : changeme → à modifier !)
-INSERT IGNORE INTO pf_users (id, username, password_hash, display_name)
-VALUES (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin');
-
 
 -- ─── Garage Manager ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_vehicles (
@@ -321,30 +349,6 @@ CREATE TABLE IF NOT EXISTS pf_garage_documents (
   FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ─── Notes / Memo ─────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS pf_memo_notes (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  title      VARCHAR(255) NOT NULL,
-  content    LONGTEXT DEFAULT '',
-  tags       VARCHAR(1000) DEFAULT '',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FULLTEXT KEY ft_notes (title, content, tags)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS pf_memo_attachments (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  note_id       INT NOT NULL,
-  type          ENUM('image','file','url') NOT NULL DEFAULT 'file',
-  filename      VARCHAR(255) DEFAULT NULL,
-  original_name VARCHAR(255) DEFAULT NULL,
-  url           TEXT DEFAULT NULL,
-  label         VARCHAR(255) DEFAULT NULL,
-  size          INT DEFAULT 0,
-  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (note_id) REFERENCES pf_memo_notes(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- ─── Todo ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_todo_lists (
   id         INT AUTO_INCREMENT PRIMARY KEY,
@@ -372,7 +376,7 @@ CREATE TABLE IF NOT EXISTS pf_todos (
   FOREIGN KEY (list_id) REFERENCES pf_todo_lists(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ─── Module Liste (multi-listes) ──────────────────────────────────────────────
+-- ─── Module Liste (Courses partagées) ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_lists (
   id        INT AUTO_INCREMENT PRIMARY KEY,
   name      VARCHAR(255) NOT NULL DEFAULT 'Ma liste',
@@ -382,7 +386,7 @@ CREATE TABLE IF NOT EXISTS pf_lists (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO pf_lists (id, name, position) VALUES (1, 'Ma liste', 0);
+INSERT IGNORE INTO pf_lists (id, name, position) VALUES (1, 'Ma liste', 0);
 
 CREATE TABLE IF NOT EXISTS pf_grocery_items (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -447,6 +451,7 @@ CREATE TABLE IF NOT EXISTS pf_calendar_event_links (
   external_uid      VARCHAR(255) NOT NULL,
   external_etag     VARCHAR(255) DEFAULT NULL,
   calendar_url      VARCHAR(1024) DEFAULT NULL,
+  external_href     VARCHAR(2048) DEFAULT NULL,
   created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_calendar_event (calendar_event_id),
@@ -498,3 +503,5 @@ CREATE TABLE IF NOT EXISTS pf_planka_config (
   updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET FOREIGN_KEY_CHECKS = 1;

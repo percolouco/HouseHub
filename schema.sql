@@ -1,10 +1,18 @@
--- HouseHub — Schéma MySQL
--- Créer la base : CREATE DATABASE househub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
+-- HouseHub — Schéma MySQL (Modèle pour une base famille)
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
--- ─── Utilisateurs ─────────────────────────────────────────────────────────────
+-- ─── Configuration du foyer ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_foyer_settings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  currency VARCHAR(10) NOT NULL DEFAULT '€',
+  zone_scolaire VARCHAR(5) NOT NULL DEFAULT 'C',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO pf_foyer_settings (id, currency, zone_scolaire) VALUES (1, '€', 'C');
+
+-- ─── Utilisateurs (Legacy) ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_users (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   username      VARCHAR(100) NOT NULL UNIQUE,
@@ -15,11 +23,12 @@ CREATE TABLE IF NOT EXISTS pf_users (
 -- ─── Personnes ────────────────────────────────────────────────────────────────
 CREATE TABLE `pf_people` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(50) NOT NULL,
-  `user_id` int(11) DEFAULT NULL,    
+  `name` varchar(100) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
   `role` varchar(50) DEFAULT NULL,
+  `color` varchar(7) DEFAULT '#0891b2',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Calendrier familial ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_events (
@@ -94,7 +103,7 @@ CREATE TABLE IF NOT EXISTS pf_budget_items (
 CREATE TABLE IF NOT EXISTS pf_expenses (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   date_exp       DATE NOT NULL,
-  gestion_month  VARCHAR(7) NOT NULL,
+  gestion_month  VARCHAR(10) NOT NULL,
   category       VARCHAR(100),
   label          VARCHAR(255),
   amount         DECIMAL(10,2) DEFAULT 0,
@@ -104,26 +113,28 @@ CREATE TABLE IF NOT EXISTS pf_expenses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_alloc_categories (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  name       VARCHAR(100) NOT NULL,
-  target     DECIMAL(10,2) DEFAULT 0,
-  holiday_id INT DEFAULT NULL,
-  sort_order INT DEFAULT 0
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  name          VARCHAR(100) NOT NULL,
+  target        DECIMAL(10,2) DEFAULT 0.00,
+  transfer_dest VARCHAR(50) DEFAULT NULL,
+  holiday_id    INT DEFAULT NULL,
+  sort_order    INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_alloc_values (
   id           INT AUTO_INCREMENT PRIMARY KEY,
-  month_date   VARCHAR(7) NOT NULL,
+  month_date   VARCHAR(10) NOT NULL,
   cat_id       INT NOT NULL,
-  amount_alex  DECIMAL(10,2) DEFAULT 0,
-  amount_laia  DECIMAL(10,2) DEFAULT 0,
-  UNIQUE KEY uq_alloc (month_date, cat_id)
+  person_id    INT NOT NULL,
+  amount       DECIMAL(10,2) DEFAULT 0.00,
+  UNIQUE KEY uq_alloc_person (month_date, cat_id, person_id),
+  FOREIGN KEY (person_id) REFERENCES pf_people(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_savings (
   id         INT AUTO_INCREMENT PRIMARY KEY,
   owner      VARCHAR(50) NOT NULL,
-  month_date VARCHAR(7) NOT NULL,
+  month_date VARCHAR(10) NOT NULL,
   category   VARCHAR(100) NOT NULL,
   amount     DECIMAL(10,2) DEFAULT 0,
   holiday_id INT DEFAULT NULL
@@ -150,15 +161,51 @@ CREATE TABLE IF NOT EXISTS pf_salary_config (
 CREATE TABLE IF NOT EXISTS pf_import_rules (
   id       INT AUTO_INCREMENT PRIMARY KEY,
   keyword  VARCHAR(255) NOT NULL UNIQUE,
-  category VARCHAR(100) NOT NULL
+  category VARCHAR(100) NOT NULL,
+  budget_item_id INT(11) NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS pf_advances (
+  id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  advance_date date NOT NULL,
+  payer varchar(50) NOT NULL,
+  description varchar(255) NOT NULL,
+  amount decimal(10,2) DEFAULT 0.00,
+  from_savings tinyint(1) DEFAULT 0,
+  is_resolved tinyint(1) DEFAULT 0,
+  created_at datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Notes / Memo ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_notes (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   note_type    VARCHAR(100) NOT NULL,
   reference_id VARCHAR(100) NOT NULL,
   content      TEXT,
   UNIQUE KEY uq_note (note_type, reference_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_memo_notes (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(255) NOT NULL,
+  content    LONGTEXT DEFAULT '',
+  tags       VARCHAR(1000) DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FULLTEXT KEY ft_notes (title, content, tags)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_memo_attachments (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  note_id       INT NOT NULL,
+  type          ENUM('image','file','url') NOT NULL DEFAULT 'file',
+  filename      VARCHAR(255) DEFAULT NULL,
+  original_name VARCHAR(255) DEFAULT NULL,
+  url           TEXT DEFAULT NULL,
+  label         VARCHAR(255) DEFAULT NULL,
+  size          INT DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (note_id) REFERENCES pf_memo_notes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Voyages / Holidays ───────────────────────────────────────────────────────
@@ -228,13 +275,153 @@ CREATE TABLE IF NOT EXISTS pf_gifts (
   amount           DECIMAL(8,2) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-SET FOREIGN_KEY_CHECKS = 1;
+-- ─── Garage Manager ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_vehicles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  brand VARCHAR(100) NOT NULL,
+  model VARCHAR(100) NOT NULL,
+  year INT DEFAULT NULL,
+  license_plate VARCHAR(50) DEFAULT NULL,
+  vin VARCHAR(100) DEFAULT NULL,
+  fuel_type VARCHAR(50) DEFAULT 'Essence',
+  color VARCHAR(50) DEFAULT NULL,
+  purchase_date DATE DEFAULT NULL,
+  purchase_price DECIMAL(10,2) DEFAULT NULL,
+  current_km INT DEFAULT 0,
+  photo VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ─── Données initiales ────────────────────────────────────────────────────────
--- Utilisateur admin (mot de passe : changeme → à modifier !)
-INSERT IGNORE INTO pf_users (id, username, password_hash, display_name)
-VALUES (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin');
+CREATE TABLE IF NOT EXISTS pf_maintenances (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT NOT NULL,
+  type VARCHAR(100) NOT NULL,
+  description TEXT DEFAULT NULL,
+  date DATE NOT NULL,
+  km INT DEFAULT NULL,
+  cost DECIMAL(10,2) DEFAULT 0,
+  mechanic VARCHAR(100) DEFAULT NULL,
+  garage_name VARCHAR(100) DEFAULT NULL,
+  next_km INT DEFAULT NULL,
+  next_date DATE DEFAULT NULL,
+  invoice_photo VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS pf_parts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT DEFAULT NULL,
+  maintenance_id INT DEFAULT NULL,
+  brand VARCHAR(100) DEFAULT NULL,
+  reference VARCHAR(100) DEFAULT NULL,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(100) DEFAULT 'Autre',
+  price DECIMAL(10,2) DEFAULT 0,
+  quantity INT DEFAULT 1,
+  unit VARCHAR(50) DEFAULT 'pièce',
+  supplier VARCHAR(100) DEFAULT NULL,
+  purchase_date DATE DEFAULT NULL,
+  photo VARCHAR(255) DEFAULT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE SET NULL,
+  FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_garage_documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  vehicle_id INT NOT NULL,
+  maintenance_id INT DEFAULT NULL,
+  label VARCHAR(255) DEFAULT NULL,
+  filename VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) DEFAULT NULL,
+  mime VARCHAR(120) DEFAULT NULL,
+  size INT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_gd_vehicle (vehicle_id),
+  KEY idx_gd_maint (maintenance_id),
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE CASCADE,
+  FOREIGN KEY (maintenance_id) REFERENCES pf_maintenances(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Todo ─────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_todo_lists (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  name       VARCHAR(255) NOT NULL,
+  color      VARCHAR(20) DEFAULT '#3b82f6',
+  icon       VARCHAR(10) DEFAULT '📋',
+  position   INT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_todos (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  list_id    INT DEFAULT NULL,
+  title      VARCHAR(500) NOT NULL,
+  notes      TEXT DEFAULT NULL,
+  due_date   DATE DEFAULT NULL,
+  due_time   TIME DEFAULT NULL,
+  notified   TINYINT(1) DEFAULT 0,
+  notified_date DATE DEFAULT NULL,
+  priority   ENUM('none','low','medium','high') DEFAULT 'none',
+  done       TINYINT(1) DEFAULT 0,
+  done_at    DATETIME DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (list_id) REFERENCES pf_todo_lists(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Module Liste (Courses partagées) ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_lists (
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  name      VARCHAR(255) NOT NULL DEFAULT 'Ma liste',
+  color     VARCHAR(20) DEFAULT NULL,
+  list_type VARCHAR(50) DEFAULT NULL,
+  position  INT NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO pf_lists (id, name, position) VALUES (1, 'Ma liste', 0);
+
+CREATE TABLE IF NOT EXISTS pf_grocery_items (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  list_id     INT NOT NULL DEFAULT 1,
+  category_id INT DEFAULT NULL,
+  label       VARCHAR(500) NOT NULL,
+  in_cart     TINYINT(1) NOT NULL DEFAULT 0,
+  position    INT NOT NULL DEFAULT 0,
+  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_items_list (list_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_grocery_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  label_hash CHAR(64) NOT NULL,
+  label_display VARCHAR(500) NOT NULL,
+  last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_grocery_hist_hash (label_hash),
+  KEY idx_hist_last (last_used_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_list_categories (
+  id       INT AUTO_INCREMENT PRIMARY KEY,
+  icon     VARCHAR(10) NOT NULL DEFAULT '🏷️',
+  name     VARCHAR(100) NOT NULL,
+  position INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_item_category_rules (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  keyword     VARCHAR(255) NOT NULL,
+  category_id INT NOT NULL,
+  UNIQUE KEY uq_keyword (keyword)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Calendar iOS ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_calendar_events (
@@ -264,8 +451,57 @@ CREATE TABLE IF NOT EXISTS pf_calendar_event_links (
   external_uid      VARCHAR(255) NOT NULL,
   external_etag     VARCHAR(255) DEFAULT NULL,
   calendar_url      VARCHAR(1024) DEFAULT NULL,
+  external_href     VARCHAR(2048) DEFAULT NULL,
   created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_calendar_event (calendar_event_id),
   UNIQUE KEY uq_external_link (external_uid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── PrintVault ───────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_pv_models (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  name          VARCHAR(255) NOT NULL,
+  description   TEXT DEFAULT '',
+  category      VARCHAR(100) DEFAULT 'Non classé',
+  tags          VARCHAR(500) DEFAULT '',
+  file_type     VARCHAR(20) NOT NULL,
+  filename      VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  file_size     INT DEFAULT 0,
+  dim_x         DECIMAL(10,3) DEFAULT 0,
+  dim_y         DECIMAL(10,3) DEFAULT 0,
+  dim_z         DECIMAL(10,3) DEFAULT 0,
+  volume        DECIMAL(10,3) DEFAULT 0,
+  gcode_time    VARCHAR(50) DEFAULT '',
+  gcode_filament VARCHAR(50) DEFAULT '',
+  gcode_nozzle  VARCHAR(20) DEFAULT '',
+  gcode_bed     VARCHAR(20) DEFAULT '',
+  thumb         VARCHAR(255) DEFAULT '',
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_pv_categories (
+  id    INT AUTO_INCREMENT PRIMARY KEY,
+  name  VARCHAR(100) NOT NULL UNIQUE,
+  color VARCHAR(20) DEFAULT '#8b5cf6'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO pf_pv_categories (name, color) VALUES
+  ('Non classé','#64748b'),('Déco','#ec4899'),('Fonctionnel','#3b82f6'),
+  ('Mécanique','#f59e0b'),('Jouets','#10b981'),('Outils','#ef4444'),
+  ('Architecture','#8b5cf6'),('Art','#06b6d4');
+
+-- ─── Planka ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_planka_config (
+  id               INT NOT NULL DEFAULT 1,
+  project_id       VARCHAR(32),
+  admin_token      TEXT,
+  token_expires_at DATETIME,
+  active_board_id  VARCHAR(32),
+  updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET FOREIGN_KEY_CHECKS = 1;

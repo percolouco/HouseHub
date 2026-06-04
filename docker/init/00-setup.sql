@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS user_calendar_integrations (
   calendar_url     VARCHAR(1024) DEFAULT NULL,
   status           VARCHAR(30) DEFAULT 'connected',
   last_sync_at     DATETIME DEFAULT NULL,
+  calendar_prefs_json TEXT DEFAULT NULL,
   created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_user_provider (user_id, provider),
