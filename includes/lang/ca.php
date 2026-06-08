@@ -164,6 +164,11 @@ return [
     'set_err_kid_name'        => 'El nom és obligatori.',
     'set_confirm_del_kid'     => 'Vols eliminar aquest nen? (El seu historial financer es conservarà als arxius).',
     'set_no_kids'             => 'Cap nen configurat per a aquesta llar.',
+    'set_family_config' => 'Configuració de la llar',
+    'set_global_params' => 'Paràmetres globals',
+    'set_care_modes'    => 'Modalitats de cura habituals',
+    'set_add_care_mode' => 'Afegir una modalitat',
+    'btn_save'   => 'Desar',
 
     // ==========================================
     // FAMILY CALENDAR
@@ -217,6 +222,9 @@ return [
     'leg_centre'                => 'Casal',
     'leg_avis'                  => 'Avís',
     'leg_pep_sick'              => 'Pep Malalt',
+    'care_nounou' => 'Kangur',
+    'care_centre' => 'Casal',
+    'care_avis'   => 'Avis',
     
     'vac_toussaint'             => 'Vacances de Tots Sants',
     'vac_noel'                  => 'Vacances de Nadal',

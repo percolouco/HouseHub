@@ -165,6 +165,11 @@ return [
     'set_err_kid_name'        => 'The first name is required.',
     'set_confirm_del_kid'     => 'Delete this kid? (Their financial history will remain visible in the archives).',
     'set_no_kids'             => 'No kids configured for this household.',
+    'set_family_config' => 'Family Structure',
+    'set_global_params' => 'Global settings',
+    'set_care_modes'    => 'Common childcare arrangements',
+    'set_add_care_mode' => 'Ajouter un modeAdd a mode',
+    'btn_save'   => 'Save',
 
     // ==========================================
     // FAMILY CALENDAR
@@ -218,6 +223,9 @@ return [
     'leg_centre'                => 'Centre',
     'leg_avis'                  => 'Notice',
     'leg_pep_sick'              => 'Pep sick',
+    'care_nounou' => 'Nanny',
+    'care_centre' => 'Daycare',
+    'care_avis'   => 'Grandparents',
 
     'vac_toussaint'             => 'All Saints\' holidays',
     'vac_noel'                  => 'Christmas holidays',
