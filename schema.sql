@@ -165,16 +165,17 @@ CREATE TABLE IF NOT EXISTS pf_import_rules (
   budget_item_id INT(11) NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS pf_advances (
-  id int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  advance_date date NOT NULL,
-  payer varchar(50) NOT NULL,
-  description varchar(255) NOT NULL,
-  amount decimal(10,2) DEFAULT 0.00,
-  from_savings tinyint(1) DEFAULT 0,
-  is_resolved tinyint(1) DEFAULT 0,
-  created_at datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS `pf_advances` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `advance_date` date NOT NULL,
+  `payer` varchar(50) NOT NULL,
+  `description` varchar(255) NOT NULL,
+  `amount` decimal(10,2) DEFAULT 0.00,
+  `from_savings` tinyint(1) DEFAULT 0,
+  `is_resolved` tinyint(1) DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─── Notes / Memo ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_notes (

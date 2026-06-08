@@ -1250,3 +1250,56 @@ p {
 [data-theme="dark"] .ts-thumb {
   transform: translateX(16px);
 }
+
+/* === ACCORDÉONS NATIFS (DETAILS/SUMMARY) === */
+.pf-accordion {
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.pf-accordion-summary {
+  padding: 14px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none; /* Masque la flèche native Firefox/Chrome */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-page);
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.pf-accordion-summary::-webkit-details-marker {
+  display: none; /* Masque la flèche native Safari */
+}
+.pf-accordion-summary:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+.pf-accordion-summary::after {
+  content: "▼";
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+details[open].pf-accordion > .pf-accordion-summary {
+  border-bottom: 1px solid var(--border-light);
+  color: var(--primary);
+}
+details[open].pf-accordion > .pf-accordion-summary::after {
+  transform: rotate(-180deg);
+}
+.pf-accordion-content {
+  padding: 16px;
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}

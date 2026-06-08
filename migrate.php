@@ -200,19 +200,59 @@ foreach ($families as $f) {
         // ==========================================
         echo "<li><strong>Table pf_alloc_categories (Récupération des données) :</strong> ";
         try {
-            $updated1 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = target, target = '0' WHERE target LIKE 'vers %'");
-            
-            $updated2 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = 'SYSTEM', target = '0' WHERE target = 'SYSTEM'");
-            
-            $fam_pdo->exec("UPDATE pf_alloc_categories SET target = '0' WHERE target NOT REGEXP '^[0-9]+(\.[0-9]+)?$'");
+            // Vérifier si la colonne target est encore au format texte (VARCHAR)
+            $stmtCol = $fam_pdo->query("SHOW COLUMNS FROM pf_alloc_categories LIKE 'target'");
+            $colInfo = $stmtCol->fetch(PDO::FETCH_ASSOC);
 
-            echo "<span style='color:green'>" . ($updated1 + $updated2) . " destinations récupérées et déplacées.</span></li>";
-            
-            $fam_pdo->exec("ALTER TABLE pf_alloc_categories MODIFY target DECIMAL(10,2) DEFAULT 0.00");
-            echo "<li><span style='color:green'>Colonne 'target' re-sécurisée en format monétaire DECIMAL(10,2).</span></li>";
+            if ($colInfo && strpos(strtolower($colInfo['Type']), 'varchar') !== false) {
+                // 1. Déplacer les textes "vers..."
+                $updated1 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = target, target = '0' WHERE target LIKE 'vers %'");
+                
+                // 2. Gérer le mot 'SYSTEM'
+                $updated2 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = 'SYSTEM', target = '0' WHERE target = 'SYSTEM'");
+                
+                // 3. Sécurité absolue avant conversion
+                $fam_pdo->exec("UPDATE pf_alloc_categories SET target = '0' WHERE target NOT REGEXP '^[0-9]+(\\\\.[0-9]+)?$'");
+
+                echo "<span style='color:green'>" . ($updated1 + $updated2) . " destinations récupérées et déplacées.</span><br>";
+                
+                // 4. Remettre la colonne en format numérique
+                $fam_pdo->exec("ALTER TABLE pf_alloc_categories MODIFY target DECIMAL(10,2) DEFAULT 0.00");
+                echo "<span style='color:green'>Colonne 'target' re-sécurisée en format monétaire DECIMAL(10,2).</span></li>";
+            } else {
+                echo "<span style='color:gray'>La colonne 'target' est déjà au format DECIMAL, transfert ignoré.</span></li>";
+            }
         } catch (\PDOException $e) {
             echo "<span style='color:red'>Erreur : " . $e->getMessage() . "</span></li>";
         }
+
+        try {
+    // Récupération de toutes les bases de données de familles via la base meta
+    $stmtFamilies = $meta_pdo->query("SELECT id, db_name FROM families WHERE is_active = 1");
+    while ($fam = $stmtFamilies->fetch(PDO::FETCH_ASSOC)) {
+        error_log("Migration de la base familiale : " . $fam['db_name']);
+        
+        $fam_dsn = "mysql:host=" . DB_HOST . ";dbname=" . $fam['db_name'] . ";charset=utf8mb4";
+        $fam_pdo = new PDO($fam_dsn, DB_USER, DB_PASS, $options);
+        
+        // Injection incrémentale sécurisée
+        $fam_pdo->exec("
+            CREATE TABLE IF NOT EXISTS `pf_advances` (
+              `id` INT AUTO_INCREMENT PRIMARY KEY,
+              `advance_date` DATE NOT NULL,
+              `payer` VARCHAR(100) NOT NULL,
+              `description` VARCHAR(255) NOT NULL,
+              `amount` DECIMAL(10,2) DEFAULT 0.00,
+              `from_savings` TINYINT(1) DEFAULT 0,
+              `is_resolved` TINYINT(1) DEFAULT 0,
+              `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    }
+    error_log("✅ Migration de la table pf_advances terminée sur tous les tenants.");
+} catch (Exception $e) {
+    die("❌ Erreur critique lors de la migration : " . $e->getMessage());
+}
 }
 
 

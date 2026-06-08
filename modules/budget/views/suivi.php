@@ -221,10 +221,15 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $pending_charges[] = ['name' => $name, 'amount' => $absAmount];
             }
         }
-        if ($name === 'Estimacio F&B & beauty') $budget_fmcg = $amt;
-        elseif ($name === 'Estimacio escola') $budget_school = $amt;
-        elseif ($name === 'Estimation gasolina') $budget_essence = $amt;
-        elseif ((int)$item['is_estimate'] === 0 && $item['type'] === 'Mensuel' && $item['category'] === 'expense') { $budget_frais += $absAmount; }
+        if (!empty($item['mapping_keywords'])) {
+            if (stripos($item['mapping_keywords'], 'FMCG') !== false) $budget_fmcg += $amt;
+            if (stripos($item['mapping_keywords'], 'School') !== false) $budget_school += $amt;
+            if (stripos($item['mapping_keywords'], 'Essence') !== false) $budget_essence += $amt;
+        }
+
+        if ((int)$item['is_estimate'] === 0 && $item['type'] === 'Mensuel' && $item['category'] === 'expense') { 
+            $budget_frais += $absAmount; 
+        }
     }
 }
 
@@ -580,8 +585,13 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <div class="form-group" id="blockInputSelect" style="margin-bottom:15px; display:none;">
                 <label class="pf-label"><?= tr('bud_beneficiary') ?></label>
                 <select name="label_select" id="schoolSelect" class="pf-input">
-                    <option value="Ecole Pol">Ecole Pol</option>
-                    <option value="Carole">Carole</option>
+                    <?php
+                    $stmtSchoolLabel = $pdo->query("SELECT name FROM pf_people WHERE role IN ('enfant', 'nounou') OR role IS NULL ORDER BY id ASC");
+                    while($k = $stmtSchoolLabel->fetch(PDO::FETCH_ASSOC)) {
+                        $pName = htmlspecialchars($k['name']);
+                        echo "<option value='{$pName}'>{$pName}</option>";
+                    }
+                    ?>
                 </select>
             </div>
 

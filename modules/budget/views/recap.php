@@ -81,18 +81,20 @@ $totalRevenus = 0;
                         $realSum = $realTotals[$item['id']];
                         $hasMatchingExpense = true;
                     } 
-                    // B. Correspondance par catégorie système (École, Essence, FMCG)
+                    // B. Correspondance par catégorie système (Multi-tenant via Mots-clés)
                     else {
                         $catKey = null;
-                        if (trim($item['name']) === 'Estimacio escola') $catKey = 'School';
-                        elseif (trim($item['name']) === 'Estimation gasolina') $catKey = 'Essence';
-                        elseif (trim($item['name']) === 'Estimacio F&B & beauty') $catKey = 'FMCG';
+                        if (!empty($item['mapping_keywords'])) {
+                            if (stripos($item['mapping_keywords'], 'School') !== false) $catKey = 'School';
+                            elseif (stripos($item['mapping_keywords'], 'Essence') !== false) $catKey = 'Essence';
+                            elseif (stripos($item['mapping_keywords'], 'FMCG') !== false) $catKey = 'FMCG';
+                        }
 
                         if ($catKey && isset($catTotals[$catKey])) {
                             $realSum = $catTotals[$catKey];
                             $hasMatchingExpense = true;
                         }
-                        // C. Correspondance par mots-clés (seulement sur les dépenses non liées)
+                        // C. Correspondance par mots-clés classiques (sur les dépenses non liées)
                         elseif (!empty($item['mapping_keywords'])) {
                             $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
                             foreach ($unlinkedExpenses as $uexp) {
