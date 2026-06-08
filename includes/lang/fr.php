@@ -156,6 +156,20 @@ return [
     'mod_planka_desc'    => 'Gérez vos projets en mode Kanban avec Planka.',
     'menu_planka'        => 'Planka',
 
+    // --- SETTINGS : ENFANTS ---
+    'set_kids_title'          => 'Enfants du foyer',
+    'set_kids_desc'           => 'Gérez la liste des enfants pour les associer à l\'épargne, aux cadeaux, etc.',
+    'set_add_kid_placeholder' => 'Prénom de l\'enfant',
+    'set_btn_add_kid'         => 'Ajouter',
+    'set_err_kid_name'        => 'Le prénom est requis.',
+    'set_confirm_del_kid'     => 'Supprimer cet enfant ? (Son historique financier restera visible dans les archives).',
+    'set_no_kids'             => 'Aucun enfant configuré pour ce foyer.',
+    'set_family_config' => 'Configuration du foyer',
+    'set_global_params' => 'Paramètres globaux',
+    'set_care_modes'    => 'Modes de garde usuels',
+    'set_add_care_mode' => 'Ajouter un mode',
+    'btn_save_config'   => 'Enregistrer',
+
     // ==========================================
     // FAMILY CALENDAR
     // ==========================================
@@ -199,6 +213,9 @@ return [
     'fc_err_action'             => 'Erreur lors de l\'action : ',
     'fc_today_short'            => 'Auj.',
     'fc_today_title'            => "Aujourd'hui",
+    'care_nounou' => 'Nounou',
+    'care_centre' => 'Centre de loisirs',
+    'care_avis'   => 'Avis',
 
     'leg_presence'              => 'Présence Pep',
     'leg_school_holidays'       => 'Vacances Scolaires',
@@ -385,6 +402,7 @@ return [
     'cat_fixed'                 => 'Charges Fixes',
     'cat_others'                => 'Autres / Imprévus',
     'cat_savings'               => 'Épargne',
+    'budget_tab_kids'           => 'Enfants',
 
     // --- BUDGET : SUIVI ---
     'bud_rem_school'            => 'École (Reste estimé)',
@@ -563,6 +581,22 @@ return [
     'bud_sav_modal_title_add'   => 'Saisir un mois',
     'bud_sav_ph_name'           => 'Nom (ex: Vacances)',
     'bud_prev_label_name'       => 'Nom',
+    'bud_adv_title' => 'Avances & Tricount Familial',
+    'bud_adv_add' => 'Ajouter une avance',
+    'bud_adv_edit' => 'Modifier l\'avance',
+    'bud_adv_who_paid' => 'Qui a payé ?',
+    'bud_adv_payer' => 'Payeur',
+    'bud_adv_has_advanced' => '%s a avancé :',
+    'bud_adv_cc_label' => 'sur le compte commun',
+    'bud_adv_livret_label' => 'depuis son livret d\'épargne',
+    'bud_adv_cc_balance_title' => 'Équilibre du Compte Commun',
+    'bud_adv_owed_to' => '<strong>%s €</strong> sont dus à <strong>%s</strong>',
+    'bud_adv_balanced' => 'Les comptes sont parfaitement équilibrés !',
+    'bud_adv_saved_badge' => 'Épargne',
+    'bud_adv_already_saved' => 'Cet argent provient d\'un livret d\'épargne',
+    'bud_adv_ph_desc' => 'Ex: Courses, Facture Électricité...',
+    'bud_adv_confirm_resolve' => 'Confirmer le remboursement complet de cette avance ?',
+    'bud_adv_confirm_delete' => 'Supprimer définitivement cette avance ?',
 
     // ==========================================
     // CADEAUX (GIFTS)

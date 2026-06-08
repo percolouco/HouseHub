@@ -1,9 +1,32 @@
 <?php
 // modules/budget/views/epargne.php
 
-$requestedOwner = $_GET['owner'] ?? 'Nens'; 
-$ownersToDisplay = ($requestedOwner === 'Nens') ? ['Pol', 'Pep'] : [$requestedOwner];
+// --- 🧠 CONFIGURATION AGNOSTIQUE DES MEMBRES (MULTI-TENANT) ---
+$stmtPeople = $pdo->query("SELECT name, role FROM pf_people ORDER BY id ASC");
+$familyParents = [];
+$familyKids = [];
 
+while ($row = $stmtPeople->fetch(PDO::FETCH_ASSOC)) {
+    $role = strtolower(trim($row['role'] ?? ''));
+    
+    if ($role === 'parent') {
+        $familyParents[] = $row['name'];
+    } elseif ($role === 'nounou') {
+        // On ignore la nounou dans l'épargne
+        continue;
+    } else {
+        // Fallback : Si c'est 'enfant', 'user', ou vide, ça va dans l'onglet Enfants
+        $familyKids[] = $row['name'];
+    }
+}
+
+// Sécurité anti-page blanche si la BDD est mal configurée
+if (empty($familyParents)) $familyParents = ['Parent 1', 'Parent 2'];
+
+$requestedOwner = $_GET['owner'] ?? ($familyParents[0] ?? 'Nens'); 
+$ownersToDisplay = ($requestedOwner === 'Nens') ? $familyKids : [$requestedOwner];
+
+// --- RÉCUPÉRATION CONFIGURATION DES MOIS ---
 $cycleConfigs = [];
 $stmtNotes = $pdo->query("SELECT reference_id, content FROM pf_notes WHERE note_type = 'month_config'");
 while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
@@ -14,7 +37,6 @@ while ($row = $stmtNotes->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
-// Récupération sécurisée du nom des mois (utilise les clés globales existantes)
 function getMonthName($dateString) {
     $m = date('m', strtotime($dateString));
     $y = date('Y', strtotime($dateString));
@@ -25,9 +47,19 @@ function getMonthName($dateString) {
 <div class="budget-view">
     <div class="view-header">
         <div class="owner-tabs">
-            <a href="?tab=epargne&owner=Alex" class="owner-tab <?= $requestedOwner === 'Alex' ? 'active' : '' ?>">Alex</a>
-            <a href="?tab=epargne&owner=Laia" class="owner-tab <?= $requestedOwner === 'Laia' ? 'active' : '' ?>">Laia</a>
-            <a href="?tab=epargne&owner=Nens" class="owner-tab <?= $requestedOwner === 'Nens' ? 'active' : '' ?>">Nens 👶</a>
+            <!-- Boucle dynamique sur les parents -->
+            <?php foreach ($familyParents as $p): ?>
+                <a href="?tab=epargne&owner=<?= urlencode($p) ?>" class="owner-tab <?= $requestedOwner === $p ? 'active' : '' ?>">
+                    <?= htmlspecialchars($p) ?>
+                </a>
+            <?php endforeach; ?>
+            
+            <!-- Onglet Enfants -->
+            <?php if (!empty($familyKids)): ?>
+            <a href="?tab=epargne&owner=Nens" class="owner-tab <?= $requestedOwner === 'Nens' ? 'active' : '' ?>">
+                <?= tr('budget_tab_kids') ?? 'Nens 👶' ?>
+            </a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -52,10 +84,7 @@ function getMonthName($dateString) {
         sort($allCategories);
 
         // Définition de la classe couleur selon le propriétaire
-        $ownerTextClass = '';
-        if ($currentOwner === 'Alex') $ownerTextClass = 'txt-alex';
-        elseif ($currentOwner === 'Laia') $ownerTextClass = 'txt-laia';
-        else $ownerTextClass = 'txt-global'; // Pour Pol et Pep
+        $ownerTextClass = 'txt-global';
     ?>
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: <?= ($requestedOwner === 'Nens' && $currentOwner !== 'Pol') ? '40px' : '0' ?>;">        

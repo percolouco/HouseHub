@@ -102,6 +102,41 @@ function getTranslatedMonthName($dateString) {
     $y = date('Y', strtotime($dateString));
     return tr('month_' . $m) . ' ' . $y;
 }
+
+// --- 🧠 PREPARATION DATA TRICOUNT / AVANCES ---
+$stmtAdvancesList = $pdo->query("SELECT * FROM pf_advances WHERE is_resolved = 0 ORDER BY advance_date DESC");
+$activeAdvances = $stmtAdvancesList->fetchAll(PDO::FETCH_ASSOC);
+
+$advTotal = [$p1_name => 0, $p2_name => 0];
+$livretTotal = [$p1_name => 0, $p2_name => 0];
+
+$labelsCC = [$p1_name => [], $p2_name => []];
+$labelsLivret = [$p1_name => [], $p2_name => []];
+
+foreach ($activeAdvances as $adv) {
+    $p = $adv['payer'];
+    $amt = (float)$adv['amount'];
+    $labelStr = htmlspecialchars($adv['description']) . ' (' . number_format($amt, 0, ',', ' ') . '€)';
+    
+    if (!isset($advTotal[$p])) {
+        $advTotal[$p] = 0; $livretTotal[$p] = 0;
+        $labelsCC[$p] = []; $labelsLivret[$p] = [];
+    }
+
+    if ($adv['from_savings']) {
+        $livretTotal[$p] += $amt;
+        $labelsLivret[$p][] = $labelStr;
+    } else {
+        $advTotal[$p] += $amt;
+        $labelsCC[$p][] = $labelStr;
+    }
+}
+
+$balanceDiff = abs(($advTotal[$p1_name] ?? 0) - ($advTotal[$p2_name] ?? 0));
+$owedTo = '';
+if (($advTotal[$p1_name] ?? 0) > ($advTotal[$p2_name] ?? 0)) $owedTo = $p1_name;
+elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_name;
+
 ?>
 
 <div class="prev-container" style="--p1-main: <?= $parentMapping[0]['color'] ?>; --p2-main: <?= $parentMapping[1]['color'] ?? '#f59e0b' ?>;">
@@ -288,6 +323,125 @@ function getTranslatedMonthName($dateString) {
         </div>
     </div>
 
+    <div style="margin: 30px 0; background: var(--bg-panel); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-light); box-shadow: var(--shadow);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+            <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800;"><?= tr('bud_adv_title') ?></h3>
+            <button type="button" class="pf-btn" onclick="document.getElementById('addAdvanceModal').classList.add('is-active')">
+                ＋ <?= tr('bud_adv_add') ?>
+            </button>
+        </div>
+
+        <div style="display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 240px; background: rgba(8, 145, 178, 0.06); border: 1px solid rgba(8, 145, 178, 0.2); padding: 18px; border-radius: 12px;">
+                <div style="font-size: 0.85rem; color: #0891b2; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"><?= sprintf(tr('bud_adv_has_advanced'), htmlspecialchars($p1_name)) ?></div>
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; align-items: baseline; gap: 6px;">
+                        <span style="font-size: 1.5rem; font-weight: 800; color: #164e63; font-family: monospace;"><?= number_format($advTotal[$p1_name] ?? 0, 2, ',', ' ') ?> €</span>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: 500;"><?= tr('bud_adv_cc_label') ?></small>
+                    <?php if (!empty($labelsCC[$p1_name])): ?>
+                        <div style="font-size: 0.75rem; color: #0e7490; margin-top: 6px; line-height: 1.4; font-style: italic;">
+                            <?= implode(', ', $labelsCC[$p1_name]) ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php if(($livretTotal[$p1_name] ?? 0) > 0): ?>
+                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(8, 145, 178, 0.3);">
+                    <div style="font-size: 1.2rem; font-weight: 800; color: #4338ca; font-family: monospace;">+ <?= number_format($livretTotal[$p1_name], 2, ',', ' ') ?> €</div>
+                    <small style="color: #4338ca; font-size: 0.75rem; font-weight: 600;"><?= tr('bud_adv_livret_label') ?></small>
+                    <?php if (!empty($labelsLivret[$p1_name])): ?>
+                        <div style="font-size: 0.75rem; color: #3730a3; margin-top: 4px; line-height: 1.4;">
+                            <?= implode(', ', $labelsLivret[$p1_name]) ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <div style="flex: 1; min-width: 240px; background: rgba(217, 119, 6, 0.06); border: 1px solid rgba(217, 119, 6, 0.2); padding: 18px; border-radius: 12px;">
+                <div style="font-size: 0.85rem; color: #d97706; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"><?= sprintf(tr('bud_adv_has_advanced'), htmlspecialchars($p2_name)) ?></div>
+                <div style="margin-top: 10px;">
+                    <div style="display: flex; align-items: baseline; gap: 6px;">
+                        <span style="font-size: 1.5rem; font-weight: 800; color: #78350f; font-family: monospace;"><?= number_format($advTotal[$p2_name] ?? 0, 2, ',', ' ') ?> €</span>
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: 500;"><?= tr('bud_adv_cc_label') ?></small>
+                    <?php if (!empty($labelsCC[$p2_name])): ?>
+                        <div style="font-size: 0.75rem; color: #b45309; margin-top: 6px; line-height: 1.4; font-style: italic;">
+                            <?= implode(', ', $labelsCC[$p2_name]) ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php if(($livretTotal[$p2_name] ?? 0) > 0): ?>
+                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(217, 119, 6, 0.3);">
+                    <div style="font-size: 1.2rem; font-weight: 800; color: #b45309; font-family: monospace;">+ <?= number_format($livretTotal[$p2_name], 2, ',', ' ') ?> €</div>
+                    <small style="color: #b45309; font-size: 0.75rem; font-weight: 600;"><?= tr('bud_adv_livret_label') ?></small>
+                    <?php if (!empty($labelsLivret[$p2_name])): ?>
+                        <div style="font-size: 0.75rem; color: #92400e; margin-top: 4px; line-height: 1.4;">
+                            <?= implode(', ', $labelsLivret[$p2_name]) ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <div style="flex: 1; min-width: 240px; background: var(--bg-page); border: 1px solid var(--border-light); padding: 18px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                    🏛️ <?= tr('bud_adv_cc_balance_title') ?>
+                </div>
+                <div style="font-size: 1.15rem; font-weight: 800;">
+                    <?php if ($balanceDiff > 0.01): ?>
+                        <?= sprintf(tr('bud_adv_owed_to'), number_format($balanceDiff, 2, ',', ' '), htmlspecialchars($owedTo)) ?>
+                    <?php else: ?>
+                        <span style="color: var(--success); font-weight: bold;">✓ <?= tr('bud_adv_balanced') ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <?php if (!empty($activeAdvances)): ?>
+            <div style="overflow-x:auto;">
+                <table class="pf-table" style="margin: 0; box-shadow: none; border: 1px solid var(--border-light);">
+                    <thead>
+                        <tr>
+                            <th><?= tr('date') ?></th>
+                            <th><?= tr('bud_adv_payer') ?></th>
+                            <th><?= tr('bud_label_name') ?></th>
+                            <th><?= tr('bud_amount') ?></th>
+                            <th style="text-align: right;"><?= tr('actions') ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($activeAdvances as $adv): ?>
+                        <tr>
+                            <td style="color: var(--text-muted);"><?= date('d/m/Y', strtotime($adv['advance_date'])) ?></td>
+                            <td style="font-weight: 700; color: <?= $adv['payer'] === $p1_name ? '#0891b2' : '#d97706' ?>;"><?= htmlspecialchars($adv['payer']) ?></td>
+                            <td>
+                                <?= htmlspecialchars($adv['description']) ?>
+                                <?php if ($adv['from_savings']): ?>
+                                    <span style="background: var(--bg-soft); color: var(--primary); font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: bold; border: 1px solid rgba(59, 130, 246, 0.2);"><?= tr('bud_adv_saved_badge') ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="font-weight: 700; font-family: monospace;"><?= number_format($adv['amount'], 2, ',', ' ') ?> €</td>
+                            <td style="text-align: right; white-space: nowrap;">
+                                <button class="btn-icon-action edit" title="<?= tr('edit') ?>"
+                                        data-id="<?= $adv['id'] ?>"
+                                        data-payer="<?= htmlspecialchars($adv['payer']) ?>"
+                                        data-date="<?= $adv['advance_date'] ?>"
+                                        data-desc="<?= htmlspecialchars($adv['description']) ?>"
+                                        data-amount="<?= $adv['amount'] ?>"
+                                        data-savings="<?= $adv['from_savings'] ?>"
+                                        onclick="triggerEditAdvanceModal(this)">✏️</button>
+                                <button class="btn-icon-action delete" title="<?= tr('delete') ?>" onclick="executeDeleteAdvance(<?= $adv['id'] ?>)">🗑️</button>
+                                <button class="pf-btn" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; width:auto; height:auto;" onclick="executeResolveAdvance(<?= $adv['id'] ?>)">✓</button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <?php
     $focusMonth = $months[0];
     $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
@@ -365,13 +519,13 @@ function getTranslatedMonthName($dateString) {
                 <input type="text" name="name" class="pf-input" required>
             </div>
             <div class="form-group">
-                <label class="pf-label">Objectif Mensuel (€)</label>
+                <label class="pf-label"><?= tr('bud_prev_monthly_target') ?? 'Objectif Mensuel (€)' ?></label>
                 <input type="number" step="1" name="target" class="pf-input" placeholder="Ex: 150">
             </div>
             <div class="form-group">
-                <label class="pf-label">Destination Virement (Optionnel)</label>
+                <label class="pf-label"><?= tr('bud_prev_transfer_dest') ?? 'Destination Virement (Optionnel)' ?></label>
                 <select name="transfer_dest" class="pf-input">
-                    <option value="" selected>-- Aucune --</option>
+                    <option value="" selected>-- <?= tr('bud_prev_none') ?? 'Aucune' ?> --</option>
                     <option value="vers L.Pol">vers L.Pol</option>
                     <option value="vers L.Pep">vers L.Pep</option>
                     <option value="vers L.Perso">vers L.Perso</option>
@@ -409,13 +563,13 @@ function getTranslatedMonthName($dateString) {
                 <input type="text" name="name" id="edit_cat_name" class="pf-input" required>
             </div>
             <div class="form-group">
-                <label class="pf-label">Objectif Mensuel (€)</label>
+                <label class="pf-label"><?= tr('bud_prev_monthly_target') ?? 'Objectif Mensuel (€)' ?></label>
                 <input type="number" step="1" name="target" id="edit_cat_target" class="pf-input" placeholder="Ex: 150">
             </div>
             <div class="form-group">
-                <label class="pf-label">Destination Virement (Optionnel)</label>
+                <label class="pf-label"><?= tr('bud_prev_transfer_dest') ?? 'Destination Virement (Optionnel)' ?></label>
                 <select name="transfer_dest" id="edit_cat_transfer_dest" class="pf-input">
-                    <option value="">-- Aucune --</option>
+                    <option value="">-- <?= tr('bud_prev_none') ?? 'Aucune' ?> --</option>
                     <option value="vers L.Pol">vers L.Pol</option>
                     <option value="vers L.Pep">vers L.Pep</option>
                     <option value="vers L.Perso">vers L.Perso</option>
@@ -439,6 +593,85 @@ function getTranslatedMonthName($dateString) {
     </div>
 </div>
 
+<div id="addAdvanceModal" class="pf-modal">
+    <div class="pf-modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;">＋ <?= tr('bud_adv_add') ?></h3>
+            <button type="button" onclick="closeSuiviModal('addAdvanceModal')" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <form action="/modules/budget/includes/api/save-budget.php" method="POST" id="formAddAdvance" onsubmit="handleAdvanceSubmit(event, this)">
+            <input type="hidden" name="action" value="save_advance">
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('bud_adv_who_paid') ?></label>
+                <select name="payer" class="pf-input" required>
+                    <option value="<?= htmlspecialchars($p1_name) ?>"><?= htmlspecialchars($p1_name) ?></option>
+                    <option value="<?= htmlspecialchars($p2_name) ?>"><?= htmlspecialchars($p2_name) ?></option>
+                </select>
+            </div>
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('date') ?></label>
+                <input type="date" name="advance_date" class="pf-input" value="<?= date('Y-m-d') ?>" required>
+            </div>
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('bud_label_name') ?></label>
+                <input type="text" name="description" class="pf-input" placeholder="<?= tr('bud_adv_ph_desc') ?>" required autocomplete="off">
+            </div>
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('bud_amount') ?></label>
+                <input type="number" step="0.01" min="0.01" name="amount" class="pf-input" required>
+            </div>
+            <div class="pf-form-group" style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+                <input type="checkbox" name="from_savings" id="add_from_savings" value="1" class="pf-checkbox-lg">
+                <label for="add_from_savings" style="margin:0; cursor:pointer; font-weight:600; color:var(--primary);"><?= tr('bud_adv_already_saved') ?></label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeSuiviModal('addAdvanceModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editAdvanceModal" class="pf-modal">
+    <div class="pf-modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;">✏️ <?= tr('bud_adv_edit') ?></h3>
+            <button type="button" onclick="closeSuiviModal('editAdvanceModal')" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+        </div>
+        <form action="/modules/budget/includes/api/save-budget.php" method="POST" id="formEditAdvance" onsubmit="handleAdvanceSubmit(event, this)">
+            <input type="hidden" name="action" value="update_advance">
+            <input type="hidden" name="id" id="edit_adv_id">
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('bud_adv_who_paid') ?></label>
+                <select name="payer" id="edit_adv_payer" class="pf-input" required>
+                    <option value="<?= htmlspecialchars($p1_name) ?>"><?= htmlspecialchars($p1_name) ?></option>
+                    <option value="<?= htmlspecialchars($p2_name) ?>"><?= htmlspecialchars($p2_name) ?></option>
+                </select>
+            </div>
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('date') ?></label>
+                <input type="date" name="advance_date" id="edit_adv_date" class="pf-input" required>
+            </div>
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('bud_label_name') ?></label>
+                <input type="text" name="description" id="edit_adv_desc" class="pf-input" required autocomplete="off">
+            </div>
+            <div class="pf-form-group">
+                <label class="pf-label"><?= tr('bud_amount') ?></label>
+                <input type="number" step="0.01" min="0.01" name="amount" id="edit_adv_amount" class="pf-input" required>
+            </div>
+            <div class="pf-form-group" style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+                <input type="checkbox" name="from_savings" id="edit_adv_from_savings" value="1" class="pf-checkbox-lg">
+                <label for="edit_adv_from_savings" style="margin:0; cursor:pointer; font-weight:600; color:var(--primary);"><?= tr('bud_adv_already_saved') ?></label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeSuiviModal('editAdvanceModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <button id="fabSumMode" class="pf-fab-sum" onclick="toggleSumMode()">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="12" y1="8" x2="12" y2="16"></line></svg>
 </button>
@@ -451,12 +684,17 @@ function getTranslatedMonthName($dateString) {
 
 <script>
 window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+
+// Dictionnaire I18N injecté proprement depuis PHP
 window.I18N = {
     ...(window.I18N || {}),
     'bud_prev_label_name': <?= json_encode(tr('bud_prev_label_name')) ?>,
     'bud_prev_err_no_history': <?= json_encode(tr('bud_prev_err_no_history')) ?>,
     'bud_prev_confirm_copy': <?= json_encode(tr('bud_prev_confirm_copy')) ?>,
     'bud_prev_confirm_transfers': <?= json_encode(tr('bud_prev_confirm_transfers')) ?>,
+    'bud_prev_confirm_del_line': <?= json_encode(tr('bud_prev_confirm_del_line')) ?>,
+    'bud_adv_confirm_resolve': <?= json_encode(tr('bud_adv_confirm_resolve') ?? 'Confirmer le remboursement ?') ?>,
+    'bud_adv_confirm_delete': <?= json_encode(tr('bud_adv_confirm_delete') ?? 'Supprimer définitivement ?') ?>,
     'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>
 };
 
@@ -466,6 +704,8 @@ window.CONFIG.CURRENCY = '<?= defined('CURRENCY') ? CURRENCY : "€" ?>';
 
 const currentYear = <?= $currentYear ?>;
 const months = <?= json_encode($months) ?>;
+
+/* --- LOGIQUE ALLOCATIONS & BUDGET --- */
 
 function openEditModal(btn) {
     document.getElementById('edit_cat_id').value = btn.getAttribute('data-id');
@@ -486,7 +726,6 @@ function updateSalary(person, input) {
     const ecoF = parseFloat(row.querySelector('[data-field="eco_family"]').value) || 0;
 
     const restant = salary - (mens + frais + ecoP + ecoF);
-
     const parentMap = window.CONFIG.parentMapping.find(m => m.name === person);
     if(parentMap) {
         document.getElementById('restant_' + parentMap.css).innerText = Math.round(restant).toLocaleString(window.appLang) + ' €';
@@ -644,11 +883,14 @@ function updateSummaryTable() {
 function saveData(action, data) {
     const formData = new FormData();
     formData.append('action', action);
+    formData.append('ajax', '1'); // <-- Sécurisation pour pachaFetch / backend
     for (const key in data) formData.append(key, data[key]);
-    fetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
+    
+    // On utilise fetch ici en mode aveugle pour ne pas bloquer l'UI lors de la frappe rapide
+    fetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
 }
 
-function validateTransfers(personCss, month) {
+async function validateTransfers(personCss, month) {
     const parentMap = window.CONFIG.parentMapping.find(m => m.css === personCss);
     if (!parentMap) return;
 
@@ -659,30 +901,30 @@ function validateTransfers(personCss, month) {
     formData.append('action', 'validate_transfers');
     formData.append('person_id', parentMap.id);
     formData.append('month_date', month);
+    formData.append('ajax', '1'); 
 
-    fetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData })
-    .then(r => r.json())
-    .then(data => {
-        if(data.success) window.location.reload();
-        else alert("Erreur: " + data.error);
-    })
-    .catch(e => alert(window.I18N['bud_err_tech']));
+    try {
+        const result = await pachaFetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
+        if(result.success) {
+            window.location.reload();
+        } else {
+            alert(window.I18N['bud_err_tech'] + " : " + result.error);
+        }
+    } catch(e) {
+        alert(window.I18N['bud_err_tech']);
+    }
 }
 
-function saveGenericNote(noteType, refId, content) {
+async function saveGenericNote(noteType, refId, content) {
     const formData = new FormData();
     formData.append('action', 'save_note');
     formData.append('note_type', noteType);
     formData.append('reference_id', refId);
     formData.append('content', content);
+    formData.append('ajax', '1');
 
-    fetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData })
-    .then(async r => {
-        const text = await r.text();
-        if (!r.ok) throw new Error(`Erreur HTTP ${r.status}`);
-        return JSON.parse(text);
-    })
-    .then(data => {
+    try {
+        const data = await pachaFetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
         if(data.success) {
             const indicator = document.getElementById('note-save-indicator');
             if(indicator) {
@@ -690,11 +932,106 @@ function saveGenericNote(noteType, refId, content) {
                 setTimeout(() => indicator.style.opacity = '0', 2000);
             }
         } else {
-            alert("Erreur: " + data.error);
+            alert(window.I18N['bud_err_tech'] + " : " + data.error);
         }
-    })
-    .catch(e => alert(e.message));
+    } catch(e) {
+        alert(window.I18N['bud_err_tech']);
+    }
 }
+
+async function deleteCategory(id) {
+    if (!confirm(window.I18N['bud_prev_confirm_del_line'])) return;
+    const formData = new FormData();
+    formData.append('action', 'delete_category');
+    formData.append('id', id);
+    formData.append('ajax', '1');
+    try {
+        const result = await pachaFetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
+        if (result.success) window.location.reload();
+    } catch(e) { console.error(e); }
+}
+
+/* --- LOGIQUE TRICOUNT / AVANCES --- */
+
+function closeSuiviModal(modalId) {
+    document.getElementById(modalId).classList.remove('is-active');
+}
+
+function openSuiviModal(modalId) {
+    document.getElementById(modalId).classList.add('is-active');
+}
+
+function triggerEditAdvanceModal(btn) {
+    document.getElementById('edit_adv_id').value = btn.getAttribute('data-id');
+    document.getElementById('edit_adv_payer').value = btn.getAttribute('data-payer');
+    document.getElementById('edit_adv_date').value = btn.getAttribute('data-date');
+    document.getElementById('edit_adv_desc').value = btn.getAttribute('data-desc');
+    document.getElementById('edit_adv_amount').value = btn.getAttribute('data-amount');
+    document.getElementById('edit_adv_from_savings').checked = (btn.getAttribute('data-savings') === '1');
+    openSuiviModal('editAdvanceModal');
+}
+
+async function handleAdvanceSubmit(event, form) {
+    event.preventDefault();
+    const btnSubmit = form.querySelector('button[type="submit"]');
+    const oldText = btnSubmit.innerHTML;
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '...';
+
+    const endpoint = form.getAttribute('action');
+    const formData = new FormData(form);
+    formData.append('ajax', '1'); // <-- Correction de l'erreur d'empty string
+
+    try {
+        // Utilisation robuste de pachaFetch 
+        const result = await pachaFetch(endpoint, { method: 'POST', body: formData });
+        
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert((window.I18N['bud_err_tech'] || "Erreur") + " : " + (result.error || "Opération échouée"));
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
+        }
+    } catch (err) {
+        console.error("AJAX Error:", err);
+        alert(window.I18N['bud_err_tech'] || "Une erreur technique est survenue.");
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = oldText;
+    }
+}
+
+async function executeResolveAdvance(id) {
+    if (!confirm(window.I18N['bud_adv_confirm_resolve'])) return;
+    const fd = new FormData();
+    fd.append('action', 'resolve_advance');
+    fd.append('id', id);
+    fd.append('ajax', '1');
+    
+    try {
+        await pachaFetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: fd });
+        window.location.reload();
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+async function executeDeleteAdvance(id) {
+    if (!confirm(window.I18N['bud_adv_confirm_delete'])) return;
+    const fd = new FormData();
+    fd.append('action', 'delete_advance');
+    fd.append('id', id);
+    fd.append('ajax', '1');
+    
+    try {
+        await pachaFetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: fd });
+        window.location.reload();
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+/* --- LOGIQUE MODE SOMME AUTOMATIQUE --- */
 
 let isSumModeActive = false;
 let selectedElementsForSum = new Set();
@@ -730,17 +1067,7 @@ function updateSumResult() {
     document.getElementById('sumResultValue').innerText = Math.round(total).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
 }
 
-async function deleteCategory(id) {
-    if (!confirm(window.I18N['bud_prev_confirm_del_line'])) return;
-    const formData = new FormData();
-    formData.append('action', 'delete_category');
-    formData.append('id', id);
-    formData.append('ajax', '1');
-    try {
-        const result = await pachaFetch('modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
-        if (result.success) window.location.reload();
-    } catch(e) { console.error(e); }
-}
+/* --- INITIALISATIONS & ECOUTEURS --- */
 
 document.addEventListener('click', function(e) {
     if (!isSumModeActive) return;
@@ -760,6 +1087,7 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 
+// Soumission standard des modales de catégories avec pachaFetch
 document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -769,9 +1097,11 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
             submitBtn.disabled = true;
             submitBtn.innerText = '⏳ ...';
             const formData = new FormData(form);
-            formData.append('ajax', '1');
+            formData.append('ajax', '1'); // Toujours sécuriser
             const actionUrl = form.getAttribute('action');
+            
             const result = await pachaFetch(actionUrl, { method: 'POST', body: formData });
+            
             if (result.success) {
                 form.closest('.pf-modal').style.display = 'none';
                 document.body.classList.remove('no-scroll');
@@ -780,7 +1110,7 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
                 alert((window.I18N['bud_err_tech'] || 'Erreur') + " : " + (result.error || "Inconnue"));
             }
         } catch (error) {
-            alert("Une erreur technique est survenue.");
+            alert(window.I18N['bud_err_tech'] || "Une erreur technique est survenue.");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = originalText;

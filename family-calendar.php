@@ -8,11 +8,33 @@ require_login();
 require __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/i18n.php';
 
-$stmtPeople = $pdo->query("SELECT id, name, user_id, role FROM pf_people ORDER BY id ASC");
+// 1. Récupération de toutes les personnes avec leurs modes de garde
+$stmtPeople = $pdo->query("SELECT id, name, user_id, role, care_modes FROM pf_people ORDER BY id ASC");
 $familyPeople = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
-$parents = array_values(array_filter($familyPeople, function($p) {
-    return strtolower($p['role'] ?? '') === 'parent';
-}));
+
+$parents = [];
+$kids = [];
+
+// Liste de tous les modes de garde actifs dans le foyer
+$activeCareModes = []; 
+
+foreach ($familyPeople as $p) {
+    $role = strtolower($p['role'] ?? '');
+    if ($role === 'parent') {
+        $parents[] = $p;
+    } elseif ($role === 'enfant') {
+        // Décodage sécurisé des modes de garde
+        $modes = json_decode($p['care_modes'] ?? '[]', true);
+        if (!is_array($modes)) $modes = [];
+        $p['modes'] = $modes;
+        $kids[] = $p;
+        
+        foreach ($modes as $m) {
+            $activeCareModes[$m] = true;
+        }
+    }
+}
+$activeCareModes = array_keys($activeCareModes); // On récupère uniquement les noms uniques
 
 $pageTitle  = tr('fc_page_title');
 $activePage = "family-calendar";
@@ -114,22 +136,17 @@ require __DIR__ . '/header.php';
             </div>
         </div>
     </div>
-</div>
 
     <section class="pf-section">
       <div class="fc-month-calendar-wrapper">
-        
         <div class="fc-month-header">
-          
           <div class="fc-month-nav-row">
             <button id="fc-prev-month" class="fc-nav-button">‹</button>
-            
             <div id="fc-smart-date-selector" style="display:flex; align-items:center; justify-content:center; flex-grow:1; gap:6px;">
                 <select id="fc-select-month" class="fc-smart-select"></select>
                 <select id="fc-select-year" class="fc-smart-select"></select>
                 <span id="fc-multi-month-suffix" style="display:none; font-size:1.3rem; font-weight:800; color:#0f172a; margin-left:4px;"></span>
             </div>
-
             <button id="fc-next-month" class="fc-nav-button">›</button>
           </div>
           
@@ -139,7 +156,6 @@ require __DIR__ . '/header.php';
             <button class="fc-view-button" data-view="2months"><?= tr('fc_view_2m') ?></button>
             <button class="fc-view-button" data-view="3months"><?= tr('fc_view_3m') ?></button>
           </div>
-
         </div>
         
         <div class="fc-calendar-container">
@@ -148,7 +164,6 @@ require __DIR__ . '/header.php';
         </div>
 
         <div id="fc-month-balances" class="fc-month-balances"></div>
-        
       </div>
     </section>
 
@@ -173,18 +188,29 @@ require __DIR__ . '/header.php';
               <th rowspan="3" class="col-day"><?= tr('day_wed') ?></th>
               <th rowspan="3" class="col-day"><?= tr('day_thu') ?></th>
               <th rowspan="3" class="col-day"><?= tr('day_fri') ?></th>
-              <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_off_carole') ?></span></th>
-              <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_extra_off') ?></span></th>
-              <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_centre') ?></span></th>
-              <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_avis') ?></span></th>
-              <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_pep_sick') ?></span></th>
-              <th rowspan="3" class="col-total rotated-text"><span><?= tr('leg_presence') ?></span></th>
-              <th colspan="6" class="col-alex header-group"><?= htmlspecialchars(strtoupper($parents[0]['name'] ?? 'PARENT 1')) ?></th>
-              <th colspan="6" class="col-laia header-group"><?= htmlspecialchars(strtoupper($parents[1]['name'] ?? 'PARENT 2')) ?></th>
+
+              <?php foreach ($activeCareModes as $mode): ?>
+                  <th rowspan="3" class="col-total rotated-text"><span><?= htmlspecialchars($mode) ?></span></th>
+              <?php endforeach; ?>
+
+              <?php foreach ($kids as $kid): ?>
+                  <th rowspan="3" class="col-total rotated-text"><span>Maladie <?= htmlspecialchars($kid['name']) ?></span></th>
+              <?php endforeach; ?>
+
+              <?php foreach ($parents as $index => $parent): 
+                  $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
+              ?>
+                  <th colspan="6" class="<?= $parentClass ?> header-group"><?= htmlspecialchars(strtoupper($parent['name'])) ?></th>
+              <?php endforeach; ?>
             </tr>
             <tr>
-              <th colspan="2" class="col-alex-sub">CP</th><th colspan="2" class="col-alex-sub">JRA</th><th colspan="2" class="col-alex-sub">JA</th>
-              <th colspan="2" class="col-laia-sub">CP</th><th colspan="2" class="col-laia-sub">JRA</th><th colspan="2" class="col-laia-sub">JA</th>
+              <?php foreach ($parents as $index => $parent): 
+                  $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
+              ?>
+                  <th colspan="2" class="<?= $parentClass ?>-sub">CP</th>
+                  <th colspan="2" class="<?= $parentClass ?>-sub">JRA</th>
+                  <th colspan="2" class="<?= $parentClass ?>-sub">JA</th>
+              <?php endforeach; ?>
             </tr>
             <tr>
                 <?php foreach ($parents as $index => $parent): 
@@ -230,11 +256,23 @@ require __DIR__ . '/header.php';
                     <div class="pf-legend-grid">
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span><?= tr('leg_school_holidays') ?></span></div>
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-off-carole"></div><span><?= tr('leg_off_carole') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-extra-off-carole"></div><span><?= tr('leg_extra_off') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-centre"></div><span><?= tr('leg_centre') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-avis"></div><span><?= tr('leg_avis') ?></span></div>
-                        <div class="pf-legend-item"><div class="pf-legend-color fc-legend-pep-sick"></div><span><?= tr('leg_pep_sick') ?></span></div>
+                        
+                        <?php foreach ($activeCareModes as $index => $mode): 
+                            // Génération d'une couleur pseudo-aléatoire mais fixe par mode
+                            $hue = ($index * 137) % 360; 
+                        ?>
+                            <div class="pf-legend-item">
+                                <div class="pf-legend-color" style="background: hsl(<?= $hue ?>, 70%, 50%);"></div>
+                                <span><?= htmlspecialchars($mode) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+
+                        <?php foreach ($kids as $kid): ?>
+                            <div class="pf-legend-item">
+                                <div class="pf-legend-color" style="background: var(--pf-danger, #ef4444); opacity: 0.8;"></div>
+                                <span>Maladie <?= htmlspecialchars($kid['name']) ?></span>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
@@ -243,32 +281,11 @@ require __DIR__ . '/header.php';
 </div>
 
 <script>
-window.I18N = {
-    ...(window.I18N || {}),
-    'fc_menu_carole': "<?= tr('fc_menu_carole') ?>",
-    'btn_off': "<?= tr('btn_off') ?>",
-    'btn_extra': "<?= tr('btn_extra') ?>",
-    'leg_centre': "<?= tr('leg_centre') ?>",
-    'leg_avis': "<?= tr('leg_avis') ?>",
-    'leg_pep_sick': "<?= tr('leg_pep_sick') ?>",
-    'leg_off_carole': "<?= tr('leg_off_carole') ?>",
-    'leg_extra_off': "<?= tr('leg_extra_off') ?>",
-    'leg_presence': "<?= tr('leg_presence') ?>",
-    'fc_menu_kids_leaves': "<?= tr('fc_menu_kids_leaves') ?>",
-    'fc_clear': "<?= tr('fc_clear') ?>",
-    'fc_unit_days': "<?= tr('fc_unit_days') ?>",
-    'vac_toussaint': "<?= tr('vac_toussaint') ?>",
-    'vac_noel': "<?= tr('vac_noel') ?>",
-    'vac_hiver': "<?= tr('vac_hiver') ?>",
-    'vac_printemps': "<?= tr('vac_printemps') ?>",
-    'vac_ascension': "<?= tr('vac_ascension') ?>",
-    'vac_ete': "<?= tr('vac_ete') ?>",
-    'leg_school_holidays': "<?= tr('leg_school_holidays') ?>",
-    'fc_school_year': "<?= tr('fc_school_year') ?>",
-    'fc_modal_holidays_title': "<?= tr('fc_modal_holidays_title') ?>",
-    'fc_alert_burn_days': "<?= tr('fc_alert_burn_days') ?>",
-    'fc_alert_burn_jra': "<?= tr('fc_alert_burn_jra') ?>",
-    'ANNIV': "<?= tr('ANNIV') ?>"
+// 🟢 OBJET DE CONFIGURATION GLOBAL POUR LE JAVASCRIPT
+window.FAMILY_CONFIG = {
+    parents: <?= json_encode($parents) ?>,
+    kids: <?= json_encode($kids) ?>,
+    activeCareModes: <?= json_encode($activeCareModes) ?>
 };
 </script>
 <script src="/modules/family-calendar/family-calendar.js"></script>
