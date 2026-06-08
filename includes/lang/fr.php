@@ -164,6 +164,11 @@ return [
     'set_err_kid_name'        => 'Le prénom est requis.',
     'set_confirm_del_kid'     => 'Supprimer cet enfant ? (Son historique financier restera visible dans les archives).',
     'set_no_kids'             => 'Aucun enfant configuré pour ce foyer.',
+    'set_family_config' => 'Configuration du foyer',
+    'set_global_params' => 'Paramètres globaux',
+    'set_care_modes'    => 'Modes de garde usuels',
+    'set_add_care_mode' => 'Ajouter un mode',
+    'btn_save_config'   => 'Enregistrer',
 
     // ==========================================
     // FAMILY CALENDAR
@@ -208,6 +213,9 @@ return [
     'fc_err_action'             => 'Erreur lors de l\'action : ',
     'fc_today_short'            => 'Auj.',
     'fc_today_title'            => "Aujourd'hui",
+    'care_nounou' => 'Nounou',
+    'care_centre' => 'Centre de loisirs',
+    'care_avis'   => 'Avis',
 
     'leg_presence'              => 'Présence Pep',
     'leg_school_holidays'       => 'Vacances Scolaires',

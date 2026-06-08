@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS user_calendar_integrations (
 // ─── Actions ──────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
-        // Fallback JSON pour les requêtes AJAX qui échouent au CSRF
         if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'error' => 'Session invalide (CSRF). Rechargez la page.']);
@@ -39,256 +38,256 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $error = "Session invalide (CSRF). Rechargez la page.";
     } else {
-    $action = $_POST['action'] ?? '';
+        $action = $_POST['action'] ?? '';
 
-    // 🟢 GESTION AJAX : ENFANTS DU FOYER
-    if ($action === 'add_child') {
-        header('Content-Type: application/json');
-        try {
-            $name = trim($_POST['child_name'] ?? '');
-            if (empty($name)) throw new Exception(tr('set_err_kid_name'));
-            
-            require_once __DIR__ . '/includes/db.php';
-            $stmt = $pdo->prepare("INSERT INTO pf_people (name, role) VALUES (?, 'enfant')");
-            $stmt->execute([$name]);
-            
-            echo json_encode(['success' => true]);
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-        }
-        exit;
-    }
-    
-    if ($action === 'delete_child') {
-        header('Content-Type: application/json');
-        try {
-            $id = (int)($_POST['child_id'] ?? 0);
-            if ($id > 0) {
+        // 🟢 SAUVEGARDE GLOBALE : CONFIGURATION DU FOYER (Unifiée)
+        if ($action === 'update_family_info') {
+            header('Content-Type: application/json');
+            try {
                 require_once __DIR__ . '/includes/db.php';
-                $stmt = $pdo->prepare("DELETE FROM pf_people WHERE id = ? AND role = 'enfant'");
-                $stmt->execute([$id]);
-            }
-            echo json_encode(['success' => true]);
-        } catch (Exception $e) {
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-        }
-        exit;
-    }
+                $pdo->beginTransaction();
 
-    if ($action === 'update_family_info') {
-        require_once __DIR__ . '/includes/db.php';
-        
-        $foyer = $pdo->query("SELECT currency, zone_scolaire FROM pf_foyer_settings WHERE id = 1")->fetch();
-        $currency = isset($_POST['currency']) ? trim($_POST['currency']) : ($foyer['currency'] ?? '€');
-        $zone = isset($_POST['zone_scolaire']) ? trim($_POST['zone_scolaire']) : ($foyer['zone_scolaire'] ?? 'C');
-        $stmtSave = $pdo->prepare("UPDATE pf_foyer_settings SET currency = ?, zone_scolaire = ? WHERE id = 1");
-        $stmtSave->execute([$currency, $zone]);
-        $success = "Paramètres du foyer mis à jour avec succès.";
-    }
+                // 1. Sauvegarde des paramètres globaux
+                $currency = trim($_POST['currency'] ?? '€');
+                $zone = trim($_POST['zone_scolaire'] ?? 'C');
+                $careModesJson = $_POST['custom_care_modes'] ?? '[]'; 
 
-    if ($action === 'set_modules' && $family_id) {
-        $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka'];
-        $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
-        if (empty($enabled)) {
-            $error = "Vous devez garder au moins un module actif.";
-        } else {
-            $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
-                     ->execute([json_encode($enabled), $family_id]);
-            $_SESSION['enabled_modules'] = $enabled;
-            $success = "Modules mis à jour.";
-        }
-    }
+                $stmtSave = $pdo->prepare("UPDATE pf_foyer_settings SET currency = ?, zone_scolaire = ?, care_modes = ? WHERE id = 1");
+                $stmtSave->execute([$currency, $zone, $careModesJson]);
 
-    if ($action === 'set_lang') {
-        $lang = $_POST['lang'] ?? 'fr';
-        if (in_array($lang, ['fr', 'ca', 'en'])) {
-            $_SESSION['app_lang'] = $lang;
-            $meta_pdo->prepare("UPDATE users SET lang = ? WHERE id = ?")
-                     ->execute([$lang, $user_id]);
-            $success = "Language updated.";
-        }
-    }
+                // 2. Gestion des enfants
+                $kids = $_POST['kids'] ?? [];
+                $deleted = json_decode($_POST['deleted_kids'] ?? '[]', true);
 
-    // 🟢 ENRICHISSEMENT : Prise en compte de la couleur du profil
-    if ($action === 'update_profile') {
-        $display_name = trim($_POST['display_name'] ?? '');
-        $color        = trim($_POST['color'] ?? '#0891b2');
-
-        if (!$display_name) {
-            $error = "Le prénom ne peut pas être vide.";
-        } else {
-            // MÀJ dans la base Meta (users)
-            $meta_pdo->prepare("UPDATE users SET display_name = ? WHERE id = ?")
-                     ->execute([$display_name, $user_id]);
-            
-            // MÀJ dans la base locale Foyer (pf_people) via le user_id mappé
-            require_once __DIR__ . '/includes/db.php';
-            if (isset($pdo)) {
-                $stmtPeopleColor = $pdo->prepare("UPDATE pf_people SET color = ? WHERE user_id = ?");
-                $stmtPeopleColor->execute([$color, $user_id]);
-            }
-
-            $_SESSION['user']['display_name'] = $display_name;
-            $success = "Profil mis à jour.";
-        }
-    }
-
-    if ($action === 'change_password') {
-        $current  = $_POST['current_password'] ?? '';
-        $new      = $_POST['new_password'] ?? '';
-        $confirm  = $_POST['confirm_password'] ?? '';
-
-        $row = $meta_pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
-        $row->execute([$user_id]);
-        $row = $row->fetch();
-
-        if (!password_verify($current, $row['password_hash'])) {
-            $error = "Mot de passe actuel incorrect.";
-        } elseif (strlen($new) < 6) {
-            $error = "Le nouveau mot de passe doit faire au moins 6 caractères.";
-        } elseif ($new !== $confirm) {
-            $error = "Les mots de passe ne correspondent pas.";
-        } else {
-            $meta_pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
-                     ->execute([password_hash($new, PASSWORD_BCRYPT), $user_id]);
-            $success = "Mot de passe modifié avec succès.";
-        }
-    }
-
-    if ($action === 'update_family_name' && $family_id) {
-        $name = trim($_POST['family_name'] ?? '');
-        if ($name) {
-            $meta_pdo->prepare("UPDATE families SET name = ? WHERE id = ?")
-                     ->execute([$name, $family_id]);
-            $success = "Nom de l'espace mis à jour.";
-        }
-    }
-
-    if ($action === 'regen_invite' && $family_id) {
-        $new_code = bin2hex(random_bytes(8));
-        $meta_pdo->prepare("UPDATE families SET invite_code = ? WHERE id = ?")
-                 ->execute([$new_code, $family_id]);
-        $success = "Nouveau code d'invitation généré.";
-    }
-
-    if ($action === 'upload_home_bg' && $family_id) {
-        $upload_dir = '/uploads/';
-        if (!is_dir($upload_dir)) @mkdir($upload_dir, 0755, true);
-        $file = $_FILES['home_bg'] ?? null;
-        if ($file && $file['error'] === 0) {
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
-                $error = "Format non supporté (jpg, png, webp).";
-            } else {
-                $dest = $upload_dir . 'home_bg_' . $family_id . '.' . $ext;
-                foreach (glob($upload_dir . 'home_bg_' . $family_id . '.*') as $old) @unlink($old);
-                if (move_uploaded_file($file['tmp_name'], $dest)) {
-                    $success = "Image d'accueil mise à jour.";
-                } else {
-                    $error = "Erreur lors de l'upload.";
+                if (!empty($deleted)) {
+                    $in = str_repeat('?,', count($deleted) - 1) . '?';
+                    $stmtDel = $pdo->prepare("DELETE FROM pf_people WHERE id IN ($in) AND role = 'enfant'");
+                    $stmtDel->execute($deleted);
                 }
-            }
-        }
-    }
 
-    if ($action === 'reset_home_bg' && $family_id) {
-        foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $old) @unlink($old);
-        $success = "Image d'accueil réinitialisée.";
-    }
+                $stmtInsert = $pdo->prepare("INSERT INTO pf_people (name, role, care_modes) VALUES (?, 'enfant', ?)");
+                $stmtUpdate = $pdo->prepare("UPDATE pf_people SET name = ?, care_modes = ? WHERE id = ? AND role = 'enfant'");
 
-    if ($action === 'grocery_history_max' && $family_id) {
-        require_once __DIR__ . '/includes/db.php';
-        if (!isset($pdo)) {
-            $error = "Base famille indisponible.";
-        } else {
-            $n = (int) ($_POST['history_max'] ?? 20);
-            $n = max(1, min(50, $n));
-            try {
-                $pdo->prepare(
-                    "INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('grocery_settings','history_max',?) ON DUPLICATE KEY UPDATE content=VALUES(content)"
-                )->execute([(string) $n]);
-                $success = tr('groceries_settings_saved');
-            } catch (\Throwable $e) {
-                $error = tr('groceries_settings_error') . ' ' . $e->getMessage();
-            }
-        }
-    }
-    
-    if ($action === 'calendar_ios_save') {
-        $username = trim($_POST['icloud_username'] ?? '');
-        $appPassword = hh_normalize_apple_app_password((string) ($_POST['icloud_app_password'] ?? ''));
-        $calendarUrl = trim($_POST['icloud_calendar_url'] ?? '');
+                foreach ($kids as $kidId => $kidData) {
+                    $name = trim($kidData['name'] ?? '');
+                    if (empty($name)) continue;
 
-        if (!$username || !$appPassword || !$calendarUrl) {
-            $error = "Merci de renseigner identifiant iCloud, mot de passe d'app et URL CalDAV.";
-        } else {
-            try {
-                $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($username, $appPassword, $calendarUrl);
-                $encrypted = hh_encrypt_secret($appPassword);
-                $meta_pdo->prepare("
-                    INSERT INTO user_calendar_integrations (user_id, provider, username, secret_encrypted, calendar_url, status, updated_at)
-                    VALUES (?, 'icloud_caldav', ?, ?, ?, 'connected', NOW())
-                    ON DUPLICATE KEY UPDATE username=VALUES(username), secret_encrypted=VALUES(secret_encrypted), calendar_url=VALUES(calendar_url), status='connected', updated_at=NOW()
-                ")->execute([$user_id, $username, $encrypted, $resolvedUrl]);
-                $msg = "Connexion calendrier iOS enregistrée.";
-                if (rtrim($resolvedUrl, '/') !== rtrim($calendarUrl, '/')) {
-                    $msg .= " URL du calendrier détectée automatiquement (tu avais mis la racine iCloud).";
-                }
-                $success = $msg;
-            } catch (\Throwable $e) {
-                $error = "Impossible d'enregistrer la connexion iOS: " . $e->getMessage();
-            }
-        }
-    }
+                    $modes = $kidData['modes'] ?? [];
+                    $modesJson = json_encode(array_values($modes));
 
-    if ($action === 'calendar_ios_test') {
-        $row = $meta_pdo->prepare("SELECT id, username, secret_encrypted, calendar_url FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
-        $row->execute([$user_id]);
-        $integration = $row->fetch();
-        if (!$integration) {
-            $error = "Aucune connexion iOS configurée.";
-        } else {
-            try {
-                $pwd = hh_normalize_apple_app_password(hh_decrypt_secret($integration['secret_encrypted']));
-                $calendarUrl = trim($integration['calendar_url']);
-                $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($integration['username'], $pwd, $calendarUrl);
-                $code = hh_caldav_test_calendar_collection($integration['username'], $pwd, $resolvedUrl);
-                if (in_array($code, [200, 207], true)) {
-                    if (rtrim($resolvedUrl, '/') !== rtrim($calendarUrl, '/')) {
-                        $meta_pdo->prepare("UPDATE user_calendar_integrations SET calendar_url = ? WHERE id = ?")
-                            ->execute([$resolvedUrl, $integration['id']]);
+                    if (strpos($kidId, 'new_') === 0) {
+                        $stmtInsert->execute([$name, $modesJson]);
+                    } else {
+                        $stmtUpdate->execute([$name, $modesJson, (int)$kidId]);
                     }
-                    $success = "Connexion iCloud CalDAV valide (HTTP $code).";
-                } else {
-                    $error = "Test connexion échoué (HTTP $code). Vérifie identifiant Apple, mot de passe d’app (16 caractères) et que le compte iCloud a le Calendrier activé.";
                 }
-            } catch (\Throwable $e) {
-                $error = "Test connexion impossible: " . $e->getMessage();
+
+                $pdo->commit();
+                echo json_encode(['success' => true]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            exit;
+        }
+
+        if ($action === 'set_modules' && $family_id) {
+            $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka'];
+            $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
+            if (empty($enabled)) {
+                $error = "Vous devez garder au moins un module actif.";
+            } else {
+                $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
+                         ->execute([json_encode($enabled), $family_id]);
+                $_SESSION['enabled_modules'] = $enabled;
+                $success = "Modules mis à jour.";
             }
         }
-    }
 
-    if ($action === 'calendar_ios_disconnect') {
-        $meta_pdo->prepare("DELETE FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'")->execute([$user_id]);
-        $success = "Connexion iOS supprimée.";
-    }
+        if ($action === 'set_lang') {
+            $lang = $_POST['lang'] ?? 'fr';
+            if (in_array($lang, ['fr', 'ca', 'en'])) {
+                $_SESSION['app_lang'] = $lang;
+                $meta_pdo->prepare("UPDATE users SET lang = ? WHERE id = ?")
+                         ->execute([$lang, $user_id]);
+                $success = "Language updated.";
+            }
+        }
+
+        if ($action === 'update_profile') {
+            $display_name = trim($_POST['display_name'] ?? '');
+            $color        = trim($_POST['color'] ?? '#0891b2');
+
+            if (!$display_name) {
+                $error = "Le prénom ne peut pas être vide.";
+            } else {
+                $meta_pdo->prepare("UPDATE users SET display_name = ? WHERE id = ?")
+                         ->execute([$display_name, $user_id]);
+                
+                require_once __DIR__ . '/includes/db.php';
+                if (isset($pdo)) {
+                    $stmtPeopleColor = $pdo->prepare("UPDATE pf_people SET color = ? WHERE user_id = ?");
+                    $stmtPeopleColor->execute([$color, $user_id]);
+                }
+
+                $_SESSION['user']['display_name'] = $display_name;
+                $success = "Profil mis à jour.";
+            }
+        }
+
+        if ($action === 'change_password') {
+            $current  = $_POST['current_password'] ?? '';
+            $new      = $_POST['new_password'] ?? '';
+            $confirm  = $_POST['confirm_password'] ?? '';
+
+            $row = $meta_pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+            $row->execute([$user_id]);
+            $row = $row->fetch();
+
+            if (!password_verify($current, $row['password_hash'])) {
+                $error = "Mot de passe actuel incorrect.";
+            } elseif (strlen($new) < 6) {
+                $error = "Le nouveau mot de passe doit faire au moins 6 caractères.";
+            } elseif ($new !== $confirm) {
+                $error = "Les mots de passe ne correspondent pas.";
+            } else {
+                $meta_pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+                         ->execute([password_hash($new, PASSWORD_BCRYPT), $user_id]);
+                $success = "Mot de passe modifié avec succès.";
+            }
+        }
+
+        if ($action === 'update_family_name' && $family_id) {
+            $name = trim($_POST['family_name'] ?? '');
+            if ($name) {
+                $meta_pdo->prepare("UPDATE families SET name = ? WHERE id = ?")
+                         ->execute([$name, $family_id]);
+                $success = "Nom de l'espace mis à jour.";
+            }
+        }
+
+        if ($action === 'regen_invite' && $family_id) {
+            $new_code = bin2hex(random_bytes(8));
+            $meta_pdo->prepare("UPDATE families SET invite_code = ? WHERE id = ?")
+                     ->execute([$new_code, $family_id]);
+            $success = "Nouveau code d'invitation généré.";
+        }
+
+        if ($action === 'upload_home_bg' && $family_id) {
+            $upload_dir = '/uploads/';
+            if (!is_dir($upload_dir)) @mkdir($upload_dir, 0755, true);
+            $file = $_FILES['home_bg'] ?? null;
+            if ($file && $file['error'] === 0) {
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
+                    $error = "Format non supporté (jpg, png, webp).";
+                } else {
+                    $dest = $upload_dir . 'home_bg_' . $family_id . '.' . $ext;
+                    foreach (glob($upload_dir . 'home_bg_' . $family_id . '.*') as $old) @unlink($old);
+                    if (move_uploaded_file($file['tmp_name'], $dest)) {
+                        $success = "Image d'accueil mise à jour.";
+                    } else {
+                        $error = "Erreur lors de l'upload.";
+                    }
+                }
+            }
+        }
+
+        if ($action === 'reset_home_bg' && $family_id) {
+            foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $old) @unlink($old);
+            $success = "Image d'accueil réinitialisée.";
+        }
+
+        if ($action === 'grocery_history_max' && $family_id) {
+            require_once __DIR__ . '/includes/db.php';
+            if (!isset($pdo)) {
+                $error = "Base famille indisponible.";
+            } else {
+                $n = (int) ($_POST['history_max'] ?? 20);
+                $n = max(1, min(50, $n));
+                try {
+                    $pdo->prepare(
+                        "INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('grocery_settings','history_max',?) ON DUPLICATE KEY UPDATE content=VALUES(content)"
+                    )->execute([(string) $n]);
+                    $success = tr('groceries_settings_saved');
+                } catch (\Throwable $e) {
+                    $error = tr('groceries_settings_error') . ' ' . $e->getMessage();
+                }
+            }
+        }
+        
+        if ($action === 'calendar_ios_save') {
+            $username = trim($_POST['icloud_username'] ?? '');
+            $appPassword = hh_normalize_apple_app_password((string) ($_POST['icloud_app_password'] ?? ''));
+            $calendarUrl = trim($_POST['icloud_calendar_url'] ?? '');
+
+            if (!$username || !$appPassword || !$calendarUrl) {
+                $error = "Merci de renseigner identifiant iCloud, mot de passe d'app et URL CalDAV.";
+            } else {
+                try {
+                    $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($username, $appPassword, $calendarUrl);
+                    $encrypted = hh_encrypt_secret($appPassword);
+                    $meta_pdo->prepare("
+                        INSERT INTO user_calendar_integrations (user_id, provider, username, secret_encrypted, calendar_url, status, updated_at)
+                        VALUES (?, 'icloud_caldav', ?, ?, ?, 'connected', NOW())
+                        ON DUPLICATE KEY UPDATE username=VALUES(username), secret_encrypted=VALUES(secret_encrypted), calendar_url=VALUES(calendar_url), status='connected', updated_at=NOW()
+                    ")->execute([$user_id, $username, $encrypted, $resolvedUrl]);
+                    $msg = "Connexion calendrier iOS enregistrée.";
+                    if (rtrim($resolvedUrl, '/') !== rtrim($calendarUrl, '/')) {
+                        $msg .= " URL du calendrier détectée automatiquement.";
+                    }
+                    $success = $msg;
+                } catch (\Throwable $e) {
+                    $error = "Impossible d'enregistrer la connexion iOS: " . $e->getMessage();
+                }
+            }
+        }
+
+        if ($action === 'calendar_ios_test') {
+            $row = $meta_pdo->prepare("SELECT id, username, secret_encrypted, calendar_url FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
+            $row->execute([$user_id]);
+            $integration = $row->fetch();
+            if (!$integration) {
+                $error = "Aucune connexion iOS configurée.";
+            } else {
+                try {
+                    $pwd = hh_normalize_apple_app_password(hh_decrypt_secret($integration['secret_encrypted']));
+                    $calendarUrl = trim($integration['calendar_url']);
+                    $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($integration['username'], $pwd, $calendarUrl);
+                    $code = hh_caldav_test_calendar_collection($integration['username'], $pwd, $resolvedUrl);
+                    if (in_array($code, [200, 207], true)) {
+                        if (rtrim($resolvedUrl, '/') !== rtrim($calendarUrl, '/')) {
+                            $meta_pdo->prepare("UPDATE user_calendar_integrations SET calendar_url = ? WHERE id = ?")
+                                ->execute([$resolvedUrl, $integration['id']]);
+                        }
+                        $success = "Connexion iCloud CalDAV valide (HTTP $code).";
+                    } else {
+                        $error = "Test connexion échoué (HTTP $code). Vérifiez vos identifiants.";
+                    }
+                } catch (\Throwable $e) {
+                    $error = "Test connexion impossible: " . $e->getMessage();
+                }
+            }
+        }
+
+        if ($action === 'calendar_ios_disconnect') {
+            $meta_pdo->prepare("DELETE FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'")->execute([$user_id]);
+            $success = "Connexion iOS supprimée.";
+        }
     }
 }
 
 // ─── Chargement données ───────────────────────────────────────────────────────
 
-// 1. On charge la base locale AVANT pour que son $user n'écrase pas le nôtre
 if ($family_id) {
     require_once __DIR__ . '/includes/db.php';
 }
 
-// 2. Maintenant on peut charger ton profil en toute sécurité
 $stmtUser = $meta_pdo->prepare("SELECT * FROM users WHERE id = ?");
 $stmtUser->execute([$user_id]);
 $user = $stmtUser->fetch();
 
-// 3. Récupération de la couleur actuelle depuis pf_people
-$user_color = '#0891b2'; // Fallback par défaut
+$user_color = '#0891b2'; 
 if ($family_id && isset($pdo)) {
     $stmtColorFetch = $pdo->prepare("SELECT color FROM pf_people WHERE user_id = ?");
     $stmtColorFetch->execute([$user_id]);
@@ -298,10 +297,24 @@ if ($family_id && isset($pdo)) {
     }
 }
 
-// 4. Récupération de la liste des enfants du foyer
+// 🟢 Récupération Unifiée : Foyer, Modes de Garde, Enfants
 $kidsList = [];
+$familyCareModes = ['Nounou', 'Centre', 'Avis']; 
+$currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
+$currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
+
 if ($family_id && isset($pdo)) {
-    $stmtKids = $pdo->query("SELECT id, name FROM pf_people WHERE role = 'enfant' ORDER BY id ASC");
+    $foyerSettings = $pdo->query("SELECT currency, zone_scolaire, care_modes FROM pf_foyer_settings WHERE id = 1")->fetch(PDO::FETCH_ASSOC);
+    if ($foyerSettings) {
+        if (!empty($foyerSettings['currency'])) $currentCurrency = $foyerSettings['currency'];
+        if (!empty($foyerSettings['zone_scolaire'])) $currentZone = $foyerSettings['zone_scolaire'];
+        if (!empty($foyerSettings['care_modes'])) {
+            $parsed = json_decode($foyerSettings['care_modes'], true);
+            if (is_array($parsed)) $familyCareModes = $parsed;
+        }
+    }
+
+    $stmtKids = $pdo->query("SELECT id, name, care_modes FROM pf_people WHERE role = 'enfant' ORDER BY id ASC");
     $kidsList = $stmtKids->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -322,18 +335,13 @@ $calendarIntegration->execute([$user_id]);
 $calendarIntegration = $calendarIntegration->fetch();
 
 $groceryHistoryMaxSetting = 20;
-if ($family_id) {
-    require_once __DIR__ . '/includes/db.php';
-    if (isset($pdo)) {
-        try {
-            $gv = $pdo->query("SELECT content FROM pf_notes WHERE note_type='grocery_settings' AND reference_id='history_max'")->fetchColumn();
-            if ($gv !== false && $gv !== null && $gv !== '') {
-                $groceryHistoryMaxSetting = max(1, min(50, (int) $gv));
-            }
-        } catch (\Throwable $e) {
-            // ignore
+if ($family_id && isset($pdo)) {
+    try {
+        $gv = $pdo->query("SELECT content FROM pf_notes WHERE note_type='grocery_settings' AND reference_id='history_max'")->fetchColumn();
+        if ($gv !== false && $gv !== null && $gv !== '') {
+            $groceryHistoryMaxSetting = max(1, min(50, (int) $gv));
         }
-    }
+    } catch (\Throwable $e) {}
 }
 
 $pageTitle = "Paramètres — HouseHub";
@@ -410,7 +418,7 @@ require __DIR__ . '/header.php';
         </label>
         <?php endforeach; ?>
       </div>
-      <button type="submit" class="pf-btn">Enregistrer</button>
+      <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
     </form>
   </section>
   <?php endif; ?>
@@ -432,20 +440,12 @@ require __DIR__ . '/header.php';
       </div>
       <button type="submit" class="pf-btn"><?= htmlspecialchars(tr('btn_save')) ?></button>
     </form>
-    <p class="pf-muted-note" style="margin-top:1rem">
-      <a href="/liste.php" style="color:var(--primary);font-weight:600;"><?= htmlspecialchars(tr('mod_liste_name')) ?></a>
-    </p>
   </section>
   <?php endif; ?>
 
   <section class="pf-panel-card">
     <h2 class="pf-card-h2 pf-card-h2--tight">📱 Intégration Calendrier iOS (CalDAV)</h2>
     <p class="pf-muted-note">Configurez ici votre calendrier iCloud pour synchroniser les événements créés dans HouseHub.</p>
-    <p class="pf-muted-note" style="margin-top:8px;">
-      Pour voir et gérer les événements : ouvrez le module
-      <a href="/calendar-ios.php" style="color:var(--primary);font-weight:600;">Calendrier iOS</a>
-      (menu du haut ou burger « Calendrier iOS », ou carte sur l’accueil). Le module doit être coché dans « Modules actifs » ci-dessus.
-    </p>
     <form method="post" class="pf-stack-md">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="calendar_ios_save">
@@ -462,7 +462,7 @@ require __DIR__ . '/header.php';
         <input type="url" name="icloud_calendar_url" class="pf-input" value="<?= htmlspecialchars($calendarIntegration['calendar_url'] ?? '') ?>" placeholder="https://caldav.icloud.com/..." required>
       </div>
       <div class="pf-flex-gap-8">
-        <button type="submit" class="pf-btn">Enregistrer</button>
+        <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
       </div>
     </form>
 
@@ -478,13 +478,6 @@ require __DIR__ . '/header.php';
         <button type="submit" class="pf-btn btn-secondary">Déconnecter</button>
       </form>
     </div>
-    <p class="pf-muted-note" style="margin-top:10px;">
-      Après enregistrement, utilisez « Tester la connexion » : un message vert confirme que l’URL CalDAV répond avec tes identifiants.
-      Sur la page Calendrier iOS, le bouton « Synchroniser » envoie les événements vers iCloud et récupère ceux créés sur l’iPhone.
-    </p>
-    <?php if (!empty($calendarIntegration['last_sync_at'])): ?>
-    <p class="pf-muted-note">Dernière synchro: <?= htmlspecialchars($calendarIntegration['last_sync_at']) ?></p>
-    <?php endif; ?>
   </section>
 
   <?php if ($family_id):
@@ -526,74 +519,90 @@ require __DIR__ . '/header.php';
 
 
   <?php
-    $enabledMods = $_SESSION['enabled_modules'] ?? [];
-    
-    $showCurrency = count(array_intersect(['budget', 'holidays', 'gifts', 'garage'], $enabledMods)) > 0;
-    $showZone = in_array('calendar', $enabledMods);
+    $showCurrency = count(array_intersect(['budget', 'holidays', 'gifts', 'garage'], $_SESSION['enabled_modules'] ?? [])) > 0;
+    $showZone = in_array('calendar', $_SESSION['enabled_modules'] ?? []);
 
     if ($family_id): 
         $currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
         $currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
   ?>
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2">👪 Configuration du foyer</h2>
+    <h2 class="pf-card-h2" style="font-size: 1.25rem;">👪 <?= tr('set_family_config') ?></h2>
     <p class="pf-muted-note">Configurez les indicateurs et les membres partagés par votre foyer.</p>
     
-    <?php if ($showCurrency || $showZone): ?>
-    <form method="post" class="pf-stack-md" style="margin-bottom: 24px;">
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+    <form id="unifiedFamilyForm" style="margin-top: 20px; display: flex; flex-direction: column;">
       <input type="hidden" name="action" value="update_family_info">
-      
-      <div class="form-row">
-        
-        <?php if ($showCurrency): ?>
-        <div class="pf-form-group">
-          <label class="pf-label">Devise monétaire</label>
-          <input type="text" name="currency" class="pf-input" value="<?= htmlspecialchars($currentCurrency) ?>" placeholder="ex: €, $, CHF" required maxlength="10">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="custom_care_modes" id="customCareModes" value="<?= htmlspecialchars(json_encode($familyCareModes)) ?>">
+      <input type="hidden" name="deleted_kids" id="deletedKids" value="[]">
+
+      <!-- ACCORDÉON 1 : PARAMÈTRES GLOBAUX -->
+      <?php if ($showCurrency || $showZone): ?>
+      <details class="pf-accordion">
+        <summary class="pf-accordion-summary">🌍 <?= tr('set_global_params') ?></summary>
+        <div class="pf-accordion-content">
+          <div class="form-row" style="margin-bottom: 0;">
+            <?php if ($showCurrency): ?>
+            <div class="pf-form-group" style="margin-bottom: 0;">
+              <label class="pf-label">Devise monétaire</label>
+              <input type="text" name="currency" class="pf-input" value="<?= htmlspecialchars($currentCurrency) ?>" placeholder="ex: €, $, CHF" required maxlength="10">
+            </div>
+            <?php endif; ?>
+
+            <?php if ($showZone): ?>
+            <div class="pf-form-group" style="margin-bottom: 0;">
+              <label class="pf-label">Zone de vacances scolaires (France)</label>
+              <select name="zone_scolaire" class="pf-input" style="background:var(--bg-panel);">
+                <option value="A" <?= $currentZone === 'A' ? 'selected' : '' ?>>Zone A</option>
+                <option value="B" <?= $currentZone === 'B' ? 'selected' : '' ?>>Zone B</option>
+                <option value="C" <?= $currentZone === 'C' ? 'selected' : '' ?>>Zone C</option>
+                <option value="Autre" <?= $currentZone === 'Autre' ? 'selected' : '' ?>>Hors France / Autre</option>
+              </select>
+            </div>
+            <?php endif; ?>
+          </div>
         </div>
-        <?php endif; ?>
+      </details>
+      <?php endif; ?>
 
-        <?php if ($showZone): ?>
-        <div class="pf-form-group">
-          <label class="pf-label">Zone de vacances scolaires (France)</label>
-          <select name="zone_scolaire" class="pf-input" style="background:var(--bg-panel);">
-            <option value="A" <?= $currentZone === 'A' ? 'selected' : '' ?>>Zone A</option>
-            <option value="B" <?= $currentZone === 'B' ? 'selected' : '' ?>>Zone B</option>
-            <option value="C" <?= $currentZone === 'C' ? 'selected' : '' ?>>Zone C</option>
-            <option value="Autre" <?= $currentZone === 'Autre' ? 'selected' : '' ?>>Hors France / Autre</option>
-          </select>
+      <!-- ACCORDÉON 2 : MODES DE GARDE -->
+      <details class="pf-accordion">
+        <summary class="pf-accordion-summary">🏷️ <?= tr('set_care_modes') ?></summary>
+        <div class="pf-accordion-content">
+          <div id="careModesContainer" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+          <!-- Largeur contrainte avec max-content -->
+          <button type="button" class="pf-btn btn-secondary pf-btn-sm-text" onclick="promptNewCareMode()" style="padding: 4px 10px; font-size: 0.8rem; width: max-content;">+ <?= tr('set_add_care_mode') ?></button>
         </div>
-        <?php endif; ?>
-        
-      </div>
-      
-      <button type="submit" class="pf-btn">Enregistrer les paramètres</button>
+      </details>
+
+      <!-- ACCORDÉON 3 : ENFANTS (Ouvert par défaut) -->
+      <details class="pf-accordion">
+        <summary class="pf-accordion-summary">👶 <?= tr('set_kids_title') ?></summary>
+        <div class="pf-accordion-content" style="gap: 10px;">
+          <ul id="kidsListContainer" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+              <?php foreach ($kidsList as $kid): 
+                  $kidModes = json_decode($kid['care_modes'] ?? '[]', true);
+                  if (!is_array($kidModes)) $kidModes = [];
+              ?>
+                  <!-- Version compactée -->
+                  <li class="kid-row" data-id="<?= $kid['id'] ?>" style="padding: 10px 12px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; gap: 8px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                          <input type="text" name="kids[<?= $kid['id'] ?>][name]" class="pf-input" value="<?= htmlspecialchars($kid['name']) ?>" style="flex: 1; padding: 8px; font-weight: bold;" required>
+                          <button type="button" class="btn-icon-action delete" onclick="removeKidRow(this, <?= $kid['id'] ?>)" title="<?= tr('delete') ?>" style="padding: 4px;">🗑️</button>
+                      </div>
+                      <div class="kid-modes-container" style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                          <span class="stored-modes" style="display:none;"><?= htmlspecialchars(json_encode($kidModes)) ?></span>
+                      </div>
+                  </li>
+              <?php endforeach; ?>
+          </ul>
+          <!-- Largeur contrainte avec max-content -->
+          <button type="button" class="pf-btn btn-secondary pf-btn-sm-text" onclick="addKidRow()" style="padding: 4px 10px; font-size: 0.8rem; width: max-content;">+ <?= tr('set_btn_add_kid') ?></button>
+        </div>
+      </details>
+
+      <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
     </form>
-    <?php endif; ?>
-
-    <div style="border-top: 1px solid var(--border-light); margin: 24px 0;"></div>
-
-    <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px;">👶 <?= tr('set_kids_title') ?></h3>
-    <p class="pf-muted-note"><?= tr('set_kids_desc') ?></p>
-
-    <ul class="pf-stack-sm" style="list-style: none; padding: 0; margin-bottom: 20px; margin-top: 15px;">
-        <?php if (empty($kidsList)): ?>
-            <li class="pf-muted-note" style="font-style: italic;"><?= tr('set_no_kids') ?></li>
-        <?php else: ?>
-            <?php foreach ($kidsList as $kid): ?>
-                <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 8px;">
-                    <strong><?= htmlspecialchars($kid['name']) ?></strong>
-                    <button type="button" class="btn-icon-action delete" onclick="deleteChild(<?= $kid['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
-                </li>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </ul>
-
-    <form id="formAddChild" style="display: flex; gap: 10px;">
-        <input type="text" id="newChildName" class="pf-input" placeholder="<?= tr('set_add_kid_placeholder') ?>" required autocomplete="off">
-        <button type="submit" class="pf-btn pf-shrink-0">➕ <?= tr('set_btn_add_kid') ?></button>
-    </form>
-
   </section>
   <?php endif; ?>
 
@@ -620,7 +629,7 @@ require __DIR__ . '/header.php';
         </div>
       </div>
       
-      <button type="submit" class="pf-btn">Enregistrer</button>
+      <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
     </form>
   </section>
 
@@ -729,70 +738,141 @@ function copyCode() {
   });
 }
 
-// Injection des traductions dynamiques pour JS
-window.I18N = {
-    ...(window.I18N || {}),
-    'set_confirm_del_kid': "<?= tr('set_confirm_del_kid') ?>",
-    'delete': "<?= tr('delete') ?>",
-    'error_occured': "<?= tr('error_occured') ?>"
-};
+// 🟢 LOGIQUE FRONT-END UNIFIÉE (Vanilla JS) : Configuration Foyer
+let globalCareModes = <?= json_encode($familyCareModes) ?>;
+let deletedKidsIds = [];
+let newKidCounter = 0;
 
-// Gestion de l'ajout d'enfant
-const formAddChild = document.getElementById('formAddChild');
-if (formAddChild) {
-    formAddChild.addEventListener('submit', async (e) => {
+function renderCareModes() {
+    const container = document.getElementById('careModesContainer');
+    if (!container) return;
+    
+    document.getElementById('customCareModes').value = JSON.stringify(globalCareModes);
+    container.innerHTML = '';
+    
+    globalCareModes.forEach((mode, index) => {
+        const badge = document.createElement('div');
+        badge.style.cssText = "background: var(--bg-soft); color: var(--primary); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(59, 130, 246, 0.2);";
+        badge.innerHTML = `
+            ${mode} 
+            <span style="cursor: pointer; opacity: 0.6; padding: 2px;" onclick="removeCareMode(${index})">&times;</span>
+        `;
+        container.appendChild(badge);
+    });
+    
+    document.querySelectorAll('.kid-row').forEach(row => renderKidCheckboxes(row));
+}
+
+function promptNewCareMode() {
+    const newMode = prompt("Entrez le nom du nouveau mode de garde (ex: Papi/Mamie, Centre aéré...)");
+    if (newMode && newMode.trim() !== '') {
+        if (!globalCareModes.includes(newMode.trim())) {
+            globalCareModes.push(newMode.trim());
+            renderCareModes();
+        }
+    }
+}
+
+function removeCareMode(index) {
+    if (confirm("Supprimer ce mode de garde pour tous les enfants ?")) {
+        globalCareModes.splice(index, 1);
+        renderCareModes();
+    }
+}
+
+function renderKidCheckboxes(row) {
+    const container = row.querySelector('.kid-modes-container');
+    const storedSpan = row.querySelector('.stored-modes');
+    let activeModes = [];
+    
+    if (storedSpan) {
+        try { activeModes = JSON.parse(storedSpan.innerText); } catch(e){}
+        storedSpan.remove(); 
+    } else {
+        const checked = Array.from(container.querySelectorAll('input:checked')).map(i => i.value);
+        if (checked.length > 0) activeModes = checked;
+    }
+
+    const kidId = row.getAttribute('data-id');
+    container.innerHTML = '';
+    
+    if (globalCareModes.length === 0) {
+        container.innerHTML = '<span style="font-style: italic;">Aucun mode de garde configuré.</span>';
+        return;
+    }
+
+    globalCareModes.forEach(mode => {
+        const isChecked = activeModes.includes(mode) ? 'checked' : '';
+        const label = document.createElement('label');
+        label.style.cssText = "cursor: pointer; display: flex; align-items: center; gap: 5px;";
+        label.innerHTML = `<input type="checkbox" name="kids[${kidId}][modes][]" value="${mode}" class="pf-checkbox-lg" style="transform: scale(0.8);" ${isChecked}> ${mode}`;
+        container.appendChild(label);
+    });
+}
+
+function addKidRow() {
+    newKidCounter++;
+    const kidId = 'new_' + newKidCounter;
+    const ul = document.getElementById('kidsListContainer');
+    
+    const li = document.createElement('li');
+    li.className = 'kid-row';
+    li.setAttribute('data-id', kidId);
+    li.style.cssText = "padding: 10px 12px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; gap: 8px;";
+    
+    li.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+            <input type="text" name="kids[${kidId}][name]" class="pf-input" placeholder="Prénom" style="flex: 1; padding: 8px; font-weight: bold;" required>
+            <button type="button" class="btn-icon-action delete" onclick="removeKidRow(this)" title="Retirer" style="padding: 4px;">🗑️</button>
+        </div>
+        <div class="kid-modes-container" style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center;"></div>
+    `;
+    ul.appendChild(li);
+    renderKidCheckboxes(li);
+}
+
+function removeKidRow(btn, dbId = null) {
+    const row = btn.closest('.kid-row');
+    if (dbId) {
+        deletedKidsIds.push(dbId);
+        document.getElementById('deletedKids').value = JSON.stringify(deletedKidsIds);
+    }
+    row.remove();
+}
+
+const unifiedFamilyForm = document.getElementById('unifiedFamilyForm');
+if (unifiedFamilyForm) {
+    unifiedFamilyForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const input = document.getElementById('newChildName');
-        const name = input.value.trim();
-        if (!name) return;
-
-        const btn = e.target.querySelector('button[type="submit"]');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '...';
+        const form = e.target;
+        const btn = form.querySelector('button[type="submit"]');
+        const oldHtml = btn.innerHTML;
+        
+        btn.innerHTML = '⏳ Enregistrement...';
         btn.disabled = true;
 
-        const fd = new FormData();
-        fd.append('action', 'add_child');
-        fd.append('child_name', name);
-        fd.append('csrf_token', window.CSRF_TOKEN); // Important: CSRF
+        const fd = new FormData(form);
 
         try {
             const res = await pachaFetch('settings.php', { method: 'POST', body: fd });
             if (res.success) {
-                window.location.reload();
+                showToast("Configuration du foyer enregistrée avec succès.", "success");
+                setTimeout(() => window.location.reload(), 1000);
             } else {
-                showToast(res.error || window.I18N['error_occured'], 'error');
+                showToast(res.error || "Erreur de sauvegarde.", "error");
             }
         } catch (err) {
-            showToast(window.I18N['error_occured'], 'error');
+            showToast("Erreur technique de sauvegarde.", "error");
         } finally {
-            btn.innerHTML = originalText;
+            btn.innerHTML = oldHtml;
             btn.disabled = false;
         }
     });
 }
 
-// Gestion de la suppression d'enfant
-async function deleteChild(id) {
-    const confirmed = await pachaConfirm(window.I18N['delete'], window.I18N['set_confirm_del_kid']);
-    if (!confirmed) return;
-
-    const fd = new FormData();
-    fd.append('action', 'delete_child');
-    fd.append('child_id', id);
-    fd.append('csrf_token', window.CSRF_TOKEN); // Important: CSRF
-
-    try {
-        const res = await pachaFetch('settings.php', { method: 'POST', body: fd });
-        if (res.success) {
-            window.location.reload();
-        } else {
-            showToast(res.error || window.I18N['error_occured'], 'error');
-        }
-    } catch (err) {
-        showToast(window.I18N['error_occured'], 'error');
-    }
-}
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('careModesContainer')) renderCareModes();
+});
 </script>
 
 <?php require __DIR__ . '/footer.php'; ?>
