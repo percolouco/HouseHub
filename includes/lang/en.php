@@ -592,48 +592,56 @@ return [
     'btn_save' => 'Save',
 
     // ==========================================
-    // GIFTS
+    // MODULE: GIFTS (gift-list)
     // ==========================================
-    'gift_page_title'        => 'HouseHub - Gift list',
-    'gift_occ_tio'           => 'Tió',
-    'gift_occ_noel'          => 'Christmas',
-    'gift_occ_rois'          => 'Three Kings',
-    'gift_occ_anniv'         => 'Birthday',
-    'gift_occ_sant'          => 'Name day',
-    'gift_main_title'        => 'Gift list %s',
-    'gift_aria_change_view'  => 'Change view',
-    'gift_view_nadal'        => 'Christmas',
-    'gift_view_anniv'        => 'Birthdays',
-    'gift_view_by_party'     => 'View by occasion',
-    'gift_no_gifts'          => 'No gifts recorded for %s in this view.',
-    'gift_add_gift'          => 'Add a gift',
-    'gift_paid_by'           => 'paid by %s',
-    'gift_summary_title'     => 'Budget summary',
-    'gift_col_adult'         => 'Adult',
-    'gift_col_child'         => 'Child',
-    'gift_col_party'         => 'Occasion',
-    'gift_debtor'            => 'Debtor',
-    'gift_creditor'          => 'Creditor',
-    'gift_liquidations'      => 'Settlement',
-    'gift_no_debt'           => 'No outstanding debts.',
-    'gift_owes'              => 'owes',
-    'gift_to'                => 'to',
-    'gift_detailed_list'     => 'Detailed gift list',
-    'gift_col_gift'          => 'Gift',
-    'gift_col_link'          => 'Link',
-    'gift_modal_title_add'   => 'Add a gift for %s',
-    'gift_modal_title_edit'  => 'Edit gift',
+
+    // 1. Titles and headers
+    'gift_page_title' => 'Gift List',
+    'gift_main_title' => 'Gifts of %s', // %s will be replaced by the year (e.g., Gifts of 2026)
+    'settings'        => 'Settings',
+    
+    // 2. Filters
+    'gift_filter_all_children' => 'All children',
+    'gift_filter_all_adults'   => 'All adults',
+
+    // 3. Content and empty states
+    'gift_add_gift'              => 'Add',
+    'gift_empty_state_no_gifts'  => 'No gifts recorded for this occasion.',
+    'gift_empty_state_no_filter' => 'No gifts match your filters.',
+    'gift_paid_by'               => 'Paid by %s', // %s will be replaced by the payer's name
+
+    // 4. Tricount Section (Balance & Refunds)
+    'gift_liquidations' => 'Balance & Refunds',
+    'gift_no_debt'      => 'Everything is settled, no debts!',
+    'gift_owes'         => 'owes',
+    'gift_view_matrix'  => 'View detailed matrix',
+    'gift_debtor'       => 'Debtor',
+    'gift_creditor'     => 'Creditor',
+
+    // 5. Modal: Add/Edit Gift
+    'gift_col_adult'         => 'On behalf of',
     'gift_modal_payer'       => 'Paid by',
-    'gift_modal_gift_name'   => 'Gift name',
-    'gift_modal_ph_name'     => 'e.g. Lego Star Wars',
-    'gift_modal_price'       => 'Price (€)',
-    'gift_modal_link'        => 'Link (optional)',
-    'gift_confirm_delete'    => 'Are you sure you want to delete this gift?',
-    'gift_filter_all_children'   => 'All children',
-    'gift_filter_all_adults'     => 'All adults',
-    'gift_empty_state_no_gifts'  => 'No gifts yet.',
-    'gift_empty_state_no_filter' => 'No gifts match the filter.',
-    'gift_view_matrix'           => 'View detailed matrix',
+    'gift_modal_gift_name'   => 'Gift description',
+    'gift_modal_price'       => 'Estimated / paid price (€)',
+    'gift_modal_link'        => 'Product link (URL)',
+    'gift_modal_title_add'   => 'Add for %s', // JS: %s = child's name
+    'gift_modal_title_edit'  => 'Edit gift', // JS
+    'gift_confirm_delete'    => 'Are you sure you want to delete this gift?', // JS
+
+    // 6. Modal: Occasions Settings
+    'gift_settings_title'            => 'Occasions Settings',
+    'gift_settings_add_title'        => '+ Add an occasion',
+    'gift_settings_name_placeholder' => 'Name (e.g. Valentine\'s Day)',
+    'gift_settings_date_placeholder' => 'MM-DD',
+    'gift_settings_date_help'        => 'Date (MM-DD) is optional. Leave empty for a floating date.',
+    'gift_settings_empty'            => 'No occasion configured.', // JS
+    'gift_settings_active'           => 'Active', // JS
+
+    // 7. Generic buttons
+    'btn_cancel' => 'Cancel',
+    'btn_save'   => 'Save',
+    'btn_add'    => 'Add',
+    'loading'    => 'Loading...',
 
     // ==========================================
     // GARAGE MANAGER

@@ -599,48 +599,57 @@ return [
     'bud_adv_confirm_delete' => 'Supprimer définitivement cette avance ?',
 
     // ==========================================
-    // CADEAUX (GIFTS)
+    // MODULE : CADEAUX (gift-list)
     // ==========================================
-    'gift_page_title'        => 'HouseHub - Liste de cadeaux',
-    'gift_occ_tio'           => 'Tió',
-    'gift_occ_noel'          => 'Noël',
-    'gift_occ_rois'          => 'Rois mages',
-    'gift_occ_anniv'         => 'Anniversaire',
-    'gift_occ_sant'          => 'Saint',
-    'gift_main_title'        => 'Liste de cadeaux %s',
-    'gift_aria_change_view'  => 'Changer la vue',
-    'gift_view_nadal'        => 'Noël',
-    'gift_view_anniv'        => 'Anniversaires',
-    'gift_view_by_party'     => 'Vue par fête',
-    'gift_no_gifts'          => 'Aucun cadeau enregistré pour %s dans cette vue.',
-    'gift_add_gift'          => 'Ajouter un cadeau',
-    'gift_paid_by'           => 'payé par %s',
-    'gift_summary_title'     => 'Résumé du budget',
-    'gift_col_adult'         => 'Adulte',
-    'gift_col_child'         => 'Enfant',
-    'gift_col_party'         => 'Fête',
-    'gift_debtor'            => 'Débiteur',
-    'gift_creditor'          => 'Créancier',
-    'gift_liquidations'      => 'Tricount',
-    'gift_no_debt'           => 'Aucune dette en cours.',
-    'gift_owes'              => 'doit',
-    'gift_to'                => 'à',
-    'gift_detailed_list'     => 'Liste détaillée des cadeaux',
-    'gift_col_gift'          => 'Cadeau',
-    'gift_col_link'          => 'Lien',
-    'gift_modal_title_add'   => 'Ajouter un cadeau pour %s',
-    'gift_modal_title_edit'  => 'Modifier le cadeau',
+
+    // 1. Titres et en-têtes
+    'gift_page_title' => 'Liste des Cadeaux',
+    'gift_main_title' => 'Cadeaux de %s', // %s sera remplacé par l'année (ex: Cadeaux de 2026)
+    'settings'        => 'Paramètres',
+    
+    // 2. Filtres
+    'gift_filter_all_children' => 'Tous les enfants',
+    'gift_filter_all_adults'   => 'Tous les adultes',
+
+    // 3. Contenu et états vides
+    'gift_add_gift'              => 'Ajouter',
+    'gift_empty_state_no_gifts'  => 'Aucun cadeau enregistré pour cette fête.',
+    'gift_empty_state_no_filter' => 'Aucun cadeau ne correspond à vos filtres.',
+    'gift_paid_by'               => 'Payé par %s', // %s sera remplacé par le nom du payeur
+
+    // 4. Section Tricount (Bilan & Remboursements)
+    'gift_liquidations' => 'Bilan & Remboursements',
+    'gift_no_debt'      => 'Tout est à jour, aucune dette !',
+    'gift_owes'         => 'doit',
+    'gift_view_matrix'  => 'Voir la matrice détaillée',
+    'gift_debtor'       => 'Débiteur',
+    'gift_creditor'     => 'Créancier',
+
+    // 5. Modale : Ajout/Modification de Cadeau
+    'gift_col_adult'         => 'Pour le compte de',
     'gift_modal_payer'       => 'Payé par',
-    'gift_modal_gift_name'   => 'Nom du cadeau',
-    'gift_modal_ph_name'     => 'ex: Lego Star Wars',
-    'gift_modal_price'       => 'Prix (€)',
-    'gift_modal_link'        => 'Lien (optionnel)',
-    'gift_confirm_delete'    => 'Voulez-vous vraiment supprimer ce cadeau ?',
-    'gift_filter_all_children'   => 'Tous les enfants',
-    'gift_filter_all_adults'     => 'Tous les adultes',
-    'gift_empty_state_no_gifts'  => 'Aucun cadeau pour le moment.',
-    'gift_empty_state_no_filter' => 'Aucun cadeau ne correspond au filtre.',
-    'gift_view_matrix'           => 'Voir la matrice détaillée',
+    'gift_modal_gift_name'   => 'Description du cadeau',
+    'gift_modal_price'       => 'Prix estimé / payé (€)',
+    'gift_modal_link'        => 'Lien du produit (URL)',
+    'gift_modal_title_add'   => 'Ajouter pour %s', // JS : %s = nom de l'enfant
+    'gift_modal_title_edit'  => 'Modifier le cadeau', // JS
+    'gift_confirm_delete'    => 'Voulez-vous vraiment supprimer ce cadeau ?', // JS
+
+    // 6. Modale : Paramètres des Fêtes (Nouveau !)
+    'gift_settings_title'            => 'Configuration des Fêtes',
+    'gift_settings_add_title'        => '+ Ajouter une occasion',
+    'gift_settings_name_placeholder' => 'Nom (ex: Saint Valentin)',
+    'gift_settings_date_placeholder' => 'MM-JJ',
+    'gift_settings_date_help'        => 'La date (MM-JJ) est optionnelle. Laissez vide pour une fête mobile.',
+    'gift_settings_empty'            => 'Aucune fête configurée.', // JS
+    'gift_settings_active'           => 'Actif', // JS
+
+    // 7. Boutons génériques (si tu ne les as pas déjà en global)
+    'btn_cancel' => 'Annuler',
+    'btn_save'   => 'Enregistrer',
+    'btn_add'    => 'Ajouter',
+    'loading'    => 'Chargement...',
+    
     // ==========================================
     // GARAGE MANAGER
     // ==========================================

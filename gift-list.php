@@ -8,66 +8,58 @@ require_once __DIR__ . '/includes/i18n.php';
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-// --- 1. CONFIGURATION ---
+// --- 1. CONFIGURATION DE BASE ---
 $year       = (int)date('Y');
 $pageTitle  = tr('gift_page_title');
 $activePage = "gift-list";
 $mainClass  = "pf-gift-list";
 $pageCss    = "/modules/gift-list/gift-list.css";
 
-$children = ['Pol', 'Pep', 'Elna', 'Bru', 'Guim'];
-$baseAdults = ['Laia', 'Laura', 'Avi Iaia'];
-$extraAdults = ['Pauline', 'Papy JC', 'Mamy Caro'];
+// --- 2. RÉCUPÉRATION DYNAMIQUE DES DONNÉES (Multi-tenant) ---
+$stmt = $pdo->query("SELECT name FROM pf_people WHERE role = 'enfant' AND is_active = 1 ORDER BY name ASC");
+$children = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun enfant configuré'];
 
-$adultsByChildForAnniv = [
-    'Pol'  => array_merge($baseAdults, $extraAdults),
-    'Pep'  => array_merge($baseAdults, $extraAdults),
-    'Elna' => $baseAdults,
-    'Bru'  => $baseAdults,
-    'Guim' => $baseAdults,
-];
+$stmt = $pdo->query("SELECT name FROM pf_people WHERE role NOT IN ('enfant', 'nounou') AND is_active = 1 ORDER BY name ASC");
+$allAdultsList = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun adulte configuré'];
 
-$VIEWS = [
-    'nadal'       => ['TIO', 'NOEL', 'ROIS'],
-    'anniversary' => ['ANNIV', 'SANT'],
-];
+$stmt = $pdo->query("SELECT code, name, month_date FROM pf_gift_occasions WHERE is_active = 1 ORDER BY month_date ASC, id ASC");
+$activeOccasions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$currentView = strtolower($_GET['view'] ?? ($_SESSION['gift_view'] ?? 'nadal'));
-if (!isset($VIEWS[$currentView])) $currentView = 'nadal';
-$_SESSION['gift_view'] = $currentView;
-$allowedOccasions = $VIEWS[$currentView];
+if (empty($activeOccasions)) {
+    $activeOccasions = [['code' => 'DEMO', 'name' => 'Fête par défaut', 'month_date' => null]];
+}
+$allowedOccasionCodes = array_column($activeOccasions, 'code');
 
-$allOccasionLabels = [
-    'TIO' => tr('gift_occ_tio'), 'NOEL' => tr('gift_occ_noel'), 'ROIS' => tr('gift_occ_rois'),
-    'ANNIV' => tr('gift_occ_anniv'), 'SANT' => tr('gift_occ_sant')
-];
 $occasionIcons = [
     'TIO' => '/modules/gift-list/assets/img/tio.png', 'NOEL' => '/modules/gift-list/assets/img/santa.png',
     'ROIS' => '/modules/gift-list/assets/img/reis.png', 'ANNIV' => '/modules/gift-list/assets/img/corona.png',
     'SANT' => '/modules/gift-list/assets/img/sant.png'
 ];
 
-// --- 2. DONNÉES ---
-$inMarks = implode(',', array_fill(0, count($allowedOccasions), '?'));
-// Tri: Par Fête, puis Enfant, puis Adulte
+// --- 3. CHARGEMENT DES CADEAUX ---
+$inMarks = implode(',', array_fill(0, count($allowedOccasionCodes), '?'));
 $sql = "SELECT * FROM pf_gifts WHERE year = ? AND occasion IN ($inMarks) ORDER BY occasion ASC, child_name ASC, adult_name ASC";
 $stmt = $pdo->prepare($sql);
-$stmt->execute(array_merge([$year], $allowedOccasions));
+$stmt->execute(array_merge([$year], $allowedOccasionCodes));
 $gifts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $data = []; 
-$adultsInView = [];
+$adultsInView = []; 
 
 foreach ($gifts as $g) {
     $data[$g['occasion']][$g['child_name']]['gifts'][] = $g;
     $data[$g['occasion']][$g['child_name']]['totals'][$g['adult_name']] = ($data[$g['occasion']][$g['child_name']]['totals'][$g['adult_name']] ?? 0) + $g['amount'];
     $adultsInView[$g['adult_name']] = true;
+    if (!empty($g['payer_name'])) {
+        $adultsInView[$g['payer_name']] = true;
+    }
 }
-$allAdultsList = array_keys($adultsInView); sort($allAdultsList);
 
-// --- 3. TRICOUNT ---
-$people = array_values(array_unique(array_merge($baseAdults, array_column($gifts, 'adult_name'), array_column($gifts, 'payer_name'))));
+// --- 4. TRICOUNT (Bilan et Remboursements) ---
+$people = array_values(array_unique(array_merge($allAdultsList, array_keys($adultsInView))));
 $people = array_filter($people);
+sort($people);
+
 $matrix = [];
 foreach ($people as $p1) { foreach ($people as $p2) $matrix[$p1][$p2] = 0.0; }
 
@@ -94,18 +86,15 @@ for ($i = 0; $i < $countPeople; $i++) {
 require __DIR__ . '/header.php';
 ?>
 
-<div class="pf-container cl-view-<?= htmlspecialchars($currentView) ?>">
+<div class="pf-container cl-view-dynamic">
     
     <div class="cl-titlebar">
         <h1>🎁 <?= sprintf(tr('gift_main_title'), $year) ?></h1>
-        <div class="cl-view-switch">
-            <a href="?view=nadal" class="cl-view-btn <?= $currentView === 'nadal' ? 'is-active' : '' ?>"><?= tr('gift_view_nadal') ?></a>
-            <a href="?view=anniversary" class="cl-view-btn <?= $currentView === 'anniversary' ? 'is-active' : '' ?>"><?= tr('gift_view_anniv') ?></a>
-        </div>
+        <button class="btn btn-ghost btn-icon" id="btn-open-gift-settings" title="<?= tr('settings') ?>">⚙️</button>
     </div>
 
     <div class="pf-filter-bar">
-        <span style="font-size:1.2rem;">🔍</span>
+        <span class="pf-filter-icon">🔍</span>
         
         <div class="pf-multi-select" id="ms-child">
             <div class="pf-ms-trigger" onclick="toggleMS('ms-child-list', this)">
@@ -139,16 +128,22 @@ require __DIR__ . '/header.php';
     </div>
 
     <section class="pf-section">
-        <?php foreach ($allowedOccasions as $occCode): ?>
+        <?php foreach ($activeOccasions as $occ): 
+            $occCode = $occ['code'];
+            $occName = $occ['name'];
+        ?>
             <div class="js-occ-section">
                 <h2 class="cl-occasion-title">
-                    <?php if(!empty($occasionIcons[$occCode])): ?><img src="<?= $occasionIcons[$occCode] ?>" class="cl-occasion-icon"><?php endif; ?>
-                    <?= $allOccasionLabels[$occCode] ?>
+                    <?php if(!empty($occasionIcons[$occCode])): ?>
+                        <img src="<?= $occasionIcons[$occCode] ?>" class="cl-occasion-icon" alt="">
+                    <?php else: ?>
+                        <span>🎀</span> 
+                    <?php endif; ?>
+                    <?= htmlspecialchars($occName) ?>
                 </h2>
 
                 <?php foreach ($children as $child): 
                     $childData = $data[$occCode][$child] ?? ['gifts' => [], 'totals' => []];
-                    $adultsForThisChild = ($currentView === 'anniversary' && in_array($child, ['Pol', 'Pep'])) ? array_merge($baseAdults, $extraAdults) : $baseAdults;
                 ?>
                 <div class="pf-child-section js-child" data-name="<?= htmlspecialchars($child) ?>">
                     <div class="pf-child-header">
@@ -156,7 +151,7 @@ require __DIR__ . '/header.php';
                         <button class="pf-btn pf-btn-small btn-add-gift" 
                                 data-child="<?= htmlspecialchars($child) ?>" 
                                 data-occ="<?= htmlspecialchars($occCode) ?>" 
-                                data-adults="<?= htmlspecialchars(json_encode(array_values($adultsForThisChild))) ?>">
+                                data-adults="<?= htmlspecialchars(json_encode(array_values($allAdultsList))) ?>">
                             ＋ <?= tr('gift_add_gift') ?>
                         </button>
                     </div>
@@ -168,9 +163,9 @@ require __DIR__ . '/header.php';
                     </div>
 
                     <?php if (empty($childData['gifts'])): ?>
-                        <p class="js-empty-state" style="color:var(--text-muted); font-size:0.9rem; font-style:italic; margin:0;"><?= tr('gift_empty_state_no_gifts') ?></p>
+                        <p class="js-empty-state gift-empty-state"><?= tr('gift_empty_state_no_gifts') ?></p>
                     <?php else: ?>
-                        <p class="js-empty-state" style="color:var(--text-muted); font-size:0.9rem; font-style:italic; display:none; margin:0;"><?= tr('gift_empty_state_no_filter') ?></p>
+                        <p class="js-empty-state gift-empty-state pf-hidden"><?= tr('gift_empty_state_no_filter') ?></p>
                         <div class="pf-gift-feed">
                             <?php foreach ($childData['gifts'] as $g): ?>
                             <div class="pf-gift-card-compact js-gift-card" data-adult="<?= htmlspecialchars($g['adult_name']) ?>">
@@ -201,41 +196,42 @@ require __DIR__ . '/header.php';
         <?php endforeach; ?>
     </section>
 
-    <section class="pf-section pf-section--panel" style="border:1px solid var(--border-light); margin-top:40px;">
-        <h2 style="margin-top:0; color:var(--text-main); font-size:1.3rem;">⚖️ <?= tr('gift_liquidations') ?? 'Bilan & Remboursements' ?></h2>
+    <section class="pf-section pf-section--panel gift-tricount-section">
+        <h2 class="gift-tricount-title">⚖️ <?= tr('gift_liquidations') ?? 'Bilan & Remboursements' ?></h2>
         
         <?php if (empty($settlements)): ?>
-            <p style="color:var(--success); font-weight:700; margin-bottom:0;">✅ <?= tr('gift_no_debt') ?></p>
+            <p class="gift-tricount-success">✅ <?= tr('gift_no_debt') ?></p>
         <?php else: ?>
             <ul class="pf-tricount-list">
                 <?php foreach ($settlements as $s): ?>
                     <li class="pf-tricount-item">
                         <span><strong><?= htmlspecialchars($s['from']) ?></strong> <?= tr('gift_owes') ?> à <?= htmlspecialchars($s['to']) ?></span>
-                        <strong style="color:var(--danger);"><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong>
+                        <strong class="gift-tricount-debt-amount"><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong>
                     </li>
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
 
-        <details style="margin-top:20px; padding:12px; border-radius:8px;">
-            <summary style="cursor:pointer; font-weight:600; color:var(--text-muted); outline:none;"><?= tr('gift_view_matrix') ?></summary>
-            <div style="overflow-x:auto; margin-top:15px;">
+        <details class="gift-matrix-details">
+            <summary class="gift-matrix-summary"><?= tr('gift_view_matrix') ?></summary>
+            <div class="gift-matrix-wrapper">
                 <table class="pf-table pf-table--compact cl-debt-matrix">
                     <thead>
                         <tr>
-                            <th style="position:sticky; left:0; background:#f8fafc; z-index:2; border-right:2px solid #e2e8f0;"><?= tr('gift_debtor') ?> \ <?= tr('gift_creditor') ?></th>
+                            <th class="sticky-col bg-header"><?= tr('gift_debtor') ?> \ <?= tr('gift_creditor') ?></th>
                             <?php foreach ($people as $p): ?><th><?= htmlspecialchars($p) ?></th><?php endforeach; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($people as $debtor): ?>
                             <tr>
-                                <th style="position:sticky; left:0; background:white; z-index:2; border-right:2px solid #e2e8f0;"><?= htmlspecialchars($debtor) ?></th>
+                                <th class="sticky-col bg-body"><?= htmlspecialchars($debtor) ?></th>
                                 <?php foreach ($people as $creditor): 
                                     $val = $matrix[$debtor][$creditor] ?? 0;
                                     $display = ($debtor === $creditor) || $val == 0 ? '—' : number_format($val, 2, ',', ' ') . ' €';
+                                    $cellClass = $val > 0 ? 'gift-cell-danger' : 'gift-cell-muted';
                                 ?>
-                                    <td style="<?= $val > 0 ? 'color:var(--danger); font-weight:700; background:#fef2f2;' : 'color:var(--text-muted);' ?>"><?= $display ?></td>
+                                    <td class="<?= $cellClass ?>"><?= $display ?></td>
                                 <?php endforeach; ?>
                             </tr>
                         <?php endforeach; ?>
@@ -247,10 +243,10 @@ require __DIR__ . '/header.php';
 </div>
 
 <div id="pf-gift-modal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 500px; width: 95%;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="modalTitle" class="pf-modal-title" style="margin:0; border:none; padding:0;">Cadeau</h3>
-            <button type="button" class="btn-modal-close" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--text-muted); line-height:1;">&times;</button>
+    <div class="pf-modal-content gift-modal-custom-content">
+        <div class="gift-modal-custom-header">
+            <h3 id="modalTitle" class="pf-modal-title gift-modal-custom-title">Cadeau</h3>
+            <button type="button" class="btn-modal-close gift-modal-close-btn">&times;</button>
         </div>
         
         <form method="post" action="/modules/gift-list/save-gift.php" id="giftForm">
@@ -264,9 +260,9 @@ require __DIR__ . '/header.php';
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_payer') ?></label><select name="payer_name" id="modalPayer" class="pf-input" required></select></div>
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_gift_name') ?></label><input type="text" name="gift_description" id="modalDesc" class="pf-input" required></div>
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_price') ?></label><input type="number" step="0.01" name="amount" id="modalAmount" class="pf-input"></div>
-            <div class="pf-form-group" style="margin-bottom:25px;"><label class="pf-label"><?= tr('gift_modal_link') ?></label><input type="url" name="product_link" id="modalLink" class="pf-input"></div>
+            <div class="pf-form-group gift-form-group-spaced"><label class="pf-label"><?= tr('gift_modal_link') ?></label><input type="url" name="product_link" id="modalLink" class="pf-input"></div>
             
-            <div class="modal-footer" style="padding-top:15px; display:flex; justify-content:flex-end; gap:10px;">
+            <div class="modal-footer gift-modal-custom-footer">
                 <button type="button" class="pf-btn btn-secondary btn-modal-close"><?= tr('btn_cancel') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
@@ -274,11 +270,42 @@ require __DIR__ . '/header.php';
     </div>
 </div>
 
+<!-- 2. Modale Paramètres Fêtes -->
+<div class="gift-settings-backdrop" id="modal-gift-settings">
+    <div class="gift-settings-modal">
+        <div class="gift-settings-header">
+            <h3>⚙️ <?= tr('gift_settings_title') ?? 'Configuration' ?></h3>
+            <button class="gift-settings-close" id="btn-close-gift-settings">×</button>
+        </div>
+        <div class="gift-settings-body">
+            
+            <h4 class="gift-add-subtitle"><?= tr('gift_settings_add_title') ?? '+ Ajouter' ?></h4>
+            <form id="form-add-occasion" class="gift-add-form">
+                <input type="text" class="pf-input" name="name" placeholder="<?= tr('gift_settings_name_placeholder') ?? 'Nom' ?>" required style="flex: 1; min-width: 150px; padding: 0.4rem 0.75rem;">
+                <input type="text" class="pf-input" name="month_date" placeholder="<?= tr('gift_settings_date_placeholder') ?? 'MM-JJ' ?>" style="width: 120px; padding: 0.4rem 0.75rem;">
+                <button type="submit" class="btn btn-secondary"><?= tr('btn_add') ?? 'Ajouter' ?></button>
+            </form>
+            <small class="gift-help-text"><?= tr('gift_settings_date_help') ?? 'Optionnel' ?></small>
+
+            <hr style="border:0; border-bottom:1px solid var(--border-light); margin: 1rem 0;">
+
+            <form id="form-save-toggles">
+                <div id="occasions-list-container" class="gift-occasions-list"></div>
+                
+                <div class="modal-footer gift-modal-custom-footer" style="padding-top: 1rem; border-top: 1px solid var(--border-light);">
+                    <button type="button" class="btn btn-secondary" id="btn-cancel-settings"><?= tr('btn_cancel') ?? 'Annuler' ?></button>
+                    <button type="submit" class="btn btn-primary"><?= tr('btn_save') ?? 'Enregistrer' ?></button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
 <script>
 // ==========================================
 // 1. GESTION DU COMPOSANT MULTI-SELECT VANILLA
 // ==========================================
-
 function toggleMS(listId, triggerEl) {
     document.querySelectorAll('.pf-ms-dropdown').forEach(el => { if (el.id !== listId) el.classList.remove('open'); });
     document.querySelectorAll('.pf-ms-trigger').forEach(el => { if (el !== triggerEl) el.classList.remove('active'); });
@@ -381,14 +408,12 @@ function applyGiftFilters() {
 }
 
 // ==========================================
-// 3. LOGIQUE DE LA MODALE & DELEGATION JS
+// 2. GESTION DE LA MODALE CADEAU (AJOUT/ÉDITION)
 // ==========================================
-
 const modal = document.getElementById('pf-gift-modal');
 const adultSelect = document.getElementById('modalAdult');
 const payerSelect = document.getElementById('modalPayer');
 
-// Synchronisation automatique : Adulte -> Payeur
 if (adultSelect && payerSelect) {
     adultSelect.addEventListener('change', function() {
         let exists = false;
@@ -409,10 +434,7 @@ function populateSelects(adults) {
     });
 }
 
-// L'écouteur d'événements global pour tous les boutons !
 document.body.addEventListener('click', async function(e) {
-    
-    // --- 1. BOUTON FERMER MODALE ---
     if (e.target.closest('.btn-modal-close')) {
         if (modal) {
             modal.classList.remove('open');
@@ -421,7 +443,6 @@ document.body.addEventListener('click', async function(e) {
         return;
     }
 
-    // --- 2. BOUTON AJOUTER (+) ---
     const btnAdd = e.target.closest('.btn-add-gift');
     if (btnAdd) {
         const childName = btnAdd.dataset.child;
@@ -453,7 +474,6 @@ document.body.addEventListener('click', async function(e) {
         return;
     }
 
-    // --- 3. BOUTON MODIFIER (CRAYON) ---
     const btnEdit = e.target.closest('.btn-edit-gift');
     if (btnEdit) {
         const data = JSON.parse(btnEdit.dataset.gift || '{}');
@@ -485,7 +505,6 @@ document.body.addEventListener('click', async function(e) {
         return;
     }
 
-    // --- 4. BOUTON SUPPRIMER (POUBELLE) ---
     const btnDel = e.target.closest('.btn-delete-gift');
     if (btnDel) {
         const giftId = btnDel.dataset.id;
@@ -506,10 +525,6 @@ document.body.addEventListener('click', async function(e) {
     }
 });
 
-// ==========================================
-// 4. SOUMISSION AJAX DU FORMULAIRE
-// ==========================================
-
 const giftForm = document.getElementById('giftForm');
 if (giftForm) {
     giftForm.addEventListener('submit', async (e) => {
@@ -525,6 +540,159 @@ if (giftForm) {
         } catch(err) {
             console.error(err);
             btn.innerText = oldText; 
+            btn.disabled = false;
+        }
+    });
+}
+
+// ==========================================
+// GESTION DES PARAMÈTRES (MODALE FÊTES ⚙️)
+// ==========================================
+
+// 1. Fonctions d'ouverture / fermeture propres
+function closeGiftSettings() {
+    document.getElementById('modal-gift-settings').classList.remove('show');
+    document.body.classList.remove('no-scroll');
+}
+
+const btnOpenSettings = document.getElementById('btn-open-gift-settings');
+if (btnOpenSettings) {
+    btnOpenSettings.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const modalSettings = document.getElementById('modal-gift-settings');
+        if (modalSettings) {
+            modalSettings.classList.add('show');
+            document.body.classList.add('no-scroll');
+            await loadGiftOccasions();
+        }
+    });
+}
+
+document.getElementById('btn-close-gift-settings')?.addEventListener('click', closeGiftSettings);
+document.getElementById('btn-cancel-settings')?.addEventListener('click', closeGiftSettings);
+
+// Fermeture au clic sur le fond (backdrop)
+const modalGiftSettings = document.getElementById('modal-gift-settings');
+if (modalGiftSettings) {
+    modalGiftSettings.addEventListener('click', (e) => {
+        if (e.target === modalGiftSettings) {
+            closeGiftSettings();
+        }
+    });
+}
+
+// 2. Chargement dynamique de la liste
+async function loadGiftOccasions() {
+    const container = document.getElementById('occasions-list-container');
+    if (!container) return;
+    
+    const txtLoading = window.I18N && window.I18N['loading'] ? window.I18N['loading'] : '⏳';
+    const txtEmpty = window.I18N && window.I18N['gift_settings_empty'] ? window.I18N['gift_settings_empty'] : 'Vide';
+    const txtActive = window.I18N && window.I18N['gift_settings_active'] ? window.I18N['gift_settings_active'] : 'Actif';
+
+    container.innerHTML = `<div class="gift-loader">${txtLoading}</div>`;
+
+    try {
+        const res = await fetch('/modules/gift-list/api-settings.php?action=get_occasions');
+        const text = await res.text();
+        const data = JSON.parse(text);
+
+        if (!data.ok) throw new Error(data.error);
+
+        if (data.data.length === 0) {
+            container.innerHTML = `<em>${txtEmpty}</em>`;
+            return;
+        }
+
+        let html = '<div class="gift-occasions-grid">';
+        data.data.forEach(occ => {
+            const isChecked = occ.is_active == 1 ? 'checked' : '';
+            const dateBadge = occ.month_date ? `<span class="gift-date-badge">${occ.month_date}</span>` : '';
+            
+            html += `
+                <div class="pf-card gift-occasion-card">
+                    <div>
+                        <strong>${occ.name}</strong> ${dateBadge}
+                    </div>
+                    <label class="gift-occasion-toggle">
+                        <input type="checkbox" class="occ-toggle-cb" data-id="${occ.id}" ${isChecked}>
+                        <small>${txtActive}</small>
+                    </label>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+
+    } catch (e) {
+        container.innerHTML = `<div class="gift-error-msg">Erreur : ${e.message}</div>`;
+    }
+}
+
+// 3. Soumission du formulaire d'AJOUT
+const formAddOccasion = document.getElementById('form-add-occasion');
+if (formAddOccasion) {
+    formAddOccasion.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = formAddOccasion.querySelector('button[type="submit"]');
+        const oldText = btn.innerText;
+        btn.innerText = '⏳';
+        btn.disabled = true;
+
+        const formData = new FormData(formAddOccasion);
+        formData.append('action', 'add_occasion');
+
+        try {
+            const res = await fetch('/modules/gift-list/api-settings.php', { method: 'POST', body: formData });
+            const text = await res.text();
+            const data = JSON.parse(text);
+
+            if (!data.ok) throw new Error(data.error || 'Erreur');
+            
+            formAddOccasion.reset();
+            await loadGiftOccasions(); // Rafraîchit juste la liste dans la modale !
+
+        } catch (err) {
+            alert("Erreur: " + err.message);
+        } finally {
+            btn.innerText = oldText;
+            btn.disabled = false;
+        }
+    });
+}
+
+// 4. Soumission GLOBALE (Bouton Enregistrer) pour les Checkboxes
+const formSaveToggles = document.getElementById('form-save-toggles');
+if (formSaveToggles) {
+    formSaveToggles.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = formSaveToggles.querySelector('button[type="submit"]');
+        const oldText = btn.innerText;
+        btn.innerText = '⏳';
+        btn.disabled = true;
+
+        // On récolte l'état de toutes les checkboxes
+        const states = [];
+        formSaveToggles.querySelectorAll('.occ-toggle-cb').forEach(cb => {
+            states.push({ id: cb.dataset.id, state: cb.checked ? 1 : 0 });
+        });
+
+        const formData = new FormData();
+        formData.append('action', 'save_toggles');
+        formData.append('states', JSON.stringify(states));
+
+        try {
+            const res = await fetch('/modules/gift-list/api-settings.php', { method: 'POST', body: formData });
+            const text = await res.text();
+            const data = JSON.parse(text);
+
+            if (!data.ok) throw new Error(data.error);
+
+            // Succès : on rafraîchit la page pour afficher/masquer les onglets
+            window.location.reload(); 
+        } catch (err) {
+            alert("Erreur: " + err.message);
+            btn.innerText = oldText;
             btn.disabled = false;
         }
     });
