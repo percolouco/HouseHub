@@ -1,261 +1,158 @@
 <?php
-// Script de migration : Refonte globale Multi-Tenant & Synchronisation des schémas
+/**
+ * Script de migration global HouseHub OS (Multi-tenant)
+ * À exécuter via le navigateur : http://localhost:8083/migrate.php
+ */
+
 require_once __DIR__ . '/includes/meta_db.php';
 
-echo "<h1>🚀 Début de la migration Globale ...</h1>";
+$db_host = getenv('DB_HOST') ?: '127.0.0.1';
+$db_user = getenv('DB_USER') ?: 'househub';
+$db_pass = getenv('DB_PASS') ?: 'househub_dev';
 
-// ==========================================
-// 0. MISE À JOUR DE LA META DB
-// ==========================================
-echo "<h3>Mise à jour Meta DB (househub_meta)</h3><ul>";
+echo "<h1>🚀 Début de la migration Multi-Tenant</h1>";
+
 try {
-    $meta_pdo->exec("ALTER TABLE user_calendar_integrations ADD COLUMN calendar_prefs_json TEXT DEFAULT NULL");
-    echo "<li><span style='color:green'>Colonne 'calendar_prefs_json' ajoutée à user_calendar_integrations.</span></li>";
-} catch (\PDOException $e) {
-    if ($e->getCode() == '42S21' || strpos($e->getMessage(), '1060') !== false) {
-        echo "<li><span style='color:gray'>Colonne 'calendar_prefs_json' déjà présente.</span></li>";
-    } else { throw $e; }
-}
-echo "</ul>";
+    $stmt = $meta_pdo->query("SELECT db_name, name FROM families WHERE is_active = 1");
+    $families = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ==========================================
-// MIGRATIONS PAR FAMILLE
-// ==========================================
-$stmt = $meta_pdo->query("SELECT id, name, db_name FROM families WHERE db_name != ''");
-$families = $stmt->fetchAll();
+    foreach ($families as $family) {
+        $dbName = $family['db_name'];
+        echo "<h2>Famille : {$family['name']} ($dbName)</h2>";
 
-$host = getenv('DB_HOST') ?: 'househub-db';
-$user = getenv('DB_USER') ?: 'househub';
-$pass = getenv('DB_PASS') ?: 'changeme';
-
-foreach ($families as $f) {
-    $db_name = $f['db_name'];
-    $family_id = $f['id'];
-    echo "<h3>Mise à jour de <strong>{$f['name']}</strong> ($db_name)</h3><ul>";
-
-    $p1_name = null;
-    $p2_name = null;
-
-    try {
-        $fam_pdo = new PDO("mysql:host=$host;dbname=$db_name;charset=utf8mb4", $user, $pass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-        ]);
-
-        // 1. Table pf_foyer_settings
-        $fam_pdo->exec("CREATE TABLE IF NOT EXISTS pf_foyer_settings (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          currency VARCHAR(10) NOT NULL DEFAULT '€',
-          zone_scolaire VARCHAR(5) NOT NULL DEFAULT 'C',
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-        $fam_pdo->exec("INSERT IGNORE INTO pf_foyer_settings (id, currency, zone_scolaire) VALUES (1, '€', 'C');");
-        echo "<li><span style='color:green'>Table pf_foyer_settings vérifiée/créée.</span></li>";
-
-        // 2. Colonne external_href pour le Calendrier iOS
         try {
-            $fam_pdo->exec("ALTER TABLE pf_calendar_event_links ADD COLUMN external_href VARCHAR(2048) DEFAULT NULL");
-            echo "<li><span style='color:green'>Colonne 'external_href' ajoutée à pf_calendar_event_links.</span></li>";
-        } catch (\PDOException $e) {
-            if ($e->getCode() != '42S21' && strpos($e->getMessage(), '1060') === false) throw $e;
-        }
+            $pdo = new PDO(
+                "mysql:host=$db_host;dbname=$dbName;charset=utf8mb4",
+                $db_user, $db_pass,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
 
-        // 3. Colonne budget_item_id pour les règles d'import
-        try {
-            $fam_pdo->exec("ALTER TABLE pf_import_rules ADD COLUMN budget_item_id INT(11) DEFAULT NULL");
-            echo "<li><span style='color:green'>Colonne 'budget_item_id' ajoutée à pf_import_rules.</span></li>";
-        } catch (\PDOException $e) {
-            if ($e->getCode() != '42S21' && strpos($e->getMessage(), '1060') === false) throw $e;
-        }
-
-        // 4. Uniformisation des VARCHAR de dates pour le budget (YYYY-MM-01 = 10 chars)
-        $fam_pdo->exec("ALTER TABLE pf_expenses MODIFY gestion_month VARCHAR(10) NOT NULL");
-        $fam_pdo->exec("ALTER TABLE pf_alloc_values MODIFY month_date VARCHAR(10) NOT NULL");
-        $fam_pdo->exec("ALTER TABLE pf_savings MODIFY month_date VARCHAR(10) NOT NULL");
-        echo "<li><span style='color:green'>Formats de dates (VARCHAR 10) uniformisés pour le budget.</span></li>";
-
-        // 5. GESTION DE PF_PEOPLE (user_id, role, color)
-        echo "<li><strong>Mise à jour pf_people :</strong> ";
-        try { $fam_pdo->exec("ALTER TABLE pf_people ADD COLUMN user_id INT NULL DEFAULT NULL"); } catch (\Exception $e) {}
-        try { $fam_pdo->exec("ALTER TABLE pf_people ADD COLUMN role VARCHAR(50) DEFAULT NULL"); } catch (\Exception $e) {}
-        try { $fam_pdo->exec("ALTER TABLE pf_people ADD COLUMN color VARCHAR(7) DEFAULT '#0891b2'"); } catch (\Exception $e) {}
-
-        $stmtUsers = $meta_pdo->prepare("SELECT id, username, display_name FROM users WHERE family_id = ? ORDER BY id ASC");
-        $stmtUsers->execute([$family_id]);
-        $users = $stmtUsers->fetchAll();
-
-        foreach ($users as $u) {
-            $stmtCheck = $fam_pdo->prepare("SELECT id FROM pf_people WHERE user_id = ? OR LOWER(name) = LOWER(?)");
-            $stmtCheck->execute([$u['id'], $u['username']]);
-            $exists = $stmtCheck->fetchColumn();
-
-            if ($exists) {
-                $fam_pdo->prepare("UPDATE pf_people SET user_id = ? WHERE id = ?")->execute([$u['id'], $exists]);
+            // ---------------------------------------------------------
+            // 1. UPDATE DE pf_people (Juste la date de naissance et l'état actif)
+            // ---------------------------------------------------------
+            $colCheck = $pdo->prepare("SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'pf_people' AND COLUMN_NAME = 'birthdate'");
+            $colCheck->execute([$dbName]);
+            if ($colCheck->rowCount() === 0) {
+                $pdo->exec("ALTER TABLE pf_people 
+                    ADD COLUMN birthdate DATE DEFAULT NULL,
+                    ADD COLUMN is_active TINYINT(1) DEFAULT 1
+                ");
+                echo "✅ pf_people mis à jour (birthdate ajouté).<br>";
             } else {
-                $fam_pdo->prepare("INSERT INTO pf_people (name, user_id) VALUES (?, ?)")->execute([$u['display_name'] ?: $u['username'], $u['id']]);
+                echo "➖ pf_people déjà à jour.<br>";
             }
-        }
-        $fam_pdo->exec("UPDATE pf_people SET role = 'parent' WHERE user_id IS NOT NULL AND role IS NULL;");
-        $fam_pdo->exec("UPDATE pf_people SET role = 'nounou' WHERE LOWER(name) = 'carole';");
 
-        $pIds = $fam_pdo->query("SELECT id FROM pf_people WHERE role = 'parent' ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
-        if (isset($pIds[0])) $fam_pdo->exec("UPDATE pf_people SET color = '#0891b2' WHERE id = " . (int)$pIds[0] . " AND color IS NULL");
-        if (isset($pIds[1])) $fam_pdo->exec("UPDATE pf_people SET color = '#f59e0b' WHERE id = " . (int)$pIds[1] . " AND color IS NULL");
-        echo "<span style='color:blue'>OK</span></li>";
-
-        // ==========================================
-        // 6. REFONTE RELATIONNELLE : pf_alloc_values (Colonnes -> Lignes)
-        // ==========================================
-        echo "<li><strong>Table pf_alloc_values (Normalisation) :</strong> ";
-
-        // Vérifier si la table est déjà convertie
-        $checkNewFormat = $fam_pdo->query("SHOW COLUMNS FROM pf_alloc_values LIKE 'person_id'")->rowCount();
-        
-        if ($checkNewFormat > 0) {
-            echo "<span style='color:gray'>Déjà convertie au format relationnel.</span></li>";
-        } else {
-            // A. Récupérer l'ordre des parents réels pour faire le mapping d'index
-            $stmtParents = $fam_pdo->query("SELECT id, name FROM pf_people WHERE role = 'parent' ORDER BY id ASC");
-            $orderedParents = $stmtParents->fetchAll();
+            // ---------------------------------------------------------
+            // 2. CRÉATION DES NOUVELLES TABLES (IF NOT EXISTS)
+            // ---------------------------------------------------------
             
-            // B. Sauvegarder les anciennes données à migrer
-            $oldAllocations = $fam_pdo->query("SELECT * FROM pf_alloc_values")->fetchAll(PDO::FETCH_ASSOC);
-            
-            // C. Supprimer l'ancienne table
-            $fam_pdo->exec("DROP TABLE IF EXISTS pf_alloc_values");
-            
-            // D. Créer la nouvelle table normalisée
-            $fam_pdo->exec("CREATE TABLE pf_alloc_values (
-              id           INT AUTO_INCREMENT PRIMARY KEY,
-              month_date   VARCHAR(10) NOT NULL,
-              cat_id       INT NOT NULL,
-              person_id    INT NOT NULL,
-              amount       DECIMAL(10,2) DEFAULT 0.00,
-              UNIQUE KEY uq_alloc_person (month_date, cat_id, person_id),
-              FOREIGN KEY (person_id) REFERENCES pf_people(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-            
-            // E. Migration des données
-            $stmtInsert = $fam_pdo->prepare("INSERT INTO pf_alloc_values (month_date, cat_id, person_id, amount) VALUES (?, ?, ?, ?)");
-            $migratedRows = 0;
+            // Comptes bancaires
+            $pdo->exec("CREATE TABLE IF NOT EXISTS pf_bank_accounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                owner_person_id INT DEFAULT NULL,
+                account_type VARCHAR(50) DEFAULT 'savings',
+                is_default TINYINT(1) DEFAULT 0,
+                FOREIGN KEY (owner_person_id) REFERENCES pf_people(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            foreach ($oldAllocations as $oldRow) {
-                // Mapping des anciennes colonnes potentielles vers les index de parents
-                $possibleColumns = [
-                    0 => ['amount_p1', 'amount_alex'],
-                    1 => ['amount_p2', 'amount_laia'],
-                    2 => ['amount_p3'],
-                    3 => ['amount_p4']
-                ];
+            // Catégories de budget
+            $pdo->exec("CREATE TABLE IF NOT EXISTS pf_budget_categories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(50) NOT NULL,
+                label VARCHAR(100) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                color VARCHAR(20) DEFAULT '#ccc',
+                icon VARCHAR(20) DEFAULT '💰',
+                UNIQUE KEY (code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-                foreach ($possibleColumns as $parentIndex => $colNames) {
-                    if (!isset($orderedParents[$parentIndex])) continue;
-                    $targetParentId = $orderedParents[$parentIndex]['id'];
+            // Types de congés
+            $pdo->exec("CREATE TABLE IF NOT EXISTS pf_leave_types (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(20) NOT NULL,
+                label VARCHAR(100) NOT NULL,
+                default_allowance DECIMAL(5,2) DEFAULT 0,
+                reset_month INT DEFAULT 1,
+                allow_carry_over TINYINT(1) DEFAULT 0,
+                UNIQUE KEY (code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-                    foreach ($colNames as $col) {
-                        if (isset($oldRow[$col]) && (float)$oldRow[$col] > 0) {
-                            $stmtInsert->execute([
-                                $oldRow['month_date'],
-                                $oldRow['cat_id'],
-                                $targetParentId,
-                                (float)$oldRow[$col]
-                            ]);
-                            $migratedRows++;
-                            break; // Passer à l'index parent suivant dès qu'on a trouvé une valeur
-                        }
-                    }
-                }
+            // Fêtes (Cadeaux)
+            $pdo->exec("CREATE TABLE IF NOT EXISTS pf_gift_occasions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(20) NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                month_date VARCHAR(5) DEFAULT NULL,
+                is_active TINYINT(1) DEFAULT 1,
+                UNIQUE KEY (code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // Règles Cadeaux (Qui paie pour quel enfant à quelle occasion)
+            // L'ERREUR DE SYNTAXE ÉTAIT ICI : UNIQUE KEY adult_child_occ
+            $pdo->exec("CREATE TABLE IF NOT EXISTS pf_gift_rules (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                adult_person_id INT NOT NULL,
+                child_person_id INT NOT NULL,
+                occasion_id INT NOT NULL,
+                FOREIGN KEY (adult_person_id) REFERENCES pf_people(id) ON DELETE CASCADE,
+                FOREIGN KEY (child_person_id) REFERENCES pf_people(id) ON DELETE CASCADE,
+                FOREIGN KEY (occasion_id) REFERENCES pf_gift_occasions(id) ON DELETE CASCADE,
+                UNIQUE KEY adult_child_occ (adult_person_id, child_person_id, occasion_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            echo "✅ Nouvelles tables de configuration créées ou vérifiées.<br>";
+
+            // ---------------------------------------------------------
+            // 3. INJECTION DE DONNÉES PAR DÉFAUT (Pour ne rien casser)
+            // ---------------------------------------------------------
+            
+            if ($pdo->query("SELECT COUNT(*) FROM pf_bank_accounts")->fetchColumn() == 0) {
+                $pdo->exec("INSERT INTO pf_bank_accounts (name, account_type, is_default) VALUES 
+                    ('Compte Commun', 'checking', 1),
+                    ('Livret A Alex', 'savings', 0),
+                    ('Livret A Laia', 'savings', 0),
+                    ('Livret A Pol', 'savings', 0),
+                    ('Livret A Pep', 'savings', 0)
+                ");
             }
-            echo "<span style='color:green'>Succès ! Nouvelle table créée, $migratedRows lignes migrées.</span></li>";
+
+            if ($pdo->query("SELECT COUNT(*) FROM pf_budget_categories")->fetchColumn() == 0) {
+                $pdo->exec("INSERT INTO pf_budget_categories (code, label, type, color, icon) VALUES 
+                    ('INCOME', 'Revenus', 'Income', '#22c55e', '💵'),
+                    ('FMCG', 'Alimentation', 'Expense', '#3b82f6', '🛒'),
+                    ('FUEL', 'Carburant', 'Expense', '#f59e0b', '⛽'),
+                    ('SCHOOL', 'École / Garde', 'Expense', '#a855f7', '🎒'),
+                    ('HEALTH', 'Santé', 'Expense', '#ef4444', '⚕️')
+                ");
+            }
+
+            if ($pdo->query("SELECT COUNT(*) FROM pf_leave_types")->fetchColumn() == 0) {
+                $pdo->exec("INSERT INTO pf_leave_types (code, label, default_allowance, reset_month, allow_carry_over) VALUES 
+                    ('CA', 'Congés Annuels', 25, 6, 1),
+                    ('JRA', 'Jours de Repos', 10, 1, 0),
+                    ('JA', 'Jour Anniversaire', 1, 1, 0)
+                ");
+            }
+
+            if ($pdo->query("SELECT COUNT(*) FROM pf_gift_occasions")->fetchColumn() == 0) {
+                $pdo->exec("INSERT INTO pf_gift_occasions (code, name, month_date) VALUES 
+                    ('NOEL', 'Noël', '12-25'),
+                    ('ROIS', 'Les Rois', '01-06'),
+                    ('ANNIV', 'Anniversaire', NULL)
+                ");
+            }
+
+            echo "✅ Données de base injectées (si nécessaire).<br>";
+
+        } catch (PDOException $e) {
+            echo "❌ Erreur sur la base $dbName : " . $e->getMessage() . "<br>";
         }
-
-        // 7. GESTION DU BUDGET (pf_alloc_categories & pf_salary_config)
-        $fam_pdo->exec("UPDATE pf_alloc_categories SET name = 'Eco P1' WHERE name LIKE 'Eco Alex%'");
-        $fam_pdo->exec("UPDATE pf_alloc_categories SET name = 'Eco P2' WHERE name LIKE 'Eco Laia%'");
-
-        $stmtParents = $fam_pdo->query("SELECT name FROM pf_people WHERE role = 'parent' ORDER BY id ASC");
-        $parents = $stmtParents->fetchAll();
-        if (count($parents) >= 2) {
-            $fam_pdo->prepare("UPDATE pf_salary_config SET person = ? WHERE person = 'Alex'")->execute([$parents[0]['name']]);
-            $fam_pdo->prepare("UPDATE pf_salary_config SET person = ? WHERE person = 'Laia'")->execute([$parents[1]['name']]);
-        }
-
-    } catch (\PDOException $e) {
-        echo "<li style='color:red'>❌ Erreur : " . $e->getMessage() . "</li>";
     }
-    echo "</ul>";
 
-        // ==========================================
-        // 8. SEPARATION CIBLE BUDGET / DESTINATION VIREMENT
-        // ==========================================
-        echo "<li><strong>Table pf_alloc_categories (Fix Collision) :</strong> ";
-        try {
-            $fam_pdo->exec("ALTER TABLE pf_alloc_categories ADD COLUMN transfer_dest VARCHAR(50) DEFAULT NULL AFTER target");
-            echo "<span style='color:green'>Succès ! Colonne 'transfer_dest' ajoutée pour préserver vos objectifs chiffrés.</span></li>";
-        } catch (\PDOException $e) {
-            echo "<span style='color:gray'>La colonne transfer_dest existe déjà.</span></li>";
-        }
+    echo "<h1>🎉 Migration terminée avec succès !</h1>";
 
-        // ==========================================
-        // 9. TRANSFERT DES DONNÉES (Cible -> Destination)
-        // ==========================================
-        echo "<li><strong>Table pf_alloc_categories (Récupération des données) :</strong> ";
-        try {
-            // Vérifier si la colonne target est encore au format texte (VARCHAR)
-            $stmtCol = $fam_pdo->query("SHOW COLUMNS FROM pf_alloc_categories LIKE 'target'");
-            $colInfo = $stmtCol->fetch(PDO::FETCH_ASSOC);
-
-            if ($colInfo && strpos(strtolower($colInfo['Type']), 'varchar') !== false) {
-                // 1. Déplacer les textes "vers..."
-                $updated1 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = target, target = '0' WHERE target LIKE 'vers %'");
-                
-                // 2. Gérer le mot 'SYSTEM'
-                $updated2 = $fam_pdo->exec("UPDATE pf_alloc_categories SET transfer_dest = 'SYSTEM', target = '0' WHERE target = 'SYSTEM'");
-                
-                // 3. Sécurité absolue avant conversion
-                $fam_pdo->exec("UPDATE pf_alloc_categories SET target = '0' WHERE target NOT REGEXP '^[0-9]+(\\\\.[0-9]+)?$'");
-
-                echo "<span style='color:green'>" . ($updated1 + $updated2) . " destinations récupérées et déplacées.</span><br>";
-                
-                // 4. Remettre la colonne en format numérique
-                $fam_pdo->exec("ALTER TABLE pf_alloc_categories MODIFY target DECIMAL(10,2) DEFAULT 0.00");
-                echo "<span style='color:green'>Colonne 'target' re-sécurisée en format monétaire DECIMAL(10,2).</span></li>";
-            } else {
-                echo "<span style='color:gray'>La colonne 'target' est déjà au format DECIMAL, transfert ignoré.</span></li>";
-            }
-        } catch (\PDOException $e) {
-            echo "<span style='color:red'>Erreur : " . $e->getMessage() . "</span></li>";
-        }
-
-        try {
-    // Récupération de toutes les bases de données de familles via la base meta
-    $stmtFamilies = $meta_pdo->query("SELECT id, db_name FROM families WHERE is_active = 1");
-    while ($fam = $stmtFamilies->fetch(PDO::FETCH_ASSOC)) {
-        error_log("Migration de la base familiale : " . $fam['db_name']);
-        
-        $fam_dsn = "mysql:host=" . DB_HOST . ";dbname=" . $fam['db_name'] . ";charset=utf8mb4";
-        $fam_pdo = new PDO($fam_dsn, DB_USER, DB_PASS, $options);
-        
-        // Injection incrémentale sécurisée
-        $fam_pdo->exec("
-            CREATE TABLE IF NOT EXISTS `pf_advances` (
-              `id` INT AUTO_INCREMENT PRIMARY KEY,
-              `advance_date` DATE NOT NULL,
-              `payer` VARCHAR(100) NOT NULL,
-              `description` VARCHAR(255) NOT NULL,
-              `amount` DECIMAL(10,2) DEFAULT 0.00,
-              `from_savings` TINYINT(1) DEFAULT 0,
-              `is_resolved` TINYINT(1) DEFAULT 0,
-              `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        ");
-    }
-    error_log("✅ Migration de la table pf_advances terminée sur tous les tenants.");
 } catch (Exception $e) {
-    die("❌ Erreur critique lors de la migration : " . $e->getMessage());
+    die("❌ Erreur fatale Meta DB : " . $e->getMessage());
 }
-}
-
-
-
-echo "<h2>🎉 Migration terminée avec succès !</h2>";
 ?>

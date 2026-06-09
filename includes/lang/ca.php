@@ -602,47 +602,57 @@ return [
     'bud_adv_confirm_delete' => 'Eliminar definitivament aquest avançament?',
 
     // ==========================================
-    // CADEAUX (GIFTS)
+    // MÒDUL: REGALS (gift-list)
     // ==========================================
-    'gift_page_title'        => 'HouseHub - Llista de regals',
-    'gift_occ_tio'           => 'Tió',
-    'gift_occ_noel'          => 'Nadal',
-    'gift_occ_rois'          => 'Reis',
-    'gift_occ_anniv'         => 'Aniversari',
-    'gift_occ_sant'          => 'Sant',
-    'gift_main_title'        => 'Llista de regals %s',
-    'gift_aria_change_view'  => 'Canvia la vista',
-    'gift_view_nadal'        => 'Nadal',
-    'gift_view_anniv'        => 'Aniversaris',
-    'gift_view_by_party'     => 'Vista per festa',
-    'gift_no_gifts'          => 'No hi ha cap regal registrat per a %s en aquesta vista.',
-    'gift_add_gift'          => 'Afegeix un regal',
-    'gift_paid_by'           => 'pagat per %s',
-    'gift_summary_title'     => 'Resum del pressupost',
-    'gift_col_adult'         => 'Adult',
-    'gift_col_child'         => 'Infant',
-    'gift_col_party'         => 'Festa',
-    'gift_debtor'            => 'Deutor',
-    'gift_creditor'          => 'Creditor',
-    'gift_liquidations'      => 'Tricount',
-    'gift_no_debt'           => 'Cap deute pendent.',
-    'gift_owes'              => 'ha de pagar',
-    'gift_to'                => 'a',
-    'gift_detailed_list'     => 'Llista detallada de regals',
-    'gift_col_gift'          => 'Regal',
-    'gift_col_link'          => 'Enllaç',
-    'gift_modal_title_add'   => 'Afegeix un regal per a %s',
-    'gift_modal_title_edit'  => 'Edita el regal',
+
+    // 1. Títols i capçaleres
+    'gift_page_title' => 'Llista de Regals',
+    'gift_main_title' => 'Regals de %s', // %s serà substituït per l'any (ex: Regals de 2026)
+    'settings'        => 'Configuració',
+    
+    // 2. Filtres
+    'gift_filter_all_children' => 'Tots els nens',
+    'gift_filter_all_adults'   => 'Tots els adults',
+
+    // 3. Contingut i estats buits
+    'gift_add_gift'              => 'Afegir',
+    'gift_empty_state_no_gifts'  => 'Cap regal registrat per a aquesta ocasió.',
+    'gift_empty_state_no_filter' => 'Cap regal coincideix amb els teus filtres.',
+    'gift_paid_by'               => 'Pagat per %s', // %s serà substituït pel nom del pagador
+
+    // 4. Secció Tricount (Balanç i Reemborsaments)
+    'gift_liquidations' => 'Balanç i Reemborsaments',
+    'gift_no_debt'      => 'Tot està al dia, cap deute!',
+    'gift_owes'         => 'deu',
+    'gift_view_matrix'  => 'Veure la matriu detallada',
+    'gift_debtor'       => 'Deutor',
+    'gift_creditor'     => 'Creditor',
+
+    // 5. Modal: Afegir/Modificar Regal
+    'gift_col_adult'         => 'Per compte de',
     'gift_modal_payer'       => 'Pagat per',
-    'gift_modal_gift_name'   => 'Nom del regal',
-    'gift_modal_ph_name'     => 'p. ex., Lego Star Wars',
-    'gift_modal_price'       => 'Preu (€)',
-    'gift_modal_link'        => 'Enllaç (opcional)',
-    'gift_confirm_delete'    => 'Vols eliminar aquest regal?',
-    'gift_filter_all_children'   => 'Tots els nens',
-    'gift_filter_all_adults'     => 'Tots els adults',
-    'gift_empty_state_no_gifts'  => 'Cap regal de moment.',
-    'gift_empty_state_no_filter' => 'Cap regal correspon al filtre.',
+    'gift_modal_gift_name'   => 'Descripció del regal',
+    'gift_modal_price'       => 'Preu estimat / pagat (€)',
+    'gift_modal_link'        => 'Enllaç del producte (URL)',
+    'gift_modal_title_add'   => 'Afegir per a %s', // JS: %s = nom del nen
+    'gift_modal_title_edit'  => 'Modificar el regal', // JS
+    'gift_confirm_delete'    => 'Vols eliminar realment aquest regal?', // JS
+
+    // 6. Modal: Configuració de les Festes
+    'gift_settings_title'            => 'Configuració de les Festes',
+    'gift_settings_add_title'        => '+ Afegir una ocasió',
+    'gift_settings_name_placeholder' => 'Nom (ex: Sant Valentí)',
+    'gift_settings_date_placeholder' => 'MM-DD',
+    'gift_settings_date_help'        => 'La data (MM-DD) és opcional. Deixa en blanc per a una festa mòbil.',
+    'gift_settings_empty'            => 'Cap festa configurada.', // JS
+    'gift_settings_active'           => 'Actiu', // JS
+
+    // 7. Botons genèrics
+    'btn_cancel' => 'Cancel·lar',
+    'btn_save'   => 'Desar',
+    'btn_add'    => 'Afegir',
+    'loading'    => 'Carregant...', //
+    
     // ==========================================
     // GARAGE MANAGER
     // ==========================================
