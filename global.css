@@ -1303,3 +1303,26 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   flex-direction: column;
   gap: 15px;
 }
+
+/* Bouton Paramètres avec icône rotative (Roue crantée) */
+.btn-settings-gear {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  font-size: 1.4rem;
+  padding: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+  line-height: 1;
+  color: inherit;
+}
+
+.btn-settings-gear:hover {
+  transform: rotate(
+    90deg
+  ); /* 90deg rend mieux sur une roue crantée qu'un 45deg ! */
+}

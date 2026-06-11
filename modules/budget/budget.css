@@ -1268,3 +1268,223 @@ body.sum-mode-active .sum-target {
     padding: 12px 10px;
   }
 }
+
+/* ==========================================================================
+   MODALE PARAMÈTRES BUDGET (Design System HouseHub)
+   ========================================================================== */
+.budget-settings-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.budget-settings-backdrop.show {
+  display: flex;
+}
+
+.budget-settings-modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 800px;
+  height: 80vh;
+  max-height: 700px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: modalIn 0.18s ease;
+}
+
+.bs-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.bs-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+.bs-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 0 0.5rem;
+}
+.bs-close:hover {
+  background: var(--bg-page);
+  color: var(--text-main);
+}
+
+.bs-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.bs-sidebar {
+  width: 200px;
+  border-right: 1px solid var(--border-light);
+  background: var(--bg-page);
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  gap: 0.4rem;
+  overflow-y: auto;
+}
+.bs-tab-btn {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+  font-size: 0.9rem;
+}
+.bs-tab-btn:hover {
+  background: var(--border-light);
+  color: var(--text-main);
+}
+.bs-tab-btn.active {
+  background: var(--text-main);
+  color: var(--bg-panel);
+}
+
+.bs-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: var(--bg-panel);
+}
+.bs-pane {
+  display: none;
+}
+.bs-pane.active {
+  display: block;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 650px) {
+  .bs-layout {
+    flex-direction: column;
+  }
+  .bs-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+    padding: 0.5rem;
+    white-space: nowrap;
+  }
+  .bs-tab-btn {
+    flex-shrink: 0;
+  }
+  .bs-content {
+    padding: 1rem;
+  }
+}
+
+/* Utilitaires pour les listes de paramètres */
+.bs-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+.bs-section-title {
+  font-size: 1.1rem;
+  color: var(--text-main);
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+/* --- AFFICHAGE SMART DES RÈGLES (TAG CLOUD) --- */
+.bs-rule-search {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-page);
+  margin-bottom: 1rem;
+  color: var(--text-main);
+  font-family: inherit;
+}
+.bs-rule-group {
+  margin-bottom: 1.2rem;
+}
+.bs-rule-group-title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 4px;
+}
+.bs-rule-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.bs-rule-tag {
+  background: var(--bg-page);
+  border: 1px solid var(--border-light);
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.15s;
+}
+.bs-rule-tag:hover {
+  border-color: var(--danger);
+  background: #fef2f2;
+}
+.bs-rule-tag-del {
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  margin-top: -2px;
+}
+.bs-rule-tag:hover .bs-rule-tag-del {
+  color: var(--danger);
+}

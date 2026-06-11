@@ -955,3 +955,39 @@ td.col-laia-sub {
     gap: 20px !important;
   }
 }
+
+/* ==========================================================================
+   MODALE PARAMÈTRES (SIDEBAR STYLE)
+   ========================================================================== */
+.fc-sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 1.2rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: all 0.2s;
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.fc-sidebar-tab.active {
+  background: #111827; /* Gris très foncé typique des sidebars */
+  color: #ffffff;
+}
+
+.fc-sidebar-tab:hover:not(.active) {
+  background: var(--bg-soft, #f1f5f9);
+}
+
+/* Variante Dark Mode native pour l'onglet actif */
+[data-theme="dark"] .fc-sidebar-tab.active {
+  background: var(--primary);
+  color: #ffffff;
+}
