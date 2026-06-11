@@ -88,8 +88,7 @@ try {
                 UNIQUE KEY (code)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-            // Règles Cadeaux (Qui paie pour quel enfant à quelle occasion)
-            // L'ERREUR DE SYNTAXE ÉTAIT ICI : UNIQUE KEY adult_child_occ
+            // Règles Cadeaux
             $pdo->exec("CREATE TABLE IF NOT EXISTS pf_gift_rules (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 adult_person_id INT NOT NULL,
@@ -144,6 +143,43 @@ try {
             }
 
             echo "✅ Données de base injectées (si nécessaire).<br>";
+
+            // ---------------------------------------------------------
+            // 4. MIGRATION SPECIFIQUE : MODULE CALENDRIER (CONGÉS GRANULAIRES)
+            // ---------------------------------------------------------
+            $tableExists = $pdo->query("SHOW TABLES LIKE 'pf_person_leave_meta'")->rowCount() > 0;
+
+            if (!$tableExists) {
+                $pdo->exec("
+                    CREATE TABLE pf_person_leave_meta (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        person_id INT NOT NULL,
+                        leave_type VARCHAR(50) NOT NULL,
+                        anniversary_date DATE NOT NULL,
+                        UNIQUE KEY uq_person_leave (person_id, leave_type),
+                        FOREIGN KEY (person_id) REFERENCES pf_people(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ");
+                echo "✅ Table pf_person_leave_meta créée (Nouvelle installation).<br>";
+            } else {
+                $checkColumn = $pdo->query("SHOW COLUMNS FROM pf_person_leave_meta LIKE 'leave_type'")->rowCount();
+                if ($checkColumn === 0) {
+                    $pdo->exec("ALTER TABLE pf_person_leave_meta ADD COLUMN leave_type VARCHAR(50) NULL AFTER person_id");
+                    $pdo->exec("UPDATE pf_person_leave_meta SET leave_type = 'CP' WHERE leave_type IS NULL");
+                    $pdo->exec("ALTER TABLE pf_person_leave_meta MODIFY COLUMN leave_type VARCHAR(50) NOT NULL");
+                    
+                    try {
+                        $pdo->exec("ALTER TABLE pf_person_leave_meta DROP INDEX person_id");
+                    } catch (\Throwable $e) {
+                        // On ignore si l'index n'avait pas ce nom
+                    }
+                    
+                    $pdo->exec("ALTER TABLE pf_person_leave_meta ADD UNIQUE KEY uq_person_leave (person_id, leave_type)");
+                    echo "✅ Table pf_person_leave_meta mise à jour avec le type granulaire.<br>";
+                } else {
+                    echo "➖ Table pf_person_leave_meta déjà à jour.<br>";
+                }
+            }
 
         } catch (PDOException $e) {
             echo "❌ Erreur sur la base $dbName : " . $e->getMessage() . "<br>";
