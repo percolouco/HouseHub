@@ -300,7 +300,12 @@ $rentrees_autres = $total_rentrees - $rentrees_salaires_reels;
 $salaires_retenus = max($rentrees_salaires_reels, $budget_income_prevu);
 
 $capacite_max_calc = $solde_initial + $salaires_retenus + $rentrees_autres;
-$solde_theorique_calc = ($solde_initial + $total_rentrees) - $depenses_reelles - $reste_a_venir_calc;
+
+// 1. On calcule s'il reste des salaires/revenus prévus à encaisser
+$revenus_a_venir = max(0, $budget_income_prevu - $rentrees_salaires_reels);
+
+// 2. Le solde théorique part de ta vraie saisie bancaire actuelle
+$solde_theorique_calc = $snapshot['amount'] + $revenus_a_venir - $reste_a_venir_calc;
 
 if ($isClosed) {
     $solde_actuel = $monthState['solde_actuel'];
