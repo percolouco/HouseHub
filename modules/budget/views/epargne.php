@@ -11,11 +11,10 @@ while ($row = $stmtPeople->fetch(PDO::FETCH_ASSOC)) {
     
     if ($role === 'parent') {
         $familyParents[] = $row['name'];
-    } elseif ($role === 'nounou') {
+    } elseif ($role === 'nounou' || $role === 'helper') {
         // On ignore la nounou dans l'épargne
         continue;
     } else {
-        // Fallback : Si c'est 'enfant', 'user', ou vide, ça va dans l'onglet Enfants
         $familyKids[] = $row['name'];
     }
 }
@@ -23,8 +22,8 @@ while ($row = $stmtPeople->fetch(PDO::FETCH_ASSOC)) {
 // Sécurité anti-page blanche si la BDD est mal configurée
 if (empty($familyParents)) $familyParents = ['Parent 1', 'Parent 2'];
 
-$requestedOwner = $_GET['owner'] ?? ($familyParents[0] ?? 'Nens'); 
-$ownersToDisplay = ($requestedOwner === 'Nens') ? $familyKids : [$requestedOwner];
+$requestedOwner = $_GET['owner'] ?? ($familyParents[0] ?? 'KIDS'); 
+$ownersToDisplay = ($requestedOwner === 'KIDS') ? $familyKids : [$requestedOwner];
 
 // --- RÉCUPÉRATION CONFIGURATION DES MOIS ---
 $cycleConfigs = [];
@@ -47,23 +46,21 @@ function getMonthName($dateString) {
 <div class="budget-view">
     <div class="view-header">
         <div class="owner-tabs">
-            <!-- Boucle dynamique sur les parents -->
             <?php foreach ($familyParents as $p): ?>
                 <a href="?tab=epargne&owner=<?= urlencode($p) ?>" class="owner-tab <?= $requestedOwner === $p ? 'active' : '' ?>">
                     <?= htmlspecialchars($p) ?>
                 </a>
             <?php endforeach; ?>
             
-            <!-- Onglet Enfants -->
             <?php if (!empty($familyKids)): ?>
-            <a href="?tab=epargne&owner=Nens" class="owner-tab <?= $requestedOwner === 'Nens' ? 'active' : '' ?>">
-                <?= tr('budget_tab_kids') ?? 'Nens 👶' ?>
+            <a href="?tab=epargne&owner=KIDS" class="owner-tab <?= $requestedOwner === 'KIDS' ? 'active' : '' ?>">
+                <?= tr('budget_tab_kids') ?? 'Enfants 👶' ?>
             </a>
             <?php endif; ?>
         </div>
     </div>
 
-    <?php foreach ($ownersToDisplay as $currentOwner): 
+    <?php foreach ($ownersToDisplay as $index => $currentOwner): 
         $stmt = $pdo->prepare("SELECT month_date, category, amount FROM pf_savings WHERE owner = ? ORDER BY month_date DESC");
         $stmt->execute([$currentOwner]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -83,28 +80,29 @@ function getMonthName($dateString) {
         $months = array_slice($months, 0, 7); 
         sort($allCategories);
 
-        // Définition de la classe couleur selon le propriétaire
         $ownerTextClass = 'txt-global';
+        // 🔄 CORRECTION ICI : Création d'un nom "safe" sans espace pour les classes CSS
+        $safeOwnerCls = htmlspecialchars(str_replace(' ', '_', $currentOwner), ENT_QUOTES);
     ?>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: <?= ($requestedOwner === 'Nens' && $currentOwner !== 'Pol') ? '40px' : '0' ?>;">        
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: <?= ($requestedOwner === 'KIDS' && $index > 0) ? '40px' : '0' ?>;">        
         <div style="flex-grow: 1;">
-            <?php if ($requestedOwner === 'Nens'): 
-                $themeClass = 'theme-' . strtolower($currentOwner);
+            <?php if ($requestedOwner === 'KIDS'): 
+                $themeClass = 'theme-' . strtolower($safeOwnerCls);
             ?>
                 <h3 class="nens-title <?= $themeClass ?>" style="margin:0; font-size:1.2rem;">
-                    <?= $currentOwner ?>
+                    <?= htmlspecialchars($currentOwner) ?>
                 </h3>
             <?php endif; ?>
         </div>
 
         <div style="display: flex; gap: 10px; align-items: center;">
             <?php if (!empty($months)): ?>
-                <button onclick="duplicateLastMonth('<?= $months[0] ?>', '<?= $currentOwner ?>')" class="pf-btn btn-secondary">
+                <button onclick="duplicateLastMonth('<?= $months[0] ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')" class="pf-btn btn-secondary">
                     🔁 <?= tr('bud_sav_add_one_month') ?>
                 </button>
             <?php endif; ?>
-            <button onclick="openCustomSavingsModal('<?= $currentOwner ?>')" class="pf-btn">
+            <button onclick="openCustomSavingsModal('<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')" class="pf-btn">
                 ＋ <?= tr('bud_sav_add_month') ?>
             </button>
         </div>
@@ -116,7 +114,7 @@ function getMonthName($dateString) {
                 <p><?= sprintf(tr('bud_sav_no_data'), htmlspecialchars($currentOwner)) ?></p>
             </div>
         <?php else: ?>
-            <table class="pf-table savings-table nens-table theme-<?= strtolower($currentOwner) ?>" style="margin-top:0; box-shadow:none; border-radius:16px;">            
+            <table class="pf-table savings-table nens-table theme-<?= strtolower($safeOwnerCls) ?>" style="margin-top:0; box-shadow:none; border-radius:16px;">            
                 <thead>
                     <tr>
                         <th class="sticky-col" style="background:#f8fafc;"><?= tr('bud_sav_post_month') ?></th>
@@ -135,11 +133,11 @@ function getMonthName($dateString) {
                                     <div class="month-actions" style="justify-content: center; width: 100%;">
                                         <button class="btn-icon-small btn-safe-click" title="<?= tr('bud_sav_edit_modal') ?>"
                                                 data-json="<?= htmlspecialchars(json_encode($data[$month] ?? []), ENT_QUOTES, 'UTF-8') ?>"
-                                                onclick='editCustomSavingsMonth("<?= $month ?>", "<?= $currentOwner ?>", JSON.parse(this.getAttribute("data-json")))'>
+                                                onclick='editCustomSavingsMonth("<?= $month ?>", "<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>", JSON.parse(this.getAttribute("data-json")))'>
                                             ✏️
                                         </button>
                                         <button class="btn-icon-small btn-safe-click" title="<?= tr('bud_sav_delete_month') ?>"
-                                                onclick="deleteEntireMonth('<?= $month ?>', '<?= $currentOwner ?>')"
+                                                onclick="deleteEntireMonth('<?= $month ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')"
                                                 style="color: #ef4444; border-color: #fca5a5; background: #fef2f2;">
                                             🗑️
                                         </button>
@@ -158,11 +156,11 @@ function getMonthName($dateString) {
                             <td class="text-center" style="padding:4px;">
                                 <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
                                     <input type="number" step="0.01" 
-                                           class="prev-input total-input-<?= $currentOwner ?>-<?= $month ?>" 
+                                           class="prev-input total-input-<?= $safeOwnerCls ?>-<?= $month ?>" 
                                            style="width: 70px; font-weight:bold; color:#2563eb;"
                                            value="<?= $val != 0 ? round($val) : '' ?>" 
                                            placeholder="0"
-                                           onchange="updateEpargneCell('<?= $month ?>', 'TOTAL_BANQUE', '<?= $currentOwner ?>', this)">
+                                           onchange="updateEpargneCell('<?= $month ?>', 'TOTAL_BANQUE', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>', this)">
                                     <span style="color:#2563eb; font-weight:bold; font-size:0.9rem;">€</span>
                                 </div>
                             </td>
@@ -178,11 +176,11 @@ function getMonthName($dateString) {
                             <td class="text-center" style="padding:4px;">
                                 <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
                                     <input type="number" step="0.01" 
-                                           class="prev-input <?= $ownerTextClass ?> cat-input-<?= $currentOwner ?>-<?= $month ?>" 
+                                           class="prev-input <?= $ownerTextClass ?> cat-input-<?= $safeOwnerCls ?>-<?= $month ?>" 
                                            style="width: 70px;"
                                            value="<?= $amount != 0 ? round($amount) : '' ?>" 
                                            placeholder="-"
-                                           onchange="updateEpargneCell('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= $currentOwner ?>', this)">
+                                           onchange="updateEpargneCell('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>', this)">
                                 </div>
                             </td>
                         <?php endforeach; ?>
@@ -197,7 +195,7 @@ function getMonthName($dateString) {
                             foreach ($allCategories as $cat) $sum += ($data[$month][$cat] ?? 0);
                             $extra = $total - $sum;
                         ?>
-                            <td class="text-center font-bold sum-target" id="extra_<?= $currentOwner ?>_<?= $month ?>" style="color: <?= $extra >= 0 ? '#10b981' : '#ef4444' ?>; padding:12px;">
+                            <td class="text-center font-bold sum-target" id="extra_<?= $safeOwnerCls ?>_<?= $month ?>" style="color: <?= $extra >= 0 ? '#10b981' : '#ef4444' ?>; padding:12px;">
                                 <?= number_format($extra, 0, ',', ' ') ?> €
                             </td>
                         <?php endforeach; ?>
@@ -289,6 +287,9 @@ window.I18N = {
     'bud_err_delete': <?= json_encode(tr('bud_err_delete')) ?>
 };
 
+// Sécurisation de la devise pour la calculatrice
+const systemCurrency = (typeof window.CONFIG !== 'undefined' && window.CONFIG.CURRENCY) ? window.CONFIG.CURRENCY : '€';
+
 // --- 2. GESTION DE L'ÉDITION INVISIBLE EN DIRECT ---
 const cycleConfigs = <?= json_encode($cycleConfigs ?? []) ?>;
 
@@ -306,16 +307,19 @@ function updateEpargneCell(month, category, owner, inputEl) {
         body: formData
     }).catch(err => alert(window.I18N['bud_err_tech'] || 'Erreur technique'));
 
-    const totalInput = document.querySelector(`.total-input-${owner}-${month}`);
+    // Gère les IDs proprement
+    const safeOwnerClass = owner.replace(/\s+/g, '_');
+    
+    const totalInput = document.querySelector(`.total-input-${CSS.escape(safeOwnerClass)}-${month}`);
     const totalVal = parseFloat(totalInput ? totalInput.value : 0) || 0;
 
     let sumCats = 0;
-    document.querySelectorAll(`.cat-input-${owner}-${month}`).forEach(inp => {
+    document.querySelectorAll(`.cat-input-${CSS.escape(safeOwnerClass)}-${month}`).forEach(inp => {
         sumCats += parseFloat(inp.value) || 0;
     });
 
     const extra = totalVal - sumCats;
-    const extraCell = document.getElementById(`extra_${owner}_${month}`);
+    const extraCell = document.getElementById(`extra_${safeOwnerClass}_${month}`);
 
     if (extraCell) {
         extraCell.innerText = Math.round(extra).toLocaleString(window.appLang) + ' €';
@@ -557,7 +561,7 @@ function updateSumResult() {
         total += val;
     });
     
-    document.getElementById('sumResultValue').innerText = Math.round(total).toLocaleString(window.appLang) + ' ' + window.CONFIG.CURRENCY;
+    document.getElementById('sumResultValue').innerText = Math.round(total).toLocaleString(window.appLang) + ' ' + systemCurrency;
 }
 
 document.addEventListener('click', function(e) {

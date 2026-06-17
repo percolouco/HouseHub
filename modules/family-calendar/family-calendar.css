@@ -32,7 +32,9 @@
   padding-bottom: 40px;
 }
 
-/* En-tête & Boutons */
+/* =========================================================
+   EN-TÊTE & BOUTONS
+   ========================================================= */
 .fc-header-row {
   display: flex;
   justify-content: space-between;
@@ -62,7 +64,9 @@
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
-/* Calendrier Mensuel */
+/* =========================================================
+   CALENDRIER MENSUEL (Vue Grille Mois)
+   ========================================================= */
 .fc-month-calendar-wrapper {
   background: white;
   border: 1px solid var(--pf-border);
@@ -114,6 +118,7 @@
 
 .fc-view-controls {
   display: flex !important;
+  align-items: center;
   width: 100% !important;
   background: #f1f5f9 !important;
   padding: 4px !important;
@@ -128,7 +133,7 @@
   padding: 6px 16px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--pf-text-muted);
+  color: #64748b;
   cursor: pointer;
   transition: 0.2s;
 }
@@ -206,7 +211,9 @@
   text-transform: capitalize;
 }
 
-/* Décompte Congés (Pills) */
+/* =========================================================
+   DÉCOMPTE CONGÉS MENSUEL (PILLS)
+   ========================================================= */
 .fc-month-balances {
   display: flex;
   flex-wrap: wrap;
@@ -226,12 +233,6 @@
   border: 1px solid var(--pf-border);
   box-shadow: var(--pf-shadow-sm);
 }
-.fc-minimal-balance-card strong.alex {
-  color: var(--text-alex);
-}
-.fc-minimal-balance-card strong.laia {
-  color: var(--text-laia);
-}
 .fc-minimal-chips {
   display: flex;
   gap: 8px;
@@ -249,17 +250,17 @@
 }
 .fc-min-chip .type {
   font-weight: 700;
-  color: var(--pf-text-muted);
+  color: #64748b;
   margin-right: 6px;
 }
 .fc-min-chip .val {
   font-weight: 800;
-  color: var(--pf-text-main);
+  color: #0f172a;
 }
 .fc-used-badge {
   margin-left: 6px;
   background: #fee2e2;
-  color: var(--pf-danger);
+  color: #ef4444;
   padding: 1px 5px;
   border-radius: 10px;
   font-size: 0.65rem;
@@ -272,7 +273,7 @@
   font-size: 0.9rem;
   display: flex;
   align-items: center;
-  color: var(--pf-danger);
+  color: #ef4444;
   font-weight: bold;
 }
 @keyframes pulseBurn {
@@ -290,7 +291,9 @@
   }
 }
 
-/* Couleurs des jours */
+/* =========================================================
+   COULEURS DES JOURS (GRILLES)
+   ========================================================= */
 .fc-day--school-holiday {
   background: var(--c-school-holiday) !important;
 }
@@ -304,35 +307,13 @@
 .fc-day--extra-off-carole {
   background: var(--c-extra-off) !important;
 }
+
 .fc-day--selected {
   background: var(--c-selected) !important;
   outline: 2px solid var(--pf-primary);
   z-index: 5;
 }
-.fc-day--centre::after {
-  content: "🏫";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 12px;
-}
-.fc-day--avis::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
-  background: url("/modules/family-calendar/assets/img/avis.svg") no-repeat
-    center;
-  background-size: contain;
-}
-.fc-pep-sick-emoji {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  font-size: 12px;
-}
+
 .fc-day--off-carole.fc-day--school-holiday,
 .fc-day--extra-off-carole.fc-day--school-holiday,
 .fc-day--centre.fc-day--school-holiday,
@@ -340,7 +321,26 @@
   box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
 }
 
-/* Planning Hebo (Desktop) */
+.fc-day--today {
+  background: #eff6ff !important;
+  box-shadow: inset 0 0 0 1px #bfdbfe !important;
+}
+.fc-day--today .fc-day-number {
+  display: inline;
+  background: none;
+  width: auto;
+  height: auto;
+  box-shadow: none;
+  border-radius: 0;
+  margin: 0;
+  color: var(--pf-primary);
+  font-weight: 900;
+  font-size: 1.1em;
+}
+
+/* =========================================================
+   PLANNING GLOBAL (Matrice Annuelle)
+   ========================================================= */
 .fc-week-header {
   display: flex;
   align-items: center;
@@ -379,22 +379,17 @@
   border-spacing: 0;
 }
 
-/* =========================================================
-   HARMONISATION DES BORDURES ET HEADERS STICKY (1px strict)
-   ========================================================= */
+/* HARMONISATION DES BORDURES ET HEADERS STICKY */
 #planningTable thead tr {
-  height: 30px; /* On fixe la hauteur pour un calcul parfait */
+  height: 30px;
 }
 #planningTable thead th {
   position: sticky;
   background: #f8fafc !important;
-  border: none !important; /* On supprime les bordures natives */
-
-  /* On utilise UNIQUEMENT des ombres internes pour simuler 1px de bordure sans doublement */
+  border: none !important;
   box-shadow:
     inset 0 -1px 0 var(--pf-border),
     inset -1px 0 0 var(--pf-border) !important;
-
   padding: 6px;
   font-size: 0.75rem;
   z-index: 20;
@@ -403,14 +398,14 @@
 }
 #planningTable thead tr:nth-child(1) th {
   top: 0;
-  z-index: 22; /* Au premier plan */
+  z-index: 22;
 }
 #planningTable thead tr:nth-child(2) th {
-  top: 30px; /* Exactement la hauteur de la ligne 1 */
+  top: 30px;
   z-index: 21;
 }
 #planningTable thead tr:nth-child(3) th {
-  top: 60px; /* Ligne 1 + Ligne 2 */
+  top: 60px;
   z-index: 20;
 }
 
@@ -425,10 +420,9 @@
   color: var(--text-laia) !important;
 }
 
-/* Cellules standards du corps */
 #planningTable tbody td {
   position: relative;
-  border: none !important; /* Reset de sécurité */
+  border: none !important;
   border-right: 1px solid var(--pf-border) !important;
   border-bottom: 1px solid var(--pf-border) !important;
   height: 36px;
@@ -467,13 +461,10 @@ td.col-laia-sub {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: 0.7rem;
-  color: var(--pf-text-muted);
+  color: #64748b;
 }
 
-/* =========================================================
-   GESTION DES COLONNES STICKY (Mois & Semaine)
-   ========================================================= */
-
+/* GESTION DES COLONNES STICKY (Mois & Semaine) */
 #planningTable tbody td.col-sticky-mois {
   position: sticky !important;
   left: 0 !important;
@@ -481,7 +472,6 @@ td.col-laia-sub {
   background: white !important;
   padding: 0 !important;
 }
-
 #planningTable tbody td.col-sticky-mois .fc-sticky-mois-label {
   position: absolute;
   top: 50%;
@@ -491,42 +481,31 @@ td.col-laia-sub {
   letter-spacing: 1px;
   text-align: center;
 }
-
-/* 2. Sticky Semaine (Body) */
 #planningTable tbody td.col-sticky-sem {
   position: sticky !important;
   left: 54px !important;
   z-index: 14 !important;
   background: white !important;
-  /* Ombre portée pour délimiter la zone sticky du reste du tableau */
   box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.1);
 }
-
-/* 3. Sticky Mois (Header) */
 #planningTable thead tr th.col-sticky-mois {
   position: sticky !important;
   top: 0 !important;
   left: 0 !important;
   z-index: 30 !important;
   background: var(--pf-bg-lighter) !important;
-  /* Les bordures sont gérées par le box-shadow général du thead th */
 }
-
-/* 4. Sticky Semaine (Header) */
 #planningTable thead tr th.col-sticky-sem {
   position: sticky !important;
   top: 0 !important;
   left: 54px !important;
   z-index: 29 !important;
   background: var(--pf-bg-lighter) !important;
-  /* Ombre interne (bordures) + Ombre portée (effet sticky) */
   box-shadow:
     inset 0 -1px 0 var(--pf-border),
     inset -1px 0 0 var(--pf-border),
     4px 0 6px -2px rgba(0, 0, 0, 0.1) !important;
 }
-
-/* Rétablissement horizontal pour les headers mois et semaine */
 #planningTable thead th.col-month,
 #planningTable tbody td.col-sticky-sem {
   writing-mode: horizontal-tb;
@@ -535,15 +514,15 @@ td.col-laia-sub {
   text-align: center;
 }
 
-/* Panneaux bas & Légendes */
+/* =========================================================
+   PANNEAUX BAS, LÉGENDES & RÉSUMÉS
+   ========================================================= */
 .fc-bottom-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 24px;
   align-items: start;
 }
-
-/* Nouvelles bordures style "Budget" pour les conteneurs */
 .pf-card {
   background: white;
   border: 1px solid var(--pf-border);
@@ -560,6 +539,7 @@ td.col-laia-sub {
   padding-bottom: 12px;
 }
 
+/* Légendes statiques */
 .pf-legend-grid {
   display: flex;
   flex-wrap: wrap;
@@ -607,53 +587,62 @@ td.col-laia-sub {
   border: none;
 }
 
-.fc-summary-header {
+/* Résumé Mensuel Injecté */
+.fc-month-container {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--pf-border);
+  flex-direction: column;
+  gap: 8px;
 }
-.fc-summ-select {
+.fc-month-summary-inline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px;
+  background: var(--pf-bg-lighter, #f8fafc);
+  padding: 10px 12px;
+  border-radius: 8px;
   border: 1px solid var(--pf-border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  height: auto;
-  background: #f8fafc;
 }
-.fc-summary-item {
+.fc-summ-pill {
   display: flex;
-  justify-content: space-between;
-  padding: 12px 4px;
-  border-bottom: 1px solid var(--pf-border); /* Ligne de séparation visible */
-}
-.fc-summary-item:last-child {
-  border-bottom: none;
-}
-.fc-summary-label {
-  font-size: 0.85rem;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.75rem;
   color: #64748b;
-  font-weight: 600;
+  flex: 1;
 }
-.fc-summary-value {
-  font-size: 1rem;
-  font-weight: 700;
+.fc-summ-pill strong {
+  font-size: 0.95rem;
   color: #0f172a;
+  margin-top: 2px;
+}
+.pf-presence-pill strong {
+  color: var(--pf-primary);
 }
 
-/* Menu Contextuel Tactile */
+[data-theme="dark"] .fc-month-summary-inline {
+  background: #1c2128;
+  border-color: #30363d;
+}
+[data-theme="dark"] .fc-summ-pill strong {
+  color: #c9d1d9;
+}
+
+/* =========================================================
+   MENU CONTEXTUEL (COMPACT & PROPRE)
+   ========================================================= */
+#selectionMenu,
+#fc-month-selectionMenu,
 .fc-selection-menu {
   position: absolute;
   z-index: 9000;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: var(--pf-shadow-lg);
-  border-radius: 16px;
-  padding: 10px 12px;
-  min-width: 220px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 8px 12px;
+  min-width: 210px;
   display: none;
   animation: menuPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: top center;
@@ -668,88 +657,70 @@ td.col-laia-sub {
     transform: scale(1) translateY(0);
   }
 }
+
 .fc-menu-section {
   padding: 6px 0;
   border-bottom: 1px dashed #cbd5e1;
 }
 .fc-menu-section:last-child {
-  border: none;
+  border-bottom: none;
   padding-bottom: 0;
-}
-.fc-menu-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-.fc-menu-section strong {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: var(--pf-text-muted);
 }
 .fc-menu-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 6px;
 }
 .fc-menu-btn {
-  background: white;
-  border: 1px solid var(--pf-border);
-  padding: 6px 8px;
-  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  transition: 0.2s;
-  box-shadow: var(--pf-shadow-sm);
+  text-align: left;
+  transition: all 0.2s ease;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
 }
 .fc-menu-btn:hover {
-  background: var(--pf-bg-page);
-  border-color: var(--pf-primary);
-  color: var(--pf-primary);
+  background: #f1f5f9;
 }
-.fc-menu-clear-icon {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  border-radius: 6px;
+
+/* --- LE BOUTON ACTIF (SANS COCHE !) --- */
+.fc-menu-btn--active {
+  border: 1px solid var(--pf-primary) !important;
+  background: #eff6ff !important;
+  color: var(--pf-primary) !important;
+  font-weight: 700 !important;
 }
-.fc-menu-clear-icon svg {
+/* Sécurité absolue pour tuer les coches fantômes */
+.fc-menu-btn--active::before,
+.fc-menu-btn--active::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Icônes intégrées dans le JS */
+.fc-icon-centre {
+  font-size: 1.1rem;
+  line-height: 1;
+  margin-right: 4px;
+}
+.fc-icon-avis {
   width: 14px;
   height: 14px;
-}
-.fc-menu-clear-icon:hover {
-  background: #fef2f2;
-  color: var(--pf-danger);
-}
-.fc-menu-leaves-table table {
-  width: 100%;
-  border-spacing: 2px;
-}
-.fc-menu-leaves-table th {
-  font-size: 0.7rem;
-  color: var(--pf-text-muted);
-  text-align: center;
-}
-.fc-th-inline {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
+  object-fit: contain;
+  margin-right: 4px;
+  vertical-align: middle;
 }
 
-/* --- BOUTON DE MENU ACTIF (Élément déjà enregistré) --- */
-.fc-menu-btn--active {
-  background: #eff6ff;
-  border-color: var(--pf-primary);
-  color: var(--pf-primary);
-  /* Un léger inset shadow pour rendre la bordure un peu plus épaisse sans casser la taille */
-  box-shadow: inset 0 0 0 1px var(--pf-primary);
-}
-
-/* Table specifique modale vacances */
+/* =========================================================
+   MODALES (Paramètres & Vacances)
+   ========================================================= */
 .fc-holidays-table {
   width: 100%;
   border-collapse: collapse;
@@ -772,7 +743,6 @@ td.col-laia-sub {
   background: #fafafa;
 }
 
-/* ===  MODALES : Alignement du Header et de la Croix === */
 .pf-modal-header {
   display: flex;
   justify-content: space-between;
@@ -781,14 +751,12 @@ td.col-laia-sub {
   border-bottom: 1px solid var(--pf-border);
   padding-bottom: 15px;
 }
-
 .pf-modal-header .pf-modal-title {
   margin: 0;
   padding: 0;
-  border-bottom: none; /* On annule la bordure par défaut du global.css pour la déléguer au header */
+  border-bottom: none;
   flex-grow: 1;
 }
-
 .pf-modal-close {
   background: none;
   border: none;
@@ -799,9 +767,37 @@ td.col-laia-sub {
   padding: 0 0 0 15px;
   transition: color 0.2s;
 }
-
 .pf-modal-close:hover {
-  color: #ef4444; /* Devient rouge au survol */
+  color: #ef4444;
+}
+
+.fc-sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 1.2rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+  color: #0f172a;
+  transition: all 0.2s;
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+.fc-sidebar-tab.active {
+  background: #111827;
+  color: #ffffff;
+}
+.fc-sidebar-tab:hover:not(.active) {
+  background: #f1f5f9;
+}
+[data-theme="dark"] .fc-sidebar-tab.active {
+  background: var(--pf-primary);
+  color: #ffffff;
 }
 
 /* =========================================================
@@ -811,34 +807,23 @@ td.col-laia-sub {
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-
   font-family: inherit;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--text-main);
-
-  /* Padding standard */
+  color: #0f172a;
   padding: 8px 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: capitalize;
   box-shadow: var(--pf-shadow-sm);
 }
-
 .fc-smart-select:hover {
   border-color: #94a3b8;
 }
-
 .fc-smart-select:focus {
-  background: #ffffff;
-  border-color: var(--primary);
+  border-color: var(--pf-primary);
   outline: none;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-/* --- BOUTON AUJOURD'HUI & CONTROLES --- */
-.fc-view-controls {
-  align-items: center; /* Pour bien centrer le nouveau bouton */
 }
 
 .fc-today-button {
@@ -853,12 +838,10 @@ td.col-laia-sub {
   transition: all 0.2s;
   box-shadow: var(--pf-shadow-sm);
 }
-
 .fc-today-button:hover {
   background: #eff6ff;
   border-color: var(--pf-primary);
 }
-
 .fc-view-divider {
   width: 1px;
   height: 20px;
@@ -866,34 +849,14 @@ td.col-laia-sub {
   margin: 0 8px;
 }
 
-/* --- MISE EN ÉVIDENCE DU JOUR EN COURS --- */
-.fc-day--today {
-  background: #eff6ff !important;
-  box-shadow: inset 0 0 0 1px #bfdbfe !important;
-}
-
-.fc-day--today .fc-day-number {
-  display: inline;
-  background: none;
-  width: auto;
-  height: auto;
-  box-shadow: none;
-  border-radius: 0;
-  margin: 0;
-  color: var(--pf-primary);
-  font-weight: 900;
-  font-size: 1.1em;
-}
-
+/* =========================================================
+   MOBILE RESPONSIVE
+   ========================================================= */
 @media (max-width: 768px) {
   .fc-smart-select {
     font-size: 1rem;
     padding: 6px 8px;
   }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
   .pf-family-calendar .pf-container {
     padding: 0 !important;
   }
@@ -927,6 +890,9 @@ td.col-laia-sub {
     grid-template-columns: 1fr;
     padding: 10px;
   }
+
+  #selectionMenu,
+  #fc-month-selectionMenu,
   .fc-selection-menu {
     position: fixed !important;
     top: auto !important;
@@ -939,7 +905,8 @@ td.col-laia-sub {
     animation: slideUpSheet 0.3s forwards;
     z-index: 10000 !important;
   }
-  .fc-selection-menu::before {
+  #selectionMenu::before,
+  #fc-month-selectionMenu::before {
     content: "";
     display: block;
     width: 40px;
@@ -955,39 +922,8 @@ td.col-laia-sub {
     gap: 20px !important;
   }
 }
-
-/* ==========================================================================
-   MODALE PARAMÈTRES (SIDEBAR STYLE)
-   ========================================================================== */
-.fc-sidebar-tab {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 1.2rem;
-  background: transparent;
-  border: none;
-  text-align: left;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--text-main);
-  transition: all 0.2s;
-  width: calc(100% - 16px);
-  margin: 2px 8px;
-  border-radius: 8px;
-  font-size: 0.95rem;
-}
-
-.fc-sidebar-tab.active {
-  background: #111827; /* Gris très foncé typique des sidebars */
-  color: #ffffff;
-}
-
-.fc-sidebar-tab:hover:not(.active) {
-  background: var(--bg-soft, #f1f5f9);
-}
-
-/* Variante Dark Mode native pour l'onglet actif */
-[data-theme="dark"] .fc-sidebar-tab.active {
-  background: var(--primary);
-  color: #ffffff;
+@keyframes slideUpSheet {
+  to {
+    transform: translateY(0);
+  }
 }

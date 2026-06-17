@@ -19,8 +19,7 @@ try {
         // 2. Catégories
         $categories = $pdo->query("SELECT * FROM pf_budget_categories ORDER BY type ASC, label ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-        // 3. Règles d'import (avec le nom de la catégorie correspondante)
-        // Utilisation de COLLATE pour éviter l'erreur 1267 de mix de collations
+        // 3. Règles d'import
         $rules = $pdo->query("
             SELECT r.*, c.label as cat_label 
             FROM pf_import_rules r 
@@ -32,73 +31,60 @@ try {
         $currentYear = (int)date('Y');
         $salaries = $pdo->query("SELECT * FROM pf_salary_config WHERE year = $currentYear ORDER BY person ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-        // Récupération de la devise du foyer (par défaut € si non définie)
-        // Lecture directe de la colonne currency dans pf_foyer_settings
-        $currencySetting = $pdo->query("SELECT currency FROM pf_foyer_settings LIMIT 1")->fetchColumn() ?: '€';
+        // 5. Paramètres Foyer (Devise + Mapping CSV)
+        $foyerData = $pdo->query("SELECT currency, csv_mapping FROM pf_foyer_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        $currencySetting = $foyerData['currency'] ?? '€';
+        $csvMapping = !empty($foyerData['csv_mapping']) ? json_decode($foyerData['csv_mapping'], true) : null;
 
         echo json_encode([
             'success' => true,
             'data' => [
-                'accounts'   => $accounts,
-                'categories' => $categories,
-                'rules'      => $rules,
-                'salaries'   => $salaries,
-                'year'       => $currentYear,
-                'currency'   => $currencySetting 
+                'accounts'    => $accounts,
+                'categories'  => $categories,
+                'rules'       => $rules,
+                'salaries'    => $salaries,
+                'year'        => $currentYear,
+                'currency'    => $currencySetting,
+                'csv_mapping' => $csvMapping
             ]
         ]);
         exit;
     }
 
     // --- GESTION DES COMPTES BANCAIRES ---
-
     if ($action === 'add_account') {
         $name = trim($_POST['name'] ?? '');
         $type = $_POST['type'] ?? 'checking';
-        // On met is_default à 0 par défaut pour les nouveaux comptes
-        
         if (empty($name)) throw new Exception("Le nom du compte est obligatoire.");
-
         $stmt = $pdo->prepare("INSERT INTO pf_bank_accounts (name, account_type, is_default) VALUES (?, ?, 0)");
         $stmt->execute([$name, $type]);
-        
         echo json_encode(['success' => true]);
         exit;
     }
 
     if ($action === 'delete_account') {
         $id = (int)($_POST['id'] ?? 0);
-        
-        // Sécurité : on empêche de supprimer un compte s'il n'en reste qu'un seul
         $count = $pdo->query("SELECT COUNT(*) FROM pf_bank_accounts")->fetchColumn();
         if ($count <= 1) throw new Exception("Impossible de supprimer le dernier compte.");
-
         $stmt = $pdo->prepare("DELETE FROM pf_bank_accounts WHERE id = ?");
         $stmt->execute([$id]);
-        
         echo json_encode(['success' => true]);
         exit;
     }
 
     // --- GESTION DES CATÉGORIES ---
-
     if ($action === 'add_category') {
         $code = strtoupper(trim($_POST['code'] ?? ''));
         $label = trim($_POST['label'] ?? '');
         $type = $_POST['type'] ?? 'Expense';
         $color = $_POST['color'] ?? '#cccccc';
         $icon = trim($_POST['icon'] ?? '📌');
-        
         if (empty($code) || empty($label)) throw new Exception("Le code et le libellé sont obligatoires.");
-
-        // Vérification anti-doublon sur le code
         $check = $pdo->prepare("SELECT COUNT(*) FROM pf_budget_categories WHERE code = ?");
         $check->execute([$code]);
         if ($check->fetchColumn() > 0) throw new Exception("Ce code de catégorie existe déjà.");
-
         $stmt = $pdo->prepare("INSERT INTO pf_budget_categories (code, label, type, color, icon) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$code, $label, $type, $color, $icon]);
-        
         echo json_encode(['success' => true]);
         exit;
     }
@@ -107,27 +93,20 @@ try {
         $id = (int)($_POST['id'] ?? 0);
         $stmt = $pdo->prepare("DELETE FROM pf_budget_categories WHERE id = ?");
         $stmt->execute([$id]);
-        
         echo json_encode(['success' => true]);
         exit;
     }
 
     // --- GESTION DES RÈGLES D'IMPORT ---
-
     if ($action === 'add_rule') {
         $keyword = strtoupper(trim($_POST['keyword'] ?? ''));
-        $category = trim($_POST['category'] ?? ''); // Le code de la catégorie (ex: FMCG)
-        
+        $category = trim($_POST['category'] ?? '');
         if (empty($keyword) || empty($category)) throw new Exception("Le mot-clé et la catégorie sont obligatoires.");
-
-        // Vérification anti-doublon
         $check = $pdo->prepare("SELECT COUNT(*) FROM pf_import_rules WHERE keyword = ?");
         $check->execute([$keyword]);
         if ($check->fetchColumn() > 0) throw new Exception("Une règle pour ce mot-clé existe déjà.");
-
         $stmt = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category) VALUES (?, ?)");
         $stmt->execute([$keyword, $category]);
-        
         echo json_encode(['success' => true]);
         exit;
     }
@@ -136,36 +115,46 @@ try {
         $id = (int)($_POST['id'] ?? 0);
         $stmt = $pdo->prepare("DELETE FROM pf_import_rules WHERE id = ?");
         $stmt->execute([$id]);
-        
         echo json_encode(['success' => true]);
         exit;
     }
 
     // --- GESTION DES SALAIRES ---
-
     if ($action === 'save_salary') {
         $id = (int)($_POST['id'] ?? 0);
         $salary = (float)($_POST['salary'] ?? 0);
         $mensualite = (float)($_POST['mensualite'] ?? 0);
-
         if ($id <= 0) throw new Exception("ID de configuration de salaire invalide.");
-
-        // Mise à jour de la ligne pour l'année en cours
         $stmt = $pdo->prepare("UPDATE pf_salary_config SET salary = ?, mensualite = ? WHERE id = ?");
         $stmt->execute([$salary, $mensualite, $id]);
-
         echo json_encode(['success' => true]);
         exit;
     }
-    // --- GESTION DE LA DEVISE GLOBALE ---
 
+    // --- GESTION DE LA DEVISE GLOBALE ---
     if ($action === 'save_currency') {
         $currency = trim($_POST['currency'] ?? '€');
-
-        // Mise à jour directe de la colonne currency pour le foyer
         $stmt = $pdo->prepare("UPDATE pf_foyer_settings SET currency = ?");
         $stmt->execute([$currency]);
+        echo json_encode(['success' => true]);
+        exit;
+    }
 
+    // --- GESTION DU FORMAT CSV ---
+    if ($action === 'save_csv_mapping') {
+        $mapping = [
+            'delimiter'   => $_POST['csv_delimiter'] ?? ';',
+            'date_format' => $_POST['csv_date_format'] ?? 'd/m/Y',
+            'col_date'    => (int)($_POST['csv_col_date'] ?? 0),
+            'col_label'   => (int)($_POST['csv_col_label'] ?? 1),
+            'amount_type' => $_POST['csv_amount_type'] ?? 'single',
+            'col_debit'   => (int)($_POST['csv_col_debit'] ?? 8),
+            'col_credit'  => (int)($_POST['csv_col_credit'] ?? 9),
+            'col_ref'     => (int)($_POST['csv_col_ref'] ?? 3)
+        ];
+        $jsonContent = json_encode($mapping);
+        $stmt = $pdo->prepare("UPDATE pf_foyer_settings SET csv_mapping = ?");
+        $stmt->execute([$jsonContent]);
         echo json_encode(['success' => true]);
         exit;
     }
