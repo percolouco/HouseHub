@@ -230,9 +230,9 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $absAmount = abs((float)$item['amount']); 
     $amt = ($item['type'] === 'Annuel') ? $absAmount / 12 : $absAmount;
     $name = trim($item['name']);
-    $catCode = $item['category']; // Ex: FIXED, FMCG, INCOME...
+    $catCode = $item['category']; // Ex: FIXED, FMCG, INCOME ou income
     
-    $isIncome = (isset($categoriesConfig[$catCode]) && $categoriesConfig[$catCode]['db_type'] === 'Income');
+    $isIncome = (strtoupper($catCode) === 'INCOME' || (float)$item['amount'] > 0); 
     
     if ($isIncome) {
         $incomeList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount];
@@ -621,10 +621,11 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                 </select>
             </div>
 
+            <!-- 🛠️ FIX VISUEL : On demande la personne concernée (Bénéficiaire) -->
             <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
-                <label class="pf-label"><?= tr('bud_expected_income') ?></label>
+                <label class="pf-label"><?= tr('bud_beneficiary') ?></label>
                 <select name="budget_item_id" id="incomeSelect" class="pf-input" disabled>
-                    <option value=""><?= tr('bud_select_beneficiary') ?>    </option>
+                    <option value=""><?= tr('gift_filter_all_adults') ?></option>
                     <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
