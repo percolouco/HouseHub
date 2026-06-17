@@ -60,7 +60,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'reopen_month') {
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
     $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    // Mémorisation du mapping étendu (incluant budget_item_id)
     $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category, budget_item_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category), budget_item_id = VALUES(budget_item_id)");
 
     if (isset($_POST['lines']) && is_array($_POST['lines'])) {
@@ -152,8 +151,42 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
 }
 
 // ============================================================================
-// 3. RECUPERATION DES DONNEES ET CALCULS
+// 3. RECUPERATION DES DONNEES ET CALCULS (100% DYNAMIQUE)
 // ============================================================================
+
+// --- LECTURE DYNAMIQUE DES CATEGORIES ---
+$stmtCats = $pdo->query("SELECT * FROM pf_budget_categories ORDER BY type DESC, label ASC");
+$dbCategories = $stmtCats->fetchAll(PDO::FETCH_ASSOC);
+
+$categoriesConfig = [];
+foreach ($dbCategories as $c) {
+    $catType = ($c['type'] === 'Income') ? 'credit' : 'debit';
+    $categoriesConfig[$c['code']] = [
+        'type'        => $catType,
+        'db_type'     => $c['type'],
+        'label'       => ($c['icon'] ? $c['icon'] . ' ' : '') . $c['label'],
+        'budget'      => 0, // Sera rempli par les règles
+        'color'       => $c['color'] ?: '#64748b',
+        'suggestions' => []
+    ];
+}
+
+// Fallback "Autres" au cas où la BDD serait vide ou pour les dépenses non classées
+if (!isset($categoriesConfig['AUTRES'])) {
+    $categoriesConfig['AUTRES'] = [
+        'type'=>'debit', 'db_type'=>'Expense', 'label'=>'📁 Autres / Divers', 
+        'budget'=>0, 'color'=>'#94a3b8', 'suggestions'=>[]
+    ];
+}
+
+// Peuplement dynamique des suggestions via les règles existantes
+$stmtRules = $pdo->query("SELECT keyword, category FROM pf_import_rules");
+while ($rule = $stmtRules->fetch(PDO::FETCH_ASSOC)) {
+    if (isset($categoriesConfig[$rule['category']])) {
+        $categoriesConfig[$rule['category']]['suggestions'][] = $rule['keyword'];
+    }
+}
+
 
 $stmtCheckClose = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'month_closure' AND reference_id = ?");
 $stmtCheckClose->execute([$viewMonthDate]);
@@ -184,27 +217,42 @@ $allExpenses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $paidItemIds = array_column(array_filter($allExpenses, fn($e) => !empty($e['budget_item_id'])), 'budget_item_id');
 $realExpensesLabels = array_column(array_filter($allExpenses, fn($e) => $e['amount'] < 0), 'label');
 
-$budget_fmcg = 0; $budget_school = 0; $budget_essence = 0; $budget_frais = 0; $budget_income_prevu = 0;
+$budget_income_prevu = 0;
 $total_income = 0; $total_expenses_prevues = 0;
 $reste_a_venir_calc = 0; 
 $fixedChargesList = []; $incomeList = []; $pending_charges = [];
 
+// ============================================================================
+// MAPPING DYNAMIQUE DES BUDGETS PRÉVISIONNELS (NOUVELLE LOGIQUE)
+// ============================================================================
 $stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $absAmount = abs((float)$item['amount']); 
     $amt = ($item['type'] === 'Annuel') ? $absAmount / 12 : $absAmount;
     $name = trim($item['name']);
+    $catCode = $item['category']; // Ex: FIXED, FMCG, INCOME...
+    $isIncome = ((float)$item['amount'] > 0); // La norme est désormais définie par le signe du montant
     
-    if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
-        $fixedChargesList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount]; 
-    }
-    if ($item['category'] === 'income') {
+    if ($isIncome) {
         $incomeList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount];
         $total_income += $amt;
-        $budget_income_prevu += $amt; 
+        $budget_income_prevu += $amt;
+        
+        // Attribution au compte de revenu défini, sinon au premier disponible
+        if (!empty($catCode) && isset($categoriesConfig[$catCode])) {
+            $categoriesConfig[$catCode]['budget'] += $amt;
+        } else {
+            $incomeCatKey = array_key_first(array_filter($categoriesConfig, fn($c) => $c['db_type'] === 'Income'));
+            if ($incomeCatKey) $categoriesConfig[$incomeCatKey]['budget'] += $amt;
+        }
+        
     } else {
         $total_expenses_prevues += $amt;
-        if ($item['category'] === 'expense' && $item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
+        
+        // C'est une charge fixe (Mensuel + Is_Estimate = 0)
+        if ($item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
+            $fixedChargesList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount]; 
+            
             $isPaid = false;
             if (in_array($item['id'], $paidItemIds)) $isPaid = true;
             elseif (!empty($item['mapping_keywords'])) {
@@ -221,90 +269,68 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $pending_charges[] = ['name' => $name, 'amount' => $absAmount];
             }
         }
-        if (!empty($item['mapping_keywords'])) {
-            if (stripos($item['mapping_keywords'], 'FMCG') !== false) $budget_fmcg += $amt;
-            if (stripos($item['mapping_keywords'], 'School') !== false) $budget_school += $amt;
-            if (stripos($item['mapping_keywords'], 'Essence') !== false) $budget_essence += $amt;
-        }
 
-        if ((int)$item['is_estimate'] === 0 && $item['type'] === 'Mensuel' && $item['category'] === 'expense') { 
-            $budget_frais += $absAmount; 
+        // NOUVEAU : Attribution du budget prévisionnel (le Plafond) via la catégorie dynamique
+        if (!empty($catCode) && isset($categoriesConfig[$catCode])) {
+            $categoriesConfig[$catCode]['budget'] += $amt;
         }
     }
 }
 
-$budget_autres = max(0, $total_income - $total_expenses_prevues);
-
-// TRADUCTION DES CATÉGORIES
-$categoriesConfig = [
-    'Income'  => ['type'=>'credit', 'label'=>tr('cat_income'), 'budget'=>$budget_income_prevu, 'color'=>'#10b981', 'suggestions'=>[]],
-    'FMCG'    => ['type'=>'debit',  'label'=>tr('cat_fmcg'),   'budget'=>$budget_fmcg, 'color'=>'#3b82f6', 'suggestions'=>['Action', 'Carrefour', 'Lidl']],
-    'Essence' => ['type'=>'debit',  'label'=>tr('cat_fuel'),   'budget'=>$budget_essence, 'color'=>'#f59e0b', 'suggestions'=>['Audi', 'Polo']],
-    'School'  => ['type'=>'debit',  'label'=>tr('cat_school'), 'budget'=>$budget_school, 'color'=>'#10b981', 'suggestions'=>[]],
-    'Frais'   => ['type'=>'debit',  'label'=>tr('cat_fixed'),  'budget'=>$budget_frais, 'color'=>'#ef4444', 'suggestions'=>[]],
-    'Autres'  => ['type'=>'debit',  'label'=>tr('cat_others'), 'budget'=>$budget_autres, 'color'=>'#64748b', 'suggestions'=>['Restaurant', 'Cadeau']],
-    'Apports' => ['type'=>'debit',  'label'=>tr('cat_contributions') ?? 'Apports & Projets', 'budget'=>0, 'color'=>'#0ea5e9', 'suggestions'=>['Alex', 'Laia', 'Remboursement']],
-    'LivretA' => ['type'=>'debit',  'label'=>tr('cat_savings'),'budget'=>0, 'color'=>'#8b5cf6', 'suggestions'=>['Virement']]
-];
+// L'enveloppe "Autres" prend tout le reste du budget non alloué
+$categoriesConfig['AUTRES']['budget'] = max(0, $total_income - $total_expenses_prevues);
 
 $totals = array_fill_keys(array_keys($categoriesConfig), 0);
 $expensesByCategory = array_fill_keys(array_keys($categoriesConfig), []);
 $total_rentrees = 0;
 $depenses_reelles = 0;
 
+// VENTILATION DYNAMIQUE DES DÉPENSES
 foreach ($allExpenses as $exp) {
     $cat = $exp['category'];
-    if (!isset($totals[$cat])) $cat = 'Autres';
+    if (!isset($categoriesConfig[$cat])) $cat = 'AUTRES';
+    
     $val = (float)$exp['amount'];
     
-    if ($cat === 'Income') { $totals[$cat] += $val; } 
-    else {
-        if ($val > 0) $categoriesConfig[$cat]['budget'] += $val;
+    if ($categoriesConfig[$cat]['db_type'] === 'Income') { 
+        $totals[$cat] += $val; 
+    } else {
+        if ($val > 0) $categoriesConfig[$cat]['budget'] += $val; // Remboursement
         else $totals[$cat] += abs($val);
     }
+    
     $expensesByCategory[$cat][] = $exp;
 
     if ($val > 0) { 
-        if ($cat === 'Income' || $cat !== 'Frais') $total_rentrees += $val; 
-        else $depenses_reelles -= $val; 
+        if ($categoriesConfig[$cat]['db_type'] === 'Income') { $total_rentrees += $val; }
+        else { $depenses_reelles -= $val; } 
     } else {
         $depenses_reelles += abs($val);
     }
 }
 
-// Reste à venir dynamiques
-$ecole_depense = isset($totals['School']) ? $totals['School'] : 0;
-$reste_ecole = max(0, $budget_school - $ecole_depense);
-if ($reste_ecole > 0) {
-    $reste_a_venir_calc += $reste_ecole;
-    $pending_charges[] = ['name' => tr('bud_rem_school'), 'amount' => $reste_ecole];
-}
-
-$fmcg_depense = isset($totals['FMCG']) ? $totals['FMCG'] : 0;
-$reste_fmcg = max(0, $budget_fmcg - $fmcg_depense);
-if ($reste_fmcg > 0) {
-    $reste_a_venir_calc += $reste_fmcg;
-    $pending_charges[] = ['name' => tr('bud_rem_fmcg'), 'amount' => $reste_fmcg];
-}
-
-$essence_depense = isset($totals['Essence']) ? $totals['Essence'] : 0;
-$reste_essence = max(0, $budget_essence - $essence_depense);
-if ($reste_essence > 0) {
-    $reste_a_venir_calc += $reste_essence;
-    $pending_charges[] = ['name' => tr('bud_rem_fuel'), 'amount' => $reste_essence];
+// RESTE A VENIR PAR CATEGORIE (Remplace les variables codées en dur)
+foreach ($categoriesConfig as $code => $conf) {
+    if ($conf['db_type'] === 'Expense' && $conf['budget'] > 0) {
+        $spent = $totals[$code] ?? 0;
+        $rem = max(0, $conf['budget'] - $spent);
+        if ($rem > 0) {
+            $reste_a_venir_calc += $rem;
+            $pending_charges[] = ['name' => 'Reste ' . strip_tags($conf['label']), 'amount' => $rem];
+        }
+    }
 }
 
 // F. Calculs des KPIs finaux
-$rentrees_salaires_reels = $totals['Income'] ?? 0;
+$rentrees_salaires_reels = 0;
+foreach($categoriesConfig as $code => $conf) { if($conf['db_type'] === 'Income') $rentrees_salaires_reels += ($totals[$code] ?? 0); }
+
 $rentrees_autres = $total_rentrees - $rentrees_salaires_reels;
 $salaires_retenus = max($rentrees_salaires_reels, $budget_income_prevu);
 
 $capacite_max_calc = $solde_initial + $salaires_retenus + $rentrees_autres;
 
-// 1. On calcule s'il reste des salaires/revenus prévus à encaisser
 $revenus_a_venir = max(0, $budget_income_prevu - $rentrees_salaires_reels);
-
-// 2. Le solde théorique part de ta vraie saisie bancaire actuelle
 $solde_theorique_calc = $snapshot['amount'] + $revenus_a_venir - $reste_a_venir_calc;
 
 if ($isClosed) {
@@ -335,7 +361,6 @@ function getDisplayLogic($spent, $bg, $type) {
     return ['pct' => $pct, 'isOver' => $isOver, 'text' => $text];
 }
 
-// Noms des mois traduits
 $monthNames = [
     1 => tr('month_01'), 2 => tr('month_02'), 3 => tr('month_03'), 4 => tr('month_04'),
     5 => tr('month_05'), 6 => tr('month_06'), 7 => tr('month_07'), 8 => tr('month_08'),
@@ -505,11 +530,11 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                     </div>
                 </div>
                 <?php if (!$isClosed): ?>
-                    <button class="btn-add-item" style="color:<?= $conf['color'] ?>;" onclick="openAddModal('<?= $key ?>', '<?= addslashes($conf['label']) ?>')">＋</button>
+                    <button class="btn-add-item" style="color:<?= $conf['color'] ?>;" onclick="openAddModal('<?= $key ?>', '<?= addslashes(strip_tags($conf['label'])) ?>')">＋</button>
                 <?php endif; ?>
             </div>
 
-            <?php $barCol = ($key === 'Income') ? '#10b981' : ($logic['isOver'] ? '#ef4444' : $conf['color']); ?>
+            <?php $barCol = ($conf['db_type'] === 'Income') ? '#10b981' : ($logic['isOver'] ? '#ef4444' : $conf['color']); ?>
             <div style="background:#f1f5f9; height:4px; width:100%;">
                 <div style="width:<?= $logic['pct'] ?>%; background:<?= $barCol ?>; height:100%;"></div>
             </div>
@@ -568,7 +593,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                 <label class="pf-label"><?= tr('bud_category') ?></label>
                 <select name="category" id="modalCatSelect" class="pf-input" onchange="handleModalCatChange(this)">
                     <?php foreach($categoriesConfig as $key => $conf): ?>
-                        <option value="<?= $key ?>"><?= $conf['label'] ?></option>
+                        <option value="<?= $key ?>"><?= strip_tags($conf['label']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -587,23 +612,10 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                 <datalist id="modalSuggestions"></datalist>
             </div>
 
-            <div class="form-group" id="blockInputSelect" style="margin-bottom:15px; display:none;">
-                <label class="pf-label"><?= tr('bud_beneficiary') ?></label>
-                <select name="label_select" id="schoolSelect" class="pf-input">
-                    <?php
-                    $stmtSchoolLabel = $pdo->query("SELECT name FROM pf_people WHERE role IN ('enfant', 'nounou') OR role IS NULL ORDER BY id ASC");
-                    while($k = $stmtSchoolLabel->fetch(PDO::FETCH_ASSOC)) {
-                        $pName = htmlspecialchars($k['name']);
-                        echo "<option value='{$pName}'>{$pName}</option>";
-                    }
-                    ?>
-                </select>
-            </div>
-
             <div class="form-group" id="blockInputFrais" style="margin-bottom:15px; display:none;">
-                <label class="pf-label"><?= tr('bud_fixed_charge') ?></label>
+                <label class="pf-label">Lier à une Charge Fixe (Optionnel)</label>
                 <select name="budget_item_id" id="fraisSelect" class="pf-input" disabled>
-                <option value=""><?= tr('bud_select_beneficiary') ?></option>
+                <option value="">-- Aucune --</option>
                     <?php foreach ($fixedChargesList as $fc): ?><option value="<?= $fc['id'] ?>"><?= htmlspecialchars($fc['name']) ?></option><?php endforeach; ?>
                 </select>
             </div>
@@ -720,11 +732,11 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                                         <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="padding:4px; font-size:0.85rem; flex:1;">
                                             <option value="">-- <?= $isCrd ? tr('bud_ignore') : tr('bud_to_define') ?> --</option>
                                             <?php foreach ($categoriesConfig as $k => $c): ?>
-                                                <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= $c['label'] ?></option>
+                                                <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= strip_tags($c['label']) ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                         <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="display:none; padding:4px; font-size:0.85rem; flex:1;" disabled>
-                                            <option value="">-- <?= tr('bud_is_charge') ?> --</option>
+                                            <option value="">-- Lier à une Charge Fixe --</option>
                                             <?php foreach ($fixedChargesList as $fc): ?>
                                                 <option value="<?= $fc['id'] ?>" <?= ($row['suggested_item_id'] == $fc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($fc['name']) ?></option>
                                             <?php endforeach; ?>
@@ -757,7 +769,6 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
     document.body.classList.add('no-scroll');
 <?php endif; ?>
 
-// --- 1. SÉCURISATION TRADUCTIONS ET LANGUE ---
 window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
 window.I18N = {
     ...(window.I18N || {}),
@@ -769,34 +780,42 @@ window.I18N = {
     'btn_delete': <?= json_encode(tr('btn_delete')) ?>,
 };
 
+// --- DICTIONNAIRE JS DYNAMIQUE ---
+const catConfigs = <?= json_encode($categoriesConfig) ?>;
+
 const activeViewMonth = '<?= substr($viewMonthDate, 0, 7) ?>';
 function toggleDiv(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'none') ? 'block' : 'none'; }
 function openSuiviModal(id) { document.getElementById(id).classList.add('open'); document.body.classList.add('no-scroll'); }
 function closeSuiviModal(id) { document.getElementById(id).classList.remove('open'); document.body.classList.remove('no-scroll');}
 
-const suggestions = <?= json_encode(array_map(fn($c) => $c['suggestions'], $categoriesConfig)) ?>;
-
+// Gestion dynamique du formulaire modal 
 function handleModalCatChange(select) {
     const catKey = select.value;
+    const conf = catConfigs[catKey] || {db_type: 'Expense', suggestions: []};
     
-    document.getElementById('blockInputText').style.display = 'none';
-    document.getElementById('blockInputSelect').style.display = 'none';
+    document.getElementById('blockInputText').style.display = 'block';
     document.getElementById('blockInputFrais').style.display = 'none';
     document.getElementById('blockInputIncome').style.display = 'none';
     
-    document.getElementById('modalLabelInput').required = false;
+    document.getElementById('modalLabelInput').required = true;
     document.getElementById('fraisSelect').required = false;
     document.getElementById('incomeSelect').required = false;
     document.getElementById('fraisSelect').disabled = true;
     document.getElementById('incomeSelect').disabled = true;
 
-    if (catKey === 'School') { document.getElementById('blockInputSelect').style.display = 'block'; } 
-    else if (catKey === 'Frais') { document.getElementById('blockInputText').style.display = 'block'; document.getElementById('blockInputFrais').style.display = 'block'; document.getElementById('fraisSelect').required = true; document.getElementById('fraisSelect').disabled = false; }
-    else if (catKey === 'Income') { document.getElementById('blockInputText').style.display = 'block'; document.getElementById('blockInputIncome').style.display = 'block'; document.getElementById('incomeSelect').required = true; document.getElementById('incomeSelect').disabled = false; }
-    else {
-        document.getElementById('blockInputText').style.display = 'block'; document.getElementById('modalLabelInput').required = true;
-        const list = document.getElementById('modalSuggestions'); list.innerHTML = ''; 
-        if (suggestions[catKey]) { suggestions[catKey].forEach(i => { const op = document.createElement('option'); op.value = i; list.appendChild(op); }); }
+    if (conf.db_type === 'Income') { 
+        document.getElementById('blockInputIncome').style.display = 'block'; 
+        document.getElementById('incomeSelect').disabled = false; 
+        document.getElementById('incomeSelect').required = true;
+    } else {
+        // Optionnel : lier l'Expense à une charge fixe
+        document.getElementById('blockInputFrais').style.display = 'block'; 
+        document.getElementById('fraisSelect').disabled = false; 
+    }
+
+    const list = document.getElementById('modalSuggestions'); list.innerHTML = ''; 
+    if (conf.suggestions) { 
+        conf.suggestions.forEach(i => { const op = document.createElement('option'); op.value = i; list.appendChild(op); }); 
     }
 }
 
@@ -808,8 +827,10 @@ function openAddModal(catKey, catLabel) {
     document.getElementById('modalGestionMonth').value = activeViewMonth; 
     document.getElementById('modalLabelInput').value = "";
     document.getElementById('modalAmount').value = "";
-    const catSelect = document.getElementById('modalCatSelect'); catSelect.value = catKey; handleModalCatChange(catSelect);
-    document.getElementById('modalIsCredit').value = (catKey === 'Income') ? "1" : "0";
+    
+    const catSelect = document.getElementById('modalCatSelect'); catSelect.value = catKey; 
+    handleModalCatChange(catSelect);
+    document.getElementById('modalIsCredit').value = (catConfigs[catKey]?.db_type === 'Income') ? "1" : "0";
 }
 
 function openEditModal(e) {
@@ -821,21 +842,30 @@ function openEditModal(e) {
     document.getElementById('modalLabelInput').value = e.label;
     document.getElementById('modalIsCredit').value = parseFloat(e.amount) > 0 ? "1" : "0";
     document.getElementById('modalAmount').value = Math.abs(parseFloat(e.amount));
-    const catSelect = document.getElementById('modalCatSelect'); catSelect.value = e.category; handleModalCatChange(catSelect);
-    if (e.category === 'Frais') document.getElementById('fraisSelect').value = e.budget_item_id;
-    else if (e.category === 'Income') document.getElementById('incomeSelect').value = e.budget_item_id;
+    
+    const catSelect = document.getElementById('modalCatSelect'); catSelect.value = e.category; 
+    handleModalCatChange(catSelect);
+    
+    if (catConfigs[e.category]?.db_type === 'Income') document.getElementById('incomeSelect').value = e.budget_item_id;
+    else document.getElementById('fraisSelect').value = e.budget_item_id;
 }
 
+// Gestion dynamique du CSV Import 
 function handleLineCatChange(select, isInit = false) {
     const row = select.closest('tr');
-    const fSel = row.querySelector('.select-frais'); const iSel = row.querySelector('.select-income');
+    const fSel = row.querySelector('.select-frais'); 
+    const iSel = row.querySelector('.select-income');
+    const conf = catConfigs[select.value] || null;
     
     fSel.style.display = 'none'; iSel.style.display = 'none'; 
     if (!isInit) { fSel.value = ''; iSel.value = ''; }
     fSel.disabled = true; iSel.disabled = true;
 
-    if (select.value === 'Frais') { fSel.style.display = 'block'; fSel.disabled = false; } 
-    else if (select.value === 'Income') { iSel.style.display = 'block'; iSel.disabled = false; }
+    if (conf && conf.db_type === 'Income') { 
+        iSel.style.display = 'block'; iSel.disabled = false; 
+    } else if (conf) { 
+        fSel.style.display = 'block'; fSel.disabled = false; 
+    }
     checkValidation();
 }
 
@@ -844,16 +874,25 @@ function toggleAll(src) { document.querySelectorAll('.line-checkbox:not([disable
 function checkValidation() {
     let miss = 0;
     document.querySelectorAll('.line-checkbox:checked').forEach(cb => { 
-        const row = cb.closest('tr'); const isCrd = row.querySelector('.is-credit-flag').value === '1'; const cat = row.querySelector('.line-select').value;
-        let v = true; if (cat==="") { if(!isCrd) v = false; } else if (cat==='Frais' && row.querySelector('.select-frais').value==="") v=false; else if (cat==='Income' && row.querySelector('.select-income').value==="") v=false;
+        const row = cb.closest('tr'); 
+        const isCrd = row.querySelector('.is-credit-flag').value === '1'; 
+        const cat = row.querySelector('.line-select').value;
+        const conf = catConfigs[cat] || null;
+
+        let v = true; 
+        if (cat === "") { 
+            if (!isCrd) v = false; 
+        } else if (conf && conf.db_type === 'Income' && row.querySelector('.select-income').value === "") {
+            v = false;
+        }
         if (!v) { miss++; row.style.background = '#fff1f2'; } else row.style.background = '';
     });
     const btn = document.getElementById('btnImport'); const msg = document.getElementById('missingCount');
-    if(miss>0) { btn.disabled = true; btn.style.opacity=0.5; msg.style.display='inline'; msg.innerText = miss + ' ' + (window.I18N['bud_to_define_js'] || ''); } 
-    else { btn.disabled = false; btn.style.opacity=1; msg.style.display='none'; }
+    if(miss > 0) { btn.disabled = true; btn.style.opacity = 0.5; msg.style.display = 'inline'; msg.innerText = miss + ' ' + (window.I18N['bud_to_define_js'] || ''); } 
+    else { btn.disabled = false; btn.style.opacity = 1; msg.style.display = 'none'; }
 }
 
-if(document.getElementById('formMapping')) { 
+if (document.getElementById('formMapping')) { 
     document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s, true)); 
     checkValidation(); 
 }
@@ -897,7 +936,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerText = '⏳ ...';
 
                 const formData = new FormData(formExpense);
-                // Force l'action ici pour être sûr
                 formData.set('action', 'save_expense_manual'); 
 
                 const actionUrl = formExpense.getAttribute('action') || 'modules/budget/includes/api/manage-item.php';

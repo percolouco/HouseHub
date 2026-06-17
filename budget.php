@@ -80,6 +80,7 @@ require __DIR__ . '/header.php';
                 <button class="bs-tab-btn" onclick="switchBsTab('categories', this)"><?= tr('bs_tab_categories') ?></button>
                 <button class="bs-tab-btn" onclick="switchBsTab('rules', this)"><?= tr('bs_tab_rules') ?></button>
                 <button class="bs-tab-btn" onclick="switchBsTab('salaries', this)"><?= tr('bs_tab_salaries') ?></button>
+                <button class="bs-tab-btn" onclick="switchBsTab('csv', this)"><?= tr('bs_tab_csv') ?></button>
             </div>
             
             <div class="bs-content">
@@ -185,6 +186,89 @@ require __DIR__ . '/header.php';
                 <div id="pane-salaries" class="bs-pane">
                     <h4 class="bs-section-title"><?= tr('bs_tab_salaries') ?> (<?= date('Y') ?>)</h4>
                     <div id="bs-list-salaries">⏳ <?= tr('loading') ?></div>
+                </div>
+
+                <div id="pane-csv" class="bs-pane">
+                    <h4 class="bs-section-title"><?= tr('bs_csv_title') ?></h4>
+                    <p class="pf-muted-tiny" style="margin-top:0; margin-bottom:15px;"><?= tr('bs_csv_desc') ?></p>
+                    
+                    <div id="csv-drop-zone" style="border: 2px dashed var(--border-light, #ccc); border-radius: var(--radius); padding: 30px; text-align: center; cursor: pointer; margin-bottom: 25px; transition: all 0.2s;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📥</div>
+                        <h5 style="margin: 0 0 5px 0;"><?= tr('bs_csv_drop_title') ?></h5>
+                        <p class="pf-muted-tiny" style="margin: 0;"><?= tr('bs_csv_drop_desc') ?></p>
+                        <input type="file" id="csv_file_input" accept=".csv" style="display: none;">
+                    </div>
+
+                    <div id="csv-preview-container" style="display:none; background: var(--bg-soft, #f8fafc); padding: 15px; border-radius: var(--radius); border: 1px dashed var(--primary); margin-bottom: 25px;">
+                    </div>
+                    
+                    <h5 style="margin: 0 0 15px 0; border-bottom: 1px solid var(--border-light); padding-bottom: 5px;">
+                        <?= tr('bs_csv_settings_title') ?>
+                    </h5>
+
+                    <form id="form-csv-mapping" onsubmit="saveCsvMapping(event)">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label class="pf-label"><?= tr('bs_csv_delimiter') ?></label>
+                                <select name="csv_delimiter" id="csv_delimiter" class="pf-input">
+                                    <option value=";"><?= tr('bs_csv_delim_semi') ?></option>
+                                    <option value=","><?= tr('bs_csv_delim_comma') ?></option>
+                                    <option value="\t"><?= tr('bs_csv_delim_tab') ?></option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="pf-label"><?= tr('bs_csv_date_format') ?></label>
+                                <select name="csv_date_format" id="csv_date_format" class="pf-input">
+                                    <option value="d/m/Y">JJ/MM/AAAA</option>
+                                    <option value="Y-m-d">AAAA-MM-JJ</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h5 style="margin: 15px 0 10px; font-size: 0.95rem;">
+                            <?= tr('bs_csv_col_index') ?> 
+                            <small style="color:var(--text-muted); font-weight:normal;"><?= tr('bs_csv_col_index_help') ?></small>
+                        </h5>
+                        
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label class="pf-label"><?= tr('bs_csv_col_date') ?></label>
+                                <input type="number" min="0" name="csv_col_date" id="csv_col_date" class="pf-input" value="0" required>
+                            </div>
+                            <div>
+                                <label class="pf-label"><?= tr('bs_csv_col_label') ?></label>
+                                <input type="number" min="0" name="csv_col_label" id="csv_col_label" class="pf-input" value="1" required>
+                            </div>
+                        </div>
+
+                        <div style="background: var(--bg-panel); padding: 10px; border-radius: var(--radius); border: 1px solid var(--border-light); margin-bottom: 15px;">
+                            <label class="pf-label"><?= tr('bs_csv_amount_mgmt') ?></label>
+                            <select name="csv_amount_type" id="csv_amount_type" class="pf-input" style="margin-bottom: 10px;" onchange="toggleCsvAmountCols(this.value)">
+                                <option value="single"><?= tr('bs_csv_amount_single') ?></option>
+                                <option value="split"><?= tr('bs_csv_amount_split') ?></option>
+                            </select>
+
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label class="pf-label" id="lbl_col_debit"><?= tr('bs_csv_col_amount') ?></label>
+                                    <input type="number" min="0" name="csv_col_debit" id="csv_col_debit" class="pf-input" value="8" required>
+                                </div>
+                                <div id="wrapper_col_credit" style="display:none;">
+                                    <label class="pf-label"><?= tr('bs_csv_col_credit') ?></label>
+                                    <input type="number" min="0" name="csv_col_credit" id="csv_col_credit" class="pf-input" value="9">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <label class="pf-label"><?= tr('bs_csv_col_ref') ?></label>
+                            <input type="number" min="0" name="csv_col_ref" id="csv_col_ref" class="pf-input" value="3">
+                        </div>
+
+                        <div style="text-align: right;">
+                            <button type="submit" class="btn btn-secondary">💾 <?= tr('btn_save_format') ?></button>
+                        </div>
+                    </form>
                 </div>
 
             </div>
@@ -719,5 +803,202 @@ async function updateBudgetCurrency(selectEl) {
         alert("Erreur : " + err.message);
     }
 }   
+
+// --- GESTION DU MAPPING CSV ---
+window.I18N = {
+    ...(window.I18N || {}),
+    'bs_csv_col_amount': <?= json_encode(tr('bs_csv_col_amount')) ?>,
+    'bs_csv_col_debit': <?= json_encode(tr('bs_csv_col_debit')) ?>,
+    'bs_csv_saved': <?= json_encode(tr('bs_csv_saved')) ?>,
+    'error_occured': <?= json_encode(tr('error_occured')) ?>
+};
+
+function toggleCsvAmountCols(type) {
+    if (type === 'split') {
+        document.getElementById('wrapper_col_credit').style.display = 'block';
+        document.getElementById('lbl_col_debit').innerText = window.I18N['bs_csv_col_debit'];
+    } else {
+        document.getElementById('wrapper_col_credit').style.display = 'none';
+        document.getElementById('lbl_col_debit').innerText = window.I18N['bs_csv_col_amount'];
+    }
+}
+
+function renderCsvMapping(mapping) {
+    if (!mapping) return;
+    document.getElementById('csv_delimiter').value = mapping.delimiter || ';';
+    document.getElementById('csv_date_format').value = mapping.date_format || 'd/m/Y';
+    document.getElementById('csv_col_date').value = mapping.col_date ?? 0;
+    document.getElementById('csv_col_label').value = mapping.col_label ?? 1;
+    document.getElementById('csv_col_ref').value = mapping.col_ref ?? 3;
+    
+    const amountType = mapping.amount_type || 'split';
+    document.getElementById('csv_amount_type').value = amountType;
+    document.getElementById('csv_col_debit').value = mapping.col_debit ?? 8;
+    document.getElementById('csv_col_credit').value = mapping.col_credit ?? 9;
+    
+    toggleCsvAmountCols(amountType);
+}
+
+async function saveCsvMapping(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const oldText = btn.innerText;
+    btn.innerText = '⏳...';
+    btn.disabled = true;
+
+    try {
+        const formData = new FormData(form);
+        formData.append('action', 'save_csv_mapping');
+
+        const response = await pachaFetch('/modules/budget/includes/api/settings.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.success) throw new Error(response.error || window.I18N['error_occured']);
+        
+        if (typeof showToast === 'function') showToast(window.I18N['bs_csv_saved']);
+        else alert(window.I18N['bs_csv_saved']);
+        
+    } catch (err) {
+        alert(window.I18N['error_occured'] + " : " + err.message);
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
+}
+
+// --- GESTION DE LA DROP ZONE CSV ET FILEREADER ---
+
+// Ajout des nouvelles clés I18N magiques
+window.I18N = {
+    ...(window.I18N || {}),
+    'bs_csv_err_type': <?= json_encode(tr('bs_csv_err_type')) ?>,
+    'bs_csv_file_ok': <?= json_encode(tr('bs_csv_file_ok')) ?>,
+    'bs_csv_preview_title': <?= json_encode(tr('bs_csv_preview_title')) ?>,
+    'bs_csv_empty_col': <?= json_encode(tr('bs_csv_empty_col')) ?>,
+    'bs_csv_no_data': <?= json_encode(tr('bs_csv_no_data')) ?>
+};
+
+const dropZone = document.getElementById('csv-drop-zone');
+const fileInput = document.getElementById('csv_file_input');
+
+if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = 'rgba(0, 123, 255, 0.05)';
+        dropZone.style.borderColor = 'var(--primary-color, #007bff)';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = '';
+        dropZone.style.borderColor = 'var(--border-light, #ccc)';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.backgroundColor = '';
+        dropZone.style.borderColor = 'var(--border-light, #ccc)';
+        
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleCsvUpload(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length) {
+            handleCsvUpload(this.files[0]);
+        }
+    });
+}
+
+function handleCsvUpload(file) {
+    if (!file.name.endsWith('.csv')) {
+        alert(window.I18N['bs_csv_err_type']);
+        return;
+    }
+    
+    if (typeof showToast === 'function') {
+        showToast(window.I18N['bs_csv_file_ok'] + ' : ' + file.name);
+    }
+    
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const delimiter = document.getElementById('csv_delimiter').value || ';';
+        
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        
+        if (lines.length > 0) {
+            // Extraction des en-têtes (Ligne 0)
+            const headers = lines[0].split(delimiter).map(h => h.replace(/^"|"$/g, '').trim());
+            
+            // Extraction de max 2 lignes de données (Ligne 1 et 2)
+            const sampleRows = [];
+            for (let i = 1; i < Math.min(lines.length, 3); i++) {
+                const rowData = lines[i].split(delimiter).map(d => d.replace(/^"|"$/g, '').trim());
+                sampleRows.push(rowData);
+            }
+            
+            renderCsvTablePreview(headers, sampleRows);
+        }
+    };
+    
+    reader.readAsText(file, 'ISO-8859-1');
+}
+
+function renderCsvTablePreview(headers, sampleRows) {
+    const container = document.getElementById('csv-preview-container');
+    
+    let html = `<h5 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">👁️ ${window.I18N['bs_csv_preview_title']}</h5>`;
+    
+    // Conteneur avec scroll horizontal si le tableau est trop large
+    html += `<div style="overflow-x: auto; max-width: 100%; border: 1px solid var(--border-light); border-radius: 8px; background: white;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left; white-space: nowrap;">
+            <thead style="background: var(--bg-page, #f1f5f9); border-bottom: 2px solid var(--border-light);">
+                <tr>`;
+    
+    // Rendu des en-têtes de colonnes (avec le numéro)
+    headers.forEach((header, index) => {
+        const cleanHeader = header || `(${window.I18N['bs_csv_empty_col']})`;
+        html += `<th style="padding: 10px 15px; font-weight: 600; color: var(--text-main); border-right: 1px solid var(--border-light);">
+                    <div style="font-size: 0.75rem; color: var(--primary); margin-bottom: 2px;">N° ${index}</div>
+                    <div>${cleanHeader}</div>
+                 </th>`;
+    });
+    
+    html += `   </tr>
+            </thead>
+            <tbody>`;
+            
+    // Rendu des données
+    if (sampleRows.length === 0) {
+        html += `<tr><td colspan="${headers.length}" style="padding: 15px; text-align: center; color: var(--text-muted); font-style: italic;">${window.I18N['bs_csv_no_data']}</td></tr>`;
+    } else {
+        sampleRows.forEach(row => {
+            html += `<tr style="border-bottom: 1px solid #e2e8f0;">`;
+            // On boucle sur la taille des headers pour s'assurer que l'affichage ne casse pas si la ligne de données est incomplète
+            for (let i = 0; i < headers.length; i++) {
+                const cellData = row[i] !== undefined ? row[i] : '';
+                // Raccourcir la donnée si elle est vraiment très longue (ex: libellé de 100 caractères)
+                const displayData = cellData.length > 40 ? cellData.substring(0, 40) + '...' : cellData;
+                
+                html += `<td style="padding: 10px 15px; color: var(--text-muted); border-right: 1px dashed #e2e8f0;">${displayData}</td>`;
+            }
+            html += `</tr>`;
+        });
+    }
+
+    html += `</tbody></table></div>`;
+    
+    container.innerHTML = html;
+    container.style.display = 'block';
+}
 </script>
 <?php require __DIR__ . '/footer.php'; ?>

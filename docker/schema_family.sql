@@ -12,6 +12,29 @@ CREATE TABLE IF NOT EXISTS pf_foyer_settings (
 
 INSERT IGNORE INTO pf_foyer_settings (id, currency, zone_scolaire) VALUES (1, '€', 'C');
 
+-- ────────────────────────────────────────────────────────────
+-- Paramètres dynamiques des Modules (Key-Value)
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS `pf_settings` (
+  `setting_key` varchar(50) NOT NULL,
+  `setting_value` text DEFAULT NULL,
+  `module` varchar(50) NOT NULL,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `pf_settings` (`setting_key`, `setting_value`, `module`) VALUES 
+('calendar_default_view', 'month', 'calendar'),
+('calendar_first_day', '1', 'calendar'),
+('calendar_working_hours', '08:00-19:00', 'calendar'),
+('budget_start_day', '1', 'budget'),
+('budget_default_tab', 'dépenses', 'budget'),
+('travel_default_transport', 'car', 'voyage'),
+('travel_default_fuel_price', '1.85', 'voyage'), 
+('gifts_hide_purchased', '0', 'cadeaux'),
+('gifts_default_sort', 'person', 'cadeaux'),
+('gifts_budget_alert', '500', 'cadeaux');
+
 -- ─── Utilisateurs (Legacy) ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_users (
   id            INT AUTO_INCREMENT PRIMARY KEY,
@@ -178,6 +201,25 @@ CREATE TABLE IF NOT EXISTS `pf_advances` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ─── Budget Catégories (Dynamiques) ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_budget_categories (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(50) NOT NULL UNIQUE,
+  label VARCHAR(100) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  color VARCHAR(20) DEFAULT '#ccc',
+  icon VARCHAR(20) DEFAULT '?'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Insertion des catégories de base pour toute nouvelle famille
+INSERT IGNORE INTO pf_budget_categories (code, label, type, color, icon) VALUES
+('INCOME', 'Revenus', 'Income', '#10b981', '💵'),
+('FMCG', 'Alimentation & Courses', 'Expense', '#3b82f6', '🛒'),
+('FUEL', 'Carburant', 'Expense', '#f59e0b', '⛽'),
+('FIXED', 'Charges Fixes', 'Expense', '#ef4444', '🏢'),
+('SCHOOL', 'École & Garde', 'Expense', '#a855f7', '🎒'),
+('SAVINGS', 'Épargne', 'Expense', '#8b5cf6', '🐷');
+
 -- ─── Notes / Memo ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_notes (
   id           INT AUTO_INCREMENT PRIMARY KEY,
@@ -287,6 +329,7 @@ CREATE TABLE IF NOT EXISTS pf_vehicles (
   license_plate VARCHAR(50) DEFAULT NULL,
   vin VARCHAR(100) DEFAULT NULL,
   fuel_type VARCHAR(50) DEFAULT 'Essence',
+  consumption decimal(4,2) DEFAULT NULL COMMENT 'Consommation L/100km',
   color VARCHAR(50) DEFAULT NULL,
   purchase_date DATE DEFAULT NULL,
   purchase_price DECIMAL(10,2) DEFAULT NULL,

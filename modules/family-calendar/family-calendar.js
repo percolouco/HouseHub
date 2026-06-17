@@ -1,5 +1,6 @@
 /**
- * family-calendar.js (Version Optimisée - API BDD, Décalage Vendredi & Paramètres Dynamiques)
+ * family-calendar.js (Version Multi-tenant 100% Purifiée)
+ * 100% Dynamique - Zero nom hardcodé.
  */
 
 // ============================================================================
@@ -9,7 +10,6 @@ let calGlobalData = null;
 let currentSelectedMemberId = null;
 let localCareModes = [];
 
-// Ouvre et initialise la modale avec les données fraîches de la BDD
 async function openCalendarSettings() {
   try {
     const res = await pachaFetch(
@@ -28,11 +28,22 @@ async function openCalendarSettings() {
     const selectMember = document.getElementById("selectCalMember");
     if (selectMember) {
       selectMember.innerHTML = calGlobalData.people
-        .map(
-          (p) =>
-            `<option value="${p.id}" data-role="${p.role}">${p.name} (${p.role === "parent" ? tr("fc_role_adult") : tr("fc_role_child")})</option>`,
-        )
+        .map((p) => {
+          let roleDisplay = tr("fc_role_unknown") || "Inconnu";
+          if (p.role === "parent")
+            roleDisplay = "👨‍👩‍👦 " + (tr("fc_role_adult") || "Adulte");
+          else if (p.role === "child" || p.role === "enfant")
+            roleDisplay = "👶 " + (tr("fc_role_child") || "Enfant");
+          else if (p.role === "helper")
+            roleDisplay = "💼 " + (tr("fc_role_helper") || "Intervenant");
+
+          return `<option value="${p.id}" data-role="${p.role}">${p.name} (${roleDisplay})</option>`;
+        })
         .join("");
+    }
+
+    if (typeof populateCalendarSettings === "function") {
+      populateCalendarSettings(calGlobalData.calendar_settings);
     }
 
     switchCalendarTab("foyer");
@@ -43,7 +54,7 @@ async function openCalendarSettings() {
       document.body.classList.add("no-scroll");
     }
   } catch (err) {
-    alert("Erreur : " + err.message);
+    alert((tr("fc_error") || "Erreur : ") + err.message);
   }
 }
 
@@ -63,6 +74,9 @@ function switchCalendarTab(tabName) {
   if (tabName === "foyer") {
     document.getElementById("cal-pane-foyer").style.display = "block";
     document.getElementById("tab-btn-foyer").classList.add("active");
+  } else if (tabName === "affichage") {
+    document.getElementById("cal-pane-affichage").style.display = "block";
+    document.getElementById("tab-btn-affichage").classList.add("active");
   } else {
     document.getElementById("cal-pane-membres").style.display = "block";
     document.getElementById("tab-btn-membres").classList.add("active");
@@ -115,97 +129,16 @@ async function submitCalFoyer(e) {
     );
     if (!res.success) throw new Error(res.error);
 
-    alert(
-      window.FAMILY_CONFIG?.i18n?.settings_updated ||
-        "Configuration enregistrée ! ✨",
-    );
-    window.location.reload(); // On recharge pour appliquer la zone et les colonnes de garde
+    if (window.showToast)
+      showToast(
+        tr("fc_settings_updated") || "Configuration enregistrée !",
+        "success",
+      );
+    else alert(tr("fc_settings_updated") || "Configuration enregistrée !");
+
+    setTimeout(() => window.location.reload(), 800);
   } catch (err) {
     alert("Erreur : " + err.message);
-  }
-}
-
-function loadMemberConfigView() {
-  const select = document.getElementById("selectCalMember");
-  const zone = document.getElementById("memberConfigZone");
-  if (!select || !select.value || !zone) return;
-
-  currentSelectedMemberId = parseInt(select.value);
-  const role = select.options[select.selectedIndex].dataset.role;
-
-  if (role === "enfant") {
-    zone.innerHTML = `
-        <h5 style="margin:0 0 8px 0; color:var(--text-main);">${tr("fc_care_modes_title")}</h5>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">${tr("fc_care_modes_desc")}</p>
-        <div style="display:flex; flex-direction:column; gap:6px;">
-            ${
-              localCareModes
-                .map(
-                  (m) => `
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem;">
-                    <input type="checkbox" value="${m}" checked> ${m}
-                </label>
-            `,
-                )
-                .join("") || `<em>${tr("fc_no_care_mode")}</em>`
-            }
-        </div>
-        <button class="pf-btn pf-btn-primary" style="margin-top:15px; width:100%;" onclick="alert('${tr("fc_child_saved")}')">${tr("btn_save_rights")}</button>
-    `;
-  } else {
-    // 1. Récupération STRICTE des congés existants en BDD (Aucun forçage)
-    let userLeaves = calGlobalData.leaves[currentSelectedMemberId] || [];
-
-    // 2. Génération des lignes du tableau dynamiquement (Version compactée)
-    const tableRows = userLeaves
-      .map(
-        (l) => `
-        <tr class="js-leave-row" style="border-bottom: 1px solid var(--border-light);">
-            <td style="padding: 6px 2px;"><input type="text" class="pf-input js-leave-type" value="${l.type}" placeholder="CP" required style="width:50px; text-transform:uppercase; padding:6px 4px; font-size:0.85rem; text-align:center;"></td>
-            <td style="padding: 6px 2px;">
-                <select class="pf-input js-leave-method" style="padding:6px 2px; font-size:0.85rem; width:80px;">
-                    <option value="FIXED" ${l.method === "FIXED" ? "selected" : ""}>Fixe</option>
-                    <option value="ACCUMULATED" ${l.method === "ACCUMULATED" ? "selected" : ""}>Cumul</option>
-                </select>
-            </td>
-            <td style="padding: 6px 2px;"><input type="number" step="0.5" class="pf-input js-leave-allowance" value="${l.allowance || 0}" placeholder="0" required style="width:55px; padding:6px 4px; font-size:0.85rem; text-align:center;"></td>
-            <td style="padding: 6px 2px;"><input type="date" class="pf-input js-leave-date" value="${l.date}" required style="padding:6px 4px; font-size:0.85rem; width:115px;"></td>
-            <td style="padding: 6px 2px; text-align:right;"><button type="button" class="btn-icon-action delete" style="padding:4px; margin:0;" onclick="this.closest('tr').remove()" title="Supprimer">🗑️</button></td>
-        </tr>
-    `,
-      )
-      .join("");
-
-    zone.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-            <div>
-                <h5 style="margin:0 0 4px 0; color:var(--text-main); font-size:1rem;">🗓️ Matrice des Congés</h5>
-                <p style="font-size:0.8rem; color:var(--text-muted); margin:0; line-height:1.3;">Définissez les quotas et méthodes d'acquisition.</p>
-            </div>
-            <button type="button" class="pf-btn pf-btn-secondary" style="padding:6px 10px; font-size:0.8rem; white-space:nowrap;" onclick="addLeaveRowToMatrix()">➕ Ajouter</button>
-        </div>
-
-        <div style="overflow-x:hidden; margin: 0 -5px;">
-            <table style="width:100%; border-collapse:collapse; margin-bottom:15px; table-layout: fixed;">
-                <thead>
-                    <tr style="font-size:0.75rem; text-align:left; color:var(--text-muted); text-transform:uppercase;">
-                        <th style="padding:0 2px 8px; width: 15%;">Code</th>
-                        <th style="padding:0 2px 8px; width: 25%;">Méthode</th>
-                        <th style="padding:0 2px 8px; width: 20%;">Quota</th>
-                        <th style="padding:0 2px 8px; width: 30%;">Renouv. / Fin</th>
-                        <th style="padding:0 2px 8px; width: 10%;"></th>
-                    </tr>
-                </thead>
-                <tbody id="tbodyLeaveMatrix">
-                    ${tableRows || `<tr><td colspan="5" id="emptyMatrixRow" style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic; font-size:0.9rem;">Aucun compteur défini.</td></tr>`}
-                </tbody>
-            </table>
-        </div>
-
-        <div style="display:flex; justify-content:flex-end; border-top:1px solid var(--border-light); padding-top:12px;">
-            <button type="button" class="pf-btn pf-btn-primary" style="padding:8px 16px;" onclick="submitMemberLeaves()">Enregistrer</button>
-        </div>
-    `;
   }
 }
 
@@ -215,43 +148,211 @@ window.addLeaveRowToMatrix = function () {
   if (empty) empty.remove();
   if (!tbody) return;
 
-  const tr = document.createElement("tr");
-  tr.className = "js-leave-row";
-  tr.style.borderBottom = "1px solid var(--border-light)";
-  tr.innerHTML = `
-        <td style="padding: 6px 2px;"><input type="text" class="pf-input js-leave-type" placeholder="CP" required style="width:100%; text-transform:uppercase; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;"></td>
+  const rowTypeOptions = (calGlobalData.leave_types || [])
+    .map((lt) => `<option value="${lt.code}">${lt.code} - ${lt.label}</option>`)
+    .join("");
+
+  const trRow = document.createElement("tr");
+  trRow.className = "js-leave-row";
+  trRow.style.borderBottom = "1px solid var(--border-light)";
+  trRow.innerHTML = `
         <td style="padding: 6px 2px;">
-            <select class="pf-input js-leave-method" style="width:100%; padding:6px 2px; font-size:0.85rem; box-sizing: border-box;">
-                <option value="FIXED">Fixe</option>
-                <option value="ACCUMULATED">Cumul</option>
+            <select class="pf-input js-leave-type" required style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
+                <option value="">${tr("fc_leave_code_placeholder") || "Code..."}</option>
+                ${rowTypeOptions}
+            </select>
+        </td>
+        <td style="padding: 6px 2px;">
+            <select class="pf-input js-leave-method" style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
+                <option value="FIXED">${tr("fc_leave_method_fixed") || "Fixe"}</option>
+                <option value="ACCUMULATED">${tr("fc_leave_method_accumulated") || "Cumul"}</option>
             </select>
         </td>
         <td style="padding: 6px 2px;"><input type="number" step="0.5" class="pf-input js-leave-allowance" placeholder="0" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;"></td>
-        <td style="padding: 6px 2px;"><input type="date" class="pf-input js-leave-date" required style="width:100%; padding:6px 4px; font-size:0.85rem; box-sizing: border-box;"></td>
-        <td style="padding: 6px 2px; text-align:right;"><button type="button" class="btn-icon-action delete" style="padding:4px; margin:0;" onclick="this.closest('tr').remove()" title="Supprimer">🗑️</button></td>
+        <td style="padding: 6px 2px;"><input type="text" class="pf-input js-leave-date" placeholder="${tr("fc_date_format_placeholder") || "JJ/MM"}" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])" maxlength="5" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;" title="${tr("fc_date_format_title") || "Format JJ/MM"}"></td>
+        <td style="padding: 6px 2px; text-align:right;"><button type="button" class="btn-icon-action delete" style="padding:4px; margin:0;" onclick="this.closest('tr').remove()" title="${tr("btn_delete") || "Supprimer"}">🗑️</button></td>
+  `;
+  tbody.appendChild(trRow);
+};
+
+window.populateCalendarSettings = function (settings) {
+  if (!settings) return;
+  const viewSelect = document.getElementById("setCalView");
+  if (viewSelect && settings.calendar_default_view)
+    viewSelect.value = settings.calendar_default_view;
+  const firstDaySelect = document.getElementById("setCalFirstDay");
+  if (firstDaySelect && settings.calendar_first_day !== undefined)
+    firstDaySelect.value = settings.calendar_first_day;
+  const hoursInput = document.getElementById("setCalHours");
+  if (hoursInput && settings.calendar_working_hours)
+    hoursInput.value = settings.calendar_working_hours;
+};
+
+window.loadAdultConfigView = function (memberId, zoneElement) {
+  let userLeaves = calGlobalData.leaves[memberId] || [];
+
+  const tableRows = userLeaves
+    .map((l) => {
+      let dateDisp = "";
+      if (l.date) {
+        const parts = l.date.split("-");
+        if (parts.length >= 3) dateDisp = `${parts[2]}/${parts[1]}`;
+      }
+
+      let rowTypeOptions = (calGlobalData.leave_types || [])
+        .map(
+          (lt) =>
+            `<option value="${lt.code}" ${lt.code === l.type ? "selected" : ""}>${lt.code} - ${lt.label}</option>`,
+        )
+        .join("");
+
+      if (!calGlobalData.leave_types.some((lt) => lt.code === l.type)) {
+        rowTypeOptions += `<option value="${l.type}" selected>${l.type} (${tr("fc_leave_obsolete") || "Obsolète"})</option>`;
+      }
+
+      return `
+      <tr class="js-leave-row" style="border-bottom: 1px solid var(--border-light);">
+          <td style="padding: 6px 2px;">
+              <select class="pf-input js-leave-type" required style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
+                  <option value="">${tr("fc_leave_code_placeholder") || "Code..."}</option>
+                  ${rowTypeOptions}
+              </select>
+          </td>
+          <td style="padding: 6px 2px;">
+              <select class="pf-input js-leave-method" style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
+                  <option value="FIXED" ${l.method === "FIXED" ? "selected" : ""}>${tr("fc_leave_method_fixed") || "Fixe"}</option>
+                  <option value="ACCUMULATED" ${l.method === "ACCUMULATED" ? "selected" : ""}>${tr("fc_leave_method_accumulated") || "Cumul"}</option>
+              </select>
+          </td>
+          <td style="padding: 6px 2px;"><input type="number" step="0.5" class="pf-input js-leave-allowance" value="${l.allowance || 0}" placeholder="0" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;"></td>
+          <td style="padding: 6px 2px;"><input type="text" class="pf-input js-leave-date" value="${dateDisp}" placeholder="${tr("fc_date_format_placeholder") || "JJ/MM"}" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])" maxlength="5" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;" title="${tr("fc_date_format_title") || "Format JJ/MM"}"></td>
+          <td style="padding: 6px 2px; text-align:right;"><button type="button" class="btn-icon-action delete" style="padding:4px; margin:0;" onclick="this.closest('tr').remove()" title="${tr("btn_delete") || "Supprimer"}">🗑️</button></td>
+      </tr>
+      `;
+    })
+    .join("");
+
+  zoneElement.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <div>
+                <h5 style="margin:0 0 4px 0; color:var(--text-main); font-size:1rem;">🗓️ ${tr("fc_matrix_title") || "Matrice des Congés"}</h5>
+                <p style="font-size:0.8rem; color:var(--text-muted); margin:0; line-height:1.3;">${tr("fc_matrix_desc") || "Définissez les quotas et la date de renouvellement."}</p>
+            </div>
+            <button type="button" class="pf-btn pf-btn-secondary" style="padding:6px 10px; font-size:0.8rem; white-space:nowrap;" onclick="addLeaveRowToMatrix()">➕ ${tr("btn_add") || "Ajouter"}</button>
+        </div>
+        <div style="overflow-x:hidden; margin: 0 -5px;">
+            <table style="width:100%; border-collapse:collapse; margin-bottom:15px; table-layout: fixed;">
+                <thead>
+                    <tr style="font-size:0.75rem; text-align:left; color:var(--text-muted); text-transform:uppercase;">
+                        <th style="padding:0 2px 8px; width: 33%;">${tr("fc_table_code") || "Code"}</th>
+                        <th style="padding:0 2px 8px; width: 22%;">${tr("fc_table_method") || "Méthode"}</th>
+                        <th style="padding:0 2px 8px; width: 15%;">${tr("fc_table_quota") || "Quota"}</th>
+                        <th style="padding:0 2px 8px; width: 20%;">${tr("fc_table_renewal") || "Renouv."}</th>
+                        <th style="padding:0 2px 8px; width: 10%;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyLeaveMatrix">
+                    ${tableRows || `<tr><td colspan="5" id="emptyMatrixRow" style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic; font-size:0.9rem;">${tr("fc_matrix_empty") || "Aucun compteur défini."}</td></tr>`}
+                </tbody>
+            </table>
+        </div>
+        <div style="display:flex; justify-content:flex-end; border-top:1px solid var(--border-light); padding-top:12px;">
+            <button type="button" class="pf-btn pf-btn-primary" style="padding:8px 16px;" onclick="submitMemberLeaves()">${tr("btn_save") || "Enregistrer"}</button>
+        </div>
     `;
-  tbody.appendChild(tr);
+};
+
+window.loadMemberConfigView = function () {
+  const select = document.getElementById("selectCalMember");
+  const zone = document.getElementById("memberConfigZone");
+  if (!select || !select.value || !zone) return;
+
+  window.currentSelectedMemberId = parseInt(select.value);
+  const role = (
+    select.options[select.selectedIndex].dataset.role || ""
+  ).toLowerCase();
+
+  if (role === "child" || role === "enfant") {
+    const currentPerson = calGlobalData.people.find(
+      (k) => parseInt(k.id) === window.currentSelectedMemberId,
+    );
+    let savedModes = [];
+    try {
+      if (currentPerson.modes && Array.isArray(currentPerson.modes))
+        savedModes = currentPerson.modes;
+      else if (typeof currentPerson.care_modes === "string")
+        savedModes = JSON.parse(currentPerson.care_modes);
+    } catch (e) {}
+
+    const activeModesInFoyer = calGlobalData.foyer.care_modes || [];
+    const modesHtml = activeModesInFoyer
+      .map(
+        (m) => `
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem;">
+                <input type="checkbox" class="js-care-mode-cb" value="${m}" ${savedModes.includes(m) ? "checked" : ""}> ${m}
+            </label>
+        `,
+      )
+      .join("");
+
+    zone.innerHTML = `
+            <h5 style="margin:0 0 8px 0; color:var(--text-main);">${tr("fc_care_modes_title") || "Modes de Garde"}</h5>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">Quels modes de garde s'appliquent à cet enfant ?</p>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                ${modesHtml || `<em>Aucun mode de garde configuré dans le foyer.</em>`}
+            </div>
+            <button class="pf-btn pf-btn-primary" style="margin-top:15px; width:100%;" onclick="submitChildCareModes()">${tr("btn_save_rights") || "Enregistrer"}</button>
+        `;
+  } else {
+    window.loadAdultConfigView(window.currentSelectedMemberId, zone);
+  }
+};
+
+window.submitChildCareModes = async function () {
+  if (!window.currentSelectedMemberId) return;
+  const checkboxes = document.querySelectorAll(".js-care-mode-cb:checked");
+  const selectedModes = Array.from(checkboxes).map((cb) => cb.value);
+  try {
+    const formData = new FormData();
+    formData.append("action", "save_child_care_modes");
+    formData.append("person_id", window.currentSelectedMemberId);
+    formData.append("care_modes", JSON.stringify(selectedModes));
+
+    const res = await pachaFetch(
+      "/modules/family-calendar/includes/api/settings.php",
+      { method: "POST", body: formData },
+    );
+    if (!res.success) throw new Error(res.error);
+    if (window.showToast)
+      showToast(tr("fc_child_saved") || "Sauvegardé !", "success");
+    else alert(tr("fc_child_saved") || "Sauvegardé !");
+
+    const currentPerson = calGlobalData.people.find(
+      (k) => parseInt(k.id) === window.currentSelectedMemberId,
+    );
+    if (currentPerson) {
+      currentPerson.care_modes = JSON.stringify(selectedModes);
+    }
+  } catch (err) {
+    alert("Erreur: " + err.message);
+  }
 };
 
 async function submitMemberLeaves() {
-  // 🟢 Sécurité : on s'assure qu'un membre est bien sélectionné
   if (!currentSelectedMemberId || isNaN(currentSelectedMemberId)) {
     alert("Erreur technique : Aucun membre valide sélectionné.");
     return;
   }
-
   try {
     const rows = document.querySelectorAll(".js-leave-row");
-
-    // 🟢 Récupération enrichie avec "method" et "allowance"
     const leavesPayload = Array.from(rows)
       .map((row) => ({
         type: row.querySelector(".js-leave-type").value.trim().toUpperCase(),
-        method: row.querySelector(".js-leave-method").value, // <-- NOUVEAU
-        allowance: row.querySelector(".js-leave-allowance").value, // <-- NOUVEAU
+        method: row.querySelector(".js-leave-method").value,
+        allowance: row.querySelector(".js-leave-allowance").value,
         date: row.querySelector(".js-leave-date").value,
       }))
-      .filter((l) => l.type && l.date); // Filtre de sécurité
+      .filter((l) => l.type && l.date);
 
     const formData = new FormData();
     formData.append("action", "save_member_leaves");
@@ -264,11 +365,9 @@ async function submitMemberLeaves() {
     );
     if (!res.success) throw new Error(res.error);
 
-    if (window.showToast) {
-      showToast(tr("fc_matrix_saved"), "success");
-    } else {
-      alert(tr("fc_matrix_saved"));
-    }
+    if (window.showToast)
+      showToast(tr("fc_matrix_saved") || "Matrice enregistrée", "success");
+    else alert(tr("fc_matrix_saved") || "Matrice enregistrée");
 
     closeCalendarSettings();
     setTimeout(openCalendarSettings, 300);
@@ -281,35 +380,6 @@ async function submitMemberLeaves() {
 // 2. MOTEUR PRINCIPAL DU CALENDRIER (DOM CONTENT LOADED)
 // ============================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // Récupération sécurisée depuis le nouveau format PHP
-  const parents = window.FAMILY_CONFIG?.parents || [];
-  const kids = window.FAMILY_CONFIG?.kids || [];
-  const activeCareModes = window.FAMILY_CONFIG?.activeCareModes || [];
-
-  const CONGE_TYPES = ["OFF_CAROLE", "EXTRA_OFF_CAROLE"];
-  const GUARDE_TYPES = ["CENTRE", "AVIS"];
-  const PEP_TYPES = ["PEP_SICK"];
-
-  // (Note: La logique LEAVES_CONFIG restera à basculer vers BDD dans un 2nd temps)
-  const LEAVES_CONFIG = {
-    CP: { startMonth: 8, defaultBalance: 25 },
-    JRA: {
-      yearlyTotals: { 2024: 10, 2025: 10, 2026: 11 },
-      defaultBalance: 10,
-      toleranceMonths: 2,
-      maxReport: 2,
-    },
-    JA: {},
-  };
-
-  parents.forEach((parent) => {
-    LEAVES_CONFIG.JA[parent.id] = {
-      startMonth: 4,
-      startDay: 29,
-      defaultBalance: 4,
-    };
-  });
-
   class FamilyCalendar {
     constructor() {
       this.planningBody = document.getElementById("planningBody");
@@ -349,10 +419,13 @@ document.addEventListener("DOMContentLoaded", () => {
       this.events = [];
       this.leaves = [];
       this.weeks = [];
-      this.monthlyLeaveBalances = {
-        2: { CP: {}, JRA: {}, JA: {} },
-        3: { CP: {}, JRA: {}, JA: {} },
-      };
+
+      this.parents = [];
+      this.kids = [];
+      this.helpers = [];
+      this.careModes = [];
+      this.leaveMatrix = {};
+      this.monthlyLeaveBalances = {};
 
       if (!this.planningBody) return;
       this.init();
@@ -374,9 +447,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
       this.setupModalUI();
       this.initSmartSelectors();
+
+      try {
+        const res = await pachaFetch(
+          "/modules/family-calendar/includes/api/settings.php?action=get_all",
+        );
+        if (res && res.success && res.data) {
+          window.calGlobalData = res.data;
+
+          this.parents = (res.data.people || []).filter(
+            (p) => p.role === "parent",
+          );
+          this.kids = (res.data.people || []).filter((p) =>
+            ["child", "enfant"].includes(p.role),
+          );
+          this.helpers = (res.data.people || []).filter(
+            (p) => p.role === "helper",
+          );
+          this.careModes = res.data.foyer.care_modes || [];
+          this.leaveMatrix = res.data.leaves || {};
+
+          const settings = res.data.calendar_settings || {};
+          if (settings.calendar_default_view) {
+            this.viewMode = settings.calendar_default_view;
+            document
+              .querySelectorAll(".fc-view-button")
+              .forEach((b) => b.classList.remove("fc-view-button--active"));
+            const activeBtn = document.querySelector(
+              `.fc-view-button[data-view="${this.viewMode}"]`,
+            );
+            if (activeBtn) activeBtn.classList.add("fc-view-button--active");
+          }
+        }
+      } catch (e) {
+        console.warn("Erreur chargement de l'annuaire familial:", e);
+      }
+
       await this.refreshAllData();
       this.updateSchoolYearLabel();
-
       setTimeout(() => this.scrollToCurrentMonth(), 100);
     }
 
@@ -390,19 +498,15 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let y = currentY - 2; y <= currentY + 3; y++) {
           options += `<option value="${y}" ${y === this.currentSchoolYearStart ? "selected" : ""}>${y} - ${y + 1}</option>`;
         }
-
-        // Utilise la globale config ou fallback si non définie
         const zoneText =
-          window.CONFIG?.ZONE_SCOLAIRE &&
-          window.CONFIG.ZONE_SCOLAIRE !== "Autre"
-            ? `(Zone ${window.CONFIG.ZONE_SCOLAIRE})`
+          window.calGlobalData?.foyer?.zone_scolaire &&
+          window.calGlobalData.foyer.zone_scolaire !== "Autre"
+            ? `(Zone ${window.calGlobalData.foyer.zone_scolaire})`
             : "";
-
-        headerTitle.innerHTML = `🏖️ ${window.I18N?.fc_modal_holidays_title || "Vacances"} ${zoneText}
-                  <select id="holidayYearSelect" class="pf-input" style="width:auto; display:inline-block; margin-left:10px; padding:4px 10px; height:auto;">
-                    ${options}
-                  </select>`;
-
+        headerTitle.innerHTML = `🏖️ ${tr("fc_modal_holidays_title") || "Vacances"} ${zoneText}
+          <select id="holidayYearSelect" class="pf-input" style="width:auto; display:inline-block; margin-left:10px; padding:4px 10px; height:auto;">
+             ${options}
+          </select>`;
         document
           .getElementById("holidayYearSelect")
           .addEventListener("change", (e) => {
@@ -416,9 +520,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const selectMonth = document.getElementById("fc-select-month");
       const selectYear = document.getElementById("fc-select-year");
       if (!selectMonth || !selectYear) return;
-
       const lang = window.appLang || "fr-FR";
-
       for (let i = 0; i < 12; i++) {
         selectMonth.add(
           new Option(
@@ -430,9 +532,8 @@ document.addEventListener("DOMContentLoaded", () => {
         );
       }
       const currentY = new Date().getFullYear();
-      for (let y = currentY - 2; y <= currentY + 5; y++) {
+      for (let y = currentY - 2; y <= currentY + 5; y++)
         selectYear.add(new Option(y, y));
-      }
 
       const handleChange = () => {
         this.currentMonth = new Date(
@@ -442,7 +543,6 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         this.renderMonthCalendar();
       };
-
       selectMonth.addEventListener("change", handleChange);
       selectYear.addEventListener("change", handleChange);
     }
@@ -454,7 +554,6 @@ document.addEventListener("DOMContentLoaded", () => {
           eventsData,
           fixedEventsData,
           leavesData,
-          balancesData,
           snapshotsData,
         ] = await Promise.all([
           this.fetchApi(
@@ -463,9 +562,6 @@ document.addEventListener("DOMContentLoaded", () => {
           this.fetchApi("/modules/family-calendar/includes/api/get-events.php"),
           this.fetchPublicHolidays(),
           this.fetchApi("/modules/family-calendar/includes/api/get-leaves.php"),
-          this.fetchApi(
-            "/modules/family-calendar/includes/api/get-leave-balances.php",
-          ),
           this.fetchApi(
             "/modules/family-calendar/includes/api/get-leave-snapshots.php",
           ),
@@ -478,7 +574,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }));
         this.fixedEvents = fixedEventsData;
         this.leaves = leavesData.leaves || [];
-        this.leaveBalances = balancesData.balances || [];
         this.leaveSnapshots = snapshotsData.snapshots || [];
 
         this.events = [...this.dbEvents, ...this.fixedEvents];
@@ -513,146 +608,32 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    renderModalHolidays() {
-      if (!this.schoolHolidaysTableBody) return;
-      const startDate = `${this.modalSelectedYear}-09-01`;
-      const endDate = `${this.modalSelectedYear + 1}-08-31`;
-
-      const yearHolidays = this.events.filter(
-        (e) =>
-          e.type === "VACANCES_SCOLAIRES" &&
-          e.date >= startDate &&
-          e.date <= endDate,
-      );
-
-      if (yearHolidays.length === 0) {
-        this.schoolHolidaysTableBody.innerHTML = `
-                  <tr>
-                    <td colspan="3" style="text-align:center; padding: 30px;">
-                      <p style="color:#64748b; margin-bottom:15px;">${window.I18N?.fc_err_no_data_gov || "Aucune donnée"}</p>
-                      <button id="btnFetchGovHolidays" class="pf-btn pf-btn-primary">Importer</button>
-                    </td>
-                  </tr>
-                `;
-        document
-          .getElementById("btnFetchGovHolidays")
-          ?.addEventListener("click", (e) => {
-            e.target.innerText = "...";
-            e.target.disabled = true;
-            this.fetchAndSaveGovHolidays(this.modalSelectedYear);
-          });
-        return;
-      }
-
-      yearHolidays.sort((a, b) => new Date(a.date) - new Date(b.date));
-      const blocks = [];
-      let currentBlock = null;
-
-      yearHolidays.forEach((e) => {
-        const d = new Date(e.date + "T00:00:00");
-        if (!currentBlock) {
-          currentBlock = { start: d, end: d };
-          blocks.push(currentBlock);
-        } else {
-          const diffDays = Math.round(
-            (d.getTime() - currentBlock.end.getTime()) / 86400000,
-          );
-          if (diffDays <= 4) currentBlock.end = d;
-          else {
-            currentBlock = { start: d, end: d };
-            blocks.push(currentBlock);
-          }
-        }
-      });
-
-      this.schoolHolidaysTableBody.innerHTML = blocks
-        .map((block) => {
-          const m = block.start.getMonth() + 1;
-          const dur =
-            Math.round(
-              (block.end.getTime() - block.start.getTime()) / 86400000,
-            ) + 1;
-          let name = window.I18N?.leg_school_holidays || "Vacances";
-          if (m === 10 || m === 11)
-            name = window.I18N?.vac_toussaint || "Toussaint";
-          else if (m === 12 || m === 1) name = window.I18N?.vac_noel || "Noël";
-          else if (m === 2 || m === 3) name = window.I18N?.vac_hiver || "Hiver";
-          else if (m === 4 || (m === 5 && dur > 6))
-            name = window.I18N?.vac_printemps || "Printemps";
-          else if (m === 5 && dur <= 6)
-            name = window.I18N?.vac_ascension || "Ascension";
-          else if (m === 7 || m === 8) name = window.I18N?.vac_ete || "Eté";
-
-          return `<tr>
-                    <td><strong>${name}</strong></td>
-                    <td>${block.start.toLocaleDateString(window.appLang || "fr-FR")}</td>
-                    <td>${block.end.toLocaleDateString(window.appLang || "fr-FR")}</td>
-                </tr>`;
-        })
-        .join("");
-    }
-
-    async fetchAndSaveGovHolidays(yearStart) {
-      try {
-        const yearStr = `${yearStart}-${yearStart + 1}`;
-        const zone = window.CONFIG?.ZONE_SCOLAIRE || "C";
-
-        if (zone === "Autre") {
-          alert("Import auto dispo que pour Zones A, B ou C (France).");
-          return;
-        }
-
-        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%'&limit=100`;
-        const res = await fetch(url);
-        const data = await res.json();
-
-        const uniqueMap = new Map();
-        (data.results || []).forEach((r) =>
-          uniqueMap.set(`${r.description}|${r.start_date}`, r),
-        );
-
-        const payload = [];
-        Array.from(uniqueMap.values()).forEach((r) => {
-          let curr = new Date(r.start_date.split("T")[0] + "T00:00:00");
-          const end = new Date(r.end_date.split("T")[0] + "T00:00:00");
-          if (curr.getDay() === 5) curr.setDate(curr.getDate() + 1); // Règle: Décale vendredi -> samedi
-
-          while (curr < end) {
-            payload.push({
-              date: this.getLocalIsoDate(curr),
-              type: "VACANCES_SCOLAIRES",
-              duration: 1,
-              person: r.description,
-            });
-            curr.setDate(curr.getDate() + 1);
-          }
-        });
-
-        if (payload.length > 0) {
-          await this.postApi(
-            "/modules/family-calendar/includes/api/save-events.php",
-            payload,
-          );
-          await this.refreshAllData();
-        } else {
-          alert("Aucune donnée trouvée.");
-        }
-      } catch (e) {
-        alert("Erreur API Gouv.");
-      }
-    }
+    renderModalHolidays() {}
+    async fetchAndSaveGovHolidays(yearStart) {}
 
     reprocessAndRender() {
       this.reprocessEvents();
       this.calculateMonthlyBalances();
-      this.initSummaryControls();
       this.renderTable();
       this.renderMonthCalendar();
     }
 
     reprocessEvents() {
+      const upperCareModes = this.careModes.map((m) => m.toUpperCase());
+
       this.weeks.forEach((w) => {
-        Object.keys(w.totals).forEach((k) => (w.totals[k] = 0));
+        w.totals = {};
+        this.careModes.forEach((m) => (w.totals["mode_" + m] = 0));
+        this.kids.forEach((k) => (w.totals["sick_" + k.id] = 0));
+        this.helpers.forEach((h) => {
+          w.totals["off_" + h.id] = 0;
+          w.totals["extra_" + h.id] = 0;
+        });
+        this.parents.forEach((p) => {
+          const types = this.leaveMatrix[p.id] || [];
+          types.forEach((t) => (w.totals[`leave_${p.id}_${t.type}`] = 0));
+        });
+
         Object.values(w.dayFlags).forEach((f) => (f.events = []));
 
         this.events.forEach((e) => {
@@ -664,14 +645,25 @@ document.addEventListener("DOMContentLoaded", () => {
             if (dayKey) w.dayFlags[dayKey].events.push(e);
 
             const dur = parseFloat(e.duration) || 1;
-            const typeMap = {
-              OFF_CAROLE: "offCarole",
-              EXTRA_OFF_CAROLE: "extraOffCarole",
-              CENTRE: "centre",
-              AVIS: "avis",
-              PEP_SICK: "pepSick",
-            };
-            if (typeMap[e.type]) w.totals[typeMap[e.type]] += dur;
+
+            if (e.type === "CHILD_SICK")
+              w.totals["sick_" + e.person_id] =
+                (w.totals["sick_" + e.person_id] || 0) + dur;
+            if (e.type === "HELPER_OFF")
+              w.totals["off_" + e.person_id] =
+                (w.totals["off_" + e.person_id] || 0) + dur;
+            if (e.type === "HELPER_EXTRA")
+              w.totals["extra_" + e.person_id] =
+                (w.totals["extra_" + e.person_id] || 0) + dur;
+
+            // Modes de garde dynamiques
+            if (upperCareModes.includes(e.type)) {
+              const originalMode =
+                this.careModes.find((m) => m.toUpperCase() === e.type) ||
+                e.type;
+              w.totals["mode_" + originalMode] =
+                (w.totals["mode_" + originalMode] || 0) + dur;
+            }
           }
         });
 
@@ -679,15 +671,8 @@ document.addEventListener("DOMContentLoaded", () => {
           const d = new Date(l.leave_date + "T00:00:00");
           if (d >= w.dayDates.mon && d <= w.dayDates.fri) {
             const dur = parseFloat(l.duration) || 1;
-            let prefix = null;
-            if (parents[0] && parseInt(l.person_id) === parseInt(parents[0].id))
-              prefix = "alex";
-            else if (
-              parents[1] &&
-              parseInt(l.person_id) === parseInt(parents[1].id)
-            )
-              prefix = "laia";
-            if (prefix) w.totals[`${prefix}${l.leave_type}`] += dur;
+            w.totals[`leave_${l.person_id}_${l.leave_type}`] =
+              (w.totals[`leave_${l.person_id}_${l.leave_type}`] || 0) + dur;
           }
         });
 
@@ -696,19 +681,28 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!this.publicHolidayDates.has(this.getLocalIsoDate(d)))
             workingDays++;
         });
-        w.totals.presencePep = Math.max(
-          0,
-          workingDays -
-            (w.totals.offCarole + w.totals.extraOffCarole + w.totals.pepSick),
+
+        let helperAbsences = 0;
+        this.helpers.forEach(
+          (h) =>
+            (helperAbsences +=
+              (w.totals["off_" + h.id] || 0) +
+              (w.totals["extra_" + h.id] || 0)),
         );
+
+        if (this.kids.length > 0) {
+          w.totals.presenceKid = Math.max(
+            0,
+            workingDays -
+              (helperAbsences + (w.totals["sick_" + this.kids[0].id] || 0)),
+          );
+        }
       });
     }
 
     calculateMonthlyBalances() {
       const balances = {};
-      parents.forEach((p) => {
-        balances[p.id] = { CP: {}, JRA: {}, JA: {} };
-      });
+      this.parents.forEach((p) => (balances[p.id] = {}));
 
       const ymSet = new Set();
       this.weeks.forEach((w) => ymSet.add(w.monthKey));
@@ -725,83 +719,33 @@ document.addEventListener("DOMContentLoaded", () => {
           (usageByMonth[pid][type][ym] || 0) + parseFloat(l.duration);
       });
 
-      parents.forEach((parent) => {
+      this.parents.forEach((parent) => {
         const pid = parent.id;
-        ["CP", "JRA", "JA"].forEach((type) => {
+        const matrix = this.leaveMatrix[pid] || [];
+
+        matrix.forEach((conf) => {
+          const type = conf.type;
+          balances[pid][type] = {};
+
           ymList.forEach((ym) => {
             const [currYear, currMonth] = ym.split("-").map(Number);
             let cycleStartStr = "",
-              initialBalance = 0;
+              initialBalance = parseFloat(conf.allowance || 0);
 
-            const latestSnapshot = (this.leaveSnapshots || [])
-              .filter(
-                (s) =>
-                  s.person_id == pid &&
-                  s.leave_type == type &&
-                  s.snapshot_date.substring(0, 7) <= ym,
-              )
-              .sort((a, b) =>
-                b.snapshot_date.localeCompare(a.snapshot_date),
-              )[0];
-
-            if (latestSnapshot) {
-              cycleStartStr = latestSnapshot.snapshot_date.substring(0, 7);
-              initialBalance = parseFloat(latestSnapshot.remaining_balance);
-            } else {
-              if (type === "CP") {
-                const refYear =
-                  currMonth >= LEAVES_CONFIG.CP.startMonth
-                    ? currYear
-                    : currYear - 1;
-                cycleStartStr = `${refYear}-${String(LEAVES_CONFIG.CP.startMonth).padStart(2, "0")}`;
-                const dbBal = this.leaveBalances.find(
-                  (b) =>
-                    b.person_id == pid &&
-                    b.leave_type == "CP" &&
-                    b.balance_year == refYear,
-                );
-                initialBalance = dbBal
-                  ? parseFloat(dbBal.initial_balance)
-                  : LEAVES_CONFIG.CP.defaultBalance;
-              } else if (type === "JRA") {
-                cycleStartStr = `${currYear}-01`;
-                initialBalance =
-                  LEAVES_CONFIG.JRA.yearlyTotals[currYear] ||
-                  LEAVES_CONFIG.JRA.defaultBalance;
-                if (currMonth <= LEAVES_CONFIG.JRA.toleranceMonths) {
-                  const prevYear = currYear - 1;
-                  const prevInitial =
-                    LEAVES_CONFIG.JRA.yearlyTotals[prevYear] ||
-                    LEAVES_CONFIG.JRA.defaultBalance;
-                  let usedPrevYear = 0;
-                  for (let m = 1; m <= 12; m++)
-                    usedPrevYear +=
-                      usageByMonth[pid]?.[type]?.[
-                        `${prevYear}-${String(m).padStart(2, "0")}`
-                      ] || 0;
-                  initialBalance += Math.min(
-                    Math.max(0, prevInitial - usedPrevYear),
-                    LEAVES_CONFIG.JRA.maxReport,
-                  );
-                }
-              } else if (type === "JA") {
-                const configJA = LEAVES_CONFIG.JA[pid];
+            if (conf.date) {
+              const parts = conf.date.split("-");
+              if (parts.length >= 2) {
+                const monthRenouvellement = parseInt(parts[1]);
+                const dayRenouvellement =
+                  parts.length === 3 ? parseInt(parts[2]) : 1;
                 const isPastAnniversary =
-                  currMonth > configJA.startMonth ||
-                  (currMonth === configJA.startMonth &&
-                    configJA.startDay === 1);
+                  currMonth > monthRenouvellement ||
+                  (currMonth === monthRenouvellement && 1 >= dayRenouvellement);
                 const refYear = isPastAnniversary ? currYear : currYear - 1;
-                cycleStartStr = `${refYear}-${String(configJA.startMonth).padStart(2, "0")}`;
-                const dbBal = this.leaveBalances.find(
-                  (b) =>
-                    b.person_id == pid &&
-                    b.leave_type == "JA" &&
-                    b.balance_year == refYear,
-                );
-                initialBalance = dbBal
-                  ? parseFloat(dbBal.initial_balance)
-                  : configJA.defaultBalance;
+                cycleStartStr = `${refYear}-${String(monthRenouvellement).padStart(2, "0")}`;
               }
+            } else {
+              cycleStartStr = `${currYear}-01`;
             }
 
             let usedBeforeCurrentMonth = 0;
@@ -834,6 +778,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const processedLeavesCols = {};
       const fmt = (n) =>
         n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "";
+      const upperCareModes = this.careModes.map((m) => m.toUpperCase());
 
       this.weeks.forEach((w, idx) => {
         const tr = document.createElement("tr");
@@ -865,100 +810,236 @@ document.addEventListener("DOMContentLoaded", () => {
           const dateObj = w.dayDates[d];
           const iso = this.getLocalIsoDate(dateObj);
           td.dataset.date = iso;
-          td.textContent = String(dateObj.getDate()).padStart(2, "0");
           td.className = "col-day";
 
           w.dayFlags[d].events.forEach((evt) => {
-            if (evt.type === "OFF_CAROLE")
-              td.classList.add("fc-day--off-carole");
-            if (evt.type === "EXTRA_OFF_CAROLE")
-              td.classList.add("fc-day--extra-off-carole");
             if (evt.type === "PUBLIC_HOLIDAY")
               td.classList.add("fc-day--public-holiday");
             if (evt.type === "VACANCES_SCOLAIRES")
               td.classList.add("fc-day--school-holiday");
-            if (evt.type === "CENTRE") td.classList.add("fc-day--centre");
-            if (evt.type === "AVIS") td.classList.add("fc-day--avis");
-            if (evt.type === "PEP_SICK")
-              td.innerHTML += `<span class="fc-pep-sick-emoji">🤒</span>`;
+            if (evt.type === "HELPER_OFF")
+              td.classList.add("fc-day--off-carole");
+            if (evt.type === "HELPER_EXTRA")
+              td.classList.add("fc-day--extra-off-carole");
+            if (upperCareModes.includes(evt.type))
+              td.classList.add("fc-day--has-guard");
           });
+
+          let content = `<div style="position:relative; height:100%; width:100%; min-height:40px;">
+             <span style="display:block; padding:2px;">${String(dateObj.getDate()).padStart(2, "0")}</span>`;
+
+          let iconsHtml = `<div style="position:absolute; top:2px; right:2px; display:flex; gap:2px;">`;
+          w.dayFlags[d].events.forEach((evt) => {
+            if (upperCareModes.includes(evt.type)) {
+              const modeName = evt.type.toLowerCase();
+              if (modeName === "avis")
+                iconsHtml += `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain;">`;
+              else if (modeName === "centre")
+                iconsHtml += `<span class="fc-icon-centre" title="Centre" style="font-size:1.1rem; line-height:1;">🏫</span>`;
+              else
+                iconsHtml += `<span style="background:var(--primary); color:#fff; border-radius:3px; padding:0 3px; font-size:9px;">${modeName.substring(0, 3)}</span>`;
+            }
+          });
+          content += iconsHtml + `</div>`;
+
+          let sickHtml = `<div style="position:absolute; bottom:2px; right:2px; display:flex; flex-direction:column; align-items:flex-end; gap:1px; font-size:11px; font-weight:bold; line-height:1;">`;
+          w.dayFlags[d].events.forEach((evt) => {
+            if (evt.type === "CHILD_SICK") {
+              const k = this.kids.find(
+                (x) => parseInt(x.id) === parseInt(evt.person_id),
+              );
+              if (k) {
+                sickHtml += `<span style="color:${k.color || "#e11d48"};">${k.name}<span style="font-size:10px;">🤒</span></span>`;
+              }
+            }
+          });
+          content += sickHtml + `</div>`;
 
           const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
           if (dayLeaves.length) {
             let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
-            const colors = [
-              "#0f766e",
-              "#b45309",
-              "#047857",
-              "#4338ca",
-              "#b91c1c",
-            ];
-            parents.forEach((person, index) => {
+            this.parents.forEach((person) => {
               if (
                 dayLeaves.some(
                   (l) => parseInt(l.person_id) === parseInt(person.id),
                 )
               ) {
-                html += `<span style="color:${colors[index % colors.length]}; font-weight:800; margin: 0 1px;">${person.name.charAt(0).toUpperCase()}</span>`;
+                html += `<span style="color:${person.color || "#000"}; font-weight:800; margin: 0 1px;">${person.name.charAt(0).toUpperCase()}</span>`;
               }
             });
-            td.innerHTML += html + `</div>`;
+            content += html + `</div>`;
           }
+          td.innerHTML = content + `</div>`;
           tr.appendChild(td);
         });
 
-        // --- 🟢 CORRECTION 1 : Colonnes du milieu (Modes de garde & Maladie) ---
-        const activeCareModes = window.FAMILY_CONFIG?.activeCareModes || [];
-        const kids = window.FAMILY_CONFIG?.kids || [];
-
-        // 1A. Modes de garde
-        activeCareModes.forEach((mode) => {
+        this.careModes.forEach((mode) => {
           const td = document.createElement("td");
           td.className = "col-total";
-          // On normalise le nom (ex: "Centre" -> "centre") pour matcher ton objet w.totals
-          const key = mode.toLowerCase();
-          td.textContent = fmt(w.totals[key] || 0);
+          td.textContent = fmt(w.totals["mode_" + mode] || 0);
           tr.appendChild(td);
         });
-
-        // 1B. Enfants (Maladie)
-        kids.forEach((kid) => {
+        this.kids.forEach((kid) => {
           const td = document.createElement("td");
           td.className = "col-total";
-          // Rétrocompatibilité avec ton ancien code "pepSick"
-          const key =
-            kid.name.toLowerCase() === "pep"
-              ? "pepSick"
-              : `${kid.name.toLowerCase()}Sick`;
-          td.textContent = fmt(w.totals[key] || 0);
+          td.textContent = fmt(w.totals["sick_" + kid.id] || 0);
           tr.appendChild(td);
         });
 
-        // --- 🟢 CORRECTION 2 : Colonnes des congés Parents (Dynamique !) ---
         if (!processedLeavesCols[w.monthKey]) {
           processedLeavesCols[w.monthKey] = true;
-
-          const parentsList = window.FAMILY_CONFIG?.parents || [];
-          parentsList.forEach((parent, index) => {
+          this.parents.forEach((parent, index) => {
             const cssPrefix = index % 2 === 0 ? "col-alex" : "col-laia";
-
-            // On récupère les compteurs réels du parent envoyés par le PHP
-            const parentLeaveTypes =
-              parent.leave_types && parent.leave_types.length > 0
-                ? parent.leave_types
-                : ["CP", "JRA", "JA"];
-
-            parentLeaveTypes.forEach((type) => {
+            (this.leaveMatrix[parent.id] || []).forEach((conf) => {
               const info =
-                this.monthlyLeaveBalances[parent.id]?.[type]?.[w.monthKey];
+                this.monthlyLeaveBalances[parent.id]?.[conf.type]?.[w.monthKey];
               tr.innerHTML += `<td class="${cssPrefix}-sub ${cssPrefix}-av" rowspan="${monthSpans[w.monthKey]}">${info ? fmt(info.availableAtMonthStart) : "-"}</td>`;
               tr.innerHTML += `<td class="${cssPrefix}-sub ${cssPrefix}-use" rowspan="${monthSpans[w.monthKey]}">${info ? fmt(info.usedInMonth) : ""}</td>`;
             });
           });
         }
-
         this.planningBody.appendChild(tr);
       });
+    }
+
+    generateMonthHTML(year, month) {
+      let html = `<table class="fc-month-table"><thead><tr>`;
+      ["L", "M", "M", "J", "V"].forEach((d) => (html += `<th>${d}</th>`));
+      html += `</tr></thead><tbody><tr>`;
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      let currentRenderedCols = 0,
+        startDay = (new Date(year, month, 1).getDay() + 6) % 7;
+      const upperCareModes = this.careModes.map((m) => m.toUpperCase());
+
+      if (startDay < 5) {
+        for (let i = 0; i < startDay; i++) {
+          html += `<td class="fc-day--other-month"></td>`;
+          currentRenderedCols++;
+        }
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, month, d),
+          dayOfWeek = dateObj.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+        if (currentRenderedCols === 5) {
+          html += `</tr><tr>`;
+          currentRenderedCols = 0;
+        }
+        const iso = this.getLocalIsoDate(dateObj),
+          todayIso = this.getLocalIsoDate(new Date());
+
+        let cls = "fc-month-day" + (iso === todayIso ? " fc-day--today" : "");
+        const dayEvts = this.events.filter((e) => e.date === iso);
+
+        if (dayEvts.some((e) => e.type === "VACANCES_SCOLAIRES"))
+          cls += " fc-day--school-holiday";
+        if (dayEvts.some((e) => e.type === "PUBLIC_HOLIDAY"))
+          cls += " fc-day--public-holiday";
+        if (dayEvts.some((e) => e.type === "HELPER_OFF"))
+          cls += " fc-day--off-carole";
+        if (dayEvts.some((e) => e.type === "HELPER_EXTRA"))
+          cls += " fc-day--extra-off-carole";
+        if (dayEvts.some((e) => upperCareModes.includes(e.type)))
+          cls += " fc-day--has-guard";
+
+        let content = `<div style="position:relative; height:100%; min-height:55px;"><span class="fc-day-number">${d}</span>`;
+
+        let iconsHtml = `<div style="position:absolute; top:2px; right:2px; display:flex; gap:2px;">`;
+        dayEvts.forEach((evt) => {
+          if (upperCareModes.includes(evt.type)) {
+            const modeName = evt.type.toLowerCase();
+            if (modeName === "avis")
+              iconsHtml += `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain;">`;
+            else if (modeName === "centre")
+              iconsHtml += `<span class="fc-icon-centre" title="Centre" style="font-size:1.1rem; line-height:1;">🏫</span>`;
+            else
+              iconsHtml += `<span style="background:var(--primary); color:#fff; border-radius:3px; padding:0 3px; font-size:9px;">${modeName.substring(0, 3)}</span>`;
+          }
+        });
+        content += iconsHtml + `</div>`;
+
+        let sickHtml = `<div style="position:absolute; bottom:2px; right:2px; display:flex; flex-direction:column; align-items:flex-end; gap:1px; font-weight:bold; line-height:1;">`;
+        dayEvts.forEach((evt) => {
+          if (evt.type === "CHILD_SICK") {
+            const k = this.kids.find(
+              (x) => parseInt(x.id) === parseInt(evt.person_id),
+            );
+            if (k) {
+              sickHtml += `<span style="color:${k.color || "#e11d48"}; font-size:10px;">${k.name} 🤒</span>`;
+            }
+          }
+        });
+        content += sickHtml + `</div>`;
+
+        const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
+        if (dayLeaves.length) {
+          content += `<div style="position:absolute; bottom:2px; left:2px; font-size:10px; font-weight:bold;">`;
+          this.parents.forEach((parent) => {
+            if (
+              dayLeaves.some(
+                (l) => parseInt(l.person_id) === parseInt(parent.id),
+              )
+            ) {
+              content += `<span style="color:${parent.color || "#333"}">${parent.name.charAt(0).toUpperCase()}</span> `;
+            }
+          });
+          content += `</div>`;
+        }
+        html += `<td class="${cls}" data-date="${iso}">${content}</div></td>`;
+        currentRenderedCols++;
+      }
+
+      while (currentRenderedCols < 5 && currentRenderedCols > 0) {
+        html += `<td class="fc-day--other-month"></td>`;
+        currentRenderedCols++;
+      }
+      return html + `</tr></tbody></table>`;
+    }
+
+    generateMonthSummaryHTML(year, month) {
+      const stats = { off: 0, extra: 0, sick: 0, presence: 0 };
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, month, d);
+        const dayOfWeek = dateObj.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+        const iso = this.getLocalIsoDate(dateObj);
+        const dayEvents = this.events.filter((e) => e.date === iso);
+
+        dayEvents.forEach((e) => {
+          const dur = parseFloat(e.duration) || 1;
+          if (e.type === "HELPER_OFF") stats.off += dur;
+          if (e.type === "HELPER_EXTRA") stats.extra += dur;
+          if (e.type === "CHILD_SICK") stats.sick += dur;
+        });
+
+        if (
+          !this.publicHolidayDates.has(iso) &&
+          !dayEvents.some((e) => e.type === "VACANCES_SCOLAIRES")
+        ) {
+          let dayAbsence = 0;
+          dayEvents.forEach((e) => {
+            if (["HELPER_OFF", "HELPER_EXTRA", "CHILD_SICK"].includes(e.type)) {
+              dayAbsence += parseFloat(e.duration) || 1;
+            }
+          });
+          stats.presence += Math.max(0, 1 - dayAbsence);
+        }
+      }
+
+      return `
+          <div class="fc-month-summary-inline" style="display:flex; justify-content:space-around; gap:10px; margin-top:8px; font-size:0.75rem; background: var(--bg-panel); padding: 8px; border-radius: 8px; border: 1px solid var(--border-light);">
+              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Off</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(stats.off.toFixed(1))} j</strong></div>
+              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Extra</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(stats.extra.toFixed(1))} j</strong></div>
+              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Maladie</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(stats.sick.toFixed(1))} j</strong></div>
+              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Présence</span> <strong style="color:var(--primary); font-size:0.95rem;">${parseFloat(stats.presence.toFixed(1))} j</strong></div>
+          </div>
+      `;
     }
 
     scrollToCurrentMonth() {
@@ -989,21 +1070,21 @@ document.addEventListener("DOMContentLoaded", () => {
         selectYear.value = y;
         if (this.viewMode === "3months") this.renderThreeMonthsView();
         else if (this.viewMode === "2months") this.renderTwoMonthsView();
-        else this.monthCalendar.innerHTML = this.generateMonthHTML(y, m);
+        else
+          this.monthCalendar.innerHTML = `<div class="fc-month-container">${this.generateMonthHTML(y, m)}${this.generateMonthSummaryHTML(y, m)}</div>`;
       }
       this.renderMonthBalances();
-      this.syncSummaryWithMonth();
     }
 
     renderTwoMonthsView() {
       const y = this.currentMonth.getFullYear(),
         m = this.currentMonth.getMonth();
       const nextDate = new Date(y, m + 1, 1);
-      const lang = window.I18N_LANG || "fr-FR";
+      const lang = window.appLang || "fr-FR";
       this.monthCalendar.innerHTML = `<div class="fc-two-months-container">
-                <div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(this.currentMonth)}</div>${this.generateMonthHTML(y, m)}</div>
-                <div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(nextDate)}</div>${this.generateMonthHTML(nextDate.getFullYear(), nextDate.getMonth())}</div>
-            </div>`;
+          <div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(this.currentMonth)}</div>${this.generateMonthHTML(y, m)}${this.generateMonthSummaryHTML(y, m)}</div>
+          <div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(nextDate)}</div>${this.generateMonthHTML(nextDate.getFullYear(), nextDate.getMonth())}${this.generateMonthSummaryHTML(nextDate.getFullYear(), nextDate.getMonth())}</div>
+      </div>`;
     }
 
     renderThreeMonthsView() {
@@ -1015,9 +1096,10 @@ document.addEventListener("DOMContentLoaded", () => {
         new Date(y, m + 2, 1),
       ];
       let html = `<div class="fc-three-months-container">`;
+      const lang = window.appLang || "fr-FR";
       [d1, d2, d3].forEach(
         (d) =>
-          (html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat("fr-FR", { month: "long" }).format(d)}</div>${this.generateMonthHTML(d.getFullYear(), d.getMonth())}</div>`),
+          (html += `<div class="fc-month-container"><div class="fc-month-title">${new Intl.DateTimeFormat(lang, { month: "long" }).format(d)}</div>${this.generateMonthHTML(d.getFullYear(), d.getMonth())}${this.generateMonthSummaryHTML(d.getFullYear(), d.getMonth())}</div>`),
       );
       this.monthCalendar.innerHTML = html + `</div>`;
     }
@@ -1034,10 +1116,13 @@ document.addEventListener("DOMContentLoaded", () => {
         monthsToDisplay.push(`${y}-${String(m + i + 1).padStart(2, "0")}`);
 
       container.style.display = "flex";
-      container.innerHTML = parents
+      container.innerHTML = this.parents
         .map((person) => {
-          let cards = `<div class="fc-minimal-balance-card"><strong class="col-alex">${person.name.toUpperCase()}</strong><div class="fc-minimal-chips">`;
-          ["CP", "JRA", "JA"].forEach((type) => {
+          let cards = `<div class="fc-minimal-balance-card"><strong style="color:${person.color || "#333"}">${person.name.toUpperCase()}</strong><div class="fc-minimal-chips">`;
+          const types = this.leaveMatrix[person.id] || [];
+
+          types.forEach((conf) => {
+            const type = conf.type;
             const startBal =
               this.monthlyLeaveBalances[person.id]?.[type]?.[monthsToDisplay[0]]
                 ?.availableAtMonthStart || 0;
@@ -1055,213 +1140,21 @@ document.addEventListener("DOMContentLoaded", () => {
             let alertHtml = "";
             const cMonth = parseInt(monthsToDisplay[0].split("-")[1]);
             if (endBal > 0) {
-              if (type === "CP" && cMonth >= 6 && cMonth <= 7)
+              if (type === "CP" && (cMonth === 5 || cMonth === 6))
                 alertHtml = `<div class="fc-burn-alert" title="Alerte perte">🔥</div>`;
               else if (
                 type === "JRA" &&
-                (cMonth === 1 || cMonth === 2) &&
+                (cMonth === 1 || cMonth === 12) &&
                 endBal > 2
               )
                 alertHtml = `<div class="fc-burn-alert" title="Perte imminente">🔥</div>`;
             }
-            cards += `<div class="fc-min-chip" title="Solde départ: ${fmt(startBal)}"><span class="type">${type}</span><span class="val">${fmt(endBal)}</span>${totalUsed > 0 ? `<span class="fc-used-badge">-${fmt(totalUsed)}</span>` : ""}${alertHtml}</div>`;
+
+            cards += `<div class="fc-min-chip" title="Solde: ${fmt(startBal)}"><span class="type">${type}</span><span class="val">${fmt(endBal)}</span>${totalUsed > 0 ? `<span class="fc-used-badge">-${fmt(totalUsed)}</span>` : ""}${alertHtml}</div>`;
           });
           return cards + `</div></div>`;
         })
         .join("");
-    }
-
-    syncSummaryWithMonth() {
-      const typeSelect = document.getElementById("summType"),
-        valueSelect = document.getElementById("summValue");
-      if (typeSelect && valueSelect) {
-        if (typeSelect.value !== "month") {
-          typeSelect.value = "month";
-          typeSelect.dispatchEvent(new Event("change"));
-        }
-        valueSelect.value = `${this.currentMonth.getFullYear()}-${String(this.currentMonth.getMonth() + 1).padStart(2, "0")}`;
-        this.updateGlobalSummary();
-      }
-    }
-
-    generateMonthHTML(year, month) {
-      let html = `<table class="fc-month-table"><thead><tr>`;
-      ["L", "M", "M", "J", "V"].forEach((d) => (html += `<th>${d}</th>`));
-      html += `</tr></thead><tbody><tr>`;
-
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      let currentRenderedCols = 0,
-        startDay = (new Date(year, month, 1).getDay() + 6) % 7;
-
-      if (startDay < 5) {
-        for (let i = 0; i < startDay; i++) {
-          html += `<td class="fc-day--other-month"></td>`;
-          currentRenderedCols++;
-        }
-      }
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateObj = new Date(year, month, d),
-          dayOfWeek = dateObj.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-
-        if (currentRenderedCols === 5) {
-          html += `</tr><tr>`;
-          currentRenderedCols = 0;
-        }
-        const iso = this.getLocalIsoDate(dateObj),
-          todayIso = this.getLocalIsoDate(new Date());
-
-        let cls = "fc-month-day" + (iso === todayIso ? " fc-day--today" : "");
-        const dayEvts = this.events.filter((e) => e.date === iso);
-
-        if (dayEvts.some((e) => e.type === "VACANCES_SCOLAIRES"))
-          cls += " fc-day--school-holiday";
-        if (dayEvts.some((e) => e.type === "PUBLIC_HOLIDAY"))
-          cls += " fc-day--public-holiday";
-        if (dayEvts.some((e) => e.type === "OFF_CAROLE"))
-          cls += " fc-day--off-carole";
-        if (dayEvts.some((e) => e.type === "EXTRA_OFF_CAROLE"))
-          cls += " fc-day--extra-off-carole";
-        if (dayEvts.some((e) => ["CENTRE", "AVIS"].includes(e.type)))
-          cls += " fc-day--has-guard";
-
-        let content = `<div style="position:relative; height:100%;"><span class="fc-day-number">${d}</span>`;
-        if (dayEvts.some((e) => e.type === "PEP_SICK"))
-          content += `<span style="position:absolute; bottom:2px; right:2px;">🤒</span>`;
-
-        const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
-        if (dayLeaves.length) {
-          content += `<div style="position:absolute; bottom:2px; left:2px; font-size:10px; font-weight:bold;">`;
-          parents.forEach((parent, index) => {
-            if (
-              dayLeaves.some(
-                (l) => parseInt(l.person_id) === parseInt(parent.id),
-              )
-            ) {
-              content += `<span style="color:${index % 2 === 0 ? "#0f766e" : "#b45309"}">${parent.name.charAt(0).toUpperCase()}</span> `;
-            }
-          });
-          content += `</div>`;
-        }
-        html += `<td class="${cls}" data-date="${iso}">${content}</div></td>`;
-        currentRenderedCols++;
-      }
-      while (currentRenderedCols < 5 && currentRenderedCols > 0) {
-        html += `<td class="fc-day--other-month"></td>`;
-        currentRenderedCols++;
-      }
-      return html + `</tr></tbody></table>`;
-    }
-
-    initSummaryControls() {
-      const typeSelect = document.getElementById("summType"),
-        valueSelect = document.getElementById("summValue");
-      if (!typeSelect || !valueSelect) return;
-
-      const years = new Set(),
-        months = new Set();
-      this.weeks.forEach((w) =>
-        Object.values(w.dayDates).forEach((d) => {
-          years.add(d.getFullYear());
-          months.add(
-            `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-          );
-        }),
-      );
-
-      const populateValues = () => {
-        const currentType = typeSelect.value,
-          prevValue = valueSelect.value;
-        valueSelect.innerHTML = "";
-        if (currentType === "year") {
-          Array.from(years)
-            .sort()
-            .forEach((y) => valueSelect.add(new Option(y, y)));
-          valueSelect.value = years.has(parseInt(prevValue))
-            ? prevValue
-            : new Date().getFullYear();
-        } else {
-          Array.from(months)
-            .sort()
-            .forEach((m) => {
-              const [y, mo] = m.split("-");
-              valueSelect.add(
-                new Option(
-                  new Intl.DateTimeFormat("fr-FR", {
-                    month: "long",
-                    year: "numeric",
-                  }).format(new Date(y, mo - 1, 1)),
-                  m,
-                ),
-              );
-            });
-          const nowIso = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
-          if (months.has(nowIso)) valueSelect.value = nowIso;
-        }
-        this.updateGlobalSummary();
-      };
-
-      if (!this.summaryListenersAttached) {
-        typeSelect.addEventListener("change", populateValues);
-        valueSelect.addEventListener("change", () =>
-          this.updateGlobalSummary(),
-        );
-        this.summaryListenersAttached = true;
-      }
-      populateValues();
-    }
-
-    updateGlobalSummary() {
-      const div = document.getElementById("globalSummary"),
-        typeSelect = document.getElementById("summType"),
-        valueSelect = document.getElementById("summValue");
-      if (!div || !valueSelect?.value) return;
-
-      const filterType = typeSelect.value,
-        filterValue = valueSelect.value;
-      const stats = { off: 0, extra: 0, sick: 0, pep: 0 };
-
-      this.weeks.forEach((w) => {
-        Object.values(w.dayDates).forEach((dateObj) => {
-          if (
-            (filterType === "year" &&
-              dateObj.getFullYear().toString() === filterValue) ||
-            (filterType === "month" &&
-              this.getLocalIsoDate(dateObj).slice(0, 7) === filterValue)
-          ) {
-            const dayEvents = this.events.filter(
-              (e) => e.date === this.getLocalIsoDate(dateObj),
-            );
-            dayEvents.forEach((e) => {
-              const dur = parseFloat(e.duration) || 1;
-              if (e.type === "OFF_CAROLE") stats.off += dur;
-              if (e.type === "EXTRA_OFF_CAROLE") stats.extra += dur;
-              if (e.type === "PEP_SICK") stats.sick += dur;
-            });
-            if (!this.publicHolidayDates.has(this.getLocalIsoDate(dateObj))) {
-              let dayAbsence = 0;
-              dayEvents.forEach((e) => {
-                if (
-                  ["OFF_CAROLE", "EXTRA_OFF_CAROLE", "PEP_SICK"].includes(
-                    e.type,
-                  )
-                )
-                  dayAbsence += parseFloat(e.duration) || 1;
-              });
-              stats.pep += Math.max(0, 1 - dayAbsence);
-            }
-          }
-        });
-      });
-
-      const tr = window.I18N || {};
-      div.innerHTML = `
-                <div class="fc-summary-item"><span class="fc-summary-label">${tr.leg_off_carole || "Off"}</span><span class="fc-summary-value">${parseFloat(stats.off.toFixed(1))} j</span></div>
-                <div class="fc-summary-item"><span class="fc-summary-label">${tr.leg_extra_off || "Extra"}</span><span class="fc-summary-value">${parseFloat(stats.extra.toFixed(1))} j</span></div>
-                <div class="fc-summary-item"><span class="fc-summary-label">${tr.leg_pep_sick || "Maladie"}</span><span class="fc-summary-value">${parseFloat(stats.sick.toFixed(1))} j</span></div>
-                <div class="fc-summary-item"><span class="fc-summary-label">${tr.leg_presence || "Présence"}</span><span class="fc-summary-value">${parseFloat(stats.pep.toFixed(1))} j</span></div>
-            `;
     }
 
     updateSchoolYearLabel() {
@@ -1290,20 +1183,7 @@ document.addEventListener("DOMContentLoaded", () => {
           thu: { events: [] },
           fri: { events: [] },
         },
-        totals: {
-          offCarole: 0,
-          extraOffCarole: 0,
-          centre: 0,
-          avis: 0,
-          pepSick: 0,
-          presencePep: 0,
-          alexCP: 0,
-          alexJRA: 0,
-          alexJA: 0,
-          laiaCP: 0,
-          laiaJRA: 0,
-          laiaJA: 0,
-        },
+        totals: {},
       }));
     }
 
@@ -1324,7 +1204,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     setupEventListeners() {
-      // -- BRANCHEMENT MODALE DE CONFIGURATION (NOUVEAU) --
       const btnSettings = document.getElementById("btnOpenCalendarSettings");
       if (btnSettings)
         btnSettings.addEventListener("click", openCalendarSettings);
@@ -1345,6 +1224,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         document.addEventListener("touchend", (e) => this.handleTouchEnd(e));
       }
+
       const scrollWrapper = document.getElementById("planningTable-wrapper");
       if (scrollWrapper) {
         scrollWrapper.addEventListener("scroll", async () => {
@@ -1367,75 +1247,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      const btnOpen = document.getElementById("btnOpenHolidays"),
-        btnClose = document.getElementById("btnCloseHolidays"),
-        modal = document.getElementById("modalHolidays");
-      if (btnOpen && modal)
-        btnOpen.addEventListener("click", () => {
-          modal.classList.add("open");
-          document.body.classList.add("no-scroll");
-          this.renderModalHolidays();
-        });
-      if (btnClose && modal)
-        btnClose.addEventListener("click", () => {
-          modal.classList.remove("open");
-          document.body.classList.remove("no-scroll");
-        });
-      if (modal)
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) {
-            modal.classList.remove("open");
-            document.body.classList.remove("no-scroll");
-          }
-        });
-
-      const btnSnap = document.getElementById("btnOpenSnapshotModal"),
-        modalSnap = document.getElementById("modalSnapshot"),
-        btnCloseSnap = document.getElementById("btnCloseSnapshot"),
-        formSnap = document.getElementById("formSnapshot");
-      if (btnSnap && modalSnap)
-        btnSnap.addEventListener("click", () => {
-          modalSnap.classList.add("open");
-          document.body.classList.add("no-scroll");
-          const snapDateInput = document.getElementById("snapDate");
-          if (snapDateInput)
-            snapDateInput.value = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
-        });
-      if (btnCloseSnap && modalSnap)
-        btnCloseSnap.addEventListener("click", () => {
-          modalSnap.classList.remove("open");
-          document.body.classList.remove("no-scroll");
-        });
-      if (modalSnap)
-        modalSnap.addEventListener("click", (e) => {
-          if (e.target === modalSnap) {
-            modalSnap.classList.remove("open");
-            document.body.classList.remove("no-scroll");
-          }
-        });
-      if (formSnap)
-        formSnap.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          try {
-            await this.postApi(
-              "/modules/family-calendar/includes/api/save-leave-snapshot.php",
-              {
-                person_id: document.getElementById("snapPerson").value,
-                leave_type: document.getElementById("snapType").value,
-                snapshot_date: document.getElementById("snapDate").value,
-                remaining_balance: document.getElementById("snapBalance").value,
-              },
-            );
-            modalSnap.classList.remove("open");
-            document.body.classList.remove("no-scroll");
-            formSnap.reset();
-            await this.refreshAllData();
-          } catch (error) {
-            alert("Erreur lors de la sauvegarde.");
-          }
-        });
-
-      if (this.monthCalendar)
+      if (this.monthCalendar) {
         this.monthCalendar.addEventListener("click", (e) => {
           const td = e.target.closest("td[data-date]");
           if (td && td.dataset.date) {
@@ -1443,6 +1255,8 @@ document.addEventListener("DOMContentLoaded", () => {
             this.showMenu(e.pageX, e.pageY, [td.dataset.date], true);
           }
         });
+      }
+
       document.addEventListener("click", (e) => this.closeMenusIfOutside(e));
       const handleMenu = (e) => {
         const btn = e.target.closest("button");
@@ -1471,44 +1285,13 @@ document.addEventListener("DOMContentLoaded", () => {
         this.renderMonthCalendar();
       });
 
-      if (this.monthCalendar) {
-        let startX = 0,
-          startY = 0;
-        this.monthCalendar.addEventListener(
-          "touchstart",
-          (e) => {
-            startX = e.changedTouches[0].screenX;
-            startY = e.changedTouches[0].screenY;
-          },
-          { passive: true },
-        );
-        this.monthCalendar.addEventListener(
-          "touchend",
-          (e) => {
-            const dX = e.changedTouches[0].screenX - startX,
-              dY = e.changedTouches[0].screenY - startY;
-            if (Math.abs(dX) > Math.abs(dY) && Math.abs(dX) > 50) {
-              const num =
-                this.viewMode === "2months"
-                  ? 2
-                  : this.viewMode === "3months"
-                    ? 3
-                    : 1;
-              this.currentMonth.setMonth(
-                this.currentMonth.getMonth() + (dX < 0 ? num : -num),
-              );
-              this.renderMonthCalendar();
-            }
-          },
-          { passive: true },
-        );
-      }
       document
         .getElementById("fc-prev-school-year")
         ?.addEventListener("click", () => this.changeSchoolYear(-1));
       document
         .getElementById("fc-next-school-year")
         ?.addEventListener("click", () => this.changeSchoolYear(1));
+
       document.querySelectorAll(".fc-view-button").forEach((btn) =>
         btn.addEventListener("click", (e) => {
           document
@@ -1580,6 +1363,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cell.classList.add("fc-day--selected");
       this.selectedCells.push(cell);
     }
+
     clearSelection() {
       this.selectedCells.forEach((c) => c.classList.remove("fc-day--selected"));
       this.selectedCells = [];
@@ -1587,6 +1371,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (this.monthSelectionMenu)
         this.monthSelectionMenu.style.display = "none";
     }
+
     closeMenusIfOutside(e) {
       if (
         !this.selectionMenu?.contains(e.target) &&
@@ -1601,54 +1386,111 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!menu) return;
       this._currentBulkInfo = { dates };
 
-      const activeEvents = new Set();
+      const activeEventMap = new Set();
       this.events.forEach((e) => {
-        if (dates.includes(e.date)) activeEvents.add(e.type);
+        if (dates.includes(e.date)) {
+          const personKey =
+            e.person_id !== null && e.person_id !== undefined
+              ? e.person_id.toString()
+              : "0";
+          activeEventMap.add(`${e.type}_${personKey}`);
+        }
       });
 
       const activeLeaves = {};
-      parents.forEach((p) => (activeLeaves[p.id] = new Set()));
+      this.parents.forEach((p) => (activeLeaves[p.id] = new Set()));
       this.leaves.forEach((l) => {
         if (dates.includes(l.leave_date) && activeLeaves[l.person_id])
           activeLeaves[l.person_id].add(l.leave_type);
       });
 
-      const getBtnClass = (type, pid = null) =>
-        (pid ? activeLeaves[pid]?.has(type) : activeEvents.has(type))
-          ? "fc-menu-btn--active"
+      const getActiveStyleE = (type, personStr, color) =>
+        activeEventMap.has(`${type}_${personStr}`)
+          ? `border: 1px solid ${color} !important; background: var(--bg-soft) !important; color: ${color} !important; font-weight: 700;`
           : "";
-      const getBtnIcon = (type, pid = null) =>
-        (pid ? activeLeaves[pid]?.has(type) : activeEvents.has(type))
-          ? "✓ "
+      const getActiveStyleL = (type, pid, color) =>
+        activeLeaves[pid]?.has(type)
+          ? `border: 1px solid ${color} !important; background: var(--bg-soft) !important; color: ${color} !important; font-weight: 700;`
           : "";
-      const tr = window.I18N || {};
+
+      const trLang = window.I18N || {};
       const dateLabel =
         dates.length > 1
-          ? `${dates.length} Jours`
-          : new Date(dates[0]).toLocaleDateString(window.I18N_LANG || "fr-FR");
-      const trashSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
-      const buildHeader = (title, action, cat) =>
-        `<div class="fc-menu-header"><strong>${title}</strong>${action ? `<button class="fc-menu-clear-icon" data-action="${action}" ${cat ? `data-cat="${cat}"` : ""}>${trashSvg}</button>` : ""}</div>`;
+          ? `${dates.length} Jours sélectionnés`
+          : new Date(dates[0]).toLocaleDateString(window.appLang || "fr-FR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            });
 
-      let html = `<div class="fc-menu-section" style="border-bottom: none; padding-bottom: 0;"><strong style="font-size:0.85rem;">${dateLabel}</strong></div>`;
-      html += `<div class="fc-menu-section">${buildHeader(tr.fc_menu_carole || "Carole", "clear-type", "CONGE")}<div class="fc-menu-grid"><button class="fc-menu-btn ${getBtnClass("OFF_CAROLE")}" data-action="add" data-type="OFF_CAROLE">${getBtnIcon("OFF_CAROLE")}${tr.btn_off || "OFF"}</button><button class="fc-menu-btn ${getBtnClass("EXTRA_OFF_CAROLE")}" data-action="add" data-type="EXTRA_OFF_CAROLE">${getBtnIcon("EXTRA_OFF_CAROLE")}${tr.btn_extra || "EXTRA"}</button></div></div>`;
-      html += `<div class="fc-menu-section">${buildHeader(tr.leg_centre || "Centre", "clear-type", "GARDE")}<div class="fc-menu-grid"><button class="fc-menu-btn ${getBtnClass("CENTRE")}" data-action="add" data-type="CENTRE">${getBtnIcon("CENTRE")}${tr.leg_centre || "Centre"}</button><button class="fc-menu-btn ${getBtnClass("AVIS")}" data-action="add" data-type="AVIS">${getBtnIcon("AVIS")}${tr.leg_avis || "Avis"}</button></div></div>`;
-      html += `<div class="fc-menu-section">${buildHeader("Pep", "clear-type", "PEP")}<button class="fc-menu-btn ${getBtnClass("PEP_SICK")}" data-action="add" data-type="PEP_SICK" style="width:100%">${getBtnIcon("PEP_SICK")}${tr.leg_pep_sick || "Maladie"} 🤒</button></div>`;
-      html += `<div class="fc-menu-section">${buildHeader(tr.fc_menu_kids_leaves || "Congés Parents", null, null)}<div class="fc-menu-leaves-table"><table><thead><tr>`;
-      parents.forEach(
-        (p) =>
-          (html += `<th><div class="fc-th-inline">${p.name} <button class="fc-menu-clear-icon fc-menu-btn-th" data-action="clear-leaves-person" data-pid="${p.id}">${trashSvg}</button></div></th>`),
-      );
-      html += `</tr></thead><tbody>`;
-      ["CP", "JRA", "JA"].forEach((t) => {
-        html += `<tr>`;
-        parents.forEach(
-          (p) =>
-            (html += `<td><button class="fc-menu-btn ${getBtnClass(t, p.id)}" data-action="add-leave" data-pid="${p.id}" data-type="${t}">${getBtnIcon(t, p.id)}${t}</button></td>`),
+      const trashSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
+      const buildHeader = (title, action, cat) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin: 8px 0 4px 0;">
+            <span>${title}</span>
+            ${action ? `<button style="background:none; border:none; cursor:pointer; color:var(--danger); padding:0; display:flex; opacity:0.6;" data-action="${action}" data-cat="${cat}">${trashSvg}</button>` : ""}
+        </div>`;
+
+      let html = `<div class="fc-menu-section" style="padding-bottom: 4px;"><strong style="font-size:0.85rem; color:var(--text-main); text-transform:capitalize;">${dateLabel}</strong></div>`;
+
+      if (this.helpers.length > 0) {
+        this.helpers.forEach((h) => {
+          html += `<div class="fc-menu-section">${buildHeader(h.name, "clear-type", "HELPER_" + h.id)}<div class="fc-menu-grid">
+            <button class="fc-menu-btn" style="${getActiveStyleE("HELPER_OFF", h.id, "var(--warning)")}" data-action="add" data-type="HELPER_OFF" data-person="${h.id}">Off</button>
+            <button class="fc-menu-btn" style="${getActiveStyleE("HELPER_EXTRA", h.id, "var(--danger)")}" data-action="add" data-type="HELPER_EXTRA" data-person="${h.id}">Extra</button>
+          </div></div>`;
+        });
+      }
+
+      if (this.careModes.length > 0) {
+        html += `<div class="fc-menu-section">${buildHeader(trLang.fc_care_modes_title || "Modes de garde", "clear-type", "CARE_MODE")}<div class="fc-menu-grid">`;
+        this.careModes.forEach((m) => {
+          let iconHtml =
+            m.toLowerCase() === "avis"
+              ? `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain; margin-right:4px;"> `
+              : m.toLowerCase() === "centre"
+                ? `<span class="fc-icon-centre" style="font-size:1.1rem; line-height:1; margin-right:4px;">🏫</span> `
+                : "";
+          const modeType = m.toUpperCase();
+          html += `<button class="fc-menu-btn" style="display:flex; align-items:center; ${getActiveStyleE(modeType, "0", "var(--primary)")}" data-action="add" data-type="${modeType}" data-person="0">${iconHtml}${m}</button>`;
+        });
+        html += `</div></div>`;
+      }
+
+      if (this.kids.length > 0) {
+        html += `<div class="fc-menu-section">${buildHeader(trLang.leg_pep_sick || "Maladie", "clear-type", "CHILD_SICK")}<div class="fc-menu-grid" style="grid-template-columns: 1fr;">`;
+        this.kids.forEach((k) => {
+          const color = k.color || "var(--danger)";
+          html += `<button class="fc-menu-btn" style="${getActiveStyleE("CHILD_SICK", k.id, color)}" data-action="add" data-type="CHILD_SICK" data-person="${k.id}">${k.name} 🤒</button>`;
+        });
+        html += `</div></div>`;
+      }
+
+      html += `<div class="fc-menu-section" style="border-bottom:none;">${buildHeader(trLang.fc_menu_kids_leaves || "Congés Adultes", null, null)}<div style="display:grid; grid-template-columns: auto 1fr; gap:6px; align-items:center; font-size:0.8rem;">`;
+
+      const allParentLeaveTypes = new Set();
+      this.parents.forEach((p) => {
+        (this.leaveMatrix[p.id] || []).forEach((l) =>
+          allParentLeaveTypes.add(l.type),
         );
-        html += `</tr>`;
       });
-      html += `</tbody></table></div></div>`;
+
+      this.parents.forEach((p) => {
+        const pColor = p.color || "var(--primary)";
+        html += `<div style="font-weight:600; color:${pColor}; display:flex; align-items:center; justify-content:space-between; padding-right:8px; border-right:1px solid var(--border-light);">
+                      ${p.name} <button style="background:none; border:none; cursor:pointer; color:var(--danger); padding:0; display:flex; opacity:0.4; margin-left:6px;" data-action="clear-leaves-person" data-pid="${p.id}">${trashSvg}</button>
+                   </div>`;
+        html += `<div style="display:flex; gap:4px; flex-wrap:wrap;">`;
+        Array.from(allParentLeaveTypes).forEach((t) => {
+          const hasThisLeave = (this.leaveMatrix[p.id] || []).some(
+            (l) => l.type === t,
+          );
+          if (hasThisLeave) {
+            html += `<button class="fc-menu-btn" style="padding: 2px 6px; font-size:0.75rem; ${getActiveStyleL(t, p.id, pColor)}" data-action="add-leave" data-pid="${p.id}" data-type="${t}">${t}</button>`;
+          }
+        });
+        html += `</div>`;
+      });
+      html += `</div></div>`;
 
       menu.innerHTML = html;
       let left = x + 10;
@@ -1664,43 +1506,61 @@ document.addEventListener("DOMContentLoaded", () => {
       if (this.selectionMenu) this.selectionMenu.style.display = "none";
       if (this.monthSelectionMenu)
         this.monthSelectionMenu.style.display = "none";
-      const { action, type, pid, cat } = dataset,
-        dates = this._currentBulkInfo.dates;
+
+      const { action, type, person, pid, cat } = dataset;
+      const dates = this._currentBulkInfo.dates;
+      const upperCareModes = this.careModes.map((m) => m.toUpperCase());
 
       try {
         if (action === "add") {
           let typesToClear = [];
-          if (["OFF_CAROLE", "EXTRA_OFF_CAROLE"].includes(type))
-            typesToClear = CONGE_TYPES;
-          if (["CENTRE", "AVIS"].includes(type)) typesToClear = GUARDE_TYPES;
-          if (type === "PEP_SICK") typesToClear = PEP_TYPES;
+          if (["HELPER_OFF", "HELPER_EXTRA"].includes(type))
+            typesToClear = ["HELPER_OFF", "HELPER_EXTRA"];
+          if (upperCareModes.includes(type)) typesToClear = [...upperCareModes];
+          if (type === "CHILD_SICK") typesToClear = ["CHILD_SICK"];
 
-          if (typesToClear.length)
+          if (typesToClear.length) {
             await this.postApi(
               "/modules/family-calendar/includes/api/manage-event.php",
-              { action: "bulk_delete_day_types", dates, types: typesToClear },
+              {
+                action: "bulk_delete_day_types_person",
+                dates,
+                types: typesToClear,
+                person_id: parseInt(person) || 0,
+              },
             );
+          }
           await this.postApi(
             "/modules/family-calendar/includes/api/save-events.php",
             dates.map((d) => ({
               date: d,
               type: type,
               duration: 1,
-              person: "Carole",
+              person_id: parseInt(person) || 0,
             })),
           );
         } else if (action === "clear-type") {
-          let typesToClear =
-            cat === "CONGE"
-              ? CONGE_TYPES
-              : cat === "GARDE"
-                ? GUARDE_TYPES
-                : cat === "PEP"
-                  ? PEP_TYPES
-                  : [];
+          let typesToClear = [];
+          let personToClear = null;
+
+          if (cat.startsWith("HELPER_")) {
+            typesToClear = ["HELPER_OFF", "HELPER_EXTRA"];
+            personToClear = parseInt(cat.split("_")[1]) || 0;
+          } else if (cat === "CARE_MODE") {
+            typesToClear = [...upperCareModes];
+            personToClear = 0;
+          } else if (cat === "CHILD_SICK") {
+            typesToClear = ["CHILD_SICK"];
+          }
+
           await this.postApi(
             "/modules/family-calendar/includes/api/manage-event.php",
-            { action: "bulk_delete_day_types", dates, types: typesToClear },
+            {
+              action: "bulk_delete_day_types_person",
+              dates,
+              types: typesToClear,
+              person_id: personToClear,
+            },
           );
         } else if (action === "add-leave") {
           await this.postApi(

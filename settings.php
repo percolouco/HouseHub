@@ -40,57 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = $_POST['action'] ?? '';
 
-        // 🟢 SAUVEGARDE GLOBALE : CONFIGURATION DU FOYER (Unifiée)
-        if ($action === 'update_family_info') {
-            header('Content-Type: application/json');
-            try {
-                require_once __DIR__ . '/includes/db.php';
-                $pdo->beginTransaction();
-
-                // 1. Sauvegarde des paramètres globaux
-                $currency = trim($_POST['currency'] ?? '€');
-                $zone = trim($_POST['zone_scolaire'] ?? 'C');
-                $careModesJson = $_POST['custom_care_modes'] ?? '[]'; 
-
-                $stmtSave = $pdo->prepare("UPDATE pf_foyer_settings SET currency = ?, zone_scolaire = ?, care_modes = ? WHERE id = 1");
-                $stmtSave->execute([$currency, $zone, $careModesJson]);
-
-                // 2. Gestion des enfants
-                $kids = $_POST['kids'] ?? [];
-                $deleted = json_decode($_POST['deleted_kids'] ?? '[]', true);
-
-                if (!empty($deleted)) {
-                    $in = str_repeat('?,', count($deleted) - 1) . '?';
-                    $stmtDel = $pdo->prepare("DELETE FROM pf_people WHERE id IN ($in) AND role = 'enfant'");
-                    $stmtDel->execute($deleted);
-                }
-
-                $stmtInsert = $pdo->prepare("INSERT INTO pf_people (name, role, care_modes) VALUES (?, 'enfant', ?)");
-                $stmtUpdate = $pdo->prepare("UPDATE pf_people SET name = ?, care_modes = ? WHERE id = ? AND role = 'enfant'");
-
-                foreach ($kids as $kidId => $kidData) {
-                    $name = trim($kidData['name'] ?? '');
-                    if (empty($name)) continue;
-
-                    $modes = $kidData['modes'] ?? [];
-                    $modesJson = json_encode(array_values($modes));
-
-                    if (strpos($kidId, 'new_') === 0) {
-                        $stmtInsert->execute([$name, $modesJson]);
-                    } else {
-                        $stmtUpdate->execute([$name, $modesJson, (int)$kidId]);
-                    }
-                }
-
-                $pdo->commit();
-                echo json_encode(['success' => true]);
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-            }
-            exit;
-        }
-
         if ($action === 'set_modules' && $family_id) {
             $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka'];
             $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
@@ -100,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
                          ->execute([json_encode($enabled), $family_id]);
                 $_SESSION['enabled_modules'] = $enabled;
-                $success = "Modules mis à jour.";
+                $success = "Modules mis à jour avec succès.";
             }
         }
 
@@ -110,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['app_lang'] = $lang;
                 $meta_pdo->prepare("UPDATE users SET lang = ? WHERE id = ?")
                          ->execute([$lang, $user_id]);
-                $success = "Language updated.";
+                $success = "Langue mise à jour.";
             }
         }
 
@@ -131,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $_SESSION['user']['display_name'] = $display_name;
-                $success = "Profil mis à jour.";
+                $success = "Profil mis à jour avec succès.";
             }
         }
 
@@ -209,9 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare(
                         "INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('grocery_settings','history_max',?) ON DUPLICATE KEY UPDATE content=VALUES(content)"
                     )->execute([(string) $n]);
-                    $success = tr('groceries_settings_saved');
+                    $success = tr('groceries_settings_saved') ?: 'Paramètres des courses enregistrés.';
                 } catch (\Throwable $e) {
-                    $error = tr('groceries_settings_error') . ' ' . $e->getMessage();
+                    $error = (tr('groceries_settings_error') ?: 'Erreur') . ' : ' . $e->getMessage();
                 }
             }
         }
@@ -274,6 +223,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $meta_pdo->prepare("DELETE FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'")->execute([$user_id]);
             $success = "Connexion iOS supprimée.";
         }
+
+        // --- GESTION DES PROFILS RATTACHÉS (Enfants, Nounous, etc.) ---
+        if ($action === 'add_attached_profile') {
+            $name = trim($_POST['profile_name'] ?? '');
+            $role = trim($_POST['profile_role'] ?? 'child');
+            
+            if ($name) {
+                require_once __DIR__ . '/includes/db.php';
+                if (isset($pdo)) {
+                    $stmt = $pdo->prepare("INSERT INTO pf_people (name, role) VALUES (?, ?)");
+                    $stmt->execute([$name, $role]);
+                    $success = "Profil de {$name} ajouté avec succès.";
+                }
+            } else {
+                $error = "Le prénom est obligatoire.";
+            }
+        }
+
+        if ($action === 'delete_attached_profile') {
+            $profile_id = (int)($_POST['profile_id'] ?? 0);
+            if ($profile_id > 0) {
+                require_once __DIR__ . '/includes/db.php';
+                if (isset($pdo)) {
+                    // On protège les vrais utilisateurs en s'assurant que user_id est NULL
+                    $stmt = $pdo->prepare("DELETE FROM pf_people WHERE id = ? AND user_id IS NULL");
+                    $stmt->execute([$profile_id]);
+                    $success = "Profil supprimé.";
+                }
+            }
+        }
     }
 }
 
@@ -297,29 +276,10 @@ if ($family_id && isset($pdo)) {
     }
 }
 
-// 🟢 Récupération Unifiée : Foyer, Modes de Garde, Enfants
-$kidsList = [];
-$familyCareModes = ['Nounou', 'Centre', 'Avis']; 
-$currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
-$currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
-
-if ($family_id && isset($pdo)) {
-    $foyerSettings = $pdo->query("SELECT currency, zone_scolaire, care_modes FROM pf_foyer_settings WHERE id = 1")->fetch(PDO::FETCH_ASSOC);
-    if ($foyerSettings) {
-        if (!empty($foyerSettings['currency'])) $currentCurrency = $foyerSettings['currency'];
-        if (!empty($foyerSettings['zone_scolaire'])) $currentZone = $foyerSettings['zone_scolaire'];
-        if (!empty($foyerSettings['care_modes'])) {
-            $parsed = json_decode($foyerSettings['care_modes'], true);
-            if (is_array($parsed)) $familyCareModes = $parsed;
-        }
-    }
-
-    $stmtKids = $pdo->query("SELECT id, name, care_modes FROM pf_people WHERE role = 'enfant' ORDER BY id ASC");
-    $kidsList = $stmtKids->fetchAll(PDO::FETCH_ASSOC);
-}
-
 $family = null;
 $members = [];
+$attached_profiles = [];
+
 if ($family_id) {
     $fam = $meta_pdo->prepare("SELECT * FROM families WHERE id = ?");
     $fam->execute([$family_id]);
@@ -328,6 +288,12 @@ if ($family_id) {
     $mem = $meta_pdo->prepare("SELECT display_name, username, created_at, is_admin FROM users WHERE family_id = ? ORDER BY id");
     $mem->execute([$family_id]);
     $members = $mem->fetchAll();
+
+    // Récupération des profils rattachés (ceux qui n'ont pas de compte de connexion, donc user_id IS NULL)
+    if (isset($pdo)) {
+        $stmtAttached = $pdo->query("SELECT id, name, role FROM pf_people WHERE user_id IS NULL ORDER BY role ASC, name ASC");
+        $attached_profiles = $stmtAttached->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 $calendarIntegration = $meta_pdo->prepare("SELECT username, calendar_url, status, last_sync_at FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'");
@@ -352,13 +318,6 @@ require __DIR__ . '/header.php';
 <div class="pf-container pf-settings-page">
 
   <h1 class="pf-settings-title">⚙️ Paramètres</h1>
-
-  <?php if ($success): ?>
-    <div class="pf-alert pf-alert--success">✓ <?= htmlspecialchars($success) ?></div>
-  <?php endif; ?>
-  <?php if ($error): ?>
-    <div class="pf-alert pf-alert--error">✗ <?= htmlspecialchars($error) ?></div>
-  <?php endif; ?>
 
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">🌐 Langue / Language</h2>
@@ -517,96 +476,6 @@ require __DIR__ . '/header.php';
   </section>
   <?php endif; ?>
 
-
-  <?php
-    $showCurrency = count(array_intersect(['budget', 'holidays', 'gifts', 'garage'], $_SESSION['enabled_modules'] ?? [])) > 0;
-    $showZone = in_array('calendar', $_SESSION['enabled_modules'] ?? []);
-
-    if ($family_id): 
-        $currentCurrency = defined('CURRENCY') ? CURRENCY : '€';
-        $currentZone = defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : 'C';
-  ?>
-  <section class="pf-panel-card">
-    <h2 class="pf-card-h2" style="font-size: 1.25rem;">👪 <?= tr('set_family_config') ?></h2>
-    <p class="pf-muted-note">Configurez les indicateurs et les membres partagés par votre foyer.</p>
-    
-    <form id="unifiedFamilyForm" style="margin-top: 20px; display: flex; flex-direction: column;">
-      <input type="hidden" name="action" value="update_family_info">
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-      <input type="hidden" name="custom_care_modes" id="customCareModes" value="<?= htmlspecialchars(json_encode($familyCareModes)) ?>">
-      <input type="hidden" name="deleted_kids" id="deletedKids" value="[]">
-
-      <!-- ACCORDÉON 1 : PARAMÈTRES GLOBAUX -->
-      <?php if ($showCurrency || $showZone): ?>
-      <details class="pf-accordion">
-        <summary class="pf-accordion-summary">🌍 <?= tr('set_global_params') ?></summary>
-        <div class="pf-accordion-content">
-          <div class="form-row" style="margin-bottom: 0;">
-            <?php if ($showCurrency): ?>
-            <div class="pf-form-group" style="margin-bottom: 0;">
-              <label class="pf-label">Devise monétaire</label>
-              <input type="text" name="currency" class="pf-input" value="<?= htmlspecialchars($currentCurrency) ?>" placeholder="ex: €, $, CHF" required maxlength="10">
-            </div>
-            <?php endif; ?>
-
-            <?php if ($showZone): ?>
-            <div class="pf-form-group" style="margin-bottom: 0;">
-              <label class="pf-label">Zone de vacances scolaires (France)</label>
-              <select name="zone_scolaire" class="pf-input" style="background:var(--bg-panel);">
-                <option value="A" <?= $currentZone === 'A' ? 'selected' : '' ?>>Zone A</option>
-                <option value="B" <?= $currentZone === 'B' ? 'selected' : '' ?>>Zone B</option>
-                <option value="C" <?= $currentZone === 'C' ? 'selected' : '' ?>>Zone C</option>
-                <option value="Autre" <?= $currentZone === 'Autre' ? 'selected' : '' ?>>Hors France / Autre</option>
-              </select>
-            </div>
-            <?php endif; ?>
-          </div>
-        </div>
-      </details>
-      <?php endif; ?>
-
-      <!-- ACCORDÉON 2 : MODES DE GARDE -->
-      <details class="pf-accordion">
-        <summary class="pf-accordion-summary">🏷️ <?= tr('set_care_modes') ?></summary>
-        <div class="pf-accordion-content">
-          <div id="careModesContainer" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
-          <!-- Largeur contrainte avec max-content -->
-          <button type="button" class="pf-btn btn-secondary pf-btn-sm-text" onclick="promptNewCareMode()" style="padding: 4px 10px; font-size: 0.8rem; width: max-content;">+ <?= tr('set_add_care_mode') ?></button>
-        </div>
-      </details>
-
-      <!-- ACCORDÉON 3 : ENFANTS (Ouvert par défaut) -->
-      <details class="pf-accordion">
-        <summary class="pf-accordion-summary">👶 <?= tr('set_kids_title') ?></summary>
-        <div class="pf-accordion-content" style="gap: 10px;">
-          <ul id="kidsListContainer" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
-              <?php foreach ($kidsList as $kid): 
-                  $kidModes = json_decode($kid['care_modes'] ?? '[]', true);
-                  if (!is_array($kidModes)) $kidModes = [];
-              ?>
-                  <!-- Version compactée -->
-                  <li class="kid-row" data-id="<?= $kid['id'] ?>" style="padding: 10px 12px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; gap: 8px;">
-                      <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-                          <input type="text" name="kids[<?= $kid['id'] ?>][name]" class="pf-input" value="<?= htmlspecialchars($kid['name']) ?>" style="flex: 1; padding: 8px; font-weight: bold;" required>
-                          <button type="button" class="btn-icon-action delete" onclick="removeKidRow(this, <?= $kid['id'] ?>)" title="<?= tr('delete') ?>" style="padding: 4px;">🗑️</button>
-                      </div>
-                      <div class="kid-modes-container" style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                          <span class="stored-modes" style="display:none;"><?= htmlspecialchars(json_encode($kidModes)) ?></span>
-                      </div>
-                  </li>
-              <?php endforeach; ?>
-          </ul>
-          <!-- Largeur contrainte avec max-content -->
-          <button type="button" class="pf-btn btn-secondary pf-btn-sm-text" onclick="addKidRow()" style="padding: 4px 10px; font-size: 0.8rem; width: max-content;">+ <?= tr('set_btn_add_kid') ?></button>
-        </div>
-      </details>
-
-      <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
-    </form>
-  </section>
-  <?php endif; ?>
-
-
   <section class="pf-panel-card">
     <h2 class="pf-card-h2">👤 Mon profil</h2>
     <form method="post">
@@ -707,6 +576,57 @@ require __DIR__ . '/header.php';
       </div>
       <?php endforeach; ?>
     </div>
+
+    <h3 class="pf-members-heading" style="margin-top: 2rem;">🧸 Profils rattachés</h3>
+    <p class="pf-muted-note pf-muted-note--tight" style="margin-bottom: 1rem;">Membres gérés par le foyer (Enfants, Nounous, Proches) n'ayant pas d'accès direct.</p>
+    
+    <div class="pf-stack-sm" style="margin-bottom: 1.5rem;">
+      <?php foreach ($attached_profiles as $p): 
+         $roleBadge = 'Inconnu';
+         if (in_array($p['role'], ['child', 'enfant'])) $roleBadge = '👶 Enfant';
+         elseif ($p['role'] === 'helper') $roleBadge = '💼 Intervenant';
+         elseif ($p['role'] === 'relative') $roleBadge = '👵 Proche';
+      ?>
+      <div class="pf-member-card" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong><?= htmlspecialchars($p['name']) ?></strong>
+          <span class="pf-muted-inline"><?= $roleBadge ?></span>
+        </div>
+        <form method="post" style="margin:0;">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+          <input type="hidden" name="action" value="delete_attached_profile">
+          <input type="hidden" name="profile_id" value="<?= $p['id'] ?>">
+          <button type="submit" class="btn-icon-action delete" title="Supprimer" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 4px;" onclick="return confirm('Supprimer définitivement ce profil ?')">🗑️</button>
+        </form>
+      </div>
+      <?php endforeach; ?>
+      
+      <?php if (empty($attached_profiles)): ?>
+        <div class="pf-muted-note" style="padding: 10px; text-align: center; border: 1px dashed var(--border-light); border-radius: 8px;">Aucun profil rattaché.</div>
+      <?php endif; ?>
+    </div>
+
+    <form method="post" style="display: flex; gap: 8px; background: var(--bg-soft); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-light); align-items: flex-end;">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="action" value="add_attached_profile">
+      
+      <div class="pf-form-group" style="margin-bottom: 0; flex: 2;">
+        <label class="pf-label" style="font-size: 0.8rem; margin-bottom: 4px;">Prénom</label>
+        <input type="text" name="profile_name" class="pf-input" placeholder="Ex: Pol, Carole..." required>
+      </div>
+      
+      <div class="pf-form-group" style="margin-bottom: 0; flex: 1.5;">
+        <label class="pf-label" style="font-size: 0.8rem; margin-bottom: 4px;">Rôle</label>
+        <select name="profile_role" class="pf-input" required>
+            <option value="child">👶 Enfant</option>
+            <option value="helper">💼 Intervenant</option>
+            <option value="relative">👵 Proche</option>
+        </select>
+      </div>
+      
+      <button type="submit" class="pf-btn pf-shrink-0" style="padding: 8px 16px;">Ajouter</button>
+    </form>
+
   </section>
   <?php endif; ?>
 
@@ -719,6 +639,7 @@ require __DIR__ . '/header.php';
 </div>
 
 <script>
+// --- INJECTION CSRF GLOBALE ---
 document.querySelectorAll('form[method="post"]').forEach((form) => {
   if (!form.querySelector('input[name="csrf_token"]')) {
     const input = document.createElement('input');
@@ -729,6 +650,7 @@ document.querySelectorAll('form[method="post"]').forEach((form) => {
   }
 });
 
+// --- COPIE DU CODE D'INVITATION ---
 function copyCode() {
   const code = document.getElementById('invite-code').textContent.trim();
   navigator.clipboard.writeText(code).then(() => {
@@ -738,140 +660,23 @@ function copyCode() {
   });
 }
 
-// 🟢 LOGIQUE FRONT-END UNIFIÉE (Vanilla JS) : Configuration Foyer
-let globalCareModes = <?= json_encode($familyCareModes) ?>;
-let deletedKidsIds = [];
-let newKidCounter = 0;
-
-function renderCareModes() {
-    const container = document.getElementById('careModesContainer');
-    if (!container) return;
-    
-    document.getElementById('customCareModes').value = JSON.stringify(globalCareModes);
-    container.innerHTML = '';
-    
-    globalCareModes.forEach((mode, index) => {
-        const badge = document.createElement('div');
-        badge.style.cssText = "background: var(--bg-soft); color: var(--primary); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(59, 130, 246, 0.2);";
-        badge.innerHTML = `
-            ${mode} 
-            <span style="cursor: pointer; opacity: 0.6; padding: 2px;" onclick="removeCareMode(${index})">&times;</span>
-        `;
-        container.appendChild(badge);
-    });
-    
-    document.querySelectorAll('.kid-row').forEach(row => renderKidCheckboxes(row));
-}
-
-function promptNewCareMode() {
-    const newMode = prompt("Entrez le nom du nouveau mode de garde (ex: Papi/Mamie, Centre aéré...)");
-    if (newMode && newMode.trim() !== '') {
-        if (!globalCareModes.includes(newMode.trim())) {
-            globalCareModes.push(newMode.trim());
-            renderCareModes();
-        }
-    }
-}
-
-function removeCareMode(index) {
-    if (confirm("Supprimer ce mode de garde pour tous les enfants ?")) {
-        globalCareModes.splice(index, 1);
-        renderCareModes();
-    }
-}
-
-function renderKidCheckboxes(row) {
-    const container = row.querySelector('.kid-modes-container');
-    const storedSpan = row.querySelector('.stored-modes');
-    let activeModes = [];
-    
-    if (storedSpan) {
-        try { activeModes = JSON.parse(storedSpan.innerText); } catch(e){}
-        storedSpan.remove(); 
-    } else {
-        const checked = Array.from(container.querySelectorAll('input:checked')).map(i => i.value);
-        if (checked.length > 0) activeModes = checked;
-    }
-
-    const kidId = row.getAttribute('data-id');
-    container.innerHTML = '';
-    
-    if (globalCareModes.length === 0) {
-        container.innerHTML = '<span style="font-style: italic;">Aucun mode de garde configuré.</span>';
-        return;
-    }
-
-    globalCareModes.forEach(mode => {
-        const isChecked = activeModes.includes(mode) ? 'checked' : '';
-        const label = document.createElement('label');
-        label.style.cssText = "cursor: pointer; display: flex; align-items: center; gap: 5px;";
-        label.innerHTML = `<input type="checkbox" name="kids[${kidId}][modes][]" value="${mode}" class="pf-checkbox-lg" style="transform: scale(0.8);" ${isChecked}> ${mode}`;
-        container.appendChild(label);
-    });
-}
-
-function addKidRow() {
-    newKidCounter++;
-    const kidId = 'new_' + newKidCounter;
-    const ul = document.getElementById('kidsListContainer');
-    
-    const li = document.createElement('li');
-    li.className = 'kid-row';
-    li.setAttribute('data-id', kidId);
-    li.style.cssText = "padding: 10px 12px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; gap: 8px;";
-    
-    li.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-            <input type="text" name="kids[${kidId}][name]" class="pf-input" placeholder="Prénom" style="flex: 1; padding: 8px; font-weight: bold;" required>
-            <button type="button" class="btn-icon-action delete" onclick="removeKidRow(this)" title="Retirer" style="padding: 4px;">🗑️</button>
-        </div>
-        <div class="kid-modes-container" style="font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; align-items: center;"></div>
-    `;
-    ul.appendChild(li);
-    renderKidCheckboxes(li);
-}
-
-function removeKidRow(btn, dbId = null) {
-    const row = btn.closest('.kid-row');
-    if (dbId) {
-        deletedKidsIds.push(dbId);
-        document.getElementById('deletedKids').value = JSON.stringify(deletedKidsIds);
-    }
-    row.remove();
-}
-
-const unifiedFamilyForm = document.getElementById('unifiedFamilyForm');
-if (unifiedFamilyForm) {
-    unifiedFamilyForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const btn = form.querySelector('button[type="submit"]');
-        const oldHtml = btn.innerHTML;
-        
-        btn.innerHTML = '⏳ Enregistrement...';
-        btn.disabled = true;
-
-        const fd = new FormData(form);
-
-        try {
-            const res = await pachaFetch('settings.php', { method: 'POST', body: fd });
-            if (res.success) {
-                showToast("Configuration du foyer enregistrée avec succès.", "success");
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                showToast(res.error || "Erreur de sauvegarde.", "error");
-            }
-        } catch (err) {
-            showToast("Erreur technique de sauvegarde.", "error");
-        } finally {
-            btn.innerHTML = oldHtml;
-            btn.disabled = false;
-        }
-    });
-}
-
+// --- GESTION DES NOTIFICATIONS TOAST (Remplaçant l'ancien bandeau vert) ---
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('careModesContainer')) renderCareModes();
+    <?php if ($success): ?>
+        if (typeof showToast === 'function') {
+            showToast(<?= json_encode($success) ?>, 'success');
+        } else {
+            alert(<?= json_encode($success) ?>);
+        }
+    <?php endif; ?>
+    
+    <?php if ($error): ?>
+        if (typeof showToast === 'function') {
+            showToast(<?= json_encode($error) ?>, 'error');
+        } else {
+            alert(<?= json_encode($error) ?>);
+        }
+    <?php endif; ?>
 });
 </script>
 

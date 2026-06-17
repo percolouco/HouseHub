@@ -8,68 +8,60 @@ require_login();
 require __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/i18n.php';
 
-// 1. Récupération de toutes les personnes avec leurs modes de garde
-$stmtPeople = $pdo->query("SELECT id, name, user_id, role, care_modes FROM pf_people WHERE is_active = 1 ORDER BY id ASC");
+// 1. Récupération de toutes les personnes
+$stmtPeople = $pdo->query("SELECT id, name, user_id, role, color, care_modes FROM pf_people WHERE is_active = 1 ORDER BY id ASC");
 $familyPeople = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
 $parents = [];
 $kids = [];
-
-// Liste de tous les modes de garde actifs dans le foyer
-$activeCareModes = []; 
+$helpers = []; 
 
 foreach ($familyPeople as $p) {
     $role = strtolower($p['role'] ?? '');
     if ($role === 'parent') {
-        // --- 🟢 NOUVEAU : Récupération dynamique des types de congés du parent ---
-        $stmtLT = $pdo->prepare("
-            SELECT DISTINCT leave_type FROM (
-                SELECT leave_type FROM pf_leave_balances WHERE person_id = ?
-                UNION
-                SELECT leave_type FROM pf_leave_snapshots WHERE person_id = ?
-            ) as t ORDER BY leave_type = 'CP' DESC, leave_type = 'JRA' DESC, leave_type = 'JA' DESC, leave_type ASC
-        ");
-        $stmtLT->execute([$p['id'], $p['id']]);
-        $lTypes = $stmtLT->fetchAll(PDO::FETCH_COLUMN);
-
-        // Fallback de sécurité si aucun compteur n'est encore paramétré
-        if (empty($lTypes)) {
-            $lTypes = ['CP', 'JRA', 'JA'];
-        }
-        $p['leave_types'] = $lTypes;
-        
         $parents[] = $p;
-    } elseif ($role === 'enfant') {
-        // Décodage sécurisé des modes de garde
-        $modes = json_decode($p['care_modes'] ?? '[]', true);
-        if (!is_array($modes)) $modes = [];
-        $p['modes'] = $modes;
+    } elseif ($role === 'enfant' || $role === 'child') {
+        $p['modes'] = json_decode($p['care_modes'] ?? '[]', true) ?: [];
         $kids[] = $p;
-
-        foreach ($modes as $m) {
-            $activeCareModes[$m] = true;
-        }
+    } elseif ($role === 'helper' || $role === 'nounou') {
+        $helpers[] = $p; // 🟢 On stocke les intervenants
     }
 }
-$activeCareModes = array_keys($activeCareModes); // On récupère uniquement les noms uniques
+
+// 2. Modes de garde (globaux du foyer, pour synchroniser avec le JS)
+$stmtFoyer = $pdo->query("SELECT care_modes FROM pf_foyer_settings LIMIT 1");
+$foyerData = $stmtFoyer->fetch(PDO::FETCH_ASSOC);
+$activeCareModes = json_decode($foyerData['care_modes'] ?? '[]', true);
+if (!is_array($activeCareModes)) $activeCareModes = [];
+
+// 3. Matrice de congés dynamique (pour les en-têtes et la modale)
+$stmtLeaves = $pdo->query("SELECT person_id, leave_type FROM pf_person_leave_meta ORDER BY id ASC");
+$dbLeaves = $stmtLeaves->fetchAll(PDO::FETCH_ASSOC);
+$leaveMatrix = [];
+$allLeaveTypes = [];
+foreach ($dbLeaves as $l) {
+    $leaveMatrix[$l['person_id']][] = $l['leave_type'];
+    $allLeaveTypes[$l['leave_type']] = true;
+}
+$allLeaveTypes = array_keys($allLeaveTypes);
 
 $pageTitle  = tr('fc_page_title');
 $activePage = "family-calendar";
 $mainClass  = "pf-family-calendar";
-$pageCss    = "/modules/family-calendar/family-calendar.css"; 
+$pageCss    = "/modules/family-calendar/family-calendar.css";
 
 require __DIR__ . '/header.php';
 ?>
 
 <div class="pf-container" style="max-width:100%; padding:0;">
     <div class="fc-header-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-        
+
         <!-- Bloc Titre + Roue crantée -->
         <div style="display: flex; align-items: center; gap: 12px;">
             <h1 style="margin: 0;"><?= tr('fc_main_header') ?></h1>
-            <button id="btnOpenCalendarSettings" class="btn-settings-gear" title="<?= tr('fc_btn_settings') ?>">
-    ⚙️
-</button>
+            <button id="btnOpenCalendarSettings" class="btn-settings-gear" title="Paramètres du calendrier" style="font-size: 1.4rem; padding: 4px;">
+                ⚙️
+            </button>
         </div>
 
         <!-- Boutons d'actions -->
@@ -89,7 +81,7 @@ require __DIR__ . '/header.php';
         <div class="pf-modal-content">
             <div class="pf-modal-header">
                 <h3 class="pf-modal-title">
-                    <?= tr('fc_modal_holidays_title') ?> 
+                    <?= tr('fc_modal_holidays_title') ?>
                     <?php if (defined('ZONE_SCOLAIRE') && ZONE_SCOLAIRE !== 'Autre') echo '(Zone ' . htmlspecialchars(ZONE_SCOLAIRE) . ')'; ?>
                 </h3>
                 <button id="btnCloseHolidays" class="pf-modal-close" onclick="document.getElementById('modalHolidays').classList.remove('active')">&times;</button>
@@ -124,7 +116,7 @@ require __DIR__ . '/header.php';
                             <label class="pf-label"><?= tr('fc_label_person') ?></label>
                             <select id="snapPerson" class="pf-input" required>
                                 <option value="" disabled selected>-- <?= tr('fc_choose_person') ?> --</option>
-                                <?php foreach ($familyPeople as $person): ?>
+                                <?php foreach ($parents as $person): ?>
                                     <option value="<?= htmlspecialchars($person['id']) ?>">
                                         <?= htmlspecialchars($person['name']) ?>
                                     </option>
@@ -134,9 +126,9 @@ require __DIR__ . '/header.php';
                         <div class="pf-form-group">
                             <label class="pf-label"><?= tr('fc_label_leave_type') ?></label>
                             <select id="snapType" class="pf-input" required>
-                                <option value="CP">CP</option>
-                                <option value="JRA">JRA</option>
-                                <option value="JA">JA</option>
+                                <?php foreach ($allLeaveTypes as $type): ?>
+                                    <option value="<?= htmlspecialchars($type) ?>"><?= htmlspecialchars($type) ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -162,87 +154,58 @@ require __DIR__ . '/header.php';
         </div>
     </div>
 
-    <!-- 3. MODALE : PARAMÈTRES AVANCÉS DU CALENDRIER -->
     <div id="modalCalendarSettings" class="pf-modal">
-        <div class="pf-modal-content" style="max-width: 750px; width: 95%; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
-            
-            <!-- HEADER -->
-            <div class="pf-modal-header" style="padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border-light); background: var(--bg-panel);">
-                <h3 class="pf-modal-title" style="display: flex; align-items: center; gap: 8px; margin: 0;">
-                    <span style="color: var(--text-muted); font-size: 1.2rem;">⚙️</span> <?= tr('fc_modal_settings_title') ?>
-                </h3>
-                <button type="button" class="pf-modal-close" style="margin-right: 1.5rem;" onclick="closeCalendarSettings()">&times;</button>
+        <div class="pf-modal-content" style="max-width: 600px; width: 90%;">
+            <div class="pf-modal-header">
+                <h3 class="pf-modal-title">⚙️ <?= tr('fc_modal_settings_title') ?></h3>
+                <button type="button" class="pf-modal-close" onclick="closeCalendarSettings()">&times;</button>
             </div>
 
-            <!-- CORPS SCINDÉ EN DEUX (SIDEBAR / CONTENU) -->
-            <div style="display: flex; flex-direction: row; height: 60vh; min-height: 400px; background: var(--bg-panel);">
+            <div style="display: flex; gap: 4px; background: var(--bg-page); padding: 4px; border-radius: 8px; margin: 1rem;">
+                <button type="button" id="tab-btn-foyer" class="bs-tab-btn active" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('foyer')">🏡 Foyer</button>
+                <button type="button" id="tab-btn-membres" class="bs-tab-btn" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('membres')">👥 Membres & Droits</button>
+            </div>
 
-                <!-- SIDEBAR GAUCHE -->
-                <div style="width: 220px; border-right: 1px solid var(--border-light); padding: 1rem 0; display: flex; flex-direction: column; gap: 4px;">
-                    <button type="button" id="tab-btn-foyer" class="fc-sidebar-tab bs-tab-btn active" onclick="switchCalendarTab('foyer')">
-                        <?= tr('fc_tab_foyer') ?>
-                    </button>
-                    <button type="button" id="tab-btn-membres" class="fc-sidebar-tab bs-tab-btn" onclick="switchCalendarTab('membres')">
-                        <?= tr('fc_tab_members') ?>
-                    </button>
+            <div class="pf-modal-body" style="max-height: 60vh; overflow-y: auto; padding-top: 0;">
+
+                <div id="cal-pane-foyer" class="cal-settings-pane">
+                    <form id="formCalFoyer" onsubmit="submitCalFoyer(event)">
+                        <div class="pf-form-group">
+                            <label class="pf-label"><?= tr('fc_zone_label') ?></label>
+                            <select id="setZoneScolaire" name="zone_scolaire" class="pf-input" required style="width: 100%;">
+                                <option value="A">Zone A</option>
+                                <option value="B">Zone B</option>
+                                <option value="C">Zone C</option>
+                                <option value="Autre">Autre / Hors France</option>
+                            </select>
+                            <small class="pf-muted-note"><?= tr('fc_zone_desc') ?></small>
+                        </div>
+
+                        <div class="pf-form-group" style="margin-top: 1.5rem;">
+                            <label class="pf-label"><?= tr('fc_care_modes_label') ?></label>
+                            <div id="careModesContainer" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 38px; padding: 8px; background: var(--bg-page); border-radius: var(--radius); border: 1px solid var(--border-light);"></div>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="inputNewCareMode" class="pf-input" placeholder="<?= tr('fc_add_mode_placeholder') ?>" style="flex: 1;">
+                                <button type="button" class="btn btn-secondary" style="padding: 0 16px; border-radius: 6px;" onclick="addCareModeTag()">＋</button>
+                            </div>
+                            <small class="pf-muted-note"><?= tr('fc_care_modes_desc') ?></small>
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 8px;">
+                            <button type="button" class="pf-btn pf-btn-secondary" onclick="closeCalendarSettings()"><?= tr('btn_cancel') ?></button>
+                            <button type="submit" class="pf-btn pf-btn-primary"><?= tr('save') ?></button>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- CONTENU DROITE -->
-                <div class="pf-modal-body" style="flex: 1; padding: 1.5rem; overflow-y: auto;">
-
-                    <!-- PANE A : CONFIGURATION GÉNÉRALE DU FOYER -->
-                    <div id="cal-pane-foyer" class="cal-settings-pane">
-                        <div style="display: flex; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.8rem;">
-                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--text-main);"><?= tr('fc_tab_foyer') ?></h4>
-                        </div>
-
-                        <form id="formCalFoyer" onsubmit="submitCalFoyer(event)">
-                            <div class="pf-form-group" style="margin-bottom: 1.5rem;">
-                                <label class="pf-label" style="font-weight: 600; margin-bottom: 6px;"><?= tr('fc_zone_label') ?></label>
-                                <select id="setZoneScolaire" name="zone_scolaire" class="pf-input" required style="width: 100%; border-radius: 8px; background-color: var(--bg-page);">
-                                    <option value="A">Zone A</option>
-                                    <option value="B">Zone B</option>
-                                    <option value="C">Zone C</option>
-                                    <option value="Autre">Autre / Hors France</option>
-                                </select>
-                                <small class="pf-muted-note" style="margin-top: 4px; display: block;"><?= tr('fc_zone_desc') ?></small>
-                            </div>
-
-                            <div class="pf-form-group">
-                                <label class="pf-label" style="font-weight: 600; margin-bottom: 6px;"><?= tr('fc_care_modes_label') ?></label>
-                                <div style="background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 8px; padding: 8px;">
-                                    <div id="careModesContainer" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 32px; margin-bottom: 8px;"></div>
-                                    <div style="display: flex; gap: 8px;">
-                                        <input type="text" id="inputNewCareMode" class="pf-input" placeholder="<?= tr('fc_add_mode_placeholder') ?>" style="flex: 1; background: var(--bg-soft); border: none; border-radius: 6px; padding: 6px 12px;">
-                                        <button type="button" class="pf-btn pf-btn-secondary" style="padding: 0 14px; border-radius: 6px;" onclick="addCareModeTag()">➕</button>
-                                    </div>
-                                </div>
-                                <small class="pf-muted-note" style="margin-top: 6px; display: block;"><?= tr('fc_care_modes_desc') ?></small>
-                            </div>
-                            
-                            <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 12px;">
-                                <button type="button" class="pf-btn pf-btn-secondary" onclick="closeCalendarSettings()"><?= tr('btn_cancel') ?></button>
-                                <button type="submit" class="pf-btn pf-btn-primary"><?= tr('save') ?></button>
-                            </div>
-                        </form>
+                <div id="cal-pane-membres" class="cal-settings-pane" style="display: none;">
+                    <div style="margin-bottom: 1.2rem;">
+                        <label class="pf-label">Sélectionner un membre de la famille :</label>
+                        <select id="selectCalMember" class="pf-input" style="width: 100%; font-weight: 600;" onchange="loadMemberConfigView()"></select>
                     </div>
 
-                    <!-- PANE B : CONFIGURATION DE LA MATRICE COMPTEURS -->
-                    <div id="cal-pane-membres" class="cal-settings-pane" style="display: none;">
-                        <div style="display: flex; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.8rem;">
-                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--text-main);"><?= tr('fc_tab_members') ?></h4>
+                    <div id="memberConfigZone" style="background: var(--bg-page); padding: 14px; border-radius: 8px; border: 1px solid var(--border-light); min-height: 100px;">
                         </div>
-
-                        <div style="margin-bottom: 1.5rem;">
-                            <label class="pf-label" style="font-weight: 600; margin-bottom: 6px;"><?= tr('fc_select_member') ?></label>
-                            <select id="selectCalMember" class="pf-input" style="width: 100%; font-weight: 600; border-radius: 8px; background-color: var(--bg-page);" onchange="loadMemberConfigView()"></select>
-                        </div>
-                        
-                        <div id="memberConfigZone" style="background: var(--bg-page); padding: 16px; border-radius: 12px; border: 1px solid var(--border-light); min-height: 120px;">
-                            <!-- Injecté à la volée en fonction du membre sélectionné -->
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>
@@ -259,7 +222,7 @@ require __DIR__ . '/header.php';
                 </div>
                 <button id="fc-next-month" class="fc-nav-button">›</button>
             </div>
-            
+
             <div class="fc-view-controls">
                 <button id="fc-today-btn" class="fc-today-button" title="<?= tr('fc_today_title') ?>"><?= tr('fc_today_short') ?></button>
                 <div class="fc-view-divider"></div>
@@ -268,7 +231,7 @@ require __DIR__ . '/header.php';
                 <button class="fc-view-button" data-view="3months"><?= tr('fc_view_3m') ?></button>
             </div>
         </div>
-        
+
         <div class="fc-calendar-container">
             <div id="fc-month-calendar" class="fc-month-calendar"></div>
             <div id="fc-month-selectionMenu" class="fc-selection-menu" style="display:none;"></div>
@@ -307,32 +270,36 @@ require __DIR__ . '/header.php';
                             <th rowspan="3" class="col-total rotated-text"><span>Maladie <?= htmlspecialchars($kid['name']) ?></span></th>
                         <?php endforeach; ?>
 
-                        <!-- 🟢 NOUVEAU : Colspan dynamique selon le nombre de compteurs de chaque parent -->
                         <?php foreach ($parents as $index => $parent):
-                            $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
-                            $colspan = count($parent['leave_types']) * 2;
+                            $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia'; // Couleurs alternées
+                            $pLeaves = $leaveMatrix[$parent['id']] ?? [];
+                            $colspan = count($pLeaves) * 2;
                         ?>
+                            <?php if ($colspan > 0): ?>
                             <th colspan="<?= $colspan ?>" class="<?= $parentClass ?> header-group"><?= htmlspecialchars(strtoupper($parent['name'])) ?></th>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </tr>
                     <tr>
-                        <!-- 🟢 NOUVEAU : Noms des compteurs dynamiques -->
                         <?php foreach ($parents as $index => $parent):
                             $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
-                            foreach ($parent['leave_types'] as $lt):
+                            $pLeaves = $leaveMatrix[$parent['id']] ?? [];
                         ?>
-                            <th colspan="2" class="<?= $parentClass ?>-sub"><?= htmlspecialchars(strtoupper($lt)) ?></th>
-                        <?php endforeach; endforeach; ?>
+                            <?php foreach ($pLeaves as $type): ?>
+                            <th colspan="2" class="<?= $parentClass ?>-sub"><?= htmlspecialchars($type) ?></th>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
                     </tr>
                     <tr>
-                        <!-- 🟢 NOUVEAU : Sous-colonnes Av./Use dynamiques -->
                         <?php foreach ($parents as $index => $parent):
                             $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
-                            foreach ($parent['leave_types'] as $lt):
+                            $pLeaves = $leaveMatrix[$parent['id']] ?? [];
                         ?>
+                            <?php foreach ($pLeaves as $type): ?>
                             <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-av"><?= tr('fc_col_av') ?></th>
                             <th class="<?= $parentClass ?>-sub <?= $parentClass ?>-use"><?= tr('fc_col_use') ?></th>
-                        <?php endforeach; endforeach; ?>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
                     </tr>
                 </thead>
                 <tbody id="planningBody"></tbody>
@@ -342,49 +309,54 @@ require __DIR__ . '/header.php';
     </section>
 
     <section class="pf-section pf-section--bottom-panels" style="margin-top: 1.5rem;">
-        <div class="fc-bottom-grid">
-            <div class="pf-card">
-                <div class="pf-card-title fc-summary-header">
-                    <span><?= tr('fc_summary_title') ?></span>
-                    <div class="fc-summary-controls">
-                        <select id="summType" class="fc-summ-select"> 
-                            <option value="year"><?= tr('fc_summ_year') ?></option>
-                            <option value="month"><?= tr('fc_summ_month') ?></option>
-                        </select>
-                        <select id="summValue" class="fc-summ-select"></select>
-                    </div>
-                </div>
-                <div class="pf-card-body">
-                    <div id="globalSummary" class="fc-summary-vertical"></div>
-                </div>
-            </div>
-
-            <div class="pf-card">
+        <div class="pf-card">
                 <h2 class="pf-card-title"><?= tr('fc_legend_title') ?></h2>
                 <div class="pf-card-body">
                     <div class="pf-legend-grid">
+                        <!-- Fériés & Vacances (Fixes) -->
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span><?= tr('leg_school_holidays') ?></span></div>
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
-                        
-                        <?php foreach ($activeCareModes as $index => $mode): 
-                            $hue = ($index * 137) % 360; 
-                        ?>
-                            <div class="pf-legend-item">
-                                <div class="pf-legend-color" style="background: hsl(<?= $hue ?>, 70%, 50%);"></div>
-                                <span><?= htmlspecialchars($mode) ?></span>
-                            </div>
+
+                        <!-- Intervenants (Dynamique) -->
+                        <?php foreach ($helpers as $helper): ?>
+                            <div class="pf-legend-item"><div class="pf-legend-color" style="background: var(--warning);"></div><span>Off <?= htmlspecialchars($helper['name']) ?></span></div>
+                            <div class="pf-legend-item"><div class="pf-legend-color" style="background: var(--danger);"></div><span>Extra <?= htmlspecialchars($helper['name']) ?></span></div>
                         <?php endforeach; ?>
 
-                        <?php foreach ($kids as $kid): ?>
+                        <!-- Modes de garde (Dynamique avec icônes) -->
+                        <?php foreach ($activeCareModes as $index => $mode):
+                            $modeLower = strtolower($mode);
+                            if ($modeLower === 'avis'): ?>
+                                <div class="pf-legend-item">
+                                    <img src="/modules/family-calendar/assets/img/avis.svg" style="width:16px;height:16px;object-fit:contain;margin-right:6px;" alt="Avis">
+                                    <span><?= htmlspecialchars($mode) ?></span>
+                                </div>
+                            <?php elseif ($modeLower === 'centre'): ?>
+                                <div class="pf-legend-item">
+                                    <span style="font-size:1.1rem; line-height:1; margin-right:6px;">🏫</span>
+                                    <span><?= htmlspecialchars($mode) ?></span>
+                                </div>
+                            <?php else: 
+                                $hue = ($index * 137) % 360; ?>
+                                <div class="pf-legend-item">
+                                    <div class="pf-legend-color" style="background: hsl(<?= $hue ?>, 70%, 50%);"></div>
+                                    <span><?= htmlspecialchars($mode) ?></span>
+                                </div>
+                            <?php endif; 
+                        endforeach; ?>
+
+                        <!-- Enfants Malades (Dynamique avec couleur BDD) -->
+                        <?php foreach ($kids as $kid): 
+                            $color = !empty($kid['color']) ? $kid['color'] : 'var(--danger)';
+                        ?>
                             <div class="pf-legend-item">
-                                <div class="pf-legend-color" style="background: var(--pf-danger, #ef4444); opacity: 0.8;"></div>
+                                <div class="pf-legend-color" style="background: <?= htmlspecialchars($color) ?>; opacity: 0.8;"></div>
                                 <span>Maladie <?= htmlspecialchars($kid['name']) ?></span>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
             </div>
-        </div>
     </section>
 </div>
 
