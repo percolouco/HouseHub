@@ -7,7 +7,7 @@ $dbCategories = $stmtCats->fetchAll(PDO::FETCH_ASSOC);
 
 // 2. Récupération des Salaires/Mensualités configurés (Revenus automatiques)
 $currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y');
-$stmtSalaries = $pdo->prepare("SELECT person, mensualite FROM pf_salary_config WHERE year = ?");
+$stmtSalaries = $pdo->prepare("SELECT id, person, mensualite FROM pf_salary_config WHERE year = ?");
 $stmtSalaries->execute([$currentYear]);
 $salaries = $stmtSalaries->fetchAll(PDO::FETCH_ASSOC);
 
@@ -44,6 +44,10 @@ foreach ($allExpenses as $row) {
     }
 }
 
+$stmtSalariesReal = $pdo->prepare("SELECT salary_id, SUM(amount) as total_salary FROM pf_expenses WHERE gestion_month = ? AND salary_id IS NOT NULL GROUP BY salary_id");
+$stmtSalariesReal->execute([$viewMonthDate]);
+$realTotalsBySalary = $stmtSalariesReal->fetchAll(PDO::FETCH_KEY_PAIR);
+
 // Récupération des détails pour le mapping par mots-clés (si besoin de précision)
 $stmtLabels = $pdo->prepare("SELECT label, amount, category FROM pf_expenses WHERE gestion_month = ? AND budget_item_id IS NULL");
 $stmtLabels->execute([$viewMonthDate]);
@@ -77,23 +81,42 @@ $totalRevenus = 0;
                 <?php foreach ($salaries as $salary): 
                     $mensualite = (float)$salary['mensualite'];
                     $totalRevenus += $mensualite;
+                    
+                    // Calcul du réel perçu
+                    $realPerçu = isset($realTotalsBySalary[$salary['id']]) ? (float)$realTotalsBySalary[$salary['id']] : 0;
+                    $gap = $realPerçu - $mensualite;
+                    $isAutoChecked = ($realPerçu >= ($mensualite - 0.10));
                 ?>
                 <tr class="row-income" style="border-bottom:1px solid var(--border-light); background:#f0fdf4;">
                     <td style="padding:15px;">
                         <strong>Apport <?= htmlspecialchars($salary['person']) ?></strong>
-                        <span title="Géré automatiquement depuis les paramètres des Salaires" style="font-size:0.8rem; cursor:help;">⚙️</span>
+                        <span title="Le montant cible est défini dans les paramètres" style="font-size:0.8rem; cursor:help;">⚙️</span>
                     </td>
                     <td class="cell-amount" style="font-weight:600; padding:15px; color:#10b981;">
                         + <?= number_format($mensualite, 2, ',', ' ') ?> €
+                        
+                        <?php if ($realPerçu > 0): ?>
+                            <?php if ($gap > 0.05): ?>
+                                <div style="font-size:0.75rem; color:#10b981; font-weight:bold;">Bonus : +<?= number_format($gap, 2, ',', ' ') ?> €</div>
+                            <?php elseif ($gap < -0.05): ?>
+                                <div style="font-size:0.75rem; color:#f59e0b;">Manque : <?= number_format(abs($gap), 2, ',', ' ') ?> €</div>
+                            <?php else: ?>
+                                <div style="font-size:0.75rem; color:#10b981;">Atteint ✓</div>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     </td>
                     <td style="padding:15px;">
-                        <span class="badge-type" style="background:#dcfce7; color:#16a34a; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:600;">Fixe (Auto)</span>
+                        <span class="badge-type" style="background:#dcfce7; color:#16a34a; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:600;">Revenu Mensuel</span>
                     </td>
                     <td style="padding:15px; color:#64748b; font-weight:bold;">-</td>
                     <td style="padding:15px;">
-                        <div style="display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #e2e8f0;">
-                            Auto
-                        </div>
+                        <?php if ($isAutoChecked): ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #bbf7d0;"><span>✓</span> Reçu</div>
+                        <?php elseif ($realPerçu > 0): ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#d97706; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #fde68a;"><span>⏳</span> Partiel</div>
+                        <?php else: ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #e2e8f0;"><span>○</span> En attente</div>
+                        <?php endif; ?>
                     </td>
                     <td style="padding:15px; text-align:right;">
                         <small style="color:#94a3b8;">Via Paramètres</small>

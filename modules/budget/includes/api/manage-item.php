@@ -114,13 +114,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             $label = trim($_POST['label'] ?? '');
+            $rawItemId = $_POST['budget_item_id'] ?? '';
             $budgetItemId = null;
+            $salaryId = null;
             $holidayId = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
 
             if ($cat === 'School' && !empty($_POST['label_select'])) {
                 $label = trim($_POST['label_select']);
-            } elseif (($cat === 'Frais' || $cat === 'Income') && !empty($_POST['budget_item_id'])) {
-                $budgetItemId = (int)$_POST['budget_item_id'];
+            } elseif (!empty($rawItemId)) {
+                // 🔥 On intercepte si c'est un Salaire (SAL_x) ou une Charge Fixe classique (x)
+                if (strpos($rawItemId, 'SAL_') === 0) {
+                    $salaryId = (int)str_replace('SAL_', '', $rawItemId);
+                } else {
+                    $budgetItemId = (int)$rawItemId;
+                }
             }
 
             // Vérification de sécurité
@@ -131,16 +138,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $is_credit = isset($_POST['is_credit']) ? (int)$_POST['is_credit'] : 0;
             $finalAmount = $is_credit ? abs($amount) : -abs($amount);
-            
+
             if ($id) {
-                // UPDATE
-                $pdo->prepare("UPDATE pf_expenses SET date_exp=?, gestion_month=?, category=?, label=?, amount=?, budget_item_id=?, holiday_id=? WHERE id=?")
-                    ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $budgetItemId, $holidayId, $id]);
+                // UPDATE (Ajout de salary_id)
+                $pdo->prepare("UPDATE pf_expenses SET date_exp=?, gestion_month=?, category=?, label=?, amount=?, budget_item_id=?, holiday_id=?, salary_id=? WHERE id=?")
+                    ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $budgetItemId, $holidayId, $salaryId, $id]);
             } else {
-                // INSERT
+                // INSERT (Ajout de salary_id)
                 $uniqueRef = "MANUAL_" . uniqid();
-                $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-                    ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId, $holidayId]);
+                $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id, salary_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+                    ->execute([$date, $gestionMonth, $cat, $label, $finalAmount, $uniqueRef, $budgetItemId, $holidayId, $salaryId]);
             }
             
             echo json_encode(['success' => true]);

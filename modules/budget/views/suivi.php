@@ -59,7 +59,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'reopen_month') {
 
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
-    $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id, salary_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category, budget_item_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category), budget_item_id = VALUES(budget_item_id)");
 
     if (isset($_POST['lines']) && is_array($_POST['lines'])) {
@@ -67,7 +67,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
             if (isset($line['import_check'])) {
                 $cat = $line['cat'];
                 $is_credit = isset($line['is_credit']) ? (int)$line['is_credit'] : 0;
-                $budgetItemId = !empty($line['budget_item_id']) ? (int)$line['budget_item_id'] : null;
+                
+                // 🔥 NOUVEAU TRAITEMENT DU BUDGET_ITEM_ID
+                $rawItemId = $line['budget_item_id'] ?? '';
+                $budgetItemId = null;
+                $salaryId = null;
+                if (!empty($rawItemId)) {
+                    if (strpos($rawItemId, 'SAL_') === 0) {
+                        $salaryId = (int)str_replace('SAL_', '', $rawItemId);
+                    } else {
+                        $budgetItemId = (int)$rawItemId;
+                    }
+                }
+                
                 $holidayId = !empty($line['holiday_id']) ? (int)$line['holiday_id'] : null;
                 $gestionMonthLine = !empty($line['gestion_month']) ? $line['gestion_month'] . '-01' : $viewMonthDate; 
                 
@@ -78,7 +90,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
                 $dateToSave = $line['date'];
 
                 try {
-                    $stmtExp->execute([$dateToSave, $gestionMonthLine, $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId, $holidayId]);
+                    $stmtExp->execute([$dateToSave, $gestionMonthLine, $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId, $holidayId, $salaryId]);
                     $stmtRule->execute([$line['label'], $cat, $budgetItemId]);
                     $count++;
                 } catch (Exception $e) { continue; }
@@ -232,7 +244,7 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $name = trim($item['name']);
     $catCode = $item['category']; // Ex: FIXED, FMCG, INCOME ou income
     
-    $isIncome = (strtoupper($catCode) === 'INCOME' || (float)$item['amount'] > 0); 
+    $isIncome = (strtoupper($catCode) === 'INCOME');
     
     if ($isIncome) {
         $incomeList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount];
@@ -276,6 +288,15 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $categoriesConfig[$catCode]['budget'] += $amt;
         }
     }
+}
+
+$stmtSalaries = $pdo->query("SELECT id, person, salary FROM pf_salary_config WHERE year = " . $viewY);
+while ($sal = $stmtSalaries->fetch(PDO::FETCH_ASSOC)) {
+    $incomeList[] = [
+        'id' => 'SAL_' . $sal['id'], 
+        'name' => 'Salaire ' . $sal['person'], 
+        'amount' => (float)$sal['salary']
+    ];
 }
 
 // L'enveloppe "Autres" prend tout le reste du budget non alloué
@@ -621,12 +642,13 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                 </select>
             </div>
 
-            <!-- 🛠️ FIX VISUEL : On demande la personne concernée (Bénéficiaire) -->
             <div class="form-group" id="blockInputIncome" style="margin-bottom:15px; display:none;">
-                <label class="pf-label"><?= tr('bud_beneficiary') ?></label>
+                <label class="pf-label">Lier à un Revenu Prévu (Optionnel)</label>
                 <select name="budget_item_id" id="incomeSelect" class="pf-input" disabled>
-                    <option value=""><?= tr('gift_filter_all_adults') ?></option>
-                    <?php foreach ($incomeList as $inc): ?><option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option><?php endforeach; ?>
+                    <option value="">-- Aucun --</option>
+                    <?php foreach ($incomeList as $inc): ?>
+                        <option value="<?= $inc['id'] ?>"><?= htmlspecialchars($inc['name']) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             
@@ -792,8 +814,8 @@ function closeSuiviModal(id) { document.getElementById(id).classList.remove('ope
 
 // Gestion dynamique du formulaire modal 
 function handleModalCatChange(select) {
-    const catKey = select.value;
-    const conf = catConfigs[catKey] || {db_type: 'Expense', suggestions: []};
+    const catKey = select.value.toUpperCase(); // Sécurité sur la casse
+    const conf = catConfigs[select.value] || {db_type: 'Expense', suggestions: []};
     
     document.getElementById('blockInputText').style.display = 'block';
     document.getElementById('blockInputFrais').style.display = 'none';
@@ -806,13 +828,17 @@ function handleModalCatChange(select) {
     document.getElementById('incomeSelect').disabled = true;
 
     if (conf.db_type === 'Income') { 
-        document.getElementById('blockInputIncome').style.display = 'block'; 
-        document.getElementById('incomeSelect').disabled = false; 
-        document.getElementById('incomeSelect').required = true;
-    } else {
-        // Optionnel : lier l'Expense à une charge fixe
+        const incSel = document.getElementById('incomeSelect');
+        // 👁️ Ne s'affiche que s'il y a des revenus prévus à lier, sinon reste invisible
+        if (incSel.options.length > 1) { 
+            document.getElementById('blockInputIncome').style.display = 'block'; 
+            incSel.disabled = false; 
+        }
+    } 
+    else if (catKey === 'FIXED') { // 🔒 Strictement pour les Charges Fixes
         document.getElementById('blockInputFrais').style.display = 'block'; 
         document.getElementById('fraisSelect').disabled = false; 
+        document.getElementById('fraisSelect').required = true; // 🔥 Devient OBLIGATOIRE
     }
 
     const list = document.getElementById('modalSuggestions'); list.innerHTML = ''; 
@@ -857,6 +883,7 @@ function handleLineCatChange(select, isInit = false) {
     const row = select.closest('tr');
     const fSel = row.querySelector('.select-frais'); 
     const iSel = row.querySelector('.select-income');
+    const catKey = select.value.toUpperCase();
     const conf = catConfigs[select.value] || null;
     
     fSel.style.display = 'none'; iSel.style.display = 'none'; 
@@ -864,8 +891,12 @@ function handleLineCatChange(select, isInit = false) {
     fSel.disabled = true; iSel.disabled = true;
 
     if (conf && conf.db_type === 'Income') { 
-        iSel.style.display = 'block'; iSel.disabled = false; 
-    } else if (conf) { 
+        // 👁️ Ne s'affiche que s'il y a des revenus à lier
+        if (iSel.options.length > 1) {
+            iSel.style.display = 'block'; iSel.disabled = false; 
+        }
+    } 
+    else if (catKey === 'FIXED') { // 🔒 Strictement pour les Charges Fixes
         fSel.style.display = 'block'; fSel.disabled = false; 
     }
     checkValidation();
@@ -879,18 +910,23 @@ function checkValidation() {
         const row = cb.closest('tr'); 
         const isCrd = row.querySelector('.is-credit-flag').value === '1'; 
         const cat = row.querySelector('.line-select').value;
-        const conf = catConfigs[cat] || null;
+        const catKey = cat.toUpperCase();
+        const fSel = row.querySelector('.select-frais');
 
         let v = true; 
         if (cat === "") { 
+            // La catégorie est obligatoire pour les dépenses (les revenus sont acceptés sans cat si souhaité)
             if (!isCrd) v = false; 
-        } else if (conf && conf.db_type === 'Income' && row.querySelector('.select-income').value === "") {
-            v = false;
+        } 
+        else if (catKey === 'FIXED' && fSel.value === "") {
+            v = false; // 🔥 Bloque l'import si une Charge Fixe n'est pas liée à une ligne du budget !
         }
+        
         if (!v) { miss++; row.style.background = '#fff1f2'; } else row.style.background = '';
     });
+    
     const btn = document.getElementById('btnImport'); const msg = document.getElementById('missingCount');
-    if(miss > 0) { btn.disabled = true; btn.style.opacity = 0.5; msg.style.display = 'inline'; msg.innerText = miss + ' ' + (window.I18N['bud_to_define_js'] || ''); } 
+    if(miss > 0) { btn.disabled = true; btn.style.opacity = 0.5; msg.style.display = 'inline'; msg.innerText = miss + ' ' + (window.I18N['bud_to_define_js'] || 'à définir'); } 
     else { btn.disabled = false; btn.style.opacity = 1; msg.style.display = 'none'; }
 }
 
@@ -901,7 +937,8 @@ if (document.getElementById('formMapping')) {
 
 window.addEventListener('click', (e) => {
     if (e.target.classList.contains('pf-modal')) {
-        e.target.style.display = 'none';
+        e.target.classList.remove('open', 'is-active');
+        e.target.style.display = ''; 
         document.body.classList.remove('no-scroll');
     }
 });
