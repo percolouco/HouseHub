@@ -603,6 +603,10 @@ return [
     'bud_to_define' => "À définir",
     'bud_is_charge' => "Est une charge fixe...",
     'bud_is_income' => "Est un revenu...",
+    'bud_edit_title'            => 'Modifier la transaction',
+    'bud_to_define_js'          => 'à définir',
+    'bud_select_beneficiary'    => 'Choisir un revenu attendu',
+    'bud_bar_actual'            => 'Actuel',
 
     // --- BUDGET : RECAP ---
     'bud_recap_monthly_title'   => 'Récapitulatif Mensuel',

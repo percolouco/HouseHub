@@ -231,7 +231,8 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $amt = ($item['type'] === 'Annuel') ? $absAmount / 12 : $absAmount;
     $name = trim($item['name']);
     $catCode = $item['category']; // Ex: FIXED, FMCG, INCOME...
-    $isIncome = ((float)$item['amount'] > 0); // La norme est désormais définie par le signe du montant
+    
+    $isIncome = (isset($categoriesConfig[$catCode]) && $categoriesConfig[$catCode]['db_type'] === 'Income');
     
     if ($isIncome) {
         $incomeList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount];
