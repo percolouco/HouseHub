@@ -6,43 +6,54 @@ require_login();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
-    // --- ACTION : SAUVEGARDER (AJOUT OU MODIF) ---
+    // --- ACTION : SAUVEGARDER (AJOUT OU MODIF DU BUDGET) ---
     if ($action === 'save') {
-        $id = $_POST['id'] ?? '';
-        $name = $_POST['name'];
-        $category = $_POST['category'];
-        $type = $_POST['type'];
-        $payment_day = empty($_POST['payment_day']) ? null : (int)$_POST['payment_day'];
-        $is_estimate = $_POST['is_estimate'];
-        $reg_month = $_POST['reg_month'];
-        $keywords = $_POST['mapping_keywords'] ?? ''; 
-        $holiday_id = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
+        try {
+            // 1. Sécurisation des données entrantes
+            $id = !empty($_POST['id']) ? (int)$_POST['id'] : null;
+            $name = trim($_POST['name'] ?? '');
+            $category = $_POST['category'] ?? '';
+            $type = $_POST['type'] ?? 'Mensuel';
+            $payment_day = !empty($_POST['payment_day']) ? (int)$_POST['payment_day'] : null;
+            $is_estimate = isset($_POST['is_estimate']) ? (int)$_POST['is_estimate'] : 0;
+            $reg_month = !empty($_POST['reg_month']) ? trim($_POST['reg_month']) : null;
+            $keywords = trim($_POST['mapping_keywords'] ?? ''); 
+            $holiday_id = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
 
-        // ==========================================
-        // NOUVELLE NORME COMPTABLE : Dépense = Négatif
-        // ==========================================
-        // On récupère le montant en valeur absolue (pour éviter les erreurs si l'utilisateur a tapé un '-')
-        $amount = abs((float)$_POST['amount']); 
-        
-        // Si c'est un frais, on l'enregistre en négatif
-        if ($category === 'expense') {
-            $amount = -$amount;
-        }
-        // ==========================================
+            // 2. Gestion du montant (toujours stocker les dépenses en négatif)
+            $amount = abs((float)($_POST['amount'] ?? 0)); 
+            $amount = -$amount; // On force le négatif car le modal Recap ne gère que des charges
 
-        if ($id) {
-            // UPDATE
-            $stmt = $pdo->prepare("UPDATE pf_budget_items SET name=?, amount=?, category=?, type=?, payment_day=?, is_estimate=?, reg_month=?, mapping_keywords=?, holiday_id=? WHERE id=?");
-            $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id, $id]);
-        } else {
-            // INSERT
-            $stmt = $pdo->prepare("INSERT INTO pf_budget_items (name, amount, category, type, payment_day, is_estimate, reg_month, mapping_keywords, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id]);
+            // 3. Exécution de la requête
+            if ($id) {
+                // UPDATE
+                $stmt = $pdo->prepare("UPDATE pf_budget_items SET name=?, amount=?, category=?, type=?, payment_day=?, is_estimate=?, reg_month=?, mapping_keywords=?, holiday_id=? WHERE id=?");
+                $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id, $id]);
+            } else {
+                // INSERT
+                $stmt = $pdo->prepare("INSERT INTO pf_budget_items (name, amount, category, type, payment_day, is_estimate, reg_month, mapping_keywords, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id]);
+            }
+            
+            // 4. Réponse appropriée (JSON si appel via JS fetch, Redirection sinon)
+            if (!empty($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true]);
+                exit;
+            } else {
+                header('Location: /budget.php?tab=recap');
+                exit;
+            }
+
+        } catch (PDOException $e) {
+            // En cas d'erreur BDD (ex: contrainte de clé étrangère, colonne manquante)
+            if (!empty($_POST['ajax'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'error' => 'Erreur BDD : ' . $e->getMessage()]);
+                exit;
+            }
+            die("Erreur fatale : " . $e->getMessage());
         }
-        
-        // Redirection
-        header('Location: /budget.php?tab=recap');
-        exit;
     }
 
     // --- ACTION : COCHER/DÉCOCHER RAPIDE (VIA JS FETCH) ---
@@ -59,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // --- ACTION : SUPPRIMER ---
+    // --- ACTION : SUPPRIMER UNE LIGNE DU BUDGET ---
     if ($action === 'delete') {
         $id = $_POST['id'];
         $pdo->prepare("DELETE FROM pf_budget_items WHERE id = ?")->execute([$id]);
@@ -84,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // --- ACTION : SAUVEGARDER UNE DÉPENSE MANUELLE (FETCH) ---
     if ($action === 'save_expense_manual') {
-        header('Content-Type: application/json'); // On force le retour JSON pour notre script JS
+        header('Content-Type: application/json'); 
         
         try {
             $id = !empty($_POST['expense_id']) ? (int)$_POST['expense_id'] : null;
@@ -92,15 +103,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $amount = floatval($_POST['amount'] ?? 0); 
             $date = $_POST['date'] ?? date('Y-m-d');
             
-            // 🛡️ SÉCURITÉ : Format attendu pour gestion_month (qui vient de input type="month") : YYYY-MM.
+            // Format attendu : YYYY-MM
             $gestionMonthRaw = $_POST['gestion_month'] ?? '';
             
-            // Si la valeur est vide ou '0000-00-00'
+            // Si la valeur est vide ou invalide
             if (empty($gestionMonthRaw) || strpos($gestionMonthRaw, '0000') !== false) {
-                // On force le mois de gestion au 1er jour de la date de la dépense
                 $gestionMonth = date('Y-m-01', strtotime($date));
             } else {
-                // Si la valeur vient d'un input "month" (ex: "2026-04"), on rajoute "-01"
                 $gestionMonth = (strlen($gestionMonthRaw) === 7) ? $gestionMonthRaw . '-01' : $gestionMonthRaw;
             }
             

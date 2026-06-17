@@ -102,9 +102,6 @@ $totalRevenus = 0;
                 <?php endforeach; ?>
 
                 <?php 
-// Initialisation du tableau de verrouillage des catégories avant la boucle
-$usedCategories = []; 
-
 foreach ($items as $item): 
     // 1. Calculs de base
     $targetAbs = abs((float)$item['amount']); 
@@ -115,19 +112,12 @@ foreach ($items as $item):
     $realSum = 0;
     $hasMatchingExpense = false;
 
-    // A. Correspondance par ID direct (Priorité 1)
+    // A. Correspondance par ID direct (Le lien dur)
     if (isset($realTotalsById[$item['id']])) {
         $realSum = (float)$realTotalsById[$item['id']];
         $hasMatchingExpense = true;
     } 
-    // B. Correspondance par Catégorie (Priorité 2 : avec verrouillage pour éviter le cumul)
-    elseif (!empty($item['category']) && isset($realTotalsByCat[$item['category']]) && !isset($usedCategories[$item['category']])) {
-        $realSum = (float)$realTotalsByCat[$item['category']];
-        $hasMatchingExpense = true;
-        // On marque la catégorie comme "consommée" pour ne pas la recompter sur la ligne suivante
-        $usedCategories[$item['category']] = true; 
-    }
-    // C. Correspondance par mots-clés bancaires (Priorité 3)
+    // B. Correspondance par mots-clés bancaires (Le lien intelligent pour les orphelines)
     elseif (!empty($item['mapping_keywords'])) {
         $keywords = array_map('trim', explode(',', $item['mapping_keywords']));
         foreach ($unlinkedExpenses as $uexp) {
@@ -135,7 +125,7 @@ foreach ($items as $item):
                 if (!empty($kw) && stripos($uexp['label'], $kw) !== false) {
                     $realSum += (float)$uexp['amount'];
                     $hasMatchingExpense = true;
-                    break; 
+                    break; // On a trouvé un mot clé sur cette dépense, on passe à l'orpheline suivante
                 }
             }
         }
