@@ -397,12 +397,15 @@ function renderMemberLeavesView(personId, memberLeaves) {
       const moisRenouv = ml.anniversary_date
         ? parseInt(ml.anniversary_date.split("-")[1])
         : 1;
+      const methodeLabel = ml.method === "ACCUMULATED" ? "Graduel" : "Fixe";
 
       html += `
         <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); padding: 8px; border-radius: 6px; border: 1px solid var(--border-light);">
             <div>
                 <strong style="color: var(--text-main);">${ml.leave_type}</strong>
-                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 5px;">(Quota: <b>${ml.allowance}j</b> - Renouv: <b>Mois ${moisRenouv}</b>)</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 5px;">
+                    (Quota: <b>${ml.allowance}j</b> - Renouv: <b>Mois ${moisRenouv}</b> - Acquis: <b>${methodeLabel}</b>)
+                </span>
             </div>
             <button class="pf-btn btn-secondary" style="padding: 2px 6px; color: var(--danger);" onclick="deleteMemberLeave(${ml.id}, ${personId})">🗑️</button>
         </div>
@@ -411,7 +414,7 @@ function renderMemberLeavesView(personId, memberLeaves) {
     html += `</div>`;
   }
 
-  // Ajout du selecteur de mois dans l'attribution
+  // Ajout du formulaire d'attribution complet
   html += `
         <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 15px 0;">
         <h5 style="margin: 0 0 10px 0;">+ Attribuer un congé</h5>
@@ -459,55 +462,45 @@ function renderMemberLeavesView(personId, memberLeaves) {
 }
 
 async function addMemberLeave(personId) {
+  // 1. Récupération des valeurs du formulaire
   const leaveCode = document.getElementById("new-member-leave-type").value;
   const allowance = document.getElementById("new-member-leave-allowance").value;
   const resetMonth = document.getElementById("new-member-leave-reset").value;
-  const method = document.getElementById("new-member-leave-method").value; // <-- Ajout
-  fd.append("method", method);
+  const method = document.getElementById("new-member-leave-method").value;
 
-  if (!leaveCode) return showToast("Veuillez sélectionner un type", "error");
+  // 2. Sécurité : vérifier qu'un type de congé a bien été sélectionné
+  if (!leaveCode) {
+    return window.showToast
+      ? showToast("Veuillez sélectionner un type de congé", "error")
+      : alert("Veuillez sélectionner un type de congé");
+  }
 
+  // 3. Préparation des données pour l'API
   const fd = new FormData();
   fd.append("action", "add_person_leave");
   fd.append("person_id", personId);
   fd.append("leave_type", leaveCode);
   fd.append("allowance", allowance);
   fd.append("reset_month", resetMonth);
+  fd.append("method", method);
 
+  // 4. Appel à l'API et rafraîchissement
   try {
     const res = await pachaFetch(
       "/modules/family-calendar/includes/api/calendar-settings.php",
       { method: "POST", body: fd },
     );
+
     if (!res.success) throw new Error(res.error);
 
     if (window.showToast) showToast("Congé attribué avec succès !", "success");
+
+    // Recharge la vue du membre pour faire apparaître la nouvelle ligne immédiatement
     loadMemberConfigView();
   } catch (err) {
-    alert("Erreur: " + err.message);
-  }
-}
-
-// Supprimer un congé d'un membre
-async function deleteMemberLeave(leaveId, personId) {
-  if (!confirm(tr("confirm_delete") || "Retirer ce congé pour ce membre ?"))
-    return;
-
-  const fd = new FormData();
-  fd.append("action", "delete_person_leave");
-  fd.append("id", leaveId);
-
-  try {
-    const res = await pachaFetch(
-      "/modules/family-calendar/includes/api/calendar-settings.php",
-      { method: "POST", body: fd },
-    );
-    if (!res.success) throw new Error(res.error);
-
-    if (window.showToast) showToast("Congé retiré !", "success");
-    loadMemberConfigView();
-  } catch (err) {
-    alert("Erreur: " + err.message);
+    if (window.showToast)
+      showToast("Erreur lors de l'attribution : " + err.message, "error");
+    else alert("Erreur: " + err.message);
   }
 }
 
@@ -837,62 +830,77 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calculateMonthlyBalances() {
       const balances = {};
-      this.parents.forEach((p) => (balances[p.id] = {}));
+      this.parents.forEach((p) => (balances[String(p.id)] = {}));
 
       const ymSet = new Set();
       this.weeks.forEach((w) => ymSet.add(w.monthKey));
       const ymList = Array.from(ymSet).sort();
 
       const usageByMonth = {};
+
+      // 1. On calcule ce qui a été posé (Strictement typé en String pour éviter les bugs)
       this.leaves.forEach((l) => {
-        const pid = l.person_id,
-          type = l.leave_type,
-          ym = l.leave_date.substring(0, 7);
+        const pid = String(l.person_id);
+        const type = String(l.leave_type).trim().toUpperCase();
+        const ym = String(l.leave_date).substring(0, 7);
+
         if (!usageByMonth[pid]) usageByMonth[pid] = {};
         if (!usageByMonth[pid][type]) usageByMonth[pid][type] = {};
         usageByMonth[pid][type][ym] =
-          (usageByMonth[pid][type][ym] || 0) + parseFloat(l.duration);
+          (usageByMonth[pid][type][ym] || 0) + (parseFloat(l.duration) || 1);
       });
 
+      // 2. On calcule les soldes pour chaque mois
       this.parents.forEach((parent) => {
-        const pid = parent.id;
+        const pid = String(parent.id);
         const matrix = this.leaveMatrix[pid] || [];
 
         matrix.forEach((conf) => {
-          const type = conf.type;
-          balances[pid][type] = {};
+          const type = String(conf.type).trim().toUpperCase();
+          if (!balances[pid][type]) balances[pid][type] = {};
 
           ymList.forEach((ym) => {
             const [currYear, currMonth] = ym.split("-").map(Number);
-            let cycleStartStr = "",
-              initialBalance = parseFloat(conf.allowance || 0);
+            let cycleStartStr = "";
+            let initialBalance = parseFloat(conf.allowance || 0);
+            let monthRenouvellement = 1;
 
             if (conf.date) {
               const parts = conf.date.split("-");
-              if (parts.length >= 2) {
-                const monthRenouvellement = parseInt(parts[1]);
-                const dayRenouvellement =
-                  parts.length === 3 ? parseInt(parts[2]) : 1;
-                const isPastAnniversary =
-                  currMonth > monthRenouvellement ||
-                  (currMonth === monthRenouvellement && 1 >= dayRenouvellement);
-                const refYear = isPastAnniversary ? currYear : currYear - 1;
-                cycleStartStr = `${refYear}-${String(monthRenouvellement).padStart(2, "0")}`;
-              }
-            } else {
-              cycleStartStr = `${currYear}-01`;
+              if (parts.length >= 2) monthRenouvellement = parseInt(parts[1]);
+            }
+
+            const isPastAnniversary =
+              currMonth > monthRenouvellement ||
+              (currMonth === monthRenouvellement && 1 >= 1);
+            const refYear = isPastAnniversary ? currYear : currYear - 1;
+            cycleStartStr = `${refYear}-${String(monthRenouvellement).padStart(2, "0")}`;
+
+            // 🔥 LE FIX : GESTION DU MODE FIXE VS GRADUEL
+            let acquiredBalance = initialBalance;
+            if (conf.method === "ACCUMULATED") {
+              // On calcule le nombre de mois passés depuis la date anniversaire
+              let monthsPassed =
+                (currYear - refYear) * 12 +
+                (currMonth - monthRenouvellement) +
+                1;
+              acquiredBalance = Math.min(
+                initialBalance,
+                (initialBalance / 12) * monthsPassed,
+              );
             }
 
             let usedBeforeCurrentMonth = 0;
             Object.keys(usageByMonth[pid]?.[type] || {}).forEach((usedYm) => {
-              if (usedYm >= cycleStartStr && usedYm < ym)
+              if (usedYm >= cycleStartStr && usedYm < ym) {
                 usedBeforeCurrentMonth += usageByMonth[pid][type][usedYm];
+              }
             });
 
             balances[pid][type][ym] = {
               availableAtMonthStart: Math.max(
                 0,
-                initialBalance - usedBeforeCurrentMonth,
+                acquiredBalance - usedBeforeCurrentMonth,
               ),
               usedInMonth: usageByMonth[pid]?.[type]?.[ym] || 0,
             };
@@ -1242,32 +1250,38 @@ document.addEventListener("DOMContentLoaded", () => {
     renderMonthBalances() {
       const container = document.getElementById("fc-month-balances");
       if (!container) return;
-      const monthsToDisplay = [],
-        y = this.currentMonth.getFullYear(),
-        m = this.currentMonth.getMonth();
+
+      const monthsToDisplay = [];
+      const y = this.currentMonth.getFullYear();
+      const m = this.currentMonth.getMonth();
       let numMonths =
         this.viewMode === "2months" ? 2 : this.viewMode === "3months" ? 3 : 1;
-      for (let i = 0; i < numMonths; i++)
+
+      for (let i = 0; i < numMonths; i++) {
         monthsToDisplay.push(`${y}-${String(m + i + 1).padStart(2, "0")}`);
+      }
 
       container.style.display = "flex";
       container.innerHTML = this.parents
         .map((person) => {
           let cards = `<div class="fc-minimal-balance-card"><strong style="color:${person.color || "#333"}">${person.name.toUpperCase()}</strong><div class="fc-minimal-chips">`;
-          const types = this.leaveMatrix[person.id] || [];
+          // Typage strict String(person.id) pour matcher avec le calcul des balances
+          const types = this.leaveMatrix[String(person.id)] || [];
 
           types.forEach((conf) => {
             const type = conf.type;
             const startBal =
-              this.monthlyLeaveBalances[person.id]?.[type]?.[monthsToDisplay[0]]
-                ?.availableAtMonthStart || 0;
+              this.monthlyLeaveBalances[String(person.id)]?.[type]?.[
+                monthsToDisplay[0]
+              ]?.availableAtMonthStart || 0;
+
             let totalUsed = 0;
-            monthsToDisplay.forEach(
-              (ym) =>
-                (totalUsed +=
-                  this.monthlyLeaveBalances[person.id]?.[type]?.[ym]
-                    ?.usedInMonth || 0),
-            );
+            monthsToDisplay.forEach((ym) => {
+              totalUsed +=
+                this.monthlyLeaveBalances[String(person.id)]?.[type]?.[ym]
+                  ?.usedInMonth || 0;
+            });
+
             const endBal = Math.max(0, startBal - totalUsed);
             const fmt = (n) =>
               n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "0";
@@ -1275,14 +1289,13 @@ document.addEventListener("DOMContentLoaded", () => {
             let alertHtml = "";
             const cMonth = parseInt(monthsToDisplay[0].split("-")[1]);
 
-            // On récupère le mois de renouvellement depuis la date (ex: "2000-06-01" -> 6)
+            // Gestion de l'alerte 🔥 (Mois en cours ou Mois précédant le renouvellement)
             if (endBal > 0 && conf.date) {
               const resetMonth = parseInt(conf.date.split("-")[1]);
-              // On alerte le mois même, ou le mois juste avant !
               const alertMonth = resetMonth - 1 === 0 ? 12 : resetMonth - 1;
 
               if (cMonth === alertMonth || cMonth === resetMonth) {
-                alertHtml = `<div class="fc-burn-alert" title="Alerte : Perte imminente !">🔥</div>`;
+                alertHtml = `<div class="fc-burn-alert" title="Alerte : ${fmt(endBal)} jour(s) perdu(s) à la fin du cycle !">🔥</div>`;
               }
             }
 

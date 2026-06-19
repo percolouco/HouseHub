@@ -20,9 +20,8 @@ try {
     $inserted = [];
 
     foreach ($eventsToSave as $event) {
-        // 🔥 SÉCURITÉ : On ignore l'itération si les données vitales manquent (évite le crash SQL)
         if (empty($event['date']) || empty($event['type'])) {
-            continue; 
+            continue; // Sécurité anti-crash
         }
 
         $person_id = 0;
@@ -32,11 +31,13 @@ try {
             $person_id = (int)$event['person'];
         }
 
+        // 🔥 LE FIX : On tronque à 50 caractères pour éviter l'erreur "Data truncated"
+        $safeType = substr(trim($event['type']), 0, 50);
         $duration = isset($event['duration']) ? (float)$event['duration'] : 1.0;
 
         $stmt->execute([
             ':event_date' => $event['date'],
-            ':event_type' => $event['type'],
+            ':event_type' => $safeType,
             ':person_id'  => $person_id,
             ':duration'   => $duration,
         ]);
@@ -44,7 +45,7 @@ try {
         $inserted[] = [
             'id'        => $pdo->lastInsertId(),
             'date'      => $event['date'],
-            'type'      => $event['type'],
+            'type'      => $safeType,
             'duration'  => $duration,
             'person_id' => $person_id,
         ];
@@ -58,14 +59,14 @@ try {
         'inserted' => $inserted,
     ]);
 
-} catch (\Throwable $e) { // 🔥 LE CORRECTIF PRINCIPAL : \Throwable attrape AUSSI les erreurs fatales PHP !
+} catch (\Throwable $e) { // 🔥 LE FIX : \Throwable attrape AUSSI les fatals errors PDO
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
     http_response_code(500);
     echo json_encode([
-        'success' => false, 
-        'status'  => 'error', 
+        'success' => false,
+        'status'  => 'error',
         'message' => 'Erreur Serveur/SQL : ' . $e->getMessage()
     ]);
 }
