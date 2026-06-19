@@ -115,6 +115,8 @@ try {
             // 4. MIGRATION DES DONNÉES (TRANSFORMATIONS HISTORIQUES)
             // ---------------------------------------------------------
             echo "<i>🔄 Exécution des transformations de données héritées...</i><br>";
+            $pdo->exec("ALTER TABLE pf_events MODIFY id INT NOT NULL AUTO_INCREMENT");
+            $pdo->exec("ALTER TABLE pf_leaves MODIFY id INT NOT NULL AUTO_INCREMENT");
             
             // A. Changement de types spécifiques (Car le parseur n'ajoute que les colonnes manquantes)
             $pdo->exec("ALTER TABLE pf_budget_items MODIFY category VARCHAR(100) DEFAULT NULL");
