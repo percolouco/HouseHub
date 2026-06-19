@@ -154,9 +154,12 @@ try {
         $type = strtoupper(trim($_POST['leave_type'] ?? ''));
         $allowance = (float)($_POST['allowance'] ?? 0);
         $resetMonth = (int)($_POST['reset_month'] ?? 1);
+        
+        $method = in_array($_POST['method'] ?? '', ['FIXED', 'ACCUMULATED']) ? $_POST['method'] : 'FIXED';
 
         if ($personId <= 0 || empty($type)) throw new Exception("Données invalides.");
 
+        // Vérification des doublons
         $check = $pdo->prepare("SELECT id FROM pf_person_leave_meta WHERE person_id = ? AND leave_type = ?");
         $check->execute([$personId, $type]);
         if ($check->rowCount() > 0) throw new Exception("Ce congé est déjà attribué à cette personne.");
@@ -164,8 +167,8 @@ try {
         // On construit la date anniversaire avec le mois choisi par l'utilisateur
         $anniversaryDate = "2000-" . str_pad((string)$resetMonth, 2, "0", STR_PAD_LEFT) . "-01";
 
-        $stmt = $pdo->prepare("INSERT INTO pf_person_leave_meta (person_id, leave_type, allowance, method, anniversary_date) VALUES (?, ?, ?, 'FIXED', ?)");
-        $stmt->execute([$personId, $type, $allowance, $anniversaryDate]);
+        $stmt = $pdo->prepare("INSERT INTO pf_person_leave_meta (person_id, leave_type, allowance, method, anniversary_date) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$personId, $type, $allowance, $method, $anniversaryDate]);
         
         echo json_encode(['success' => true]);
         exit;

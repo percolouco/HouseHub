@@ -20,9 +20,12 @@ try {
     $inserted = [];
 
     foreach ($eventsToSave as $event) {
-        // 🔥 LE CORRECTIF : On initialise à 0 (car NOT NULL en base)
-        $person_id = 0;
+        // 🔥 SÉCURITÉ : On ignore l'itération si les données vitales manquent (évite le crash SQL)
+        if (empty($event['date']) || empty($event['type'])) {
+            continue; 
+        }
 
+        $person_id = 0;
         if (!empty($event['person_id']) && is_numeric($event['person_id'])) {
             $person_id = (int)$event['person_id'];
         } elseif (!empty($event['person']) && is_numeric($event['person'])) {
@@ -55,7 +58,7 @@ try {
         'inserted' => $inserted,
     ]);
 
-} catch (Exception $e) {
+} catch (\Throwable $e) { // 🔥 LE CORRECTIF PRINCIPAL : \Throwable attrape AUSSI les erreurs fatales PHP !
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
@@ -63,7 +66,7 @@ try {
     echo json_encode([
         'success' => false, 
         'status'  => 'error', 
-        'message' => 'Erreur SQL : ' . $e->getMessage()
+        'message' => 'Erreur Serveur/SQL : ' . $e->getMessage()
     ]);
 }
 ?>

@@ -444,6 +444,13 @@ function renderMemberLeavesView(personId, memberLeaves) {
                     <option value="12">${tr("month_dec") || "Décembre"}</option>
                 </select>
             </div>
+            <div style="flex: 0 0 90px;">
+                <label class="pf-label" style="font-size: 0.8rem;">Acquisition</label>
+                <select id="new-member-leave-method" class="pf-input" style="width: 100%;">
+                    <option value="FIXED">Fixe</option>
+                    <option value="ACCUMULATED">Graduel</option>
+                </select>
+            </div>
             <button class="pf-btn pf-btn-primary" onclick="addMemberLeave(${personId})">Ajouter</button>
         </div>
     `;
@@ -455,6 +462,8 @@ async function addMemberLeave(personId) {
   const leaveCode = document.getElementById("new-member-leave-type").value;
   const allowance = document.getElementById("new-member-leave-allowance").value;
   const resetMonth = document.getElementById("new-member-leave-reset").value;
+  const method = document.getElementById("new-member-leave-method").value; // <-- Ajout
+  fd.append("method", method);
 
   if (!leaveCode) return showToast("Veuillez sélectionner un type", "error");
 
@@ -1265,15 +1274,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let alertHtml = "";
             const cMonth = parseInt(monthsToDisplay[0].split("-")[1]);
-            if (endBal > 0) {
-              if (type === "CP" && (cMonth === 5 || cMonth === 6))
-                alertHtml = `<div class="fc-burn-alert" title="Alerte perte">🔥</div>`;
-              else if (
-                type === "JRA" &&
-                (cMonth === 1 || cMonth === 12) &&
-                endBal > 2
-              )
-                alertHtml = `<div class="fc-burn-alert" title="Perte imminente">🔥</div>`;
+
+            // On récupère le mois de renouvellement depuis la date (ex: "2000-06-01" -> 6)
+            if (endBal > 0 && conf.date) {
+              const resetMonth = parseInt(conf.date.split("-")[1]);
+              // On alerte le mois même, ou le mois juste avant !
+              const alertMonth = resetMonth - 1 === 0 ? 12 : resetMonth - 1;
+
+              if (cMonth === alertMonth || cMonth === resetMonth) {
+                alertHtml = `<div class="fc-burn-alert" title="Alerte : Perte imminente !">🔥</div>`;
+              }
             }
 
             cards += `<div class="fc-min-chip" title="Solde: ${fmt(startBal)}"><span class="type">${type}</span><span class="val">${fmt(endBal)}</span>${totalUsed > 0 ? `<span class="fc-used-badge">-${fmt(totalUsed)}</span>` : ""}${alertHtml}</div>`;
