@@ -141,7 +141,7 @@ try {
     // ─── 5. GESTION DES CONGÉS INDIVIDUELS (MEMBRES) ───
     if ($action === 'get_person_leaves') {
         $personId = (int)($_GET['person_id'] ?? 0);
-        $stmt = $pdo->prepare("SELECT id, leave_type, allowance, anniversary_date FROM pf_person_leave_meta WHERE person_id = ? ORDER BY leave_type ASC");
+        $stmt = $pdo->prepare("SELECT id, leave_type, allowance, method, anniversary_date FROM pf_person_leave_meta WHERE person_id = ? ORDER BY leave_type ASC");
         $stmt->execute([$personId]);
         echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
         exit;

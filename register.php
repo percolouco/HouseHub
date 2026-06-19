@@ -38,6 +38,47 @@ function createFamilyDb(PDO $meta, string $db_host, string $db_user, string $db_
     return $db_name;
 }
 
+function generateCalendarWeeks(PDO $familyPdo) {
+    $monthsFr = [1=>'Janvier', 2=>'Février', 3=>'Mars', 4=>'Avril', 5=>'Mai', 6=>'Juin', 7=>'Juillet', 8=>'Août', 9=>'Septembre', 10=>'Octobre', 11=>'Novembre', 12=>'Décembre'];
+    
+    $sql = "REPLACE INTO pf_calendar_weeks 
+            (year, week_iso_year, week_iso_number, week_label, month, month_name, week_start_date, mon_date, tue_date, wed_date, thu_date, fri_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $familyPdo->prepare($sql);
+
+    // On commence de l'année précédente jusqu'à +10 ans
+    $currentYear = (int)date('Y');
+    $startDate = new DateTime(($currentYear - 1) . '-08-28'); // On s'assure de couvrir la rentrée scolaire précédente
+    $endDate = new DateTime(($currentYear + 10) . '-12-31');
+
+    while ($startDate <= $endDate) {
+        $mon = clone $startDate;
+        $tue = clone $startDate; $tue->modify('+1 day');
+        $wed = clone $startDate; $wed->modify('+2 days');
+        $thu = clone $startDate; $thu->modify('+3 days');
+        $fri = clone $startDate; $fri->modify('+4 days');
+
+        $month = (int)$mon->format('n');
+
+        $stmt->execute([
+            (int)$mon->format('Y'),
+            (int)$mon->format('o'),
+            (int)$mon->format('W'),
+            "Semaine " . (int)$mon->format('W'),
+            $month,
+            $monthsFr[$month],
+            $mon->format('Y-m-d'),
+            $mon->format('Y-m-d'),
+            $tue->format('Y-m-d'),
+            $wed->format('Y-m-d'),
+            $thu->format('Y-m-d'),
+            $fri->format('Y-m-d')
+        ]);
+
+        $startDate->modify('+1 week');
+    }
+}
+
 // ─── Traitement du formulaire ─────────────────────────────────────────────────
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -137,10 +178,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     )->execute([$username, $hash, $display_name, $family_id]);
                     $user_id = (int)$meta_pdo->lastInsertId();
 
-                    // 🔥 INJECTION ICI : Ajouter le créateur comme premier parent de la famille (Couleur bleue)
                     $tenantPdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                     $stmtPerson = $tenantPdo->prepare("INSERT INTO pf_people (name, user_id, role, color, is_active) VALUES (?, ?, 'parent', '#0891b2', 1)");
                     $stmtPerson->execute([$display_name, $user_id]);
+
+                    generateCalendarWeeks($tenantPdo);
 
                     $meta_pdo->commit();
 

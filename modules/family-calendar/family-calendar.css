@@ -464,6 +464,32 @@ td.col-laia-sub {
   color: #64748b;
 }
 
+/* ==========================================================================
+   OPTIMISATION DES LARGEURS DU TABLEAU HEBDOMADAIRE
+   ========================================================================== */
+
+/* 1. On limite les colonnes des jours (Lun-Ven) pour qu'elles prennent ~55% de la page max */
+#planningTable th.col-day,
+#planningTable td.col-day {
+  width: 11%;
+  max-width: 90px;
+}
+
+/* 2. On compacte la colonne "Sem." qui n'affiche plus que 2 chiffres */
+#planningTable th.col-sticky-sem,
+#planningTable td.col-sticky-sem {
+  width: 40px;
+  min-width: 40px;
+  text-align: center;
+  padding: 4px; /* Réduit les marges internes */
+}
+
+/* 3. On s'assure que le tableau utilise tout l'espace disponible intelligemment */
+#planningTable {
+  table-layout: auto;
+  width: 100%;
+}
+
 /* GESTION DES COLONNES STICKY (Mois & Semaine) */
 #planningTable tbody td.col-sticky-mois {
   position: sticky !important;
@@ -926,4 +952,88 @@ td.col-laia-sub {
   to {
     transform: translateY(0);
   }
+}
+/* ==========================================================================
+   AFFINAGE EXTRÊME DES COLONNES MOIS ET SEMAINE (Mise à jour)
+   ========================================================================== */
+
+/* 1. Colonne Mois (Texte vertical) : On réduit à 35px */
+.col-month,
+#planningTable th.col-sticky-mois,
+#planningTable td.col-sticky-mois {
+  width: 15px !important;
+  min-width: 15px !important;
+  max-width: 15px !important;
+  padding: 2px !important;
+}
+
+/* 2. Colonne Semaine (Numéro court) : On réduit à 30px */
+#planningTable th.col-sticky-sem,
+#planningTable td.col-sticky-sem {
+  width: 10px !important;
+  min-width: 10px !important;
+  max-width: 10px !important;
+  padding: 2px !important;
+  font-size: 0.85rem !important;
+}
+
+/* 3. CORRECTION CRITIQUE : Le décalage "Sticky" de la colonne Semaine */
+/* Puisque la colonne Mois fait 35px, la colonne Semaine doit démarrer à 35px (et non plus 54px) */
+#planningTable tbody td.col-sticky-sem,
+#planningTable thead tr th.col-sticky-sem {
+  left: 15px !important;
+}
+
+/* ==========================================================================
+   RÉGLAGES MILLIMÉTRÉS (FIX ALIGNEMENTS & STICKY)
+   ========================================================================== */
+
+/* 1. On force un alignement strict pour éviter que les bordures de "Av." et "Use" ne se désalignent */
+#planningTable {
+  table-layout: fixed !important;
+  width: max-content !important;
+  min-width: 100% !important;
+}
+
+/* 2. Colonne Mois : Box-sizing inclut le padding pour un calcul mathématique exact */
+.col-month,
+#planningTable th.col-sticky-mois,
+#planningTable td.col-sticky-mois {
+  box-sizing: border-box !important;
+  width: 25px !important; /* 15px + marges de sécurité */
+  min-width: 25px !important;
+  max-width: 25px !important;
+  padding: 2px !important;
+  overflow: hidden;
+}
+
+/* 3. Colonne Semaine : Le décalage (left) correspond EXACTEMENT à la largeur du Mois */
+#planningTable th.col-sticky-sem,
+#planningTable td.col-sticky-sem {
+  box-sizing: border-box !important;
+  left: 25px !important; /* Doit être rigoureusement égal au width du Mois ! */
+  width: 20px !important; /* 10px + marges */
+  min-width: 20px !important;
+  max-width: 20px !important;
+  padding: 2px !important;
+  font-size: 0.8rem !important;
+  overflow: hidden;
+}
+
+/* 4. Sécurité Anti-Trous pour les headers collants du haut (Empêche de voir à travers lors du scroll) */
+#planningTable thead tr {
+  height: 32px !important;
+}
+#planningTable thead th {
+  height: 32px !important;
+  box-sizing: border-box !important;
+}
+#planningTable thead tr:nth-child(1) th {
+  top: 0 !important;
+}
+#planningTable thead tr:nth-child(2) th {
+  top: 32px !important;
+}
+#planningTable thead tr:nth-child(3) th {
+  top: 64px !important;
 }
