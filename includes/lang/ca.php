@@ -280,6 +280,56 @@ return [
     
     'btn_save_rights'             => 'Guardar',
 
+    // ==========================================
+// MODAL DE CONFIGURACIÓ DEL CALENDARI
+// ==========================================
+'fc_modal_settings_title' => 'Configuració del calendari',
+'fc_tab_foyer'            => 'Llar',
+'fc_tab_members'          => 'Membres i Drets',
+
+// Llar: Zona escolar
+'fc_zone_label'           => 'Zona escolar',
+'fc_zone_a'               => 'Zona A',
+'fc_zone_b'               => 'Zona B',
+'fc_zone_c'               => 'Zona C',
+'fc_zone_other'           => 'Altra / Fora de França',
+'fc_zone_desc'            => 'Permet mostrar correctament les vacances escolars.',
+
+// Llar: Opcions de cura (Modes de garde)
+'fc_care_modes_label'     => 'Modalitats de cura',
+'fc_add_mode_placeholder' => 'Ex: Mainadera, Llar d\'infants...',
+'fc_care_modes_desc'      => 'Afegeix les diferents modalitats de cura per als teus fills.',
+'fc_empty_kids_msg'       => 'Actualment no hi ha cap infant configurat a la teva família.',
+'fc_link_settings'        => 'Anar a la configuració general',
+
+// Llar: Catàleg de permisos (Congés)
+'fc_leave_catalog_title'  => 'Catàleg de permisos',
+'fc_leave_catalog_desc'   => 'Defineix els tipus de permisos possibles per a tota la família.',
+'fc_add_leave_type'       => 'Afegir un tipus de permís',
+'fc_col_code'             => 'Codi',
+'fc_code_irreversible'    => 'Irreversible',
+'fc_col_label'            => 'Etiqueta',
+'fc_leave_label_ph'       => 'Ex: Vacances, Assumptes propis...',
+'fc_quota_default'        => 'Quota per defecte',
+'fc_reset_month'          => 'Mes de renovació',
+
+// Membres
+'fc_select_member'        => 'Selecciona un membre:',
+
+// Mesos
+'month_jan' => 'Gener',
+'month_feb' => 'Febrer',
+'month_mar' => 'Març',
+'month_apr' => 'Abril',
+'month_may' => 'Maig',
+'month_jun' => 'Juny',
+'month_jul' => 'Juliol',
+'month_aug' => 'Agost',
+'month_sep' => 'Setembre',
+'month_oct' => 'Octubre',
+'month_nov' => 'Novembre',
+'month_dec' => 'Desembre',
+
     'leg_presence'              => 'Presència Pep',
     'leg_school_holidays'       => 'Vacances Escolars',
     'leg_public_holiday'        => 'Festiu',
@@ -592,8 +642,23 @@ return [
     'bud_bar_max_cap' => "Capacitat Màx.",
     'bud_edit_title'            => 'Modificar la transacció',
     'bud_to_define_js'          => 'per definir',
-    'bud_select_beneficiary'    => 'Triar un ingrés esperat', // 👈 À ajouter ici
+    'bud_select_beneficiary'    => 'Triar un ingrés esperat', /
     'bud_bar_actual'            => 'Actual',
+
+    // ONBOARDING BUDGET
+    'bs_onb_title'       => 'Benvinguts! Configurem el teu pressupost:',
+    'bs_onb_desc'        => 'Completa aquests passos perquè l\'aplicació pugui calcular el teu pressupost disponible:',
+    'bs_onb_cat_link'    => 'Categories',
+    'bs_onb_cat_desc'    => 'Crea almenys una categoria de despeses.',
+    'bs_onb_acc_link'    => 'Comptes Bancaris',
+    'bs_onb_acc_desc'    => 'Afegeix almenys un compte corrent o d\'estalvi.',
+    'bs_onb_sal_link'    => 'Sous',
+    'bs_onb_sal_desc'    => 'Introdueix els ingressos de l\'any en curs.',
+    'bs_onb_items_link'  => 'Línies de Pressupost',
+    'bs_onb_items_desc'  => 'Ves a la pestanya Resum per llistar les teves despeses fixes (Lloguer, Assegurances...).',
+    'bs_rule_search_ph'  => '🔍 Cercar una paraula clau (ex: AUCHAN)...',
+    'error_loading_settings' => 'Error en carregar la configuració',
+    'settings'           => 'Configuració',
     
     // --- MODULE BUDGET : IMPORT CSV ---
     'bud_import_csv' => "Importar CSV",
@@ -652,6 +717,9 @@ return [
     'bud_sav_modal_title_add'   => 'Introduir un mes',
     'bud_sav_ph_name'           => 'Nom (ex: Vacances)',
     'bud_prev_label_name'       => 'Nom',
+    'bud_prev_monthly_target' => 'Import objectiu / Mensualitat (€)',
+    'bud_prev_transfer_dest'  => 'Destinació de la transferència',
+    'bud_prev_none'           => 'Cap destinació (Despesa estàndard)',
 
     // --- BUDGET : EPARGNE ---
     'bud_sav_add_month'            => 'Introduir un mes',
@@ -750,6 +818,8 @@ return [
     'bud_prev_err_no_history'    => 'Impossible: no hi ha historial disponible per copiar.',
     'bud_prev_confirm_copy'      => "Vols copiar les dades de %s a %t?\n\n⚠️ Això sobreescriurà tots els valors ja presents per a %t.",
     'bud_prev_confirm_transfers' => "Confirmes que %p ha fet totes les transferències per a %m?\n\nAixò actualitzarà l'Estalvi automàticament.",
+    'bud_prev_target_ph'    => 'Ex: 150',
+    'bud_prev_transfer_to'  => 'Cap a',
 
     // --- MODULE BUDGET : AVANCES & TRICOUNT ---
     'bud_adv_title' => 'Avançaments i Tricount Familiar',
@@ -820,6 +890,22 @@ return [
     'btn_save'   => 'Desar',
     'btn_add'    => 'Afegir',
     'loading'    => 'Carregant...', //
+
+    // --- MODULE CADEAUX : SETTINGS ---
+    'gift_settings'          => 'Configuració',
+    'gift_tab_occasions'     => 'Festes i Ocasions',
+    'gift_tab_proches'       => 'Familiars (Fora de la llar)',
+    'gift_settings_icon'     => 'Icona',
+    'gift_settings_date'     => 'Data (MM-DD)',
+    'gift_settings_add_occ'  => 'Afegeix una festa',
+    'gift_settings_add_proche'=> 'Afegeix un familiar',
+    'gift_role_proche_adulte'=> 'Adult (Oncle, amic...)',
+    'gift_role_proche_enfant'=> 'Nen (Nebot, neboda...)',
+    'gift_ph_proche_name'    => 'Nom',
+    'gift_role_label'        => 'Rol',
+    'gift_settings_saved'    => 'Configuració desada!',
+    'gift_settings_edit_occ' => 'Modificar la festa',
+    'gift_settings_edit_proche' => 'Modificar el familiar',
     
     // ==========================================
     // GARAGE MANAGER

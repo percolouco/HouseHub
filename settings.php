@@ -630,7 +630,7 @@ require __DIR__ . '/header.php';
   </section>
   <?php endif; ?>
 
-  <?php if ($_SESSION['user']['is_admin']): ?>
+  <?php if (!empty($_SESSION['user']['is_admin'])): ?>
   <div class="pf-settings-admin-link">
     <a href="/admin/">→ Panneau d'administration</a>
   </div>

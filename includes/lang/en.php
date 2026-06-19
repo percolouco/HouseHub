@@ -281,6 +281,56 @@ return [
     
     'btn_save_rights'             => 'Save',
 
+    // ==========================================
+// CALENDAR SETTINGS MODAL
+// ==========================================
+'fc_modal_settings_title' => 'Calendar Settings',
+'fc_tab_foyer'            => 'Household',
+'fc_tab_members'          => 'Members & Rights',
+
+// Household: School Zone
+'fc_zone_label'           => 'School zone',
+'fc_zone_a'               => 'Zone A',
+'fc_zone_b'               => 'Zone B',
+'fc_zone_c'               => 'Zone C',
+'fc_zone_other'           => 'Other / Outside France',
+'fc_zone_desc'            => 'Used to accurately display school holidays.',
+
+// Household: Care Modes
+'fc_care_modes_label'     => 'Childcare options',
+'fc_add_mode_placeholder' => 'Ex: Nanny, Daycare...',
+'fc_care_modes_desc'      => 'Add the different childcare options for your children.',
+'fc_empty_kids_msg'       => 'No children are configured in your household yet.',
+'fc_link_settings'        => 'Go to general settings',
+
+// Household: Leave Catalog
+'fc_leave_catalog_title'  => 'Leave Catalog',
+'fc_leave_catalog_desc'   => 'Define the possible leave types for the whole family.',
+'fc_add_leave_type'       => 'Add a leave type',
+'fc_col_code'             => 'Code',
+'fc_code_irreversible'    => 'Irreversible',
+'fc_col_label'            => 'Label',
+'fc_leave_label_ph'       => 'Ex: PTO, Sick leave...',
+'fc_quota_default'        => 'Default quota',
+'fc_reset_month'          => 'Reset month',
+
+// Members
+'fc_select_member'        => 'Select a member:',
+
+// Months
+'month_jan' => 'January',
+'month_feb' => 'February',
+'month_mar' => 'March',
+'month_apr' => 'April',
+'month_may' => 'May',
+'month_jun' => 'June',
+'month_jul' => 'July',
+'month_aug' => 'August',
+'month_sep' => 'September',
+'month_oct' => 'October',
+'month_nov' => 'November',
+'month_dec' => 'December',
+
     'leg_presence'              => 'Pep presence',
     'leg_school_holidays'       => 'School holidays',
     'leg_public_holiday'        => 'Public holiday',
@@ -532,6 +582,21 @@ return [
     'bs_csv_empty_col' => 'Empty',
     'bs_csv_no_data' => 'No transaction row found in this file.',
 
+    // ONBOARDING BUDGET
+    'bs_onb_title'       => 'Welcome! Let\'s set up your budget:',
+    'bs_onb_desc'        => 'Complete these steps so the app can calculate your remaining budget:',
+    'bs_onb_cat_link'    => 'Categories',
+    'bs_onb_cat_desc'    => 'Create at least one expense category.',
+    'bs_onb_acc_link'    => 'Bank Accounts',
+    'bs_onb_acc_desc'    => 'Add at least one checking or savings account.',
+    'bs_onb_sal_link'    => 'Salaries',
+    'bs_onb_sal_desc'    => 'Enter your income for the current year.',
+    'bs_onb_items_link'  => 'Budget Items',
+    'bs_onb_items_desc'  => 'Go to the Summary tab to list your fixed expenses (Rent, Insurance...).',
+    'bs_rule_search_ph'  => '🔍 Search for a keyword (e.g. WALMART)...',
+    'error_loading_settings' => 'Error loading settings',
+    'settings'           => 'Settings',
+
     // --- BUDGET: TRACKING ---
     'bud_rem_school'            => 'School (estimated remaining)',
     'bud_rem_fmcg'              => 'Groceries (estimated remaining)',
@@ -630,6 +695,9 @@ return [
     'bud_reg_none'              => 'None',
     'bud_recap_confirm_delete'  => 'Are you sure you want to delete this item?',
     'bud_err_delete'            => 'Error while deleting.',
+    'bud_prev_monthly_target' => 'Target amount / Monthly payment (€)',
+    'bud_prev_transfer_dest'  => 'Transfer destination',
+    'bud_prev_none'           => 'No destination (Standard expense)',
 
     // --- BUDGET: SAVINGS ---
     'bud_sav_add_month'            => 'Enter a month',
@@ -753,6 +821,8 @@ return [
     'delete' => 'Delete',
     'btn_cancel' => 'Cancel',
     'btn_save' => 'Save',
+    'bud_prev_target_ph'    => 'E.g., 150',
+    'bud_prev_transfer_to'  => 'To',
 
     // ==========================================
     // MODULE: GIFTS (gift-list)
@@ -805,6 +875,22 @@ return [
     'btn_save'   => 'Save',
     'btn_add'    => 'Add',
     'loading'    => 'Loading...',
+
+    // --- MODULE CADEAUX : SETTINGS ---
+    'gift_settings'          => 'Settings',
+    'gift_tab_occasions'     => 'Occasions & Events',
+    'gift_tab_proches'       => 'Relatives (Outside household)',
+    'gift_settings_icon'     => 'Icon',
+    'gift_settings_date'     => 'Date (MM-DD)',
+    'gift_settings_add_occ'  => 'Add an occasion',
+    'gift_settings_add_proche'=> 'Add a relative',
+    'gift_role_proche_adulte'=> 'Adult (Uncle, friend...)',
+    'gift_role_proche_enfant'=> 'Child (Nephew, niece...)',
+    'gift_ph_proche_name'    => 'First name',
+    'gift_role_label'        => 'Role',
+    'gift_settings_saved'    => 'Settings saved!',
+    'gift_settings_edit_occ' => 'Edit occasion',
+    'gift_settings_edit_proche' => 'Edit relative',
 
     // ==========================================
     // GARAGE MANAGER

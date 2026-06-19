@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS pf_foyer_settings (
   id INT AUTO_INCREMENT PRIMARY KEY,
   currency VARCHAR(10) NOT NULL DEFAULT '€',
   zone_scolaire VARCHAR(5) NOT NULL DEFAULT 'C',
+  csv_mapping TEXT DEFAULT NULL,
+  cares_modes TEXT DEFAULT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -44,12 +46,14 @@ CREATE TABLE IF NOT EXISTS pf_users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Personnes ────────────────────────────────────────────────────────────────
-CREATE TABLE `pf_people` (
+CREATE TABLE IF NOT EXISTS `pf_people` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
   `role` varchar(50) DEFAULT NULL,
+  `care_modes` varchar(255) DEFAULT NULL,
   `color` varchar(7) DEFAULT '#0891b2',
+  `is_active` TINYINT(1) DEFAULT 1,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -88,10 +92,29 @@ CREATE TABLE IF NOT EXISTS pf_leave_snapshots (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_person_leave_meta (
-  id               INT AUTO_INCREMENT PRIMARY KEY,
-  person_id        INT NOT NULL UNIQUE,
-  anniversary_date DATE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  person_id INT(11) NOT NULL,
+  leave_type VARCHAR(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  method VARCHAR(20) COLLATE utf8mb4_unicode_ci DEFAULT 'FIXED',
+  allowance DECIMAL(5,2) DEFAULT 0.00,
+  anniversary_date DATE DEFAULT NULL,
+  INDEX (person_id),
+  INDEX (leave_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─── Types de Congés (Référentiel) ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_leave_types (
+  id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(20) COLLATE utf8mb4_general_ci NOT NULL,
+  label VARCHAR(100) COLLATE utf8mb4_general_ci NOT NULL,
+  default_allowance DECIMAL(5,2) DEFAULT 0.00,
+  reset_month INT(11) DEFAULT 1,
+  allow_carry_over TINYINT(1) DEFAULT 0,
+  UNIQUE KEY code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT IGNORE INTO pf_leave_types (code, label, default_allowance, reset_month, allow_carry_over) VALUES
+('CP', 'Congés Payés', 25.00, 6, 0);
 
 CREATE TABLE IF NOT EXISTS pf_calendar_weeks (
   id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -108,86 +131,100 @@ CREATE TABLE IF NOT EXISTS pf_calendar_weeks (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Budget ───────────────────────────────────────────────────────────────────
+
+-- NOUVEAU : Table des comptes bancaires
+CREATE TABLE IF NOT EXISTS pf_bank_accounts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  account_type ENUM('checking', 'savings') DEFAULT 'checking',
+  owner_person_id INT DEFAULT NULL,
+  is_default TINYINT(1) DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_person_id) REFERENCES pf_people(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS pf_budget_items (
-  id               INT AUTO_INCREMENT PRIMARY KEY,
-  name             VARCHAR(255) NOT NULL,
-  amount           DECIMAL(10,2) DEFAULT 0,
-  category         VARCHAR(100),
-  type             VARCHAR(50),
-  payment_day      INT DEFAULT NULL,
-  is_estimate      TINYINT(1) DEFAULT 0,
-  reg_month        VARCHAR(7) DEFAULT NULL,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  amount DECIMAL(10,2) DEFAULT 0,
+  category VARCHAR(100),
+  type VARCHAR(50),
+  payment_day INT DEFAULT NULL,
+  is_estimate TINYINT(1) DEFAULT 0,
+  reg_month VARCHAR(7) DEFAULT NULL,
   mapping_keywords TEXT DEFAULT NULL,
-  holiday_id       INT DEFAULT NULL,
-  is_checked       TINYINT(1) DEFAULT 0,
-  sort_order       INT DEFAULT 0
+  holiday_id INT DEFAULT NULL,
+  is_checked TINYINT(1) DEFAULT 0,
+  sort_order INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_expenses (
-  id             INT AUTO_INCREMENT PRIMARY KEY,
-  date_exp       DATE NOT NULL,
-  gestion_month  VARCHAR(10) NOT NULL,
-  category       VARCHAR(100),
-  label          VARCHAR(255),
-  amount         DECIMAL(10,2) DEFAULT 0,
-  import_ref     VARCHAR(255) DEFAULT NULL,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  date_exp DATE NOT NULL,
+  gestion_month VARCHAR(10) NOT NULL,
+  category VARCHAR(100),
+  label VARCHAR(255),
+  amount DECIMAL(10,2) DEFAULT 0,
+  import_ref VARCHAR(255) DEFAULT NULL,
   budget_item_id INT DEFAULT NULL,
-  holiday_id     INT DEFAULT NULL
+  holiday_id INT DEFAULT NULL,
+  salary_id INT DEFAULT NULL -- 🔥 AJOUT : Lien vers le salaire configuré
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_alloc_categories (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  name          VARCHAR(100) NOT NULL,
-  target        DECIMAL(10,2) DEFAULT 0.00,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  target DECIMAL(10,2) DEFAULT 0.00,
   transfer_dest VARCHAR(50) DEFAULT NULL,
-  holiday_id    INT DEFAULT NULL,
-  sort_order    INT DEFAULT 0
+  holiday_id INT DEFAULT NULL,
+  sort_order INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_alloc_values (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  month_date   VARCHAR(10) NOT NULL,
-  cat_id       INT NOT NULL,
-  person_id    INT NOT NULL,
-  amount       DECIMAL(10,2) DEFAULT 0.00,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  month_date VARCHAR(10) NOT NULL,
+  cat_id INT NOT NULL,
+  person_id INT NOT NULL,
+  amount DECIMAL(10,2) DEFAULT 0.00,
   UNIQUE KEY uq_alloc_person (month_date, cat_id, person_id),
   FOREIGN KEY (person_id) REFERENCES pf_people(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_savings (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  owner      VARCHAR(50) NOT NULL,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  owner VARCHAR(50) NOT NULL,
   month_date VARCHAR(10) NOT NULL,
-  category   VARCHAR(100) NOT NULL,
-  amount     DECIMAL(10,2) DEFAULT 0,
-  holiday_id INT DEFAULT NULL
+  category VARCHAR(100) NOT NULL,
+  amount DECIMAL(10,2) DEFAULT 0,
+  holiday_id INT DEFAULT NULL,
+  UNIQUE KEY uq_savings (owner, month_date, category)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_bank_snapshots (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
+  id INT AUTO_INCREMENT PRIMARY KEY,
   snapshot_date DATE NOT NULL,
-  amount        DECIMAL(12,2) DEFAULT 0
+  amount DECIMAL(12,2) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_salary_config (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  year        INT NOT NULL,
-  person      VARCHAR(50) NOT NULL,
-  salary      DECIMAL(10,2) DEFAULT 0,
-  mensualite  DECIMAL(10,2) DEFAULT 0,
-  frais_func  DECIMAL(10,2) DEFAULT 0,
-  eco_perso   DECIMAL(10,2) DEFAULT 0,
-  eco_family  DECIMAL(10,2) DEFAULT 0,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  year INT NOT NULL,
+  person VARCHAR(50) NOT NULL,
+  salary DECIMAL(10,2) DEFAULT 0,
+  mensualite DECIMAL(10,2) DEFAULT 0,
+  frais_func DECIMAL(10,2) DEFAULT 0,
+  eco_perso DECIMAL(10,2) DEFAULT 0,
+  eco_family DECIMAL(10,2) DEFAULT 0,
   UNIQUE KEY uq_salary (year, person)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_import_rules (
-  id       INT AUTO_INCREMENT PRIMARY KEY,
-  keyword  VARCHAR(255) NOT NULL UNIQUE,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  keyword VARCHAR(255) NOT NULL UNIQUE,
   category VARCHAR(100) NOT NULL,
   budget_item_id INT(11) NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 
 CREATE TABLE IF NOT EXISTS `pf_advances` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -214,11 +251,7 @@ CREATE TABLE IF NOT EXISTS pf_budget_categories (
 -- Insertion des catégories de base pour toute nouvelle famille
 INSERT IGNORE INTO pf_budget_categories (code, label, type, color, icon) VALUES
 ('INCOME', 'Revenus', 'Income', '#10b981', '💵'),
-('FMCG', 'Alimentation & Courses', 'Expense', '#3b82f6', '🛒'),
-('FUEL', 'Carburant', 'Expense', '#f59e0b', '⛽'),
-('FIXED', 'Charges Fixes', 'Expense', '#ef4444', '🏢'),
-('SCHOOL', 'École & Garde', 'Expense', '#a855f7', '🎒'),
-('SAVINGS', 'Épargne', 'Expense', '#8b5cf6', '🐷');
+('FIXED', 'Charges Fixes', 'Expense', '#ef4444', '🏢');
 
 -- ─── Notes / Memo ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_notes (
@@ -308,16 +341,42 @@ CREATE TABLE IF NOT EXISTS pf_geocode_cache (
 
 -- ─── Cadeaux ──────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_gifts (
-  id               INT AUTO_INCREMENT PRIMARY KEY,
-  year             INT NOT NULL,
-  adult_name       VARCHAR(100) NOT NULL,
-  payer_name       VARCHAR(100),
-  child_name       VARCHAR(100) NOT NULL,
-  occasion         VARCHAR(50) NOT NULL,
+  id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  year INT(11) NOT NULL,
+  adult_name VARCHAR(100) NOT NULL,
+  payer_name VARCHAR(100) DEFAULT NULL,
+  child_name VARCHAR(100) NOT NULL,
+  occasion VARCHAR(50) NOT NULL,
   gift_description TEXT NOT NULL,
-  product_link     VARCHAR(500) DEFAULT NULL,
-  amount           DECIMAL(8,2) DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  product_link VARCHAR(500) DEFAULT NULL,
+  amount DECIMAL(8,2) DEFAULT 0.00
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS pf_gift_occasions (
+  id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  icon VARCHAR(20) DEFAULT '🎁',
+  month_date VARCHAR(5) DEFAULT NULL,
+  is_active TINYINT(1) DEFAULT 1,
+  sort_order INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT IGNORE INTO pf_gift_occasions (code, name, icon, month_date, is_active, sort_order) VALUES
+('XMAS', 'Noël', '🎄', '12-25', 1, 1),
+('BIRTHDAY', 'Anniversaire', '🎂', NULL, 1, 2),
+('OTHER', 'Autre', '🎁', NULL, 1, 99);
+
+-- Table des règles (Qui offre à Qui)
+CREATE TABLE IF NOT EXISTS pf_gift_rules (
+  id INT(11) AUTO_INCREMENT PRIMARY KEY,
+  adult_person_id INT(11) NOT NULL,
+  child_person_id INT(11) NOT NULL,
+  occasion_id INT(11) NOT NULL,
+  INDEX (adult_person_id),
+  INDEX (child_person_id),
+  INDEX (occasion_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ─── Garage Manager ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pf_vehicles (

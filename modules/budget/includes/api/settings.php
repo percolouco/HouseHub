@@ -29,7 +29,16 @@ try {
 
         // 4. Salaires (Année en cours)
         $currentYear = (int)date('Y');
-        $salaries = $pdo->query("SELECT * FROM pf_salary_config WHERE year = $currentYear ORDER BY person ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $salaries = $pdo->query("
+            SELECT p.name as person, 
+                   COALESCE(s.salary, 0) as salary, 
+                   COALESCE(s.mensualite, 0) as mensualite,
+                   s.id as id
+            FROM pf_people p 
+            LEFT JOIN pf_salary_config s ON p.name = s.person AND s.year = $currentYear
+            WHERE p.role NOT IN ('enfant', 'nounou') AND p.is_active = 1
+            ORDER BY p.name ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
 
         // 5. Paramètres Foyer (Devise + Mapping CSV)
         $foyerData = $pdo->query("SELECT currency, csv_mapping FROM pf_foyer_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC);
