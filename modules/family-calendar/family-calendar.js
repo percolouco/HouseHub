@@ -13,7 +13,7 @@ let localCareModes = [];
 async function openCalendarSettings() {
   try {
     const res = await pachaFetch(
-      "/modules/family-calendar/includes/api/settings.php?action=get_all",
+      "/modules/family-calendar/includes/api/calendar-settings.php?action=get_all",
     );
     if (!res.success) throw new Error(res.error);
 
@@ -63,29 +63,34 @@ function closeCalendarSettings() {
   document.body.classList.remove("no-scroll");
 }
 
-function switchCalendarTab(tabName) {
-  document
-    .querySelectorAll(".cal-settings-pane")
-    .forEach((p) => (p.style.display = "none"));
+function switchCalendarTab(tabId) {
+  // 1. On réinitialise l'affichage
   document
     .querySelectorAll(".bs-tab-btn")
-    .forEach((b) => b.classList.remove("active"));
+    .forEach((btn) => btn.classList.remove("active"));
+  document
+    .querySelectorAll(".cal-settings-pane")
+    .forEach((pane) => (pane.style.display = "none"));
 
-  if (tabName === "foyer") {
-    document.getElementById("cal-pane-foyer").style.display = "block";
-    document.getElementById("tab-btn-foyer").classList.add("active");
-  } else if (tabName === "affichage") {
-    document.getElementById("cal-pane-affichage").style.display = "block";
-    document.getElementById("tab-btn-affichage").classList.add("active");
-  } else {
-    document.getElementById("cal-pane-membres").style.display = "block";
-    document.getElementById("tab-btn-membres").classList.add("active");
-    loadMemberConfigView();
+  // 2. On active l'onglet cliqué
+  document.getElementById(`tab-btn-${tabId}`).classList.add("active");
+  document.getElementById(`cal-pane-${tabId}`).style.display = "block";
+
+  // 3. Actions spécifiques
+  if (tabId === "foyer") {
+    loadLeaveCatalog();
+  } else if (tabId === "membres") {
+    // On charge la vue du membre sélectionné par défaut dans la liste
+    if (document.getElementById("selectCalMember").value) {
+      loadMemberConfigView();
+    }
   }
 }
 
 function renderCareModeTags() {
   const container = document.getElementById("careModesContainer");
+  if (!container) return; // 🛑 LA BARRIÈRE DE SÉCURITÉ EST ICI
+
   container.innerHTML = localCareModes
     .map(
       (mode, i) => `
@@ -97,8 +102,11 @@ function renderCareModeTags() {
     .join("");
 }
 
+// Ajoutons la même sécurité pour l'ajout au cas où :
 function addCareModeTag() {
   const input = document.getElementById("inputNewCareMode");
+  if (!input) return; // 🛑 SÉCURITÉ
+
   const val = input.value.trim();
   if (val && !localCareModes.includes(val)) {
     localCareModes.push(val);
@@ -124,7 +132,7 @@ async function submitCalFoyer(e) {
     formData.append("care_modes", JSON.stringify(localCareModes));
 
     const res = await pachaFetch(
-      "/modules/family-calendar/includes/api/settings.php",
+      "/modules/family-calendar/includes/api/calendar-settings.php",
       { method: "POST", body: formData },
     );
     if (!res.success) throw new Error(res.error);
@@ -142,139 +150,195 @@ async function submitCalFoyer(e) {
   }
 }
 
-window.addLeaveRowToMatrix = function () {
-  const tbody = document.getElementById("tbodyLeaveMatrix");
-  const empty = document.getElementById("emptyMatrixRow");
-  if (empty) empty.remove();
-  if (!tbody) return;
+window.submitChildCareModes = async function () {
+  if (!window.currentSelectedMemberId) return;
+  const checkboxes = document.querySelectorAll(".js-care-mode-cb:checked");
+  const selectedModes = Array.from(checkboxes).map((cb) => cb.value);
+  try {
+    const formData = new FormData();
+    formData.append("action", "save_child_care_modes");
+    formData.append("person_id", window.currentSelectedMemberId);
+    formData.append("care_modes", JSON.stringify(selectedModes));
 
-  const rowTypeOptions = (calGlobalData.leave_types || [])
-    .map((lt) => `<option value="${lt.code}">${lt.code} - ${lt.label}</option>`)
-    .join("");
+    const res = await pachaFetch(
+      "/modules/family-calendar/includes/api/calendar-settings.php",
+      { method: "POST", body: formData },
+    );
+    if (!res.success) throw new Error(res.error);
+    if (window.showToast)
+      showToast(tr("fc_child_saved") || "Sauvegardé !", "success");
+    else alert(tr("fc_child_saved") || "Sauvegardé !");
 
-  const trRow = document.createElement("tr");
-  trRow.className = "js-leave-row";
-  trRow.style.borderBottom = "1px solid var(--border-light)";
-  trRow.innerHTML = `
-        <td style="padding: 6px 2px;">
-            <select class="pf-input js-leave-type" required style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
-                <option value="">${tr("fc_leave_code_placeholder") || "Code..."}</option>
-                ${rowTypeOptions}
-            </select>
-        </td>
-        <td style="padding: 6px 2px;">
-            <select class="pf-input js-leave-method" style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
-                <option value="FIXED">${tr("fc_leave_method_fixed") || "Fixe"}</option>
-                <option value="ACCUMULATED">${tr("fc_leave_method_accumulated") || "Cumul"}</option>
-            </select>
-        </td>
-        <td style="padding: 6px 2px;"><input type="number" step="0.5" class="pf-input js-leave-allowance" placeholder="0" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;"></td>
-        <td style="padding: 6px 2px;"><input type="text" class="pf-input js-leave-date" placeholder="${tr("fc_date_format_placeholder") || "JJ/MM"}" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])" maxlength="5" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;" title="${tr("fc_date_format_title") || "Format JJ/MM"}"></td>
-        <td style="padding: 6px 2px; text-align:right;"><button type="button" class="btn-icon-action delete" style="padding:4px; margin:0;" onclick="this.closest('tr').remove()" title="${tr("btn_delete") || "Supprimer"}">🗑️</button></td>
-  `;
-  tbody.appendChild(trRow);
+    const currentPerson = calGlobalData.people.find(
+      (k) => parseInt(k.id) === window.currentSelectedMemberId,
+    );
+    if (currentPerson) {
+      currentPerson.care_modes = JSON.stringify(selectedModes);
+    }
+  } catch (err) {
+    alert("Erreur: " + err.message);
+  }
 };
 
-window.populateCalendarSettings = function (settings) {
-  if (!settings) return;
-  const viewSelect = document.getElementById("setCalView");
-  if (viewSelect && settings.calendar_default_view)
-    viewSelect.value = settings.calendar_default_view;
-  const firstDaySelect = document.getElementById("setCalFirstDay");
-  if (firstDaySelect && settings.calendar_first_day !== undefined)
-    firstDaySelect.value = settings.calendar_first_day;
-  const hoursInput = document.getElementById("setCalHours");
-  if (hoursInput && settings.calendar_working_hours)
-    hoursInput.value = settings.calendar_working_hours;
-};
+// ==========================================
+// NOUVEAU CATALOGUE GLOBAL (FOYER)
+// ==========================================
+let globalLeaveCatalog = [];
 
-window.loadAdultConfigView = function (memberId, zoneElement) {
-  let userLeaves = calGlobalData.leaves[memberId] || [];
+async function loadLeaveCatalog() {
+  try {
+    const res = await pachaFetch(
+      "/modules/family-calendar/includes/api/calendar-settings.php?action=get_leave_types",
+    );
+    globalLeaveCatalog = res.data || [];
+    renderLeaveCatalog(globalLeaveCatalog);
+  } catch (err) {
+    console.error("Erreur chargement catalogue", err);
+  }
+}
 
-  const tableRows = userLeaves
-    .map((l) => {
-      let dateDisp = "";
-      if (l.date) {
-        const parts = l.date.split("-");
-        if (parts.length >= 3) dateDisp = `${parts[2]}/${parts[1]}`;
-      }
+function renderLeaveCatalog(types) {
+  const container = document.getElementById("leaveTypesContainer");
+  if (!container) return;
+  container.innerHTML = "";
 
-      let rowTypeOptions = (calGlobalData.leave_types || [])
-        .map(
-          (lt) =>
-            `<option value="${lt.code}" ${lt.code === l.type ? "selected" : ""}>${lt.code} - ${lt.label}</option>`,
-        )
-        .join("");
+  if (types.length === 0) {
+    container.innerHTML = `<p class="pf-muted-note">Aucun congé configuré.</p>`;
+    return;
+  }
 
-      if (!calGlobalData.leave_types.some((lt) => lt.code === l.type)) {
-        rowTypeOptions += `<option value="${l.type}" selected>${l.type} (${tr("fc_leave_obsolete") || "Obsolète"})</option>`;
-      }
-
-      return `
-      <tr class="js-leave-row" style="border-bottom: 1px solid var(--border-light);">
-          <td style="padding: 6px 2px;">
-              <select class="pf-input js-leave-type" required style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
-                  <option value="">${tr("fc_leave_code_placeholder") || "Code..."}</option>
-                  ${rowTypeOptions}
-              </select>
-          </td>
-          <td style="padding: 6px 2px;">
-              <select class="pf-input js-leave-method" style="width:100%; padding:6px 2px; font-size:0.8rem; box-sizing: border-box;">
-                  <option value="FIXED" ${l.method === "FIXED" ? "selected" : ""}>${tr("fc_leave_method_fixed") || "Fixe"}</option>
-                  <option value="ACCUMULATED" ${l.method === "ACCUMULATED" ? "selected" : ""}>${tr("fc_leave_method_accumulated") || "Cumul"}</option>
-              </select>
-          </td>
-          <td style="padding: 6px 2px;"><input type="number" step="0.5" class="pf-input js-leave-allowance" value="${l.allowance || 0}" placeholder="0" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;"></td>
-          <td style="padding: 6px 2px;"><input type="text" class="pf-input js-leave-date" value="${dateDisp}" placeholder="${tr("fc_date_format_placeholder") || "JJ/MM"}" pattern="(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[012])" maxlength="5" required style="width:100%; padding:6px 4px; font-size:0.85rem; text-align:center; box-sizing: border-box;" title="${tr("fc_date_format_title") || "Format JJ/MM"}"></td>
-          <td style="padding: 6px 2px; text-align:right;"><button type="button" class="btn-icon-action delete" style="padding:4px; margin:0;" onclick="this.closest('tr').remove()" title="${tr("btn_delete") || "Supprimer"}">🗑️</button></td>
-      </tr>
-      `;
-    })
-    .join("");
-
-  zoneElement.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-            <div>
-                <h5 style="margin:0 0 4px 0; color:var(--text-main); font-size:1rem;">🗓️ ${tr("fc_matrix_title") || "Matrice des Congés"}</h5>
-                <p style="font-size:0.8rem; color:var(--text-muted); margin:0; line-height:1.3;">${tr("fc_matrix_desc") || "Définissez les quotas et la date de renouvellement."}</p>
+  types.forEach((lt) => {
+    container.innerHTML += `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-page); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-light); margin-bottom: 6px;">
+                <div>
+                    <span style="font-weight: bold; color: var(--text-main);">${lt.label}</span>
+                    <span style="background: var(--bg-subtle); border: 1px solid var(--border-main); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem; margin-left: 8px; color: var(--text-muted);">${lt.code}</span>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                    <button type="button" class="pf-btn btn-secondary" style="padding: 4px 8px;" onclick="editLeaveType('${lt.code}', '${lt.label.replace(/'/g, "\\'")}')">✏️</button>
+                    <button type="button" class="pf-btn btn-secondary" style="padding: 4px 8px; color: var(--danger);" onclick="deleteLeaveType('${lt.code}', '${lt.label.replace(/'/g, "\\'")}')">🗑️</button>
+                </div>
             </div>
-            <button type="button" class="pf-btn pf-btn-secondary" style="padding:6px 10px; font-size:0.8rem; white-space:nowrap;" onclick="addLeaveRowToMatrix()">➕ ${tr("btn_add") || "Ajouter"}</button>
-        </div>
-        <div style="overflow-x:hidden; margin: 0 -5px;">
-            <table style="width:100%; border-collapse:collapse; margin-bottom:15px; table-layout: fixed;">
-                <thead>
-                    <tr style="font-size:0.75rem; text-align:left; color:var(--text-muted); text-transform:uppercase;">
-                        <th style="padding:0 2px 8px; width: 33%;">${tr("fc_table_code") || "Code"}</th>
-                        <th style="padding:0 2px 8px; width: 22%;">${tr("fc_table_method") || "Méthode"}</th>
-                        <th style="padding:0 2px 8px; width: 15%;">${tr("fc_table_quota") || "Quota"}</th>
-                        <th style="padding:0 2px 8px; width: 20%;">${tr("fc_table_renewal") || "Renouv."}</th>
-                        <th style="padding:0 2px 8px; width: 10%;"></th>
-                    </tr>
-                </thead>
-                <tbody id="tbodyLeaveMatrix">
-                    ${tableRows || `<tr><td colspan="5" id="emptyMatrixRow" style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic; font-size:0.9rem;">${tr("fc_matrix_empty") || "Aucun compteur défini."}</td></tr>`}
-                </tbody>
-            </table>
-        </div>
-        <div style="display:flex; justify-content:flex-end; border-top:1px solid var(--border-light); padding-top:12px;">
-            <button type="button" class="pf-btn pf-btn-primary" style="padding:8px 16px;" onclick="submitMemberLeaves()">${tr("btn_save") || "Enregistrer"}</button>
-        </div>
-    `;
-};
+        `;
+  });
+}
 
-window.loadMemberConfigView = function () {
+function editLeaveType(code, label) {
+  document.getElementById("leaveTypeFormTitle").innerText =
+    "✏️ Modifier : " + label;
+  document.getElementById("lt-mode").value = "edit";
+
+  const codeInput = document.getElementById("lt-code");
+  codeInput.value = code;
+  codeInput.readOnly = true;
+  codeInput.style.backgroundColor = "var(--bg-subtle)";
+  codeInput.style.opacity = "0.6";
+  codeInput.style.cursor = "not-allowed";
+
+  document.getElementById("lt-code-note").innerText = "Non modifiable";
+  document.getElementById("lt-label").value = label;
+}
+
+function resetLeaveTypeForm() {
+  document.getElementById("leaveTypeFormTitle").innerText = "+ Ajouter";
+  document.getElementById("lt-mode").value = "add";
+
+  const codeInput = document.getElementById("lt-code");
+  codeInput.value = "";
+  codeInput.readOnly = false;
+  codeInput.style.backgroundColor = "";
+  codeInput.style.opacity = "1";
+  codeInput.style.cursor = "text";
+
+  document.getElementById("lt-code-note").innerText = "Irréversible";
+  document.getElementById("lt-label").value = "";
+}
+
+// NOUVELLE FONCTION DE SUPPRESSION
+async function deleteLeaveType(code, label) {
+  if (
+    !confirm(
+      `Supprimer définitivement le congé "${label}" du catalogue ? Cela le retirera également des membres qui l'utilisent.`,
+    )
+  )
+    return;
+
+  const fd = new FormData();
+  fd.append("action", "delete_leave_type");
+  fd.append("code", code);
+
+  try {
+    const res = await pachaFetch(
+      "/modules/family-calendar/includes/api/calendar-settings.php",
+      { method: "POST", body: fd },
+    );
+    if (!res.success) throw new Error(res.error);
+
+    if (window.showToast) showToast("Congé supprimé avec succès !", "success");
+    resetLeaveTypeForm();
+    loadLeaveCatalog();
+
+    // On recharge l'onglet membre au cas où le membre affiché utilisait ce congé
+    if (document.getElementById("selectCalMember").value) {
+      loadMemberConfigView();
+    }
+  } catch (err) {
+    alert("Erreur de suppression : " + err.message);
+  }
+}
+
+async function saveLeaveType() {
+  const code = document.getElementById("lt-code").value.toUpperCase();
+  const label = document.getElementById("lt-label").value;
+
+  if (!code || !label)
+    return window.showToast
+      ? showToast("Code et Label requis", "error")
+      : alert("Code et Label requis");
+
+  const fd = new FormData();
+  fd.append("action", "save_leave_type");
+  fd.append("mode", document.getElementById("lt-mode").value);
+  fd.append("code", code);
+  fd.append("label", label);
+
+  try {
+    const res = await pachaFetch(
+      "/modules/family-calendar/includes/api/calendar-settings.php",
+      { method: "POST", body: fd },
+    );
+    if (!res.success) throw new Error(res.error);
+
+    if (window.showToast) showToast("Catalogue mis à jour !", "success");
+    resetLeaveTypeForm();
+    loadLeaveCatalog();
+  } catch (err) {
+    alert("Erreur d'enregistrement : " + err.message);
+  }
+}
+
+// ==========================================
+// MODALE SETTINGS : AFFECTATION (MEMBRES)
+// ==========================================
+
+// Quand on choisit un membre dans la liste déroulante
+async function loadMemberConfigView() {
   const select = document.getElementById("selectCalMember");
   const zone = document.getElementById("memberConfigZone");
   if (!select || !select.value || !zone) return;
 
-  window.currentSelectedMemberId = parseInt(select.value);
+  const personId = parseInt(select.value);
+  window.currentSelectedMemberId = personId;
   const role = (
     select.options[select.selectedIndex].dataset.role || ""
   ).toLowerCase();
 
+  zone.innerHTML = '<p class="pf-muted-note">Chargement...</p>';
+
+  // === CAS 1 : C'EST UN ENFANT (On gère les modes de garde) ===
   if (role === "child" || role === "enfant") {
     const currentPerson = calGlobalData.people.find(
-      (k) => parseInt(k.id) === window.currentSelectedMemberId,
+      (k) => parseInt(k.id) === personId,
     );
     let savedModes = [];
     try {
@@ -296,83 +360,145 @@ window.loadMemberConfigView = function () {
       .join("");
 
     zone.innerHTML = `
-            <h5 style="margin:0 0 8px 0; color:var(--text-main);">${tr("fc_care_modes_title") || "Modes de Garde"}</h5>
-            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">Quels modes de garde s'appliquent à cet enfant ?</p>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-                ${modesHtml || `<em>Aucun mode de garde configuré dans le foyer.</em>`}
-            </div>
-            <button class="pf-btn pf-btn-primary" style="margin-top:15px; width:100%;" onclick="submitChildCareModes()">${tr("btn_save_rights") || "Enregistrer"}</button>
-        `;
-  } else {
-    window.loadAdultConfigView(window.currentSelectedMemberId, zone);
+        <h5 style="margin:0 0 8px 0; color:var(--text-main);">${tr("fc_care_modes_title") || "Modes de Garde"}</h5>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">Quels modes de garde s'appliquent à cet enfant ?</p>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+            ${modesHtml || `<em>Aucun mode de garde configuré dans le foyer.</em>`}
+        </div>
+        <button class="pf-btn pf-btn-primary" style="margin-top:15px; width:100%;" onclick="submitChildCareModes()">${tr("btn_save_rights") || "Enregistrer"}</button>
+    `;
   }
-};
+  // === CAS 2 : C'EST UN ADULTE (On gère les congés) ===
+  else {
+    try {
+      const res = await pachaFetch(
+        `/modules/family-calendar/includes/api/calendar-settings.php?action=get_person_leaves&person_id=${personId}`,
+      );
+      const memberLeaves = res.data || [];
+      renderMemberLeavesView(personId, memberLeaves);
+    } catch (err) {
+      zone.innerHTML =
+        '<p class="pf-muted-note" style="color:var(--danger);">Erreur de chargement.</p>';
+    }
+  }
+}
 
-window.submitChildCareModes = async function () {
-  if (!window.currentSelectedMemberId) return;
-  const checkboxes = document.querySelectorAll(".js-care-mode-cb:checked");
-  const selectedModes = Array.from(checkboxes).map((cb) => cb.value);
+// Affichage des congés du membre et du formulaire d'ajout
+function renderMemberLeavesView(personId, memberLeaves) {
+  const zone = document.getElementById("memberConfigZone");
+  let html = `<h5 style="margin: 0 0 10px 0; color: var(--text-main);">Congés attribués</h5>`;
+
+  if (memberLeaves.length === 0) {
+    html += `<p class="pf-muted-note" style="font-size: 0.85rem;">Aucun congé attribué à ce membre.</p>`;
+  } else {
+    html += `<div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">`;
+    memberLeaves.forEach((ml) => {
+      // On extrait le mois de la date anniversaire (ex: "2000-06-01" -> 6)
+      const moisRenouv = ml.anniversary_date
+        ? parseInt(ml.anniversary_date.split("-")[1])
+        : 1;
+
+      html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); padding: 8px; border-radius: 6px; border: 1px solid var(--border-light);">
+            <div>
+                <strong style="color: var(--text-main);">${ml.leave_type}</strong>
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 5px;">(Quota: <b>${ml.allowance}j</b> - Renouv: <b>Mois ${moisRenouv}</b>)</span>
+            </div>
+            <button class="pf-btn btn-secondary" style="padding: 2px 6px; color: var(--danger);" onclick="deleteMemberLeave(${ml.id}, ${personId})">🗑️</button>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  // Ajout du selecteur de mois dans l'attribution
+  html += `
+        <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 15px 0;">
+        <h5 style="margin: 0 0 10px 0;">+ Attribuer un congé</h5>
+        <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 120px;">
+                <label class="pf-label" style="font-size: 0.8rem;">Type de congé</label>
+                <select id="new-member-leave-type" class="pf-input" style="width: 100%;">
+                    <option value="" disabled selected>-- Sélectionner --</option>
+                    ${globalLeaveCatalog.map((lt) => `<option value="${lt.code}">${lt.label}</option>`).join("")}
+                </select>
+            </div>
+            <div style="flex: 0 0 70px;">
+                <label class="pf-label" style="font-size: 0.8rem;">Quota</label>
+                <input type="number" step="0.5" id="new-member-leave-allowance" class="pf-input" value="0" style="width: 100%;">
+            </div>
+            <div style="flex: 0 0 100px;">
+                <label class="pf-label" style="font-size: 0.8rem;">Renouvellement</label>
+                <select id="new-member-leave-reset" class="pf-input" style="width: 100%;">
+                    <option value="1">${tr("month_jan") || "Janvier"}</option>
+                    <option value="2">${tr("month_feb") || "Février"}</option>
+                    <option value="3">${tr("month_mar") || "Mars"}</option>
+                    <option value="4">${tr("month_apr") || "Avril"}</option>
+                    <option value="5">${tr("month_may") || "Mai"}</option>
+                    <option value="6">${tr("month_jun") || "Juin"}</option>
+                    <option value="7">${tr("month_jul") || "Juillet"}</option>
+                    <option value="8">${tr("month_aug") || "Août"}</option>
+                    <option value="9">${tr("month_sep") || "Septembre"}</option>
+                    <option value="10">${tr("month_oct") || "Octobre"}</option>
+                    <option value="11">${tr("month_nov") || "Novembre"}</option>
+                    <option value="12">${tr("month_dec") || "Décembre"}</option>
+                </select>
+            </div>
+            <button class="pf-btn pf-btn-primary" onclick="addMemberLeave(${personId})">Ajouter</button>
+        </div>
+    `;
+
+  zone.innerHTML = html;
+}
+
+async function addMemberLeave(personId) {
+  const leaveCode = document.getElementById("new-member-leave-type").value;
+  const allowance = document.getElementById("new-member-leave-allowance").value;
+  const resetMonth = document.getElementById("new-member-leave-reset").value;
+
+  if (!leaveCode) return showToast("Veuillez sélectionner un type", "error");
+
+  const fd = new FormData();
+  fd.append("action", "add_person_leave");
+  fd.append("person_id", personId);
+  fd.append("leave_type", leaveCode);
+  fd.append("allowance", allowance);
+  fd.append("reset_month", resetMonth);
+
   try {
-    const formData = new FormData();
-    formData.append("action", "save_child_care_modes");
-    formData.append("person_id", window.currentSelectedMemberId);
-    formData.append("care_modes", JSON.stringify(selectedModes));
-
     const res = await pachaFetch(
-      "/modules/family-calendar/includes/api/settings.php",
-      { method: "POST", body: formData },
+      "/modules/family-calendar/includes/api/calendar-settings.php",
+      { method: "POST", body: fd },
     );
     if (!res.success) throw new Error(res.error);
-    if (window.showToast)
-      showToast(tr("fc_child_saved") || "Sauvegardé !", "success");
-    else alert(tr("fc_child_saved") || "Sauvegardé !");
 
-    const currentPerson = calGlobalData.people.find(
-      (k) => parseInt(k.id) === window.currentSelectedMemberId,
-    );
-    if (currentPerson) {
-      currentPerson.care_modes = JSON.stringify(selectedModes);
-    }
+    if (window.showToast) showToast("Congé attribué avec succès !", "success");
+    loadMemberConfigView();
   } catch (err) {
     alert("Erreur: " + err.message);
   }
-};
+}
 
-async function submitMemberLeaves() {
-  if (!currentSelectedMemberId || isNaN(currentSelectedMemberId)) {
-    alert("Erreur technique : Aucun membre valide sélectionné.");
+// Supprimer un congé d'un membre
+async function deleteMemberLeave(leaveId, personId) {
+  if (!confirm(tr("confirm_delete") || "Retirer ce congé pour ce membre ?"))
     return;
-  }
+
+  const fd = new FormData();
+  fd.append("action", "delete_person_leave");
+  fd.append("id", leaveId);
+
   try {
-    const rows = document.querySelectorAll(".js-leave-row");
-    const leavesPayload = Array.from(rows)
-      .map((row) => ({
-        type: row.querySelector(".js-leave-type").value.trim().toUpperCase(),
-        method: row.querySelector(".js-leave-method").value,
-        allowance: row.querySelector(".js-leave-allowance").value,
-        date: row.querySelector(".js-leave-date").value,
-      }))
-      .filter((l) => l.type && l.date);
-
-    const formData = new FormData();
-    formData.append("action", "save_member_leaves");
-    formData.append("person_id", currentSelectedMemberId);
-    formData.append("leaves", JSON.stringify(leavesPayload));
-
     const res = await pachaFetch(
-      "/modules/family-calendar/includes/api/settings.php",
-      { method: "POST", body: formData },
+      "/modules/family-calendar/includes/api/calendar-settings.php",
+      { method: "POST", body: fd },
     );
     if (!res.success) throw new Error(res.error);
 
-    if (window.showToast)
-      showToast(tr("fc_matrix_saved") || "Matrice enregistrée", "success");
-    else alert(tr("fc_matrix_saved") || "Matrice enregistrée");
-
-    closeCalendarSettings();
-    setTimeout(openCalendarSettings, 300);
+    if (window.showToast) showToast("Congé retiré !", "success");
+    loadMemberConfigView();
   } catch (err) {
-    alert("Erreur : " + err.message);
+    alert("Erreur: " + err.message);
   }
 }
 
@@ -450,7 +576,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const res = await pachaFetch(
-          "/modules/family-calendar/includes/api/settings.php?action=get_all",
+          "/modules/family-calendar/includes/api/calendar-settings.php?action=get_all",
         );
         if (res && res.success && res.data) {
           window.calGlobalData = res.data;

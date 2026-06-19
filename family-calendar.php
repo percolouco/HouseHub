@@ -29,7 +29,7 @@ foreach ($familyPeople as $p) {
 }
 
 // 2. Modes de garde (globaux du foyer, pour synchroniser avec le JS)
-$stmtFoyer = $pdo->query("SELECT care_modes FROM pf_foyer_settings LIMIT 1");
+$stmtFoyer = $pdo->query("SELECT care_modes, zone_scolaire FROM pf_foyer_settings LIMIT 1");
 $foyerData = $stmtFoyer->fetch(PDO::FETCH_ASSOC);
 $activeCareModes = json_decode($foyerData['care_modes'] ?? '[]', true);
 if (!is_array($activeCareModes)) $activeCareModes = [];
@@ -44,6 +44,38 @@ foreach ($dbLeaves as $l) {
     $allLeaveTypes[$l['leave_type']] = true;
 }
 $allLeaveTypes = array_keys($allLeaveTypes);
+
+// ==========================================
+// VÉRIFICATIONS D'INTÉGRITÉ (ALERTES)
+// ==========================================
+$calendarAlerts = [];
+
+// 1. Aucun membre adulte/parent configuré
+if (empty($parents)) {
+    $calendarAlerts[] = "<strong>Aucun adulte configuré.</strong> Rendez-vous dans les Paramètres Généraux de HouseHub pour ajouter les membres du foyer.";
+}
+
+// 2. Enfants présents, mais aucun mode de garde global défini
+if (!empty($kids) && empty($activeCareModes)) {
+    $calendarAlerts[] = "<strong>Modes de garde manquants.</strong> Vous avez des enfants, mais aucun mode de garde n'est défini. Cliquez sur l'icône ⚙️ (Paramètres du calendrier) pour les ajouter.";
+}
+
+// 3. Référentiel des types de congés vide
+try {
+    $countLeaveTypes = $pdo->query("SELECT COUNT(*) FROM pf_leave_types")->fetchColumn();
+    if ($countLeaveTypes == 0) {
+        $calendarAlerts[] = "<strong>Types de congés manquants.</strong> Le catalogue des congés (CP, RTT...) est vide. Ajoutez-les dans les paramètres généraux.";
+    }
+} catch (Exception $e) {
+    // Si la table n'existe pas encore
+    $calendarAlerts[] = "<strong>Table des congés manquante.</strong> Veuillez mettre à jour la base de données.";
+}
+
+// 4. Zone scolaire manquante (si tu l'as stockée dans pf_foyer_settings)
+$zoneScolaire = $foyerData['zone_scolaire'] ?? null;
+if (empty($zoneScolaire)) {
+    $calendarAlerts[] = "<strong>Zone scolaire non définie.</strong> Cliquez sur l'icône ⚙️ pour configurer votre zone afin d'afficher les vacances scolaires.";
+}
 
 $pageTitle  = tr('fc_page_title');
 $activePage = "family-calendar";
@@ -76,6 +108,20 @@ require __DIR__ . '/header.php';
             </button>
         </div>
     </div>
+
+    <?php if (!empty($calendarAlerts)): ?>
+    <div class="pf-alert pf-alert-warning" style="background: var(--bg-warning, #fffbeb); border: 1px solid var(--border-warning, #fcd34d); color: var(--text-warning, #92400e); padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-start;">
+        <div style="font-size: 1.5rem; line-height: 1;">⚠️</div>
+        <div>
+            <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;">Configuration incomplète</h4>
+            <ul style="margin: 0; padding-left: 18px; font-size: 0.95rem; line-height: 1.5;">
+                <?php foreach ($calendarAlerts as $alert): ?>
+                    <li style="margin-bottom: 4px;"><?= $alert ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div id="modalHolidays" class="pf-modal">
         <div class="pf-modal-content">
@@ -155,61 +201,120 @@ require __DIR__ . '/header.php';
     </div>
 
     <div id="modalCalendarSettings" class="pf-modal">
-        <div class="pf-modal-content" style="max-width: 600px; width: 90%;">
-            <div class="pf-modal-header">
-                <h3 class="pf-modal-title">⚙️ <?= tr('fc_modal_settings_title') ?></h3>
-                <button type="button" class="pf-modal-close" onclick="closeCalendarSettings()">&times;</button>
-            </div>
+    <div class="pf-modal-content" style="max-width: 650px; width: 95%;">
+        
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">⚙️ <?= tr('fc_modal_settings_title') ?></h3>
+            <button type="button" class="pf-modal-close" onclick="closeCalendarSettings()">&times;</button>
+        </div>
 
-            <div style="display: flex; gap: 4px; background: var(--bg-page); padding: 4px; border-radius: 8px; margin: 1rem;">
-                <button type="button" id="tab-btn-foyer" class="bs-tab-btn active" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('foyer')">🏡 Foyer</button>
-                <button type="button" id="tab-btn-membres" class="bs-tab-btn" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('membres')">👥 Membres & Droits</button>
-            </div>
+        <div style="display: flex; gap: 4px; background: var(--bg-page); padding: 4px; border-radius: 8px; margin: 1rem;">
+            <button type="button" id="tab-btn-foyer" class="bs-tab-btn active" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('foyer')">
+                🏡 <?= tr('fc_tab_foyer') ?>
+            </button>
+            <button type="button" id="tab-btn-membres" class="bs-tab-btn" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('membres')">
+                👥 <?= tr('fc_tab_members') ?>
+            </button>
+        </div>
 
-            <div class="pf-modal-body" style="max-height: 60vh; overflow-y: auto; padding-top: 0;">
+        <div class="pf-modal-body" style="max-height: 65vh; overflow-y: auto; padding-top: 0; padding-bottom: 1rem;">
 
-                <div id="cal-pane-foyer" class="cal-settings-pane">
-                    <form id="formCalFoyer" onsubmit="submitCalFoyer(event)">
-                        <div class="pf-form-group">
-                            <label class="pf-label"><?= tr('fc_zone_label') ?></label>
-                            <select id="setZoneScolaire" name="zone_scolaire" class="pf-input" required style="width: 100%;">
-                                <option value="A">Zone A</option>
-                                <option value="B">Zone B</option>
-                                <option value="C">Zone C</option>
-                                <option value="Autre">Autre / Hors France</option>
-                            </select>
-                            <small class="pf-muted-note"><?= tr('fc_zone_desc') ?></small>
-                        </div>
+            <div id="cal-pane-foyer" class="cal-settings-pane">
+                
+                <form id="formCalFoyer" onsubmit="submitCalFoyer(event)">
+                    
+                    <div class="pf-form-group">
+                        <label class="pf-label"><?= tr('fc_zone_label') ?></label>
+                        <select id="setZoneScolaire" name="zone_scolaire" class="pf-input" required style="width: 100%;">
+                            <option value="A"><?= tr('fc_zone_a') ?></option>
+                            <option value="B"><?= tr('fc_zone_b') ?></option>
+                            <option value="C"><?= tr('fc_zone_c') ?></option>
+                            <option value="Autre"><?= tr('fc_zone_other') ?></option>
+                        </select>
+                        <small class="pf-muted-note"><?= tr('fc_zone_desc') ?></small>
+                    </div>
 
-                        <div class="pf-form-group" style="margin-top: 1.5rem;">
-                            <label class="pf-label"><?= tr('fc_care_modes_label') ?></label>
+                    <div class="pf-form-group" style="margin-top: 1.5rem;">
+                        <label class="pf-label"><?= tr('fc_care_modes_label') ?></label>
+                        
+                        <?php if (!empty($kids)): ?>
                             <div id="careModesContainer" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; min-height: 38px; padding: 8px; background: var(--bg-page); border-radius: var(--radius); border: 1px solid var(--border-light);"></div>
                             <div style="display: flex; gap: 8px;">
                                 <input type="text" id="inputNewCareMode" class="pf-input" placeholder="<?= tr('fc_add_mode_placeholder') ?>" style="flex: 1;">
-                                <button type="button" class="btn btn-secondary" style="padding: 0 16px; border-radius: 6px;" onclick="addCareModeTag()">＋</button>
+                                <button type="button" class="pf-btn btn-secondary" style="padding: 0 16px; border-radius: 6px;" onclick="addCareModeTag()">＋</button>
                             </div>
                             <small class="pf-muted-note"><?= tr('fc_care_modes_desc') ?></small>
-                        </div>
-
-                        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 8px;">
-                            <button type="button" class="pf-btn pf-btn-secondary" onclick="closeCalendarSettings()"><?= tr('btn_cancel') ?></button>
-                            <button type="submit" class="pf-btn pf-btn-primary"><?= tr('save') ?></button>
-                        </div>
-                    </form>
-                </div>
-
-                <div id="cal-pane-membres" class="cal-settings-pane" style="display: none;">
-                    <div style="margin-bottom: 1.2rem;">
-                        <label class="pf-label">Sélectionner un membre de la famille :</label>
-                        <select id="selectCalMember" class="pf-input" style="width: 100%; font-weight: 600;" onchange="loadMemberConfigView()"></select>
+                        <?php else: ?>
+                            <div style="background: var(--bg-subtle); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-main); text-align: center;">
+                                <p style="margin: 0 0 10px 0; color: var(--text-muted); font-size: 0.9rem;">
+                                    <?= tr('fc_empty_kids_msg') ?>
+                                </p>
+                                <a href="/settings.php" class="pf-btn btn-secondary" style="text-decoration: none; display: inline-block; font-size: 0.85rem;">
+                                    ⚙️ <?= tr('fc_link_settings') ?>
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
-                    <div id="memberConfigZone" style="background: var(--bg-page); padding: 14px; border-radius: 8px; border: 1px solid var(--border-light); min-height: 100px;">
-                        </div>
+                    <?php if (!empty($kids)): ?>
+                    <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+                        <button type="submit" class="pf-btn pf-btn-primary"><?= tr('save') ?></button>
+                    </div>
+                    <?php endif; ?>
+                </form>
+
+                <div class="pf-form-group" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-light);">
+                    <h4 style="margin: 0 0 10px 0; color: var(--text-main);">🏖️ <?= tr('fc_leave_catalog_title') ?></h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+                        <?= tr('fc_leave_catalog_desc') ?>
+                    </p>
+
+                    <div id="leaveTypesContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
+
+                    <div style="background: var(--bg-subtle); padding: 12px; border-radius: 8px; border: 1px solid var(--border-light);">
+                        <h5 id="leaveTypeFormTitle" style="margin: 0 0 10px 0;">+ <?= tr('fc_add_leave_type') ?></h5>
+                        
+                        <form id="formLeaveType" style="display: flex; flex-direction: column; gap: 10px;">
+                            <input type="hidden" id="lt-mode" value="add">
+                            
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <div style="flex: 0 0 80px;">
+                                    <label class="pf-label"><?= tr('fc_col_code') ?> *</label>
+                                    <input type="text" id="lt-code" class="pf-input" maxlength="4" style="text-transform: uppercase;" required>
+                                    <small class="pf-muted-note" id="lt-code-note"><?= tr('fc_code_irreversible') ?></small>
+                                </div>
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label class="pf-label"><?= tr('fc_col_label') ?> *</label>
+                                    <input type="text" id="lt-label" class="pf-input" placeholder="<?= tr('fc_leave_label_ph') ?>" required>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px;">
+                                <button type="button" class="pf-btn btn-secondary" onclick="resetLeaveTypeForm()"><?= tr('btn_cancel') ?></button>
+                                <button type="button" class="pf-btn pf-btn-primary" onclick="saveLeaveType()"><?= tr('btn_save') ?></button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
+
             </div>
+
+            <div id="cal-pane-membres" class="cal-settings-pane" style="display: none;">
+                
+                <div style="margin-bottom: 1.2rem;">
+                    <label class="pf-label"><?= tr('fc_select_member') ?></label>
+                    <select id="selectCalMember" class="pf-input" style="width: 100%; font-weight: 600;" onchange="loadMemberConfigView()">
+                        </select>
+                </div>
+
+                <div id="memberConfigZone" style="background: var(--bg-page); padding: 14px; border-radius: 8px; border: 1px solid var(--border-light); min-height: 150px;">
+                    </div>
+
+            </div>
+
         </div>
     </div>
+</div>
 
     <div class="fc-month-calendar-wrapper">
         <div class="fc-month-header">

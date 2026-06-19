@@ -282,7 +282,56 @@ return [
     'fc_table_renewal'            => 'Renouv.',
     
     'btn_save_rights'             => 'Enregistrer',
-    
+
+    // ==========================================
+// MODALE PARAMÈTRES CALENDRIER
+// ==========================================
+'fc_modal_settings_title' => 'Paramètres du calendrier',
+'fc_tab_foyer'            => 'Foyer',
+'fc_tab_members'          => 'Membres & Droits',
+
+// Foyer : Zone scolaire
+'fc_zone_label'           => 'Zone scolaire',
+'fc_zone_a'               => 'Zone A',
+'fc_zone_b'               => 'Zone B',
+'fc_zone_c'               => 'Zone C',
+'fc_zone_other'           => 'Autre / Hors France',
+'fc_zone_desc'            => 'Permet d\'afficher correctement les vacances scolaires.',
+
+// Foyer : Modes de garde
+'fc_care_modes_label'     => 'Modes de garde',
+'fc_add_mode_placeholder' => 'Ex: Nounou, Crèche...',
+'fc_care_modes_desc'      => 'Ajoutez les différents modes de garde pour vos enfants.',
+'fc_empty_kids_msg'       => 'Aucun enfant n\'est configuré dans votre famille pour le moment.',
+'fc_link_settings'        => 'Aller aux paramètres généraux',
+
+// Foyer : Catalogue des congés
+'fc_leave_catalog_title'  => 'Catalogue des congés',
+'fc_leave_catalog_desc'   => 'Définissez les types de congés possibles pour toute la famille.',
+'fc_add_leave_type'       => 'Ajouter un type de congé',
+'fc_col_code'             => 'Code',
+'fc_code_irreversible'    => 'Irréversible',
+'fc_col_label'            => 'Label',
+'fc_leave_label_ph'       => 'Ex: RTT, Récup...',
+'fc_quota_default'        => 'Quota par défaut',
+'fc_reset_month'          => 'Mois de renouv.',
+
+// Membres
+'fc_select_member'        => 'Sélectionner un membre :',
+
+// Mois (S'ils n'existent pas déjà dans ton système)
+'month_jan' => 'Janvier',
+'month_feb' => 'Février',
+'month_mar' => 'Mars',
+'month_apr' => 'Avril',
+'month_may' => 'Mai',
+'month_jun' => 'Juin',
+'month_jul' => 'Juillet',
+'month_aug' => 'Août',
+'month_sep' => 'Septembre',
+'month_oct' => 'Octobre',
+'month_nov' => 'Novembre',
+'month_dec' => 'Décembre',
     
 
     'leg_presence'              => 'Présence Pep',
@@ -607,6 +656,21 @@ return [
     'bud_to_define_js'          => 'à définir',
     'bud_select_beneficiary'    => 'Choisir un revenu attendu',
     'bud_bar_actual'            => 'Actuel',
+    
+    // ONBOARDING BUDGET
+    'bs_onb_title'       => 'Bienvenue ! Configurons votre budget :',
+    'bs_onb_desc'        => 'Complétez ces étapes pour que l\'application puisse calculer votre Reste à Vivre :',
+    'bs_onb_cat_link'    => 'Catégories',
+    'bs_onb_cat_desc'    => 'Créez au moins une catégorie de dépenses.',
+    'bs_onb_acc_link'    => 'Comptes Bancaires',
+    'bs_onb_acc_desc'    => 'Ajoutez au moins un compte courant ou épargne.',
+    'bs_onb_sal_link'    => 'Salaires',
+    'bs_onb_sal_desc'    => 'Renseignez les rentrées d\'argent de l\'année en cours.',
+    'bs_onb_items_link'  => 'Lignes de Budget',
+    'bs_onb_items_desc'  => 'Rendez-vous dans l\'onglet Récapitulatif pour lister vos charges fixes (Loyer, Assurances...).',
+    'bs_rule_search_ph'  => '🔍 Rechercher un mot-clé (ex: AUCHAN)...',
+    'error_loading_settings' => 'Erreur lors du chargement des paramètres',
+    'settings'           => 'Paramètres',
 
     // --- BUDGET : RECAP ---
     'bud_recap_monthly_title'   => 'Récapitulatif Mensuel',
@@ -649,6 +713,10 @@ return [
     'bud_reg_none'              => 'Aucune',
     'bud_recap_confirm_delete'  => 'Voulez-vous vraiment supprimer cet élément ?',
     'bud_err_delete'            => 'Erreur lors de la suppression.',
+    'bud_prev_monthly_target' => 'Montant cible / Mensualité (€)',
+    'bud_prev_transfer_dest'  => 'Destination du virement',
+    'bud_prev_none'           => 'Aucune destination (Charge standard)',
+
 
     // --- BUDGET : EPARGNE ---
     'bud_sav_add_month'            => 'Saisir un mois',
@@ -703,6 +771,7 @@ return [
     'bud_sav_sum_mode_title'       => 'Activer/Désactiver la calculatrice',
     'bud_sav_selection'            => 'Sélection :',
     'bud_sav_ph_name'              => 'Nom du compte',
+    
     
     // JS & Erreurs
     'bud_sav_confirm_delete_month' => 'Voulez-vous vraiment supprimer toutes les données de %m pour %o ?',
@@ -766,6 +835,8 @@ return [
     'bud_adv_ph_desc' => 'Ex: Courses, Facture Électricité...',
     'bud_adv_confirm_resolve' => 'Confirmer le remboursement complet de cette avance ?',
     'bud_adv_confirm_delete' => 'Supprimer définitivement cette avance ?',
+    'bud_prev_target_ph'    => 'Ex: 150',
+    'bud_prev_transfer_to'  => 'Vers',
 
     // ==========================================
     // MODULE : CADEAUX (gift-list)
@@ -818,6 +889,22 @@ return [
     'btn_save'   => 'Enregistrer',
     'btn_add'    => 'Ajouter',
     'loading'    => 'Chargement...',
+
+    // --- MODULE CADEAUX : SETTINGS ---
+    'gift_settings'          => 'Configuration',
+    'gift_tab_occasions'     => 'Fêtes & Occasions',
+    'gift_tab_proches'       => 'Proches (Hors foyer)',
+    'gift_settings_icon'     => 'Icône',
+    'gift_settings_date'     => 'Date (MM-JJ)',
+    'gift_settings_add_occ'  => 'Ajouter une fête',
+    'gift_settings_add_proche'=> 'Ajouter un proche',
+    'gift_role_proche_adulte'=> 'Adulte (Oncle, ami...)',
+    'gift_role_proche_enfant'=> 'Enfant (Neveu, nièce...)',
+    'gift_ph_proche_name'    => 'Prénom',
+    'gift_role_label'        => 'Rôle',
+    'gift_settings_saved'    => 'Paramètres enregistrés !',
+    'gift_settings_edit_occ' => 'Modifier la fête',
+    'gift_settings_edit_proche' => 'Modifier le proche',
     
     // ==========================================
     // GARAGE MANAGER

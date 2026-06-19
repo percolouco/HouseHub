@@ -89,14 +89,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $meta_pdo->prepare(
                         "INSERT INTO users (username, password_hash, display_name, family_id) VALUES (?, ?, ?, ?)"
                     )->execute([$username, $hash, $display_name, $family['id']]);
+                    
+                    $user_id = (int)$meta_pdo->lastInsertId();
+
+                    // 🔥 INJECTION ICI : Ajouter la personne à la base de la famille (Couleur orangée pour différencier)
+                    $tenant_db = $family['db_name'];
+                    $tenantPdo = new PDO("mysql:host=$db_host;dbname=$tenant_db;charset=utf8mb4", $db_user, $db_pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                    $stmtPerson = $tenantPdo->prepare("INSERT INTO pf_people (name, user_id, role, color, is_active) VALUES (?, ?, 'parent', '#f59e0b', 1)");
+                    $stmtPerson->execute([$display_name, $user_id]);
 
                     $_SESSION['user'] = [
-                        'id'           => (int)$meta_pdo->lastInsertId(),
+                        'id'           => $user_id,
                         'username'     => $username,
                         'display_name' => $display_name,
                         'family_id'    => (int)$family['id'],
                     ];
-                    $_SESSION['family_db'] = $family['db_name'];
+                    $_SESSION['family_db'] = $tenant_db;
                     session_regenerate_id(true);
                     header('Location: /index.php');
                     exit;
@@ -128,6 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         "INSERT INTO users (username, password_hash, display_name, family_id) VALUES (?, ?, ?, ?)"
                     )->execute([$username, $hash, $display_name, $family_id]);
                     $user_id = (int)$meta_pdo->lastInsertId();
+
+                    // 🔥 INJECTION ICI : Ajouter le créateur comme premier parent de la famille (Couleur bleue)
+                    $tenantPdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                    $stmtPerson = $tenantPdo->prepare("INSERT INTO pf_people (name, user_id, role, color, is_active) VALUES (?, ?, 'parent', '#0891b2', 1)");
+                    $stmtPerson->execute([$display_name, $user_id]);
 
                     $meta_pdo->commit();
 
@@ -169,7 +182,6 @@ require __DIR__ . '/header.php';
       <div class="pf-login-error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <!-- Onglets -->
     <div style="display:flex;gap:8px;margin-bottom:24px">
       <button id="tab-create" onclick="switchTab('create')"
         class="pf-btn" style="flex:1">Nouvel espace</button>
@@ -177,7 +189,6 @@ require __DIR__ . '/header.php';
         class="pf-btn btn-secondary" style="flex:1">Rejoindre</button>
     </div>
 
-    <!-- Formulaire commun -->
     <form method="post" action="/register.php" id="reg-form">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" id="reg-action" value="create">
@@ -208,7 +219,6 @@ require __DIR__ . '/header.php';
           placeholder="••••••" autocomplete="new-password">
       </div>
 
-      <!-- Champs spécifiques : Nouvel espace -->
       <div id="section-create">
         <div class="pf-form-group">
           <label class="pf-label">Nom de la famille / foyer</label>
@@ -218,7 +228,6 @@ require __DIR__ . '/header.php';
         </div>
       </div>
 
-      <!-- Champs spécifiques : Rejoindre -->
       <div id="section-join" style="display:none">
         <div class="pf-form-group">
           <label class="pf-label">Code d'invitation</label>

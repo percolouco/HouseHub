@@ -6,7 +6,6 @@
   margin: 0;
   color: var(--text-main);
 }
-
 .cl-titlebar {
   display: flex;
   flex-wrap: wrap;
@@ -17,7 +16,6 @@
   border-bottom: 1px solid var(--border-light);
   padding-bottom: 15px;
 }
-
 .cl-view-switch {
   display: flex;
   padding: 4px;
@@ -25,7 +23,6 @@
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
 }
-
 .cl-view-btn {
   padding: 6px 16px;
   border-radius: 6px;
@@ -35,13 +32,12 @@
   color: var(--text-muted);
   transition: 0.2s;
 }
-
 .cl-view-btn.is-active {
   background: var(--text-main);
   color: var(--bg-panel);
 }
 
-/* === FILTRES STICKY === */
+/* === FILTRES === */
 .pf-filter-bar {
   display: flex;
   gap: 10px;
@@ -52,7 +48,6 @@
   z-index: 50;
   flex-wrap: wrap;
 }
-
 .pf-filter-label {
   font-size: 0.85rem;
   font-weight: 600;
@@ -60,35 +55,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.pf-filter-select {
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--border-light);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-main);
-  outline: none;
-  font-family: inherit;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  width: auto;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 12px;
-  padding-right: 28px;
-}
-
-.pf-filter-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 /* === SECTIONS ENFANTS === */
@@ -226,18 +192,69 @@
   z-index: 2;
   border-right: 2px solid var(--border-light);
 }
-
-.cl-occasion-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  vertical-align: middle;
+.gift-tricount-section {
+  border: 1px solid var(--border-light);
+  margin-top: 40px;
+}
+.gift-tricount-title {
+  margin-top: 0;
+  color: var(--text-main);
+  font-size: 1.3rem;
+}
+.gift-tricount-success {
+  color: var(--success);
+  font-weight: 700;
+  margin-bottom: 0;
+}
+.gift-tricount-debt-amount {
+  color: var(--danger);
+}
+.gift-matrix-details {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+}
+.gift-matrix-summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-muted);
+  outline: none;
+}
+.gift-matrix-wrapper {
+  overflow-x: auto;
+  margin-top: 15px;
+}
+.cl-debt-matrix th.sticky-col.bg-header {
+  background: var(--bg-page);
+}
+.cl-debt-matrix th.sticky-col.bg-body {
+  background: var(--bg-panel);
+}
+.gift-cell-danger {
+  color: var(--danger);
+  font-weight: 700;
+  background: var(--bg-danger-soft);
+}
+.gift-cell-muted {
+  color: var(--text-muted);
 }
 
+/* === TYPOGRAPHIE & ICONES === */
+.cl-occasion-icon {
+  font-size: 1.4rem;
+  margin-right: 8px;
+}
 .cl-occasion-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+}
+.gift-empty-state {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+  margin: 0;
 }
 
 /* === COMPOSANT MULTI-SELECT VANILLA === */
@@ -355,79 +372,7 @@
   }
 }
 
-/* Header & Settings Button */
-.gift-settings-btn {
-  font-size: 1.5rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-/* Empty States */
-.gift-empty-state {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  font-style: italic;
-  margin: 0;
-}
-
-/* Section Tricount (Bilan) */
-.gift-tricount-section {
-  border: 1px solid var(--border-light);
-  margin-top: 40px;
-}
-.gift-tricount-title {
-  margin-top: 0;
-  color: var(--text-main);
-  font-size: 1.3rem;
-}
-.gift-tricount-success {
-  color: var(--success);
-  font-weight: 700;
-  margin-bottom: 0;
-}
-.gift-tricount-debt-amount {
-  color: var(--danger);
-}
-.gift-matrix-details {
-  margin-top: 20px;
-  padding: 12px;
-  border-radius: 8px;
-}
-.gift-matrix-summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text-muted);
-  outline: none;
-}
-.gift-matrix-wrapper {
-  overflow-x: auto;
-  margin-top: 15px;
-}
-.cl-debt-matrix th.sticky-col,
-.cl-debt-matrix td.sticky-col {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  border-right: 2px solid #e2e8f0;
-}
-.cl-debt-matrix th.sticky-col.bg-header {
-  background: #f8fafc;
-}
-.cl-debt-matrix th.sticky-col.bg-body {
-  background: white;
-}
-
-.gift-cell-danger {
-  color: var(--danger);
-  font-weight: 700;
-  background: #fef2f2;
-}
-.gift-cell-muted {
-  color: var(--text-muted);
-}
-
-/* Modale Edition Cadeau */
+/* === MODALE EDITION CADEAU === */
 .gift-modal-custom-content {
   max-width: 500px;
   width: 95%;
@@ -459,249 +404,126 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  border-top: 1px solid var(--border-light);
 }
 
-/* Modale Paramètres Occasions (Bottom Sheet style) */
-.gift-settings-backdrop {
+.gl-pane {
   display: none;
-  align-items: flex-end; /* Bottom sheet on mobile */
+  animation: fadeIn 0.3s ease;
 }
-.gift-settings-modal {
-  width: 100%;
-  border-radius: 12px 12px 0 0;
-  margin: 0;
+.gl-pane.active {
+  display: block;
 }
-.gift-settings-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.gl-pane-title {
+  margin-top: 0;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  margin-bottom: 10px;
 }
-.gift-settings-header h3 {
-  margin: 0;
-}
-.gift-settings-body {
-  padding: 1rem;
-}
-.gift-occasions-list {
-  margin-bottom: 2rem;
-}
-.gift-occasions-grid {
-  display: grid;
-  gap: 0.5rem;
-}
-.gift-occasion-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.8rem 1rem;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-}
-.gift-occasion-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-}
-.gift-date-badge {
-  font-size: 0.8em;
-  background: var(--bg-page);
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 10px;
-}
-.gift-add-subtitle {
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-}
-.gift-add-form {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.gift-add-input-name {
-  flex: 1;
-  min-width: 150px;
-}
-.gift-add-input-date {
-  width: 120px;
-}
-.gift-help-text {
+.gl-pane-desc {
+  font-size: 0.85rem;
   color: var(--text-muted);
-  font-size: 0.85em;
+  margin-bottom: 15px;
 }
+
+.gl-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  margin-bottom: 8px;
+}
+.gl-form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-top: 15px;
+}
+.gl-divider {
+  margin: 1.5rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.gl-input-sm {
+  flex: 0 0 60px;
+}
+.gl-input-md {
+  flex: 1;
+  min-width: 120px;
+}
+
 .gift-loader {
   text-align: center;
   padding: 20px;
-}
-.gift-error-msg {
-  color: var(--danger);
-  padding: 10px;
-}
-/* ==========================================================================
-   BOUTONS & MODALE (Design System Todo)
-   ========================================================================== */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.btn-icon {
-  padding: 0.25rem;
-  min-width: 28px;
-  justify-content: center;
-  font-size: 1.2rem;
-}
-.btn-ghost {
-  background: transparent;
-  border: none;
   color: var(--text-muted);
+  font-style: italic;
 }
-.btn-ghost:hover {
-  color: var(--text-main);
-  background: var(--bg-page);
-  border-radius: 6px;
-}
-
-/* Correction de la surimpression de la modale Paramètres */
-.gift-settings-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(4px);
+.align-center {
   align-items: center;
-  justify-content: center;
-  padding: 1rem;
 }
 
-.gift-settings-modal {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-light);
-  border-radius: 14px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
+/* =========================================
+   COMPOSANTS MODALE & EDITION IN-PLACE
+   ========================================= */
+
+/* Sélecteur d'émojis horizontal */
+.emoji-picker {
   display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  animation: modalIn 0.18s ease;
-}
-
-@keyframes modalIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* ==========================================================================
-   MODALE PARAMÈTRES (Design System Todo)
-   ========================================================================== */
-.gift-settings-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(4px);
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-.gift-settings-backdrop.show {
-  display: flex;
-}
-
-.gift-settings-modal {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-light);
-  border-radius: 14px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  animation: giftModalIn 0.18s ease;
-}
-
-@keyframes giftModalIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.gift-settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-light);
-}
-.gift-settings-header h3 {
-  font-size: 1rem;
-  font-weight: 700;
-  margin: 0;
-}
-.gift-settings-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 1.2rem;
-  border-radius: 6px;
-  padding: 0.2rem 0.4rem;
-}
-.gift-settings-close:hover {
-  background: var(--bg-page);
-}
-
-.gift-settings-body {
-  padding: 1.25rem;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.gift-add-subtitle {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin: 0.5rem 0 0;
-}
-.gift-add-form {
-  display: flex;
-  gap: 0.5rem;
+  gap: 8px;
   flex-wrap: wrap;
 }
-/* Aligner le bouton sur celui de Todo */
-.gift-add-form .btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
+.emoji-option {
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 1.4rem;
+  transition: all 0.2s;
+  background: transparent;
+  user-select: none;
 }
-.gift-add-form .btn-primary:hover {
-  background: var(--primary-dark);
+.emoji-option:hover {
+  background: var(--bg-page);
+  border-color: #cbd5e1;
+}
+.emoji-option.selected {
+  border-color: var(--primary);
+  background: var(
+    --bg-subtle
+  ); /* ou un bleu très clair rgba(59, 130, 246, 0.1) */
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Alignement des boutons d'ajout */
+.modal-actions-right {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  width: 100%;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* Édition In-Place sur les lignes de la liste */
+.inline-edit-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--bg-subtle);
+  padding: 8px 12px;
+  border-radius: 8px;
+  width: 100%;
+  flex-wrap: wrap; /* Évite que ça dépasse sur mobile */
+}
+.inline-edit-form .pf-input {
+  margin: 0;
 }

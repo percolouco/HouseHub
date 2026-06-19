@@ -15,26 +15,23 @@ $activePage = "gift-list";
 $mainClass  = "pf-gift-list";
 $pageCss    = "/modules/gift-list/gift-list.css";
 
-// --- 2. RÉCUPÉRATION DYNAMIQUE DES DONNÉES (Multi-tenant) ---
-$stmt = $pdo->query("SELECT name FROM pf_people WHERE role = 'enfant' AND is_active = 1 ORDER BY name ASC");
+// --- 2. RÉCUPÉRATION DYNAMIQUE DES DONNÉES ---
+// On inclut les enfants du foyer ET les proches enfants
+$stmt = $pdo->query("SELECT name FROM pf_people WHERE role IN ('enfant', 'proche_enfant') ORDER BY name ASC");
 $children = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun enfant configuré'];
 
-$stmt = $pdo->query("SELECT name FROM pf_people WHERE role NOT IN ('enfant', 'nounou') AND is_active = 1 ORDER BY name ASC");
+// On inclut les adultes du foyer ET les proches adultes (On exclut nounou et les enfants)
+$stmt = $pdo->query("SELECT name FROM pf_people WHERE role NOT IN ('enfant', 'proche_enfant', 'nounou') ORDER BY name ASC");
 $allAdultsList = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun adulte configuré'];
 
-$stmt = $pdo->query("SELECT code, name, month_date FROM pf_gift_occasions WHERE is_active = 1 ORDER BY month_date ASC, id ASC");
+// On récupère toutes les occasions (avec l'icône)
+$stmt = $pdo->query("SELECT code, name, icon, month_date FROM pf_gift_occasions WHERE is_active = 1 ORDER BY sort_order ASC, month_date ASC, id ASC");
 $activeOccasions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($activeOccasions)) {
-    $activeOccasions = [['code' => 'DEMO', 'name' => 'Fête par défaut', 'month_date' => null]];
+    $activeOccasions = [['code' => 'DEMO', 'name' => 'Fête par défaut', 'icon' => '🎁', 'month_date' => null]];
 }
 $allowedOccasionCodes = array_column($activeOccasions, 'code');
-
-$occasionIcons = [
-    'TIO' => '/modules/gift-list/assets/img/tio.png', 'NOEL' => '/modules/gift-list/assets/img/santa.png',
-    'ROIS' => '/modules/gift-list/assets/img/reis.png', 'ANNIV' => '/modules/gift-list/assets/img/corona.png',
-    'SANT' => '/modules/gift-list/assets/img/sant.png'
-];
 
 // --- 3. CHARGEMENT DES CADEAUX ---
 $inMarks = implode(',', array_fill(0, count($allowedOccasionCodes), '?'));
@@ -43,8 +40,8 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute(array_merge([$year], $allowedOccasionCodes));
 $gifts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$data = []; 
-$adultsInView = []; 
+$data = [];
+$adultsInView = [];
 
 foreach ($gifts as $g) {
     $data[$g['occasion']][$g['child_name']]['gifts'][] = $g;
@@ -78,7 +75,7 @@ for ($i = 0; $i < $countPeople; $i++) {
     for ($j = $i + 1; $j < $countPeople; $j++) {
         $a = $people[$i]; $b = $people[$j];
         $net = $matrix[$a][$b] - $matrix[$b][$a];
-        if ($net > 0.01) { $settlements[] = ['from' => $a, 'to' => $b, 'amount' => $net]; } 
+        if ($net > 0.01) { $settlements[] = ['from' => $a, 'to' => $b, 'amount' => $net]; }
         elseif ($net < -0.01) { $settlements[] = ['from' => $b, 'to' => $a, 'amount' => -$net]; }
     }
 }
@@ -87,22 +84,26 @@ require __DIR__ . '/header.php';
 ?>
 
 <div class="pf-container cl-view-dynamic">
-    
+
     <div class="cl-titlebar">
-        <h1>🎁 <?= sprintf(tr('gift_main_title'), $year) ?></h1>
-        <button class="btn btn-ghost btn-icon" id="btn-open-gift-settings" title="<?= tr('settings') ?>">⚙️</button>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <h1 style="margin: 0;">🎁 <?= sprintf(tr('gift_main_title'), $year) ?></h1>
+            <button id="btn-open-gift-settings" class="btn-settings-gear" title="<?= tr('gift_settings') ?>" style="font-size: 1.4rem; padding: 4px;">
+                ⚙️
+            </button>
+        </div>
     </div>
 
     <div class="pf-filter-bar">
         <span class="pf-filter-icon">🔍</span>
-        
+
         <div class="pf-multi-select" id="ms-child">
             <div class="pf-ms-trigger" onclick="toggleMS('ms-child-list', this)">
                 👦 <span id="ms-child-label"><?= tr('gift_filter_all_children') ?></span>
             </div>
             <div class="pf-ms-dropdown" id="ms-child-list">
                 <label class="pf-ms-option is-all">
-                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'child')"> 
+                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'child')">
                     <?= tr('gift_filter_all_children') ?>
                 </label>
                 <?php foreach($children as $c): ?>
@@ -117,7 +118,7 @@ require __DIR__ . '/header.php';
             </div>
             <div class="pf-ms-dropdown" id="ms-adult-list">
                 <label class="pf-ms-option is-all">
-                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'adult')"> 
+                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'adult')">
                     <?= tr('gift_filter_all_adults') ?>
                 </label>
                 <?php foreach($allAdultsList as $a): ?>
@@ -128,29 +129,27 @@ require __DIR__ . '/header.php';
     </div>
 
     <section class="pf-section">
-        <?php foreach ($activeOccasions as $occ): 
+        <?php foreach ($activeOccasions as $occ):
             $occCode = $occ['code'];
+            // Affichage Brut de la BDD pour le nom de l'occasion
             $occName = $occ['name'];
+            $occIcon = $occ['icon'] ?: '🎁';
         ?>
             <div class="js-occ-section">
                 <h2 class="cl-occasion-title">
-                    <?php if(!empty($occasionIcons[$occCode])): ?>
-                        <img src="<?= $occasionIcons[$occCode] ?>" class="cl-occasion-icon" alt="">
-                    <?php else: ?>
-                        <span>🎀</span> 
-                    <?php endif; ?>
+                    <span class="cl-occasion-icon"><?= htmlspecialchars($occIcon) ?></span>
                     <?= htmlspecialchars($occName) ?>
                 </h2>
 
-                <?php foreach ($children as $child): 
+                <?php foreach ($children as $child):
                     $childData = $data[$occCode][$child] ?? ['gifts' => [], 'totals' => []];
                 ?>
                 <div class="pf-child-section js-child" data-name="<?= htmlspecialchars($child) ?>">
                     <div class="pf-child-header">
                         <h3>👦 <?= htmlspecialchars($child) ?></h3>
-                        <button class="pf-btn pf-btn-small btn-add-gift" 
-                                data-child="<?= htmlspecialchars($child) ?>" 
-                                data-occ="<?= htmlspecialchars($occCode) ?>" 
+                        <button class="pf-btn pf-btn-small btn-add-gift"
+                                data-child="<?= htmlspecialchars($child) ?>"
+                                data-occ="<?= htmlspecialchars($occCode) ?>"
                                 data-adults="<?= htmlspecialchars(json_encode(array_values($allAdultsList))) ?>">
                             ＋ <?= tr('gift_add_gift') ?>
                         </button>
@@ -171,7 +170,7 @@ require __DIR__ . '/header.php';
                             <div class="pf-gift-card-compact js-gift-card" data-adult="<?= htmlspecialchars($g['adult_name']) ?>">
                                 <div>
                                     <h4 class="pf-gift-title">
-                                        <?= htmlspecialchars($g['gift_description']) ?> 
+                                        <?= htmlspecialchars($g['gift_description']) ?>
                                         <?php if($g['product_link']): ?><a href="<?= htmlspecialchars($g['product_link']) ?>" target="_blank" class="pf-gift-link">🔗</a><?php endif; ?>
                                     </h4>
                                     <span class="pf-pill-adult">👤 <?= htmlspecialchars($g['adult_name']) ?></span>
@@ -197,15 +196,15 @@ require __DIR__ . '/header.php';
     </section>
 
     <section class="pf-section pf-section--panel gift-tricount-section">
-        <h2 class="gift-tricount-title">⚖️ <?= tr('gift_liquidations') ?? 'Bilan & Remboursements' ?></h2>
-        
+        <h2 class="gift-tricount-title">⚖️ <?= tr('gift_liquidations') ?></h2>
+
         <?php if (empty($settlements)): ?>
             <p class="gift-tricount-success">✅ <?= tr('gift_no_debt') ?></p>
         <?php else: ?>
             <ul class="pf-tricount-list">
                 <?php foreach ($settlements as $s): ?>
                     <li class="pf-tricount-item">
-                        <span><strong><?= htmlspecialchars($s['from']) ?></strong> <?= tr('gift_owes') ?> à <?= htmlspecialchars($s['to']) ?></span>
+                        <span><strong><?= htmlspecialchars($s['from']) ?></strong> <?= tr('gift_owes') ?> <?= tr('gift_to') ?> <?= htmlspecialchars($s['to']) ?></span>
                         <strong class="gift-tricount-debt-amount"><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong>
                     </li>
                 <?php endforeach; ?>
@@ -226,7 +225,7 @@ require __DIR__ . '/header.php';
                         <?php foreach ($people as $debtor): ?>
                             <tr>
                                 <th class="sticky-col bg-body"><?= htmlspecialchars($debtor) ?></th>
-                                <?php foreach ($people as $creditor): 
+                                <?php foreach ($people as $creditor):
                                     $val = $matrix[$debtor][$creditor] ?? 0;
                                     $display = ($debtor === $creditor) || $val == 0 ? '—' : number_format($val, 2, ',', ' ') . ' €';
                                     $cellClass = $val > 0 ? 'gift-cell-danger' : 'gift-cell-muted';
@@ -242,26 +241,27 @@ require __DIR__ . '/header.php';
     </section>
 </div>
 
+<!-- 1. Modale CRUD Cadeau -->
 <div id="pf-gift-modal" class="pf-modal">
     <div class="pf-modal-content gift-modal-custom-content">
         <div class="gift-modal-custom-header">
             <h3 id="modalTitle" class="pf-modal-title gift-modal-custom-title">Cadeau</h3>
             <button type="button" class="btn-modal-close gift-modal-close-btn">&times;</button>
         </div>
-        
+
         <form method="post" action="/modules/gift-list/save-gift.php" id="giftForm">
             <input type="hidden" name="year" value="<?= $year ?>">
             <input type="hidden" name="child_name" id="modalChild">
             <input type="hidden" name="occasion" id="modalOccasion">
             <input type="hidden" name="action" id="modalAction">
             <input type="hidden" name="gift_id" id="modalGiftId">
-            
+
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_col_adult') ?></label><select name="adult_name" id="modalAdult" class="pf-input" required></select></div>
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_payer') ?></label><select name="payer_name" id="modalPayer" class="pf-input" required></select></div>
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_gift_name') ?></label><input type="text" name="gift_description" id="modalDesc" class="pf-input" required></div>
             <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_price') ?></label><input type="number" step="0.01" name="amount" id="modalAmount" class="pf-input"></div>
             <div class="pf-form-group gift-form-group-spaced"><label class="pf-label"><?= tr('gift_modal_link') ?></label><input type="url" name="product_link" id="modalLink" class="pf-input"></div>
-            
+
             <div class="modal-footer gift-modal-custom-footer">
                 <button type="button" class="pf-btn btn-secondary btn-modal-close"><?= tr('btn_cancel') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
@@ -270,33 +270,86 @@ require __DIR__ . '/header.php';
     </div>
 </div>
 
-<!-- 2. Modale Paramètres Fêtes -->
-<div class="gift-settings-backdrop" id="modal-gift-settings">
-    <div class="gift-settings-modal">
-        <div class="gift-settings-header">
-            <h3>⚙️ <?= tr('gift_settings_title') ?? 'Configuration' ?></h3>
-            <button class="gift-settings-close" id="btn-close-gift-settings">×</button>
+<!-- 2. Modale Paramètres (Occasions & Proches) -->
+<div id="modal-gift-settings" class="pf-modal">
+    <div class="pf-modal-content" style="max-width: 600px; width: 90%;">
+        
+        <div class="pf-modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="pf-modal-title" style="margin: 0;">⚙️ <?= tr('gift_settings') ?></h3>
+            <button type="button" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="closeGiftSettings()">&times;</button>
         </div>
-        <div class="gift-settings-body">
+
+        <div style="display: flex; gap: 4px; background: var(--bg-page); padding: 4px; border-radius: 8px; margin: 1rem 0;">
+            <button type="button" id="tab-btn-occasions" class="bs-tab-btn active" style="flex: 1; padding: 8px 12px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s;" onclick="switchGLTab('occasions')"><?= tr('gift_tab_occasions') ?></button>
+            <button type="button" id="tab-btn-proches" class="bs-tab-btn" style="flex: 1; padding: 8px 12px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; background: transparent;" onclick="switchGLTab('proches')"><?= tr('gift_tab_proches') ?></button>
+        </div>
+
+        <div class="pf-modal-body" style="min-height: 450px; max-height: 60vh; overflow-y: auto; padding: 0 1rem 1rem 1rem; display: flex; flex-direction: column;">
             
-            <h4 class="gift-add-subtitle"><?= tr('gift_settings_add_title') ?? '+ Ajouter' ?></h4>
-            <form id="form-add-occasion" class="gift-add-form">
-                <input type="text" class="pf-input" name="name" placeholder="<?= tr('gift_settings_name_placeholder') ?? 'Nom' ?>" required style="flex: 1; min-width: 150px; padding: 0.4rem 0.75rem;">
-                <input type="text" class="pf-input" name="month_date" placeholder="<?= tr('gift_settings_date_placeholder') ?? 'MM-JJ' ?>" style="width: 120px; padding: 0.4rem 0.75rem;">
-                <button type="submit" class="btn btn-secondary"><?= tr('btn_add') ?? 'Ajouter' ?></button>
-            </form>
-            <small class="gift-help-text"><?= tr('gift_settings_date_help') ?? 'Optionnel' ?></small>
-
-            <hr style="border:0; border-bottom:1px solid var(--border-light); margin: 1rem 0;">
-
-            <form id="form-save-toggles">
-                <div id="occasions-list-container" class="gift-occasions-list"></div>
+            <div id="gl-pane-occasions" class="gl-pane active" style="display: block; animation: fadeIn 0.3s ease;">
+                <div id="occasions-list" style="margin-bottom: 20px;">⏳ <?= tr('loading') ?></div>
                 
-                <div class="modal-footer gift-modal-custom-footer" style="padding-top: 1rem; border-top: 1px solid var(--border-light);">
-                    <button type="button" class="btn btn-secondary" id="btn-cancel-settings"><?= tr('btn_cancel') ?? 'Annuler' ?></button>
-                    <button type="submit" class="btn btn-primary"><?= tr('btn_save') ?? 'Enregistrer' ?></button>
-                </div>
-            </form>
+                <hr style="border:0; border-top: 1px solid var(--border-light); margin: 20px 0;">
+                
+                <h5 style="margin: 0 0 15px 0; font-size: 1rem; color: var(--text-main);"><?= tr('gift_settings_add_occ') ?></h5>
+                <form id="form-add-occasion" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <label class="pf-label" style="display: block; margin-bottom: 6px;"><?= tr('gift_settings_icon') ?></label>
+                        <input type="hidden" name="icon" id="add-occ-icon" value="🎁">
+                        <div class="emoji-picker" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <div class="emoji-option selected" onclick="selectEmoji(this, 'add-occ-icon', '🎁')">🎁</div>
+                            <div class="emoji-option" onclick="selectEmoji(this, 'add-occ-icon', '🎄')">🎄</div>
+                            <div class="emoji-option" onclick="selectEmoji(this, 'add-occ-icon', '🎂')">🎂</div>
+                            <div class="emoji-option" onclick="selectEmoji(this, 'add-occ-icon', '🎉')">🎉</div>
+                            <div class="emoji-option" onclick="selectEmoji(this, 'add-occ-icon', '🎓')">🎓</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label class="pf-label" style="display: block; margin-bottom: 6px;"><?= tr('gift_modal_gift_name') ?> *</label>
+                            <input type="text" name="name" id="add-occ-name" class="pf-input" style="width: 100%;" required>
+                        </div>
+                        <div style="width: 110px;">
+                            <label class="pf-label" style="display: block; margin-bottom: 6px;"><?= tr('gift_settings_date') ?></label>
+                            <input type="text" name="month_date" id="add-occ-date" class="pf-input" style="width: 100%;" placeholder="MM-DD">
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px;">
+                        <button type="button" class="pf-btn btn-secondary" onclick="document.getElementById('form-add-occasion').reset()"><?= tr('btn_cancel') ?></button>
+                        <button type="submit" class="pf-btn pf-btn-primary"><?= tr('btn_add') ?></button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="gl-pane-proches" class="gl-pane" style="display: none; animation: fadeIn 0.3s ease;">
+                <div id="proches-list" style="margin-bottom: 20px;">⏳ <?= tr('loading') ?></div>
+
+                <hr style="border:0; border-top: 1px solid var(--border-light); margin: auto 0 20px 0;">
+                
+                <h5 style="margin: 0 0 15px 0; font-size: 1rem; color: var(--text-main);"><?= tr('gift_settings_add_proche') ?></h5>
+                <form id="form-add-proche" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label class="pf-label" style="display: block; margin-bottom: 6px;"><?= tr('gift_ph_proche_name') ?> *</label>
+                            <input type="text" name="name" id="add-proche-name" class="pf-input" style="width: 100%;" required>
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label class="pf-label" style="display: block; margin-bottom: 6px;"><?= tr('gift_role_label') ?> *</label>
+                            <select name="role" id="add-proche-role" class="pf-input" style="width: 100%;" required>
+                                <option value="proche_adulte"><?= tr('gift_role_proche_adulte') ?></option>
+                                <option value="proche_enfant"><?= tr('gift_role_proche_enfant') ?></option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px;">
+                        <button type="button" class="pf-btn btn-secondary" onclick="document.getElementById('form-add-proche').reset()"><?= tr('btn_cancel') ?></button>
+                        <button type="submit" class="pf-btn pf-btn-primary"><?= tr('btn_add') ?></button>
+                    </div>
+                </form>
+            </div>
 
         </div>
     </div>
@@ -306,6 +359,7 @@ require __DIR__ . '/header.php';
 // ==========================================
 // 1. GESTION DU COMPOSANT MULTI-SELECT VANILLA
 // ==========================================
+
 function toggleMS(listId, triggerEl) {
     document.querySelectorAll('.pf-ms-dropdown').forEach(el => { if (el.id !== listId) el.classList.remove('open'); });
     document.querySelectorAll('.pf-ms-trigger').forEach(el => { if (el !== triggerEl) el.classList.remove('active'); });
@@ -324,7 +378,7 @@ document.addEventListener('click', e => {
 function handleMSChange(cb, type) {
     const container = document.getElementById('ms-' + type + '-list');
     if (!container) return;
-    
+
     if (cb.value === 'all' && cb.checked) {
         container.querySelectorAll('input[type="checkbox"]:not([value="all"])').forEach(i => i.checked = false);
     } else if (cb.checked) {
@@ -337,10 +391,10 @@ function handleMSChange(cb, type) {
             if (allCb) allCb.checked = true;
         }
     }
-    
+
     const checkedSpecifics = container.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])');
     const labelEl = document.getElementById('ms-' + type + '-label');
-    
+
     if (labelEl) {
         if (checkedSpecifics.length === 0) {
             let defaultText = 'Tous';
@@ -362,23 +416,23 @@ function applyGiftFilters() {
     const cList = document.getElementById('ms-child-list');
     const aList = document.getElementById('ms-adult-list');
     if (!cList || !aList) return;
-    
+
     const allChildCb = cList.querySelector('input[value="all"]');
     const cAll = allChildCb ? allChildCb.checked : true;
     const cVals = Array.from(cList.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])')).map(i => i.value);
-    
+
     const allAdultCb = aList.querySelector('input[value="all"]');
     const aAll = allAdultCb ? allAdultCb.checked : true;
     const aVals = Array.from(aList.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])')).map(i => i.value);
 
     document.querySelectorAll('.js-occ-section').forEach(occSec => {
         let occHasVisible = false;
-        
+
         occSec.querySelectorAll('.js-child').forEach(childSec => {
-            const cName = childSec.getAttribute('data-name'); 
+            const cName = childSec.getAttribute('data-name');
             const matchChild = cAll || (cVals.indexOf(cName) !== -1);
             let childHasVisibleCard = false;
-            
+
             if (matchChild) {
                 childSec.querySelectorAll('.js-gift-card').forEach(card => {
                     const aName = card.getAttribute('data-adult');
@@ -386,23 +440,23 @@ function applyGiftFilters() {
                     card.style.display = matchAdult ? 'flex' : 'none';
                     if (matchAdult) childHasVisibleCard = true;
                 });
-                
+
                 childSec.querySelectorAll('.js-pill-adult').forEach(pill => {
                     const aName = pill.getAttribute('data-adult');
                     const matchAdult = aAll || (aVals.indexOf(aName) !== -1);
                     pill.style.opacity = matchAdult ? '1' : '0.2';
                 });
-                
+
                 const empty = childSec.querySelector('.js-empty-state');
                 if (empty) empty.style.display = childHasVisibleCard ? 'none' : 'block';
-                
+
                 childSec.style.display = 'block';
                 occHasVisible = true;
             } else {
                 childSec.style.display = 'none';
             }
         });
-        
+
         occSec.style.display = occHasVisible ? 'block' : 'none';
     });
 }
@@ -449,16 +503,16 @@ document.body.addEventListener('click', async function(e) {
         const occCode = btnAdd.dataset.occ;
         const adultsList = JSON.parse(btnAdd.dataset.adults || '[]');
 
-        document.getElementById('modalAction').value = 'create'; 
+        document.getElementById('modalAction').value = 'create';
         document.getElementById('modalGiftId').value = '';
-        document.getElementById('modalChild').value = childName; 
+        document.getElementById('modalChild').value = childName;
         document.getElementById('modalOccasion').value = occCode;
-        document.getElementById('modalDesc').value = ''; 
+        document.getElementById('modalDesc').value = '';
         document.getElementById('modalAmount').value = '';
         document.getElementById('modalLink').value = '';
-        
+
         populateSelects(adultsList);
-        
+
         if (adultSelect && payerSelect) {
             if (adultsList.indexOf('Laia') !== -1) {
                 adultSelect.value = 'Laia'; payerSelect.value = 'Laia';
@@ -469,7 +523,7 @@ document.body.addEventListener('click', async function(e) {
 
         const titleStr = window.I18N && window.I18N['gift_modal_title_add'] ? window.I18N['gift_modal_title_add'] : 'Ajouter pour %s';
         document.getElementById('modalTitle').textContent = titleStr.replace('%s', childName);
-        
+
         if (modal) { modal.classList.add('open'); document.body.classList.add('no-scroll'); }
         return;
     }
@@ -478,11 +532,11 @@ document.body.addEventListener('click', async function(e) {
     if (btnEdit) {
         const data = JSON.parse(btnEdit.dataset.gift || '{}');
 
-        document.getElementById('modalAction').value = 'update'; 
+        document.getElementById('modalAction').value = 'update';
         document.getElementById('modalGiftId').value = data.id;
-        document.getElementById('modalChild').value = data.child_name; 
+        document.getElementById('modalChild').value = data.child_name;
         document.getElementById('modalOccasion').value = data.occasion;
-        document.getElementById('modalDesc').value = data.gift_description; 
+        document.getElementById('modalDesc').value = data.gift_description;
         document.getElementById('modalAmount').value = data.amount;
         document.getElementById('modalLink').value = data.product_link;
 
@@ -491,16 +545,16 @@ document.body.addEventListener('click', async function(e) {
             let adultExists = false, payerExists = false;
             for(let i=0; i<adultSelect.options.length; i++) { if(adultSelect.options[i].value === data.adult_name) adultExists = true; }
             for(let i=0; i<payerSelect.options.length; i++) { if(payerSelect.options[i].value === payerVal) payerExists = true; }
-            
+
             if (!adultExists) adultSelect.appendChild(new Option(data.adult_name, data.adult_name));
             if (!payerExists) payerSelect.appendChild(new Option(payerVal, payerVal));
-            
+
             adultSelect.value = data.adult_name;
             payerSelect.value = payerVal;
         }
-        
+
         document.getElementById('modalTitle').textContent = window.I18N && window.I18N['gift_modal_title_edit'] ? window.I18N['gift_modal_title_edit'] : 'Modifier le cadeau';
-        
+
         if (modal) { modal.classList.add('open'); document.body.classList.add('no-scroll'); }
         return;
     }
@@ -510,11 +564,11 @@ document.body.addEventListener('click', async function(e) {
         const giftId = btnDel.dataset.id;
         const msg = window.I18N && window.I18N['gift_confirm_delete'] ? window.I18N['gift_confirm_delete'] : 'Supprimer ce cadeau ?';
         if (!confirm(msg)) return;
-        
+
         const fd = new FormData();
         fd.append('action', 'delete');
         fd.append('gift_id', giftId);
-        
+
         try {
             await fetch('/modules/gift-list/save-gift.php', { method: 'POST', body: fd });
             window.location.reload();
@@ -531,7 +585,7 @@ if (giftForm) {
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
         const oldText = btn.innerText;
-        btn.innerText = '...'; 
+        btn.innerText = '...';
         btn.disabled = true;
 
         try {
@@ -539,164 +593,382 @@ if (giftForm) {
             window.location.reload();
         } catch(err) {
             console.error(err);
-            btn.innerText = oldText; 
+            btn.innerText = oldText;
             btn.disabled = false;
         }
     });
 }
 
 // ==========================================
-// GESTION DES PARAMÈTRES (MODALE FÊTES ⚙️)
+// 3. GESTION DES PARAMÈTRES (MODALE FÊTES & PROCHES)
 // ==========================================
 
-// 1. Fonctions d'ouverture / fermeture propres
 function closeGiftSettings() {
-    document.getElementById('modal-gift-settings').classList.remove('show');
+    document.getElementById('modal-gift-settings').classList.remove('open');
     document.body.classList.remove('no-scroll');
 }
 
-const btnOpenSettings = document.getElementById('btn-open-gift-settings');
-if (btnOpenSettings) {
-    btnOpenSettings.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const modalSettings = document.getElementById('modal-gift-settings');
-        if (modalSettings) {
-            modalSettings.classList.add('show');
-            document.body.classList.add('no-scroll');
-            await loadGiftOccasions();
-        }
-    });
-}
+document.getElementById('btn-open-gift-settings')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    document.getElementById('modal-gift-settings').classList.add('open');
+    document.body.classList.add('no-scroll');
+    await loadSettingsData();
+});
 
-document.getElementById('btn-close-gift-settings')?.addEventListener('click', closeGiftSettings);
-document.getElementById('btn-cancel-settings')?.addEventListener('click', closeGiftSettings);
+document.querySelectorAll('.btn-close-settings').forEach(btn => btn.addEventListener('click', closeGiftSettings));
 
-// Fermeture au clic sur le fond (backdrop)
-const modalGiftSettings = document.getElementById('modal-gift-settings');
-if (modalGiftSettings) {
-    modalGiftSettings.addEventListener('click', (e) => {
-        if (e.target === modalGiftSettings) {
-            closeGiftSettings();
-        }
-    });
-}
+function switchGLTab(tabId) {
+    // Gestion du contenu (Afficher/Cacher)
+    document.getElementById('gl-pane-occasions').style.display = (tabId === 'occasions') ? 'block' : 'none';
+    document.getElementById('gl-pane-proches').style.display = (tabId === 'proches') ? 'block' : 'none';
 
-// 2. Chargement dynamique de la liste
-async function loadGiftOccasions() {
-    const container = document.getElementById('occasions-list-container');
-    if (!container) return;
-    
-    const txtLoading = window.I18N && window.I18N['loading'] ? window.I18N['loading'] : '⏳';
-    const txtEmpty = window.I18N && window.I18N['gift_settings_empty'] ? window.I18N['gift_settings_empty'] : 'Vide';
-    const txtActive = window.I18N && window.I18N['gift_settings_active'] ? window.I18N['gift_settings_active'] : 'Actif';
+    // Gestion du style des boutons d'onglet
+    const btnOcc = document.getElementById('tab-btn-occasions');
+    const btnProche = document.getElementById('tab-btn-proches');
 
-    container.innerHTML = `<div class="gift-loader">${txtLoading}</div>`;
-
-    try {
-        const res = await fetch('/modules/gift-list/api-settings.php?action=get_occasions');
-        const text = await res.text();
-        const data = JSON.parse(text);
-
-        if (!data.ok) throw new Error(data.error);
-
-        if (data.data.length === 0) {
-            container.innerHTML = `<em>${txtEmpty}</em>`;
-            return;
-        }
-
-        let html = '<div class="gift-occasions-grid">';
-        data.data.forEach(occ => {
-            const isChecked = occ.is_active == 1 ? 'checked' : '';
-            const dateBadge = occ.month_date ? `<span class="gift-date-badge">${occ.month_date}</span>` : '';
-            
-            html += `
-                <div class="pf-card gift-occasion-card">
-                    <div>
-                        <strong>${occ.name}</strong> ${dateBadge}
-                    </div>
-                    <label class="gift-occasion-toggle">
-                        <input type="checkbox" class="occ-toggle-cb" data-id="${occ.id}" ${isChecked}>
-                        <small>${txtActive}</small>
-                    </label>
-                </div>
-            `;
-        });
-        html += '</div>';
-        container.innerHTML = html;
-
-    } catch (e) {
-        container.innerHTML = `<div class="gift-error-msg">Erreur : ${e.message}</div>`;
+    if (tabId === 'occasions') {
+        btnOcc.style.background = 'var(--bg-panel)';
+        btnOcc.style.color = 'var(--primary)';
+        btnOcc.style.boxShadow = 'var(--shadow-sm)';
+        
+        btnProche.style.background = 'transparent';
+        btnProche.style.color = 'var(--text-muted)';
+        btnProche.style.boxShadow = 'none';
+    } else {
+        btnProche.style.background = 'var(--bg-panel)';
+        btnProche.style.color = 'var(--primary)';
+        btnProche.style.boxShadow = 'var(--shadow-sm)';
+        
+        btnOcc.style.background = 'transparent';
+        btnOcc.style.color = 'var(--text-muted)';
+        btnOcc.style.boxShadow = 'none';
     }
 }
 
-// 3. Soumission du formulaire d'AJOUT
-const formAddOccasion = document.getElementById('form-add-occasion');
-if (formAddOccasion) {
-    formAddOccasion.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = formAddOccasion.querySelector('button[type="submit"]');
-        const oldText = btn.innerText;
-        btn.innerText = '⏳';
-        btn.disabled = true;
+let hasSettingsChanged = false;
 
-        const formData = new FormData(formAddOccasion);
-        formData.append('action', 'add_occasion');
+async function loadSettingsData() {
+    try {
+        const res = await pachaFetch('/modules/gift-list/api-settings.php?action=get_all');
+        if (!res.success) throw new Error(res.error);
+        
+        renderOccasions(res.data.occasions);
+        renderProches(res.data.proches);
+    } catch (e) {
+        document.getElementById('occasions-list').innerHTML = `<div class="pf-alert pf-alert--error">Erreur : ${e.message}</div>`;
+        document.getElementById('proches-list').innerHTML = `<div class="pf-alert pf-alert--error">Erreur : ${e.message}</div>`;
+    }
+}
 
-        try {
-            const res = await fetch('/modules/gift-list/api-settings.php', { method: 'POST', body: formData });
-            const text = await res.text();
-            const data = JSON.parse(text);
+function renderOccasions(occasions) {
+    const container = document.getElementById('occasions-list');
+    if (!occasions.length) { container.innerHTML = `<em class="gift-empty-state">Vide</em>`; return; }
 
-            if (!data.ok) throw new Error(data.error || 'Erreur');
+    let html = '';
+    occasions.forEach(occ => {
+        const isChecked = occ.is_active == 1 ? 'checked' : '';
+        // ⚠️ Remarque l'ajout de id="row-occ-${occ.id}" ici :
+        html += `
+            <div class="gl-list-item" id="row-occ-${occ.id}">
+                <div>
+                    <span style="font-size:1.2rem; margin-right:8px;">${occ.icon || '🎁'}</span>
+                    <strong>${occ.name}</strong> 
+                    <small style="color:var(--text-muted); margin-left:8px;">${occ.month_date || ''}</small>
+                </div>
+                <div class="pf-flex-gap-8 align-center">
+                    <label style="display:flex; align-items:center; cursor:pointer;">
+                        <input type="checkbox" class="pf-checkbox-lg" ${isChecked} onchange="toggleOccasion(${occ.id}, this.checked)">
+                    </label>
+                    <button type="button" class="btn-icon-action edit" onclick="transformRowToEditOccasion('row-occ-${occ.id}', ${occ.id}, '${occ.name.replace(/'/g, "\\'")}', '${occ.icon}', '${occ.month_date || ''}')" title="${tr('btn_edit')}">✏️</button>
+                    <button type="button" class="btn-icon-action delete" onclick="deleteOccasion(${occ.id})" title="${tr('btn_delete')}">🗑️</button>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function renderProches(proches) {
+    const container = document.getElementById('proches-list');
+    if (!proches.length) { container.innerHTML = `<em class="gift-empty-state">Aucun proche configuré.</em>`; return; }
+
+    let html = '';
+    proches.forEach(p => {
+        const roleLabel = p.role === 'proche_adulte' ? (tr('gift_role_proche_adulte') || 'Adulte') : (tr('gift_role_proche_enfant') || 'Enfant');
+        html += `
+            <div class="gl-list-item" id="row-proche-${p.id}">
+                <div><strong>${p.name}</strong> <small style="color:var(--text-muted);">— ${roleLabel}</small></div>
+                <div class="pf-flex-gap-8 align-center">
+                    <button type="button" class="btn-icon-action edit" onclick="transformRowToEditProche('row-proche-${p.id}', ${p.id}, '${p.name.replace(/'/g, "\\'")}', '${p.role}')" title="${tr('btn_edit')}">✏️</button>
+                    <button type="button" class="btn-icon-action delete" onclick="deleteProche(${p.id})" title="${tr('btn_delete')}">🗑️</button>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// ==========================================
+// CRUD : OCCASIONS
+// ==========================================
+
+// 1. Ajouter une occasion
+document.getElementById('form-add-occasion')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    hasSettingsChanged = true;
+    
+    const fd = new FormData(e.target); 
+    fd.append('action', 'save_occasion');
+    
+    try {
+        await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+        
+        // On vide le formulaire
+        e.target.reset();
+        
+        // On remet l'émoji par défaut visuellement
+        document.querySelectorAll('#form-add-occasion .emoji-option').forEach(el => el.classList.remove('selected'));
+        document.querySelector('#form-add-occasion .emoji-option').classList.add('selected');
+        document.getElementById('add-occ-icon').value = '🎁';
+        
+        showToast("Fête ajoutée avec succès !", "success");
+        loadSettingsData(); // Recharge la liste
+    } catch (err) {
+        showToast("Erreur lors de l'ajout", "error");
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// 2. Sauvegarder la modification (In-place)
+async function saveInlineOccasion(id) {
+    hasSettingsChanged = true;
+    const fd = new FormData();
+    fd.append('action', 'save_occasion');
+    fd.append('id', id);
+    fd.append('icon', document.getElementById(`inline-occ-icon-${id}`).value);
+    fd.append('name', document.getElementById(`inline-occ-name-${id}`).value);
+    fd.append('month_date', document.getElementById(`inline-occ-date-${id}`).value);
+
+    try {
+        await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+        showToast("Fête modifiée avec succès !", "success");
+        loadSettingsData(); 
+    } catch (err) {
+        showToast("Erreur lors de la modification", "error");
+        console.error(err);
+    }
+}
+
+// 3. Supprimer une occasion
+async function deleteOccasion(id) {
+    if (!confirm(tr('confirm_delete') || 'Supprimer définitivement ?')) return;
+    hasSettingsChanged = true;
+    const fd = new FormData(); 
+    fd.append('action', 'delete_occasion'); 
+    fd.append('id', id);
+    
+    try {
+        await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+        showToast("Fête supprimée.", "success");
+        loadSettingsData();
+    } catch (err) {
+        showToast("Erreur lors de la suppression", "error");
+    }
+}
+
+// 4. Activer / Désactiver (Checkbox)
+async function toggleOccasion(id, state) {
+    hasSettingsChanged = true;
+    const fd = new FormData();
+    fd.append('action', 'toggle_occasion');
+    fd.append('id', id);
+    fd.append('state', state ? 1 : 0);
+    
+    try {
+        await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+        showToast(state ? "Fête activée" : "Fête masquée", "success");
+    } catch (err) {
+        showToast("Erreur de mise à jour", "error");
+    }
+}
+
+// ==========================================
+// CRUD : PROCHES
+// ==========================================
+
+// 1. Ajouter un proche
+document.getElementById('form-add-proche')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    hasSettingsChanged = true;
+    
+    const fd = new FormData(e.target); 
+    fd.append('action', 'save_proche');
+    
+    try {
+        await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+        e.target.reset();
+        showToast("Proche ajouté avec succès !", "success");
+        loadSettingsData();
+    } catch (err) {
+        showToast("Erreur lors de l'ajout", "error");
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// 2. Sauvegarder la modification (In-place)
+async function saveInlineProche(id) {
+    hasSettingsChanged = true;
+    const fd = new FormData();
+    fd.append('action', 'save_proche');
+    fd.append('id', id);
+    fd.append('name', document.getElementById(`inline-proche-name-${id}`).value);
+    fd.append('role', document.getElementById(`inline-proche-role-${id}`).value);
+
+    try {
+        await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+        showToast("Proche mis à jour !", "success");
+        loadSettingsData(); 
+    } catch (err) {
+        showToast("Erreur lors de la mise à jour", "error");
+    }
+}
+
+// 3. Supprimer un proche
+async function deleteProche(id) {
+    if (!confirm(tr('confirm_delete') || 'Supprimer ce proche ?')) return;
+    hasSettingsChanged = true;
+    const fd = new FormData(); 
+    fd.append('action', 'delete_proche'); 
+    fd.append('id', id);
+    
+    try {
+        await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+        showToast("Proche retiré de la liste.", "success");
+        loadSettingsData();
+    } catch (err) {
+        showToast("Erreur lors de la suppression", "error");
+    }
+}
+
+// Rechargement intelligent lors de la fermeture si modifications
+document.getElementById('modal-gift-settings').addEventListener('click', (e) => {
+    if (e.target.id === 'modal-gift-settings' || e.target.classList.contains('btn-close-settings')) {
+        if (hasSettingsChanged) {
+            showToast(tr('gift_settings_saved') || 'Paramètres mis à jour !', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            closeGiftSettings();
+        }
+    }
+});
+
+// Fonction pour gérer la sélection dans la grille d'émojis (formulaire d'ajout)
+function selectEmoji(element, targetInputId, emoji) {
+    document.getElementById(targetInputId).value = emoji;
+    // Mise à jour visuelle de la sélection
+    const siblings = element.parentNode.querySelectorAll('.emoji-option');
+    siblings.forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+}
+
+// ==========================================
+// LOGIQUE D'ÉDITION IN-PLACE (OCCASIONS)
+// ==========================================
+
+// On crée une mémoire pour stocker le HTML d'origine de chaque ligne
+const rowStates = {};
+
+function transformRowToEditOccasion(rowId, id, name, icon, date) {
+    const row = document.getElementById(rowId);
+    
+    // On sauvegarde l'état proprement en JS (fini les bugs d'affichage !)
+    rowStates[rowId] = row.innerHTML; 
+
+    row.innerHTML = `
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; background: var(--bg-subtle); padding: 8px; border-radius: 8px; border: 1px solid var(--border-light);">
+            <select id="inline-occ-icon-${id}" class="pf-input" style="width: 60px; padding: 6px; margin: 0;">
+                <option value="🎁" ${icon==='🎁'?'selected':''}>🎁</option>
+                <option value="🎄" ${icon==='🎄'?'selected':''}>🎄</option>
+                <option value="🎂" ${icon==='🎂'?'selected':''}>🎂</option>
+                <option value="🎉" ${icon==='🎉'?'selected':''}>🎉</option>
+                <option value="🎓" ${icon==='🎓'?'selected':''}>🎓</option>
+            </select>
+            <input type="text" id="inline-occ-name-${id}" value="${name}" class="pf-input" style="flex: 1; min-width: 100px; padding: 6px; margin: 0;">
+            <input type="text" id="inline-occ-date-${id}" value="${date}" class="pf-input" style="width: 70px; padding: 6px; margin: 0;" placeholder="MM-JJ">
             
-            formAddOccasion.reset();
-            await loadGiftOccasions(); // Rafraîchit juste la liste dans la modale !
-
-        } catch (err) {
-            alert("Erreur: " + err.message);
-        } finally {
-            btn.innerText = oldText;
-            btn.disabled = false;
-        }
-    });
+            <div style="display: flex; gap: 4px; margin-left: auto;">
+                <button type="button" onclick="saveInlineOccasion(${id})" class="pf-btn pf-btn-primary" style="padding: 6px 10px;">💾</button>
+                <button type="button" onclick="cancelInlineEdit('${rowId}')" class="pf-btn btn-secondary" style="padding: 6px 10px;">❌</button>
+            </div>
+        </div>
+    `;
 }
 
-// 4. Soumission GLOBALE (Bouton Enregistrer) pour les Checkboxes
-const formSaveToggles = document.getElementById('form-save-toggles');
-if (formSaveToggles) {
-    formSaveToggles.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = formSaveToggles.querySelector('button[type="submit"]');
-        const oldText = btn.innerText;
-        btn.innerText = '⏳';
-        btn.disabled = true;
+async function saveInlineOccasion(id) {
+    hasSettingsChanged = true;
+    const fd = new FormData();
+    fd.append('action', 'save_occasion');
+    fd.append('id', id);
+    fd.append('icon', document.getElementById(`inline-occ-icon-${id}`).value);
+    fd.append('name', document.getElementById(`inline-occ-name-${id}`).value);
+    fd.append('month_date', document.getElementById(`inline-occ-date-${id}`).value);
 
-        // On récolte l'état de toutes les checkboxes
-        const states = [];
-        formSaveToggles.querySelectorAll('.occ-toggle-cb').forEach(cb => {
-            states.push({ id: cb.dataset.id, state: cb.checked ? 1 : 0 });
-        });
-
-        const formData = new FormData();
-        formData.append('action', 'save_toggles');
-        formData.append('states', JSON.stringify(states));
-
-        try {
-            const res = await fetch('/modules/gift-list/api-settings.php', { method: 'POST', body: formData });
-            const text = await res.text();
-            const data = JSON.parse(text);
-
-            if (!data.ok) throw new Error(data.error);
-
-            // Succès : on rafraîchit la page pour afficher/masquer les onglets
-            window.location.reload(); 
-        } catch (err) {
-            alert("Erreur: " + err.message);
-            btn.innerText = oldText;
-            btn.disabled = false;
-        }
-    });
+    // On met à jour en BDD puis on recharge la liste !
+    await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+    loadSettingsData(); 
 }
+
+// ==========================================
+// LOGIQUE D'ÉDITION IN-PLACE (PROCHES)
+// ==========================================
+
+function transformRowToEditProche(rowId, id, name, role) {
+    const row = document.getElementById(rowId);
+    rowStates[rowId] = row.innerHTML; 
+
+    const roleAdulte = window.I18N ? window.I18N['gift_role_proche_adulte'] : 'Adulte';
+    const roleEnfant = window.I18N ? window.I18N['gift_role_proche_enfant'] : 'Enfant';
+
+    row.innerHTML = `
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; background: var(--bg-subtle); padding: 8px; border-radius: 8px; border: 1px solid var(--border-light);">
+            <input type="text" id="inline-proche-name-${id}" value="${name}" class="pf-input" style="flex: 1; min-width: 100px; padding: 6px; margin: 0;">
+            <select id="inline-proche-role-${id}" class="pf-input" style="width: 130px; padding: 6px; margin: 0;">
+                <option value="proche_adulte" ${role==='proche_adulte'?'selected':''}>${roleAdulte}</option>
+                <option value="proche_enfant" ${role==='proche_enfant'?'selected':''}>${roleEnfant}</option>
+            </select>
+            
+            <div style="display: flex; gap: 4px; margin-left: auto;">
+                <button type="button" onclick="saveInlineProche(${id})" class="pf-btn pf-btn-primary" style="padding: 6px 10px;">💾</button>
+                <button type="button" onclick="cancelInlineEdit('${rowId}')" class="pf-btn btn-secondary" style="padding: 6px 10px;">❌</button>
+            </div>
+        </div>
+    `;
+}
+
+async function saveInlineProche(id) {
+    hasSettingsChanged = true;
+    const fd = new FormData();
+    fd.append('action', 'save_proche');
+    fd.append('id', id);
+    fd.append('name', document.getElementById(`inline-proche-name-${id}`).value);
+    fd.append('role', document.getElementById(`inline-proche-role-${id}`).value);
+
+    await pachaFetch('/modules/gift-list/api-settings.php', { method: 'POST', body: fd });
+    loadSettingsData(); 
+}
+
+// Fonction pour restaurer la ligne (sans casser le HTML)
+function cancelInlineEdit(rowId) {
+    document.getElementById(rowId).innerHTML = rowStates[rowId];
+}
+
 </script>
 
 <?php require __DIR__ . '/footer.php'; ?>

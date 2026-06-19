@@ -1,15 +1,18 @@
 <?php
 // modules/budget/views/budget_prev.php
 
-// 1. Chargement dynamique des parents
-$stmtPeople = $pdo->query("SELECT id, name, user_id, role, color FROM pf_people WHERE role = 'parent' ORDER BY id ASC");
+// 1. Chargement dynamique des ADULTES de la famille
+$stmtPeople = $pdo->query("SELECT id, name, user_id, role, color FROM pf_people WHERE role NOT IN ('enfant', 'nounou') AND is_active = 1 ORDER BY id ASC");
 $budgetParents = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
-$p1_name = $budgetParents[0]['name'] ?? 'Parent 1';
-$p2_name = $budgetParents[1]['name'] ?? 'Parent 2';
+// Sécurité : au cas où aucun adulte n'est trouvé, on évite un crash
+if (empty($budgetParents)) {
+    $budgetParents[] = ['id' => 0, 'name' => 'Utilisateur', 'color' => '#0891b2'];
+}
+
 $currentYear = date('Y');
 
-// Cartographie dynamique
+// Cartographie dynamique (Supporte 1, 2 ou N adultes)
 $parentMapping = [];
 foreach ($budgetParents as $index => $parent) {
     $num = $index + 1;
@@ -21,6 +24,10 @@ foreach ($budgetParents as $index => $parent) {
     ];
 }
 
+// 1.5 Récupération des VRAIS comptes bancaires créés dans les paramètres
+$stmtAccounts = $pdo->query("SELECT name FROM pf_bank_accounts ORDER BY is_default DESC, name ASC");
+$bankAccounts = $stmtAccounts->fetchAll(PDO::FETCH_COLUMN);
+
 // 2. Récupération Config Salaires
 $salaryConfig = [];
 $stmt = $pdo->prepare("SELECT * FROM pf_salary_config WHERE year = ?");
@@ -29,7 +36,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $salaryConfig[$row['person']] = $row;
 }
 
-// Sécurité profils de salaire vides
+// Sécurité profils de salaire vides (Garantit l'affichage à 0 même si non configuré)
 foreach ($parentMapping as $map) {
     if (!isset($salaryConfig[$map['name']])) {
         $salaryConfig[$map['name']] = ['salary'=>0, 'mensualite'=>0, 'frais_func'=>0, 'eco_perso'=>0, 'eco_family'=>0];
@@ -103,21 +110,28 @@ function getTranslatedMonthName($dateString) {
     return tr('month_' . $m) . ' ' . $y;
 }
 
-// --- 🧠 PREPARATION DATA TRICOUNT / AVANCES ---
+// --- 🧠 PREPARATION DATA TRICOUNT / AVANCES (Dynamique) ---
 $stmtAdvancesList = $pdo->query("SELECT * FROM pf_advances WHERE is_resolved = 0 ORDER BY advance_date DESC");
 $activeAdvances = $stmtAdvancesList->fetchAll(PDO::FETCH_ASSOC);
 
-$advTotal = [$p1_name => 0, $p2_name => 0];
-$livretTotal = [$p1_name => 0, $p2_name => 0];
+$advTotal = [];
+$livretTotal = [];
+$labelsCC = [];
+$labelsLivret = [];
 
-$labelsCC = [$p1_name => [], $p2_name => []];
-$labelsLivret = [$p1_name => [], $p2_name => []];
+foreach ($parentMapping as $map) {
+    $advTotal[$map['name']] = 0;
+    $livretTotal[$map['name']] = 0;
+    $labelsCC[$map['name']] = [];
+    $labelsLivret[$map['name']] = [];
+}
 
 foreach ($activeAdvances as $adv) {
     $p = $adv['payer'];
     $amt = (float)$adv['amount'];
     $labelStr = htmlspecialchars($adv['description']) . ' (' . number_format($amt, 0, ',', ' ') . '€)';
     
+    // Si un ancien nom traîne en base, on l'initialise
     if (!isset($advTotal[$p])) {
         $advTotal[$p] = 0; $livretTotal[$p] = 0;
         $labelsCC[$p] = []; $labelsLivret[$p] = [];
@@ -132,10 +146,16 @@ foreach ($activeAdvances as $adv) {
     }
 }
 
-$balanceDiff = abs(($advTotal[$p1_name] ?? 0) - ($advTotal[$p2_name] ?? 0));
+// Calcul de la dette croisée (Valable surtout si 2 parents)
+$balanceDiff = 0;
 $owedTo = '';
-if (($advTotal[$p1_name] ?? 0) > ($advTotal[$p2_name] ?? 0)) $owedTo = $p1_name;
-elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_name;
+if (count($parentMapping) >= 2) {
+    $p1 = $parentMapping[0]['name'];
+    $p2 = $parentMapping[1]['name'];
+    $balanceDiff = abs(($advTotal[$p1] ?? 0) - ($advTotal[$p2] ?? 0));
+    if (($advTotal[$p1] ?? 0) > ($advTotal[$p2] ?? 0)) $owedTo = $p1;
+    elseif (($advTotal[$p2] ?? 0) > ($advTotal[$p1] ?? 0)) $owedTo = $p2;
+}
 
 ?>
 
@@ -260,10 +280,11 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
                         $isIndicative = (strpos($cat['name'], 'Eco P') === 0);
                         $rowClass = $isIndicative ? 'row-indicative' : '';
                         $inputClass = $isIndicative ? 'ignore-calc' : '';
-
+                        
+                        // Retrocompatibilité pour les anciens noms d'économies hardcodés
                         $catDisplayName = $cat['name'];
-                        if ($catDisplayName === 'Eco P1') $catDisplayName = 'Eco ' . $p1_name;
-                        if ($catDisplayName === 'Eco P2') $catDisplayName = 'Eco ' . $p2_name;
+                        if (isset($parentMapping[0]) && $catDisplayName === 'Eco P1') $catDisplayName = 'Eco ' . $parentMapping[0]['name'];
+                        if (isset($parentMapping[1]) && $catDisplayName === 'Eco P2') $catDisplayName = 'Eco ' . $parentMapping[1]['name'];
                     ?>
                 <tr class="<?= $rowClass ?>">
                     <td class="col-sticky">
@@ -323,6 +344,7 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
         </div>
     </div>
 
+    <?php if (count($parentMapping) > 1): ?>
     <div style="margin: 30px 0; background: var(--bg-panel); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-light); box-shadow: var(--shadow);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
             <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800;"><?= tr('bud_adv_title') ?></h3>
@@ -332,57 +354,39 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
         </div>
 
         <div style="display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 240px; background: rgba(8, 145, 178, 0.06); border: 1px solid rgba(8, 145, 178, 0.2); padding: 18px; border-radius: 12px;">
-                <div style="font-size: 0.85rem; color: #0891b2; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"><?= sprintf(tr('bud_adv_has_advanced'), htmlspecialchars($p1_name)) ?></div>
+            <?php foreach ($parentMapping as $idx => $map): 
+                $pName = $map['name'];
+                $bgClass = ($idx === 0) ? 'rgba(8, 145, 178, 0.06)' : 'rgba(217, 119, 6, 0.06)';
+                $bdClass = ($idx === 0) ? 'rgba(8, 145, 178, 0.2)' : 'rgba(217, 119, 6, 0.2)';
+                $colorMain = ($idx === 0) ? '#0891b2' : '#d97706';
+                $colorDark = ($idx === 0) ? '#164e63' : '#78350f';
+            ?>
+            <div style="flex: 1; min-width: 240px; background: <?= $bgClass ?>; border: 1px solid <?= $bdClass ?>; padding: 18px; border-radius: 12px;">
+                <div style="font-size: 0.85rem; color: <?= $colorMain ?>; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"><?= sprintf(tr('bud_adv_has_advanced'), htmlspecialchars($pName)) ?></div>
                 <div style="margin-top: 10px;">
                     <div style="display: flex; align-items: baseline; gap: 6px;">
-                        <span style="font-size: 1.5rem; font-weight: 800; color: #164e63; font-family: monospace;"><?= number_format($advTotal[$p1_name] ?? 0, 2, ',', ' ') ?> €</span>
+                        <span style="font-size: 1.5rem; font-weight: 800; color: <?= $colorDark ?>; font-family: monospace;"><?= number_format($advTotal[$pName] ?? 0, 2, ',', ' ') ?> €</span>
                     </div>
                     <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: 500;"><?= tr('bud_adv_cc_label') ?></small>
-                    <?php if (!empty($labelsCC[$p1_name])): ?>
-                        <div style="font-size: 0.75rem; color: #0e7490; margin-top: 6px; line-height: 1.4; font-style: italic;">
-                            <?= implode(', ', $labelsCC[$p1_name]) ?>
+                    <?php if (!empty($labelsCC[$pName])): ?>
+                        <div style="font-size: 0.75rem; color: <?= $colorMain ?>; margin-top: 6px; line-height: 1.4; font-style: italic;">
+                            <?= implode(', ', $labelsCC[$pName]) ?>
                         </div>
                     <?php endif; ?>
                 </div>
-                <?php if(($livretTotal[$p1_name] ?? 0) > 0): ?>
-                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(8, 145, 178, 0.3);">
-                    <div style="font-size: 1.2rem; font-weight: 800; color: #4338ca; font-family: monospace;">+ <?= number_format($livretTotal[$p1_name], 2, ',', ' ') ?> €</div>
-                    <small style="color: #4338ca; font-size: 0.75rem; font-weight: 600;"><?= tr('bud_adv_livret_label') ?></small>
-                    <?php if (!empty($labelsLivret[$p1_name])): ?>
-                        <div style="font-size: 0.75rem; color: #3730a3; margin-top: 4px; line-height: 1.4;">
-                            <?= implode(', ', $labelsLivret[$p1_name]) ?>
+                <?php if(($livretTotal[$pName] ?? 0) > 0): ?>
+                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed <?= $bdClass ?>;">
+                    <div style="font-size: 1.2rem; font-weight: 800; color: <?= $colorDark ?>; font-family: monospace;">+ <?= number_format($livretTotal[$pName], 2, ',', ' ') ?> €</div>
+                    <small style="color: <?= $colorDark ?>; font-size: 0.75rem; font-weight: 600;"><?= tr('bud_adv_livret_label') ?></small>
+                    <?php if (!empty($labelsLivret[$pName])): ?>
+                        <div style="font-size: 0.75rem; color: <?= $colorDark ?>; margin-top: 4px; line-height: 1.4;">
+                            <?= implode(', ', $labelsLivret[$pName]) ?>
                         </div>
                     <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
-
-            <div style="flex: 1; min-width: 240px; background: rgba(217, 119, 6, 0.06); border: 1px solid rgba(217, 119, 6, 0.2); padding: 18px; border-radius: 12px;">
-                <div style="font-size: 0.85rem; color: #d97706; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"><?= sprintf(tr('bud_adv_has_advanced'), htmlspecialchars($p2_name)) ?></div>
-                <div style="margin-top: 10px;">
-                    <div style="display: flex; align-items: baseline; gap: 6px;">
-                        <span style="font-size: 1.5rem; font-weight: 800; color: #78350f; font-family: monospace;"><?= number_format($advTotal[$p2_name] ?? 0, 2, ',', ' ') ?> €</span>
-                    </div>
-                    <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: 500;"><?= tr('bud_adv_cc_label') ?></small>
-                    <?php if (!empty($labelsCC[$p2_name])): ?>
-                        <div style="font-size: 0.75rem; color: #b45309; margin-top: 6px; line-height: 1.4; font-style: italic;">
-                            <?= implode(', ', $labelsCC[$p2_name]) ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-                <?php if(($livretTotal[$p2_name] ?? 0) > 0): ?>
-                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed rgba(217, 119, 6, 0.3);">
-                    <div style="font-size: 1.2rem; font-weight: 800; color: #b45309; font-family: monospace;">+ <?= number_format($livretTotal[$p2_name], 2, ',', ' ') ?> €</div>
-                    <small style="color: #b45309; font-size: 0.75rem; font-weight: 600;"><?= tr('bud_adv_livret_label') ?></small>
-                    <?php if (!empty($labelsLivret[$p2_name])): ?>
-                        <div style="font-size: 0.75rem; color: #92400e; margin-top: 4px; line-height: 1.4;">
-                            <?= implode(', ', $labelsLivret[$p2_name]) ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-                <?php endif; ?>
-            </div>
+            <?php endforeach; ?>
 
             <div style="flex: 1; min-width: 240px; background: var(--bg-page); border: 1px solid var(--border-light); padding: 18px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
                 <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
@@ -411,10 +415,19 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($activeAdvances as $adv): ?>
+                        <?php foreach ($activeAdvances as $adv): 
+                            // Attribution de la couleur selon l'utilisateur
+                            $colorP = '#64748b'; // Defaut
+                            foreach($parentMapping as $idx => $m) {
+                                if($m['name'] === $adv['payer']) {
+                                    $colorP = ($idx === 0) ? '#0891b2' : '#d97706';
+                                    break;
+                                }
+                            }
+                        ?>
                         <tr>
                             <td style="color: var(--text-muted);"><?= date('d/m/Y', strtotime($adv['advance_date'])) ?></td>
-                            <td style="font-weight: 700; color: <?= $adv['payer'] === $p1_name ? '#0891b2' : '#d97706' ?>;"><?= htmlspecialchars($adv['payer']) ?></td>
+                            <td style="font-weight: 700; color: <?= $colorP ?>;"><?= htmlspecialchars($adv['payer']) ?></td>
                             <td>
                                 <?= htmlspecialchars($adv['description']) ?>
                                 <?php if ($adv['from_savings']): ?>
@@ -441,11 +454,19 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
             </div>
         <?php endif; ?>
     </div>
+    <?php endif; // Fin du Tricount conditionnel ?>
 
     <?php
     $focusMonth = $months[0];
-    $targetsOrder = ['vers commune', 'vers L.Pol', 'vers L.Pep', 'vers L.Perso'];
     
+    // Génération dynamique des cibles basées UNIQUEMENT sur les comptes bancaires
+    $targetsOrder = [];
+    foreach ($bankAccounts as $accName) {
+        $targetsOrder[] = 'vers ' . $accName;
+    }
+    
+    // On ajoute quand même les cibles historiques enregistrées dans les catégories 
+    // (pour ne pas casser l'affichage si on supprime un compte plus tard)
     $allTargets = $targetsOrder;
     foreach($cats as $c) {
         $t = trim($c['transfer_dest'] ?? '');
@@ -506,33 +527,38 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
     </div>
 </div>
 
-<div id="addCatModal" class="pf-modal">
-    <div class="pf-modal-content">
-        <div class="prev-header-left">
-            <h3 class="pf-modal-title"><?= tr('bud_prev_new_line_title') ?></h3>
-            <button onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');">&times;</button>
+<div id="addCatModal" class="pf-modal" onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');">
+    <div class="pf-modal-content" onclick="event.stopPropagation()">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 class="pf-modal-title" style="margin: 0; font-size: 1.25rem;"><?= tr('bud_prev_new_line_title') ?></h3>
+            <button type="button" onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--text-muted, #64748b);">×</button>
         </div>
+
         <form action="/modules/budget/includes/api/save-budget.php" method="POST">
             <input type="hidden" name="action" value="add_category">
-            <div class="form-group">
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
                 <label class="pf-label"><?= tr('bud_prev_label_name') ?></label>
                 <input type="text" name="name" class="pf-input" required>
             </div>
-            <div class="form-group">
-                <label class="pf-label"><?= tr('bud_prev_monthly_target') ?? 'Objectif Mensuel (€)' ?></label>
-                <input type="number" step="1" name="target" class="pf-input" placeholder="Ex: 150">
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="pf-label"><?= tr('bud_prev_monthly_target') ?></label>
+                <input type="number" step="1" name="target" class="pf-input" placeholder="<?= tr('bud_prev_target_ph') ?>">
             </div>
-            <div class="form-group">
-                <label class="pf-label"><?= tr('bud_prev_transfer_dest') ?? 'Destination Virement (Optionnel)' ?></label>
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="pf-label"><?= tr('bud_prev_transfer_dest') ?></label>
                 <select name="transfer_dest" class="pf-input">
-                    <option value="" selected>-- <?= tr('bud_prev_none') ?? 'Aucune' ?> --</option>
-                    <option value="vers L.Pol">vers L.Pol</option>
-                    <option value="vers L.Pep">vers L.Pep</option>
-                    <option value="vers L.Perso">vers L.Perso</option>
-                    <option value="vers commune">vers commune</option>
+                    <option value="">-- <?= tr('bud_prev_none') ?> --</option>
+                    <?php foreach ($bankAccounts as $accName): ?>
+                        <option value="vers <?= htmlspecialchars($accName) ?>"><?= tr('bud_prev_transfer_to') ?> <?= htmlspecialchars($accName) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
-            <div class="form-group">
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
                 <label class="pf-label">🌴 <?= tr('bud_prev_link_holiday') ?></label>
                 <select name="holiday_id" class="pf-input">
                     <option value="">-- <?= tr('bud_prev_no_link') ?> --</option>
@@ -541,7 +567,8 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="modal-footer">
+            
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('bud_add_title') ?></button>
             </div>
@@ -549,34 +576,39 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
     </div>
 </div>
 
-<div id="editCatModal" class="pf-modal">
-    <div class="pf-modal-content">
-        <div class="prev-header-left">
-            <h3 class="pf-modal-title"><?= tr('bud_prev_edit_line_title') ?></h3>
-            <button onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');">&times;</button>
+<div id="editCatModal" class="pf-modal" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');">
+    <div class="pf-modal-content" onclick="event.stopPropagation()">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 class="pf-modal-title" style="margin: 0; font-size: 1.25rem;"><?= tr('bud_prev_edit_line_title') ?></h3>
+            <button type="button" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--text-muted, #64748b);">×</button>
         </div>
+
         <form action="/modules/budget/includes/api/save-budget.php" method="POST">
             <input type="hidden" name="action" value="update_category">
             <input type="hidden" name="cat_id" id="edit_cat_id">
-            <div class="form-group">
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
                 <label class="pf-label"><?= tr('bud_label_name') ?></label>
                 <input type="text" name="name" id="edit_cat_name" class="pf-input" required>
             </div>
-            <div class="form-group">
-                <label class="pf-label"><?= tr('bud_prev_monthly_target') ?? 'Objectif Mensuel (€)' ?></label>
-                <input type="number" step="1" name="target" id="edit_cat_target" class="pf-input" placeholder="Ex: 150">
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="pf-label"><?= tr('bud_prev_monthly_target') ?></label>
+                <input type="number" step="1" name="target" id="edit_cat_target" class="pf-input" placeholder="<?= tr('bud_prev_target_ph') ?>">
             </div>
-            <div class="form-group">
-                <label class="pf-label"><?= tr('bud_prev_transfer_dest') ?? 'Destination Virement (Optionnel)' ?></label>
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="pf-label"><?= tr('bud_prev_transfer_dest') ?></label>
                 <select name="transfer_dest" id="edit_cat_transfer_dest" class="pf-input">
-                    <option value="">-- <?= tr('bud_prev_none') ?? 'Aucune' ?> --</option>
-                    <option value="vers L.Pol">vers L.Pol</option>
-                    <option value="vers L.Pep">vers L.Pep</option>
-                    <option value="vers L.Perso">vers L.Perso</option>
-                    <option value="vers commune">vers commune</option>
+                    <option value="">-- <?= tr('bud_prev_none') ?> --</option>
+                    <?php foreach ($bankAccounts as $accName): ?>
+                        <option value="vers <?= htmlspecialchars($accName) ?>"><?= tr('bud_prev_transfer_to') ?> <?= htmlspecialchars($accName) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
-            <div class="form-group">
+            
+            <div class="form-group" style="margin-bottom: 1rem;">
                 <label class="pf-label">🌴 <?= tr('bud_prev_link_holiday') ?></label>
                 <select name="holiday_id" id="edit_cat_holiday" class="pf-input">
                     <option value="">-- <?= tr('bud_prev_no_link') ?> --</option>
@@ -585,7 +617,8 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="modal-footer">
+            
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
@@ -604,8 +637,9 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
             <div class="pf-form-group">
                 <label class="pf-label"><?= tr('bud_adv_who_paid') ?></label>
                 <select name="payer" class="pf-input" required>
-                    <option value="<?= htmlspecialchars($p1_name) ?>"><?= htmlspecialchars($p1_name) ?></option>
-                    <option value="<?= htmlspecialchars($p2_name) ?>"><?= htmlspecialchars($p2_name) ?></option>
+                    <?php foreach ($parentMapping as $map): ?>
+                        <option value="<?= htmlspecialchars($map['name']) ?>"><?= htmlspecialchars($map['name']) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="pf-form-group">
@@ -644,8 +678,9 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
             <div class="pf-form-group">
                 <label class="pf-label"><?= tr('bud_adv_who_paid') ?></label>
                 <select name="payer" id="edit_adv_payer" class="pf-input" required>
-                    <option value="<?= htmlspecialchars($p1_name) ?>"><?= htmlspecialchars($p1_name) ?></option>
-                    <option value="<?= htmlspecialchars($p2_name) ?>"><?= htmlspecialchars($p2_name) ?></option>
+                    <?php foreach ($parentMapping as $map): ?>
+                        <option value="<?= htmlspecialchars($map['name']) ?>"><?= htmlspecialchars($map['name']) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="pf-form-group">
@@ -684,20 +719,6 @@ elseif (($advTotal[$p2_name] ?? 0) > ($advTotal[$p1_name] ?? 0)) $owedTo = $p2_n
 
 <script>
 window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
-
-// Dictionnaire I18N injecté proprement depuis PHP
-window.I18N = {
-    ...(window.I18N || {}),
-    'bud_prev_label_name': <?= json_encode(tr('bud_prev_label_name')) ?>,
-    'bud_prev_err_no_history': <?= json_encode(tr('bud_prev_err_no_history')) ?>,
-    'bud_prev_confirm_copy': <?= json_encode(tr('bud_prev_confirm_copy')) ?>,
-    'bud_prev_confirm_transfers': <?= json_encode(tr('bud_prev_confirm_transfers')) ?>,
-    'bud_prev_confirm_del_line': <?= json_encode(tr('bud_prev_confirm_del_line')) ?>,
-    'bud_adv_confirm_resolve': <?= json_encode(tr('bud_adv_confirm_resolve') ?? 'Confirmer le remboursement ?') ?>,
-    'bud_adv_confirm_delete': <?= json_encode(tr('bud_adv_confirm_delete') ?? 'Supprimer définitivement ?') ?>,
-    'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>
-};
-
 window.CONFIG = window.CONFIG || {};
 window.CONFIG.parentMapping = <?= json_encode($parentMapping) ?>;
 window.CONFIG.CURRENCY = '<?= defined('CURRENCY') ? CURRENCY : "€" ?>';
@@ -746,7 +767,7 @@ function duplicateMonth() {
     const parentMap = window.CONFIG.parentMapping;
 
     if (!sourceDateStr) {
-        alert(window.I18N['bud_prev_err_no_history']);
+        alert(tr('bud_prev_err_no_history'));
         return;
     }
 
@@ -757,7 +778,7 @@ function duplicateMonth() {
 
     const sourceName = formatMonth(sourceDateStr);
     const targetName = formatMonth(targetDateStr);
-    const message = window.I18N['bud_prev_confirm_copy'].replace('%s', sourceName).replace('%t', targetName);
+    const message = tr('bud_prev_confirm_copy').replace('%s', sourceName).replace('%t', targetName);
 
     if(!confirm(message)) return;
 
@@ -883,10 +904,9 @@ function updateSummaryTable() {
 function saveData(action, data) {
     const formData = new FormData();
     formData.append('action', action);
-    formData.append('ajax', '1'); // <-- Sécurisation pour pachaFetch / backend
+    formData.append('ajax', '1');
     for (const key in data) formData.append(key, data[key]);
     
-    // On utilise fetch ici en mode aveugle pour ne pas bloquer l'UI lors de la frappe rapide
     fetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
 }
 
@@ -894,7 +914,7 @@ async function validateTransfers(personCss, month) {
     const parentMap = window.CONFIG.parentMapping.find(m => m.css === personCss);
     if (!parentMap) return;
 
-    const msg = window.I18N['bud_prev_confirm_transfers'].replace('%p', parentMap.name).replace('%m', month);
+    const msg = tr('bud_prev_confirm_transfers').replace('%p', parentMap.name).replace('%m', month);
     if (!confirm(msg)) return;
 
     const formData = new FormData();
@@ -908,10 +928,10 @@ async function validateTransfers(personCss, month) {
         if(result.success) {
             window.location.reload();
         } else {
-            alert(window.I18N['bud_err_tech'] + " : " + result.error);
+            alert(tr('bud_err_tech') + " : " + result.error);
         }
     } catch(e) {
-        alert(window.I18N['bud_err_tech']);
+        alert(tr('bud_err_tech'));
     }
 }
 
@@ -932,15 +952,15 @@ async function saveGenericNote(noteType, refId, content) {
                 setTimeout(() => indicator.style.opacity = '0', 2000);
             }
         } else {
-            alert(window.I18N['bud_err_tech'] + " : " + data.error);
+            alert(tr('bud_err_tech') + " : " + data.error);
         }
     } catch(e) {
-        alert(window.I18N['bud_err_tech']);
+        alert(tr('bud_err_tech'));
     }
 }
 
 async function deleteCategory(id) {
-    if (!confirm(window.I18N['bud_prev_confirm_del_line'])) return;
+    if (!confirm(tr('bud_prev_confirm_del_line'))) return;
     const formData = new FormData();
     formData.append('action', 'delete_category');
     formData.append('id', id);
@@ -980,29 +1000,28 @@ async function handleAdvanceSubmit(event, form) {
 
     const endpoint = form.getAttribute('action');
     const formData = new FormData(form);
-    formData.append('ajax', '1'); // <-- Correction de l'erreur d'empty string
+    formData.append('ajax', '1');
 
     try {
-        // Utilisation robuste de pachaFetch 
         const result = await pachaFetch(endpoint, { method: 'POST', body: formData });
         
         if (result.success) {
             window.location.reload();
         } else {
-            alert((window.I18N['bud_err_tech'] || "Erreur") + " : " + (result.error || "Opération échouée"));
+            alert((tr('bud_err_tech') || "Erreur") + " : " + (result.error || "Opération échouée"));
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = oldText;
         }
     } catch (err) {
         console.error("AJAX Error:", err);
-        alert(window.I18N['bud_err_tech'] || "Une erreur technique est survenue.");
+        alert(tr('bud_err_tech') || "Une erreur technique est survenue.");
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = oldText;
     }
 }
 
 async function executeResolveAdvance(id) {
-    if (!confirm(window.I18N['bud_adv_confirm_resolve'])) return;
+    if (!confirm(tr('bud_adv_confirm_resolve'))) return;
     const fd = new FormData();
     fd.append('action', 'resolve_advance');
     fd.append('id', id);
@@ -1017,7 +1036,7 @@ async function executeResolveAdvance(id) {
 }
 
 async function executeDeleteAdvance(id) {
-    if (!confirm(window.I18N['bud_adv_confirm_delete'])) return;
+    if (!confirm(tr('bud_adv_confirm_delete'))) return;
     const fd = new FormData();
     fd.append('action', 'delete_advance');
     fd.append('id', id);
@@ -1087,7 +1106,6 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', recalcAllAllocations);
 
-// Soumission standard des modales de catégories avec pachaFetch
 document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1097,7 +1115,7 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
             submitBtn.disabled = true;
             submitBtn.innerText = '⏳ ...';
             const formData = new FormData(form);
-            formData.append('ajax', '1'); // Toujours sécuriser
+            formData.append('ajax', '1'); 
             const actionUrl = form.getAttribute('action');
             
             const result = await pachaFetch(actionUrl, { method: 'POST', body: formData });
@@ -1107,10 +1125,10 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
                 document.body.classList.remove('no-scroll');
                 window.location.reload();
             } else {
-                alert((window.I18N['bud_err_tech'] || 'Erreur') + " : " + (result.error || "Inconnue"));
+                alert((tr('bud_err_tech') || 'Erreur') + " : " + (result.error || "Inconnue"));
             }
         } catch (error) {
-            alert(window.I18N['bud_err_tech'] || "Une erreur technique est survenue.");
+            alert(tr('bud_err_tech') || "Une erreur technique est survenue.");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = originalText;
