@@ -64,7 +64,6 @@ function closeCalendarSettings() {
 }
 
 function switchCalendarTab(tabId) {
-  // 1. On réinitialise l'affichage
   document
     .querySelectorAll(".bs-tab-btn")
     .forEach((btn) => btn.classList.remove("active"));
@@ -72,15 +71,12 @@ function switchCalendarTab(tabId) {
     .querySelectorAll(".cal-settings-pane")
     .forEach((pane) => (pane.style.display = "none"));
 
-  // 2. On active l'onglet cliqué
   document.getElementById(`tab-btn-${tabId}`).classList.add("active");
   document.getElementById(`cal-pane-${tabId}`).style.display = "block";
 
-  // 3. Actions spécifiques
   if (tabId === "foyer") {
     loadLeaveCatalog();
   } else if (tabId === "membres") {
-    // On charge la vue du membre sélectionné par défaut dans la liste
     if (document.getElementById("selectCalMember").value) {
       loadMemberConfigView();
     }
@@ -89,7 +85,7 @@ function switchCalendarTab(tabId) {
 
 function renderCareModeTags() {
   const container = document.getElementById("careModesContainer");
-  if (!container) return; // 🛑 LA BARRIÈRE DE SÉCURITÉ EST ICI
+  if (!container) return;
 
   container.innerHTML = localCareModes
     .map(
@@ -102,10 +98,9 @@ function renderCareModeTags() {
     .join("");
 }
 
-// Ajoutons la même sécurité pour l'ajout au cas où :
 function addCareModeTag() {
   const input = document.getElementById("inputNewCareMode");
-  if (!input) return; // 🛑 SÉCURITÉ
+  if (!input) return;
 
   const val = input.value.trim();
   if (val && !localCareModes.includes(val)) {
@@ -254,7 +249,6 @@ function resetLeaveTypeForm() {
   document.getElementById("lt-label").value = "";
 }
 
-// NOUVELLE FONCTION DE SUPPRESSION
 async function deleteLeaveType(code, label) {
   if (
     !confirm(
@@ -278,7 +272,6 @@ async function deleteLeaveType(code, label) {
     resetLeaveTypeForm();
     loadLeaveCatalog();
 
-    // On recharge l'onglet membre au cas où le membre affiché utilisait ce congé
     if (document.getElementById("selectCalMember").value) {
       loadMemberConfigView();
     }
@@ -320,8 +313,6 @@ async function saveLeaveType() {
 // ==========================================
 // MODALE SETTINGS : AFFECTATION (MEMBRES)
 // ==========================================
-
-// Quand on choisit un membre dans la liste déroulante
 async function loadMemberConfigView() {
   const select = document.getElementById("selectCalMember");
   const zone = document.getElementById("memberConfigZone");
@@ -335,7 +326,6 @@ async function loadMemberConfigView() {
 
   zone.innerHTML = '<p class="pf-muted-note">Chargement...</p>';
 
-  // === CAS 1 : C'EST UN ENFANT (On gère les modes de garde) ===
   if (role === "child" || role === "enfant") {
     const currentPerson = calGlobalData.people.find(
       (k) => parseInt(k.id) === personId,
@@ -367,9 +357,7 @@ async function loadMemberConfigView() {
         </div>
         <button class="pf-btn pf-btn-primary" style="margin-top:15px; width:100%;" onclick="submitChildCareModes()">${tr("btn_save_rights") || "Enregistrer"}</button>
     `;
-  }
-  // === CAS 2 : C'EST UN ADULTE (On gère les congés) ===
-  else {
+  } else {
     try {
       const res = await pachaFetch(
         `/modules/family-calendar/includes/api/calendar-settings.php?action=get_person_leaves&person_id=${personId}`,
@@ -383,7 +371,6 @@ async function loadMemberConfigView() {
   }
 }
 
-// Affichage des congés du membre et du formulaire d'ajout
 function renderMemberLeavesView(personId, memberLeaves) {
   const zone = document.getElementById("memberConfigZone");
   let html = `<h5 style="margin: 0 0 10px 0; color: var(--text-main);">Congés attribués</h5>`;
@@ -393,7 +380,6 @@ function renderMemberLeavesView(personId, memberLeaves) {
   } else {
     html += `<div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">`;
     memberLeaves.forEach((ml) => {
-      // On extrait le mois de la date anniversaire (ex: "2000-06-01" -> 6)
       const moisRenouv = ml.anniversary_date
         ? parseInt(ml.anniversary_date.split("-")[1])
         : 1;
@@ -414,7 +400,6 @@ function renderMemberLeavesView(personId, memberLeaves) {
     html += `</div>`;
   }
 
-  // Ajout du formulaire d'attribution complet
   html += `
         <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 15px 0;">
         <h5 style="margin: 0 0 10px 0;">+ Attribuer un congé</h5>
@@ -462,20 +447,17 @@ function renderMemberLeavesView(personId, memberLeaves) {
 }
 
 async function addMemberLeave(personId) {
-  // 1. Récupération des valeurs du formulaire
   const leaveCode = document.getElementById("new-member-leave-type").value;
   const allowance = document.getElementById("new-member-leave-allowance").value;
   const resetMonth = document.getElementById("new-member-leave-reset").value;
   const method = document.getElementById("new-member-leave-method").value;
 
-  // 2. Sécurité : vérifier qu'un type de congé a bien été sélectionné
   if (!leaveCode) {
     return window.showToast
       ? showToast("Veuillez sélectionner un type de congé", "error")
       : alert("Veuillez sélectionner un type de congé");
   }
 
-  // 3. Préparation des données pour l'API
   const fd = new FormData();
   fd.append("action", "add_person_leave");
   fd.append("person_id", personId);
@@ -484,7 +466,6 @@ async function addMemberLeave(personId) {
   fd.append("reset_month", resetMonth);
   fd.append("method", method);
 
-  // 4. Appel à l'API et rafraîchissement
   try {
     const res = await pachaFetch(
       "/modules/family-calendar/includes/api/calendar-settings.php",
@@ -492,10 +473,7 @@ async function addMemberLeave(personId) {
     );
 
     if (!res.success) throw new Error(res.error);
-
     if (window.showToast) showToast("Congé attribué avec succès !", "success");
-
-    // Recharge la vue du membre pour faire apparaître la nouvelle ligne immédiatement
     loadMemberConfigView();
   } catch (err) {
     if (window.showToast)
@@ -675,12 +653,15 @@ document.addEventListener("DOMContentLoaded", () => {
       selectYear.addEventListener("change", handleChange);
     }
 
+    // 🔥 LE FIX (refreshAllData avec schoolHols injecté et fusionné)
     async refreshAllData() {
       try {
+        const zone = window.calGlobalData?.foyer?.zone_scolaire || "C";
         const [
           weeksData,
           eventsData,
-          fixedEventsData,
+          publicHols,
+          schoolHols, // 🏖️ NOUVEAU : On réceptionne les vacances
           leavesData,
           snapshotsData,
         ] = await Promise.all([
@@ -689,6 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ),
           this.fetchApi("/modules/family-calendar/includes/api/get-events.php"),
           this.fetchPublicHolidays(),
+          this.fetchSchoolHolidays(zone), // 🏖️ NOUVEAU : On appelle l'API
           this.fetchApi("/modules/family-calendar/includes/api/get-leaves.php"),
           this.fetchApi(
             "/modules/family-calendar/includes/api/get-leave-snapshots.php",
@@ -700,7 +682,9 @@ document.addEventListener("DOMContentLoaded", () => {
           ...e,
           duration: parseFloat(e.duration),
         }));
-        this.fixedEvents = fixedEventsData;
+
+        // 🔥 LE FIX : On fusionne les jours fériés ET les vacances
+        this.fixedEvents = [...publicHols, ...schoolHols];
         this.leaves = leavesData.leaves || [];
         this.leaveSnapshots = snapshotsData.snapshots || [];
 
@@ -736,8 +720,108 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    renderModalHolidays() {}
-    async fetchAndSaveGovHolidays(yearStart) {}
+    async fetchSchoolHolidays(zone) {
+      if (!zone || zone === "Autre") return [];
+      try {
+        const yearStr = `${this.currentSchoolYearStart}-${this.currentSchoolYearStart + 1}`;
+        // Ton URL qui utilise le LIKE, beaucoup plus robuste !
+        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%'&limit=100`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+        const rawRecords = data.results || [];
+
+        // Ton système de dédoublonnage
+        const uniqueMap = new Map();
+        rawRecords.forEach((r) => {
+          const key = `${r.description}|${r.start_date}`;
+          if (!uniqueMap.has(key)) uniqueMap.set(key, r);
+        });
+
+        const holidays = [];
+
+        Array.from(uniqueMap.values()).forEach((r) => {
+          const startDateStr = r.start_date.split("T")[0];
+          const endDateStr = r.end_date.split("T")[0];
+
+          let curr = new Date(startDateStr + "T00:00:00");
+          const end = new Date(endDateStr + "T00:00:00");
+
+          // TA REGLE METIER : Si vendredi, on passe au samedi
+          if (curr.getDay() === 5) {
+            curr.setDate(curr.getDate() + 1);
+          }
+
+          while (curr < end) {
+            holidays.push({
+              id: `sh-${curr.getTime()}`,
+              date: this.getLocalIsoDate(curr),
+              name: r.description,
+              type: "VACANCES_SCOLAIRES",
+              duration: 1,
+            });
+            curr.setDate(curr.getDate() + 1);
+          }
+        });
+
+        return holidays;
+      } catch (e) {
+        console.error("Erreur API Vacances:", e);
+        return [];
+      }
+    }
+
+    async renderModalHolidays() {
+      const tbody = document.querySelector("#schoolHolidaysTable tbody");
+      if (!tbody) return;
+
+      const zone = window.calGlobalData?.foyer?.zone_scolaire || "C";
+      if (zone === "Autre") {
+        tbody.innerHTML =
+          "<tr><td colspan='3' style='text-align:center;'>Zone 'Autre' sélectionnée. Pas de données auto.</td></tr>";
+        return;
+      }
+
+      tbody.innerHTML =
+        "<tr><td colspan='3' style='text-align:center; padding: 20px;'>Chargement des données du Ministère... ⏳</td></tr>";
+
+      try {
+        const year = this.modalSelectedYear || this.currentSchoolYearStart;
+        const yearStr = `${year}-${year + 1}`;
+        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%'&limit=100&order_by=start_date`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.results && data.results.length > 0) {
+          // Ton système de dédoublonnage pour la modale
+          const uniqueMap = new Map();
+          data.results.forEach((r) => {
+            const key = `${r.description}|${r.start_date}`;
+            if (!uniqueMap.has(key)) uniqueMap.set(key, r);
+          });
+
+          let rows = "";
+          Array.from(uniqueMap.values()).forEach((p) => {
+            // On applique aussi le décalage du vendredi pour l'affichage propre dans la modale
+            let d1Date = new Date(p.start_date.split("T")[0] + "T00:00:00");
+            if (d1Date.getDay() === 5) d1Date.setDate(d1Date.getDate() + 1);
+
+            const d1 = d1Date.toLocaleDateString(window.appLang || "fr-FR");
+            const d2 = new Date(p.end_date.split("T")[0]).toLocaleDateString(
+              window.appLang || "fr-FR",
+            );
+            rows += `<tr><td><strong>${p.description}</strong></td><td>${d1}</td><td>${d2}</td></tr>`;
+          });
+          tbody.innerHTML = rows;
+        } else {
+          tbody.innerHTML = `<tr><td colspan='3' style='text-align:center; padding: 20px;'>Aucune vacance trouvée pour ${yearStr}.</td></tr>`;
+        }
+      } catch (e) {
+        tbody.innerHTML =
+          "<tr><td colspan='3' style='color:red; text-align:center;'>Erreur de connexion à l'API du gouvernement.</td></tr>";
+      }
+    }
 
     reprocessAndRender() {
       this.reprocessEvents();
@@ -832,54 +916,68 @@ document.addEventListener("DOMContentLoaded", () => {
       const balances = {};
       this.parents.forEach((p) => (balances[String(p.id)] = {}));
 
-      const ymSet = new Set();
-      this.weeks.forEach((w) => ymSet.add(w.monthKey));
-      const ymList = Array.from(ymSet).sort();
+      const ymList = [];
+      const tempDate = new Date();
+      tempDate.setFullYear(tempDate.getFullYear() - 2);
+      for (let i = 0; i < 60; i++) {
+        ymList.push(
+          `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, "0")}`,
+        );
+        tempDate.setMonth(tempDate.getMonth() + 1);
+      }
 
       const usageByMonth = {};
+      const allPlacedLeaves = [...(this.leaves || []), ...(this.events || [])];
 
-      // 1. On calcule ce qui a été posé (Strictement typé en String pour éviter les bugs)
-      this.leaves.forEach((l) => {
-        const pid = String(l.person_id);
-        const type = String(l.leave_type).trim().toUpperCase();
-        const ym = String(l.leave_date).substring(0, 7);
+      allPlacedLeaves.forEach((l) => {
+        const rawType = l.leave_type || l.event_type || l.type;
+        const rawDate = l.leave_date || l.event_date || l.date;
+        if (!rawType || !rawDate) return;
+
+        const pid = String(l.person_id || l.person);
+        const type = String(rawType).trim().toUpperCase();
+        const ym = String(rawDate).substring(0, 7);
 
         if (!usageByMonth[pid]) usageByMonth[pid] = {};
         if (!usageByMonth[pid][type]) usageByMonth[pid][type] = {};
-        usageByMonth[pid][type][ym] =
-          (usageByMonth[pid][type][ym] || 0) + (parseFloat(l.duration) || 1);
+
+        let dur = parseFloat(l.duration);
+        if (isNaN(dur)) dur = 1;
+
+        usageByMonth[pid][type][ym] = (usageByMonth[pid][type][ym] || 0) + dur;
       });
 
-      // 2. On calcule les soldes pour chaque mois
       this.parents.forEach((parent) => {
         const pid = String(parent.id);
-        const matrix = this.leaveMatrix[pid] || [];
+        const matrix =
+          this.leaveMatrix[pid] || this.leaveMatrix[Number(pid)] || [];
 
         matrix.forEach((conf) => {
-          const type = String(conf.type).trim().toUpperCase();
+          const type = String(conf.leave_type || conf.type)
+            .trim()
+            .toUpperCase();
           if (!balances[pid][type]) balances[pid][type] = {};
 
+          let monthRenouvellement = 1;
+          const dateVal = conf.anniversary_date || conf.date;
+          if (dateVal && dateVal.includes("-")) {
+            monthRenouvellement = parseInt(dateVal.split("-")[1], 10) || 1;
+          }
+
+          let initialBalance = parseFloat(conf.allowance);
+          if (isNaN(initialBalance)) initialBalance = 0;
+
           ymList.forEach((ym) => {
-            const [currYear, currMonth] = ym.split("-").map(Number);
-            let cycleStartStr = "";
-            let initialBalance = parseFloat(conf.allowance || 0);
-            let monthRenouvellement = 1;
+            const [currYearStr, currMonthStr] = ym.split("-");
+            const currYear = parseInt(currYearStr, 10);
+            const currMonth = parseInt(currMonthStr, 10);
 
-            if (conf.date) {
-              const parts = conf.date.split("-");
-              if (parts.length >= 2) monthRenouvellement = parseInt(parts[1]);
-            }
-
-            const isPastAnniversary =
-              currMonth > monthRenouvellement ||
-              (currMonth === monthRenouvellement && 1 >= 1);
+            const isPastAnniversary = currMonth >= monthRenouvellement;
             const refYear = isPastAnniversary ? currYear : currYear - 1;
-            cycleStartStr = `${refYear}-${String(monthRenouvellement).padStart(2, "0")}`;
+            const cycleStartStr = `${refYear}-${String(monthRenouvellement).padStart(2, "0")}`;
 
-            // 🔥 LE FIX : GESTION DU MODE FIXE VS GRADUEL
             let acquiredBalance = initialBalance;
             if (conf.method === "ACCUMULATED") {
-              // On calcule le nombre de mois passés depuis la date anniversaire
               let monthsPassed =
                 (currYear - refYear) * 12 +
                 (currMonth - monthRenouvellement) +
@@ -907,142 +1005,190 @@ document.addEventListener("DOMContentLoaded", () => {
           });
         });
       });
+
       this.monthlyLeaveBalances = balances;
     }
 
     renderTable() {
       if (!this.planningBody) return;
-      this.planningBody.innerHTML = "";
-      const monthSpans = this.weeks.reduce((acc, w) => {
-        acc[w.monthKey] = (acc[w.monthKey] || 0) + 1;
-        return acc;
-      }, {});
-      const processedMonths = {};
-      const processedLeavesCols = {};
-      const fmt = (n) =>
-        n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "";
-      const upperCareModes = this.careModes.map((m) => m.toUpperCase());
 
-      this.weeks.forEach((w, idx) => {
-        const tr = document.createElement("tr");
-        tr.setAttribute("data-month", w.monthKey);
-        if (idx === 0 || this.weeks[idx - 1].monthKey !== w.monthKey)
-          tr.classList.add("fc-month-first-week-row");
-        if (
-          idx === this.weeks.length - 1 ||
-          this.weeks[idx + 1].monthKey !== w.monthKey
-        )
-          tr.classList.add("fc-month-last-week-row");
+      try {
+        this.planningBody.innerHTML = "";
 
-        if (!processedMonths[w.monthKey]) {
-          processedMonths[w.monthKey] = true;
-          const td = document.createElement("td");
-          td.className = "col-month col-sticky-mois";
-          td.innerHTML = `<span class="fc-sticky-mois-label">${w.monthName}</span>`;
-          td.rowSpan = monthSpans[w.monthKey];
-          tr.appendChild(td);
+        if (!this.weeks || this.weeks.length === 0) {
+          this.planningBody.innerHTML =
+            "<tr><td colspan='15' style='text-align:center; padding: 20px; color: var(--text-muted);'>Aucune donnée pour cette année scolaire.</td></tr>";
+          return;
         }
 
-        const tdW = document.createElement("td");
-        tdW.className = "col-month col-sticky-sem";
-        tdW.textContent = w.weekLabel;
-        tr.appendChild(tdW);
+        const monthSpans = this.weeks.reduce((acc, w) => {
+          acc[w.monthKey] = (acc[w.monthKey] || 0) + 1;
+          return acc;
+        }, {});
 
-        ["mon", "tue", "wed", "thu", "fri"].forEach((d) => {
-          const td = document.createElement("td");
-          const dateObj = w.dayDates[d];
-          const iso = this.getLocalIsoDate(dateObj);
-          td.dataset.date = iso;
-          td.className = "col-day";
+        const processedMonths = {};
+        const processedLeavesCols = {};
+        const fmt = (n) =>
+          n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "";
 
-          w.dayFlags[d].events.forEach((evt) => {
-            if (evt.type === "PUBLIC_HOLIDAY")
-              td.classList.add("fc-day--public-holiday");
-            if (evt.type === "VACANCES_SCOLAIRES")
-              td.classList.add("fc-day--school-holiday");
-            if (evt.type === "HELPER_OFF")
-              td.classList.add("fc-day--off-carole");
-            if (evt.type === "HELPER_EXTRA")
-              td.classList.add("fc-day--extra-off-carole");
-            if (upperCareModes.includes(evt.type))
-              td.classList.add("fc-day--has-guard");
-          });
+        const upperCareModes = (this.careModes || []).map((m) =>
+          String(m).toUpperCase(),
+        );
 
-          let content = `<div style="position:relative; height:100%; width:100%; min-height:40px;">
-             <span style="display:block; padding:2px;">${String(dateObj.getDate()).padStart(2, "0")}</span>`;
+        this.weeks.forEach((w, idx) => {
+          const tr = document.createElement("tr");
+          tr.setAttribute("data-month", w.monthKey);
 
-          let iconsHtml = `<div style="position:absolute; top:2px; right:2px; display:flex; gap:2px;">`;
-          w.dayFlags[d].events.forEach((evt) => {
-            if (upperCareModes.includes(evt.type)) {
-              const modeName = evt.type.toLowerCase();
-              if (modeName === "avis")
-                iconsHtml += `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain;">`;
-              else if (modeName === "centre")
-                iconsHtml += `<span class="fc-icon-centre" title="Centre" style="font-size:1.1rem; line-height:1;">🏫</span>`;
-              else
-                iconsHtml += `<span style="background:var(--primary); color:#fff; border-radius:3px; padding:0 3px; font-size:9px;">${modeName.substring(0, 3)}</span>`;
-            }
-          });
-          content += iconsHtml + `</div>`;
+          if (idx === 0 || this.weeks[idx - 1].monthKey !== w.monthKey)
+            tr.classList.add("fc-month-first-week-row");
+          if (
+            idx === this.weeks.length - 1 ||
+            this.weeks[idx + 1].monthKey !== w.monthKey
+          )
+            tr.classList.add("fc-month-last-week-row");
 
-          let sickHtml = `<div style="position:absolute; bottom:2px; right:2px; display:flex; flex-direction:column; align-items:flex-end; gap:1px; font-size:11px; font-weight:bold; line-height:1;">`;
-          w.dayFlags[d].events.forEach((evt) => {
-            if (evt.type === "CHILD_SICK") {
-              const k = this.kids.find(
-                (x) => parseInt(x.id) === parseInt(evt.person_id),
-              );
-              if (k) {
-                sickHtml += `<span style="color:${k.color || "#e11d48"};">${k.name}<span style="font-size:10px;">🤒</span></span>`;
-              }
-            }
-          });
-          content += sickHtml + `</div>`;
-
-          const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
-          if (dayLeaves.length) {
-            let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
-            this.parents.forEach((person) => {
-              if (
-                dayLeaves.some(
-                  (l) => parseInt(l.person_id) === parseInt(person.id),
-                )
-              ) {
-                html += `<span style="color:${person.color || "#000"}; font-weight:800; margin: 0 1px;">${person.name.charAt(0).toUpperCase()}</span>`;
-              }
-            });
-            content += html + `</div>`;
+          if (!processedMonths[w.monthKey]) {
+            processedMonths[w.monthKey] = true;
+            const td = document.createElement("td");
+            td.className = "col-month col-sticky-mois";
+            td.innerHTML = `<span class="fc-sticky-mois-label">${w.monthName || ""}</span>`;
+            td.rowSpan = monthSpans[w.monthKey];
+            tr.appendChild(td);
           }
-          td.innerHTML = content + `</div>`;
-          tr.appendChild(td);
-        });
 
-        this.careModes.forEach((mode) => {
-          const td = document.createElement("td");
-          td.className = "col-total";
-          td.textContent = fmt(w.totals["mode_" + mode] || 0);
-          tr.appendChild(td);
-        });
-        this.kids.forEach((kid) => {
-          const td = document.createElement("td");
-          td.className = "col-total";
-          td.textContent = fmt(w.totals["sick_" + kid.id] || 0);
-          tr.appendChild(td);
-        });
+          const tdW = document.createElement("td");
+          tdW.className = "col-month col-sticky-sem";
+          tdW.textContent = w.weekLabel || "";
+          tr.appendChild(tdW);
 
-        if (!processedLeavesCols[w.monthKey]) {
-          processedLeavesCols[w.monthKey] = true;
-          this.parents.forEach((parent, index) => {
-            const cssPrefix = index % 2 === 0 ? "col-alex" : "col-laia";
-            (this.leaveMatrix[parent.id] || []).forEach((conf) => {
-              const info =
-                this.monthlyLeaveBalances[parent.id]?.[conf.type]?.[w.monthKey];
-              tr.innerHTML += `<td class="${cssPrefix}-sub ${cssPrefix}-av" rowspan="${monthSpans[w.monthKey]}">${info ? fmt(info.availableAtMonthStart) : "-"}</td>`;
-              tr.innerHTML += `<td class="${cssPrefix}-sub ${cssPrefix}-use" rowspan="${monthSpans[w.monthKey]}">${info ? fmt(info.usedInMonth) : ""}</td>`;
+          ["mon", "tue", "wed", "thu", "fri"].forEach((d) => {
+            const td = document.createElement("td");
+            const dateObj = w.dayDates[d];
+            if (!dateObj) return;
+
+            const iso = this.getLocalIsoDate(dateObj);
+            td.dataset.date = iso;
+            td.className = "col-day";
+
+            const events = w.dayFlags?.[d]?.events || [];
+
+            events.forEach((evt) => {
+              if (evt.type === "PUBLIC_HOLIDAY")
+                td.classList.add("fc-day--public-holiday");
+              if (evt.type === "VACANCES_SCOLAIRES")
+                td.classList.add("fc-day--school-holiday");
+              if (evt.type === "HELPER_OFF")
+                td.classList.add("fc-day--off-carole");
+              if (evt.type === "HELPER_EXTRA")
+                td.classList.add("fc-day--extra-off-carole");
+              if (upperCareModes.includes(evt.type))
+                td.classList.add("fc-day--has-guard");
             });
+
+            let content = `<div style="position:relative; height:100%; width:100%; min-height:40px;">
+                <span style="display:block; padding:2px;">${String(dateObj.getDate()).padStart(2, "0")}</span>`;
+
+            let iconsHtml = `<div style="position:absolute; top:2px; right:2px; display:flex; gap:2px;">`;
+            events.forEach((evt) => {
+              if (upperCareModes.includes(evt.type)) {
+                const modeName = String(evt.type).toLowerCase();
+                if (modeName === "avis")
+                  iconsHtml += `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain;">`;
+                else if (modeName === "centre")
+                  iconsHtml += `<span class="fc-icon-centre" title="Centre" style="font-size:1.1rem; line-height:1;">🏫</span>`;
+                else
+                  iconsHtml += `<span style="background:var(--primary); color:#fff; border-radius:3px; padding:0 3px; font-size:9px;">${modeName.substring(0, 3)}</span>`;
+              }
+            });
+            content += iconsHtml + `</div>`;
+
+            let sickHtml = `<div style="position:absolute; bottom:2px; right:2px; display:flex; flex-direction:column; align-items:flex-end; gap:1px; font-size:11px; font-weight:bold; line-height:1;">`;
+            events.forEach((evt) => {
+              if (evt.type === "CHILD_SICK") {
+                const k = (this.kids || []).find(
+                  (x) => parseInt(x.id) === parseInt(evt.person_id),
+                );
+                if (k) {
+                  sickHtml += `<span style="color:${k.color || "#e11d48"};">${k.name}<span style="font-size:10px;">🤒</span></span>`;
+                }
+              }
+            });
+            content += sickHtml + `</div>`;
+
+            const dayLeaves = (this.leaves || []).filter(
+              (l) => l.leave_date === iso || l.date === iso,
+            );
+            if (dayLeaves.length) {
+              let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
+              (this.parents || []).forEach((person) => {
+                if (
+                  dayLeaves.some(
+                    (l) =>
+                      parseInt(l.person_id || l.person) === parseInt(person.id),
+                  )
+                ) {
+                  html += `<span style="color:${person.color || "#000"}; font-weight:800; margin: 0 1px;">${String(person.name).charAt(0).toUpperCase()}</span>`;
+                }
+              });
+              content += html + `</div>`;
+            }
+            td.innerHTML = content + `</div>`;
+            tr.appendChild(td);
           });
-        }
-        this.planningBody.appendChild(tr);
-      });
+
+          (this.careModes || []).forEach((mode) => {
+            const td = document.createElement("td");
+            td.className = "col-total";
+            td.textContent = fmt(w.totals["mode_" + mode] || 0);
+            tr.appendChild(td);
+          });
+
+          (this.kids || []).forEach((kid) => {
+            const td = document.createElement("td");
+            td.className = "col-total";
+            td.textContent = fmt(w.totals["sick_" + kid.id] || 0);
+            tr.appendChild(td);
+          });
+
+          if (!processedLeavesCols[w.monthKey]) {
+            processedLeavesCols[w.monthKey] = true;
+            (this.parents || []).forEach((parent, index) => {
+              const cssPrefix = index % 2 === 0 ? "col-alex" : "col-laia";
+              const matrix =
+                this.leaveMatrix[String(parent.id)] ||
+                this.leaveMatrix[Number(parent.id)] ||
+                [];
+
+              matrix.forEach((conf) => {
+                const type = String(conf.leave_type || conf.type)
+                  .trim()
+                  .toUpperCase();
+                const info =
+                  this.monthlyLeaveBalances[String(parent.id)]?.[type]?.[
+                    w.monthKey
+                  ];
+
+                const tdAv = document.createElement("td");
+                tdAv.className = `${cssPrefix}-sub ${cssPrefix}-av`;
+                tdAv.rowSpan = monthSpans[w.monthKey];
+                tdAv.textContent = info ? fmt(info.availableAtMonthStart) : "-";
+                tr.appendChild(tdAv);
+
+                const tdUse = document.createElement("td");
+                tdUse.className = `${cssPrefix}-sub ${cssPrefix}-use`;
+                tdUse.rowSpan = monthSpans[w.monthKey];
+                tdUse.textContent = info ? fmt(info.usedInMonth) : "";
+                tr.appendChild(tdUse);
+              });
+            });
+          }
+
+          this.planningBody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error("🔥 Erreur fatale dans renderTable :", e);
+        this.planningBody.innerHTML = `<tr><td colspan="15" style="color:red; font-weight:bold; padding:20px; text-align:center;">Erreur d'affichage : ${e.message} <br> <small>Regarde la console pour plus de détails.</small></td></tr>`;
+      }
     }
 
     generateMonthHTML(year, month) {
@@ -1251,6 +1397,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const container = document.getElementById("fc-month-balances");
       if (!container) return;
 
+      this.calculateMonthlyBalances();
+
       const monthsToDisplay = [];
       const y = this.currentMonth.getFullYear();
       const m = this.currentMonth.getMonth();
@@ -1265,11 +1413,15 @@ document.addEventListener("DOMContentLoaded", () => {
       container.innerHTML = this.parents
         .map((person) => {
           let cards = `<div class="fc-minimal-balance-card"><strong style="color:${person.color || "#333"}">${person.name.toUpperCase()}</strong><div class="fc-minimal-chips">`;
-          // Typage strict String(person.id) pour matcher avec le calcul des balances
-          const types = this.leaveMatrix[String(person.id)] || [];
+          const types =
+            this.leaveMatrix[String(person.id)] ||
+            this.leaveMatrix[Number(person.id)] ||
+            [];
 
           types.forEach((conf) => {
-            const type = conf.type;
+            const type = String(conf.leave_type || conf.type)
+              .trim()
+              .toUpperCase();
             const startBal =
               this.monthlyLeaveBalances[String(person.id)]?.[type]?.[
                 monthsToDisplay[0]
@@ -1287,19 +1439,19 @@ document.addEventListener("DOMContentLoaded", () => {
               n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "0";
 
             let alertHtml = "";
-            const cMonth = parseInt(monthsToDisplay[0].split("-")[1]);
+            const cMonth = parseInt(monthsToDisplay[0].split("-")[1], 10);
+            const dateVal = conf.anniversary_date || conf.date;
 
-            // Gestion de l'alerte 🔥 (Mois en cours ou Mois précédant le renouvellement)
-            if (endBal > 0 && conf.date) {
-              const resetMonth = parseInt(conf.date.split("-")[1]);
-              const alertMonth = resetMonth - 1 === 0 ? 12 : resetMonth - 1;
+            if (endBal > 0 && dateVal && dateVal.includes("-")) {
+              const resetMonth = parseInt(dateVal.split("-")[1], 10) || 1;
+              const alertMonth = resetMonth === 1 ? 12 : resetMonth - 1;
 
               if (cMonth === alertMonth || cMonth === resetMonth) {
                 alertHtml = `<div class="fc-burn-alert" title="Alerte : ${fmt(endBal)} jour(s) perdu(s) à la fin du cycle !">🔥</div>`;
               }
             }
 
-            cards += `<div class="fc-min-chip" title="Solde: ${fmt(startBal)}"><span class="type">${type}</span><span class="val">${fmt(endBal)}</span>${totalUsed > 0 ? `<span class="fc-used-badge">-${fmt(totalUsed)}</span>` : ""}${alertHtml}</div>`;
+            cards += `<div class="fc-min-chip" title="Solde: ${fmt(startBal)}"><span class="type">${conf.type || type}</span><span class="val">${fmt(endBal)}</span>${totalUsed > 0 ? `<span class="fc-used-badge">-${fmt(totalUsed)}</span>` : ""}${alertHtml}</div>`;
           });
           return cards + `</div></div>`;
         })
@@ -1317,7 +1469,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id: `${w.week_iso_year}-W${w.week_iso_number}`,
         monthKey: `${w.year}-${String(w.month).padStart(2, "0")}`,
         monthName: w.month_name,
-        weekLabel: w.week_label,
+        weekLabel: w.week_iso_number,
         dayDates: {
           mon: new Date(w.mon_date + "T00:00:00"),
           tue: new Date(w.tue_date + "T00:00:00"),
@@ -1354,8 +1506,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setupEventListeners() {
       const btnSettings = document.getElementById("btnOpenCalendarSettings");
+
+      const btnSnapshot = document.getElementById("btnOpenSnapshotModal");
+      if (btnSnapshot) {
+        btnSnapshot.addEventListener("click", () => {
+          const modal =
+            document.getElementById("modalSnapshot") ||
+            document.getElementById("snapshotModal");
+          if (modal) modal.style.display = "flex";
+        });
+      }
+
+      const btnHolidays = document.getElementById("btnOpenHolidays");
+      if (btnHolidays) {
+        btnHolidays.addEventListener("click", () => {
+          const modal =
+            document.getElementById("modalHolidays") ||
+            document.getElementById("schoolHolidaysModal");
+          if (modal) modal.style.display = "flex";
+        });
+      }
+
       if (btnSettings)
         btnSettings.addEventListener("click", openCalendarSettings);
+
+      window.addEventListener("click", (event) => {
+        if (
+          event.target.classList.contains("pf-modal") ||
+          event.target.classList.contains("modal-overlay")
+        ) {
+          event.target.style.display = "none";
+          event.target.classList.remove("open");
+          document.body.classList.remove("no-scroll");
+        }
+      });
+
+      const btnCloseSnap = document.getElementById("btnCloseSnapshot");
+      if (btnCloseSnap) {
+        btnCloseSnap.addEventListener("click", () => {
+          const m =
+            document.getElementById("modalSnapshot") ||
+            document.getElementById("snapshotModal");
+          if (m) m.style.display = "none";
+          document.body.classList.remove("no-scroll");
+        });
+      }
+
+      const btnCloseHol = document.getElementById("btnCloseHolidays");
+      if (btnCloseHol) {
+        btnCloseHol.addEventListener("click", () => {
+          const m =
+            document.getElementById("modalHolidays") ||
+            document.getElementById("schoolHolidaysModal");
+          if (m) m.style.display = "none";
+          document.body.classList.remove("no-scroll");
+        });
+      }
 
       if (this.planningBody) {
         this.planningBody.addEventListener("mousedown", (e) =>
