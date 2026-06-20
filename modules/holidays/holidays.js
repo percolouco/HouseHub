@@ -151,6 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function initDetailMap() {
   if (typeof L === "undefined" || typeof MAP_POINTS === "undefined") return;
 
+  // 1. Nettoyage de l'ancienne carte
   if (detailMap !== null) {
     detailMap.remove();
     detailMap = null;
@@ -180,6 +181,7 @@ function initDetailMap() {
   const latlngs = [];
   const bounds = L.latLngBounds();
 
+  // 2. Placement des marqueurs d'étapes
   MAP_POINTS.forEach((pt, index) => {
     const pos = [pt.lat, pt.lng];
     latlngs.push(pos);
@@ -222,6 +224,7 @@ function initDetailMap() {
 
   const mapPadding = window.innerWidth < 768 ? [20, 20] : [50, 50];
 
+  // 3. Tracés OSRM et calculs
   if (latlngs.length === 1) {
     detailMap.setView(latlngs[0], 12);
   } else if (latlngs.length > 1) {
@@ -254,6 +257,10 @@ function initDetailMap() {
     Promise.all(routePromises).then((results) => {
       results.sort((a, b) => a.index - b.index);
 
+      // Compteur global de distance
+      let totalTripDistance = 0;
+
+      // Détection de l'étape de retour (Ligne Orange)
       let returnStartIndex = latlngs.length - 2;
       if (
         typeof window.GLOBAL_RETURN_STEP_ID !== "undefined" &&
@@ -292,8 +299,10 @@ function initDetailMap() {
             lineJoin: "round",
           }).addTo(detailMap);
 
-          // 🔥 CALCUL AUTO DU COUT ET KILOMÈTRES
+          // CALCUL AUTO DU COUT ET KILOMÈTRES
           const distanceKm = res.data.routes[0].distance / 1000;
+          totalTripDistance += distanceKm;
+
           const fuelL100 = window.VEHICLE_CONSUMPTION || 7;
           const fuelPrice = window.FUEL_PRICE || 1.85;
           const cost = (distanceKm / 100) * fuelL100 * fuelPrice;
@@ -321,7 +330,7 @@ function initDetailMap() {
               <div class="transit-auto-info" style="font-size: 0.8rem; color: var(--text-muted); padding: 4px 0 10px 42px; display: flex; align-items: center; gap: 8px;">
                   🚗 ${Math.round(distanceKm)} km 
                   <span style="opacity: 0.5;">|</span> 
-                  **⛽ ~${cost.toFixed(2)} €**
+                  <strong>⛽ ~${cost.toFixed(2)} €</strong>
                   ${
                     !isAlreadyAdded
                       ? `<button type="button" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.8rem; padding:0; margin-left: 5px;" 
@@ -341,9 +350,18 @@ function initDetailMap() {
           drawFallbackLine(res.coords, routeColor, routeWeight);
         }
       });
+
+      // Affichage du total global en haut de page
+      const distEl = document.getElementById("global_total_distance");
+      const distBlock = document.getElementById("block_total_distance");
+      if (distEl && distBlock) {
+        distEl.innerText = Math.round(totalTripDistance);
+        distBlock.style.display = "Block";
+      }
     });
   }
 
+  // 4. Chargement des badges Météo
   if (typeof MAP_POINTS !== "undefined") {
     MAP_POINTS.forEach((pt) => {
       if (typeof loadWeatherForStep === "function") {
@@ -352,6 +370,7 @@ function initDetailMap() {
     });
   }
 
+  // 5. Fix Leaflet Resize
   setTimeout(() => {
     if (detailMap) {
       detailMap.invalidateSize();
