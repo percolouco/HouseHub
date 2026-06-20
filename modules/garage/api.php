@@ -109,14 +109,31 @@ if ($action === 'vehicles') {
     }
     if ($method === 'POST') {
         $photo = handleUpload('photo', $UPLOAD_DIR); $d = $_POST ?: gBody();
-        $stmt = $pdo->prepare("INSERT INTO pf_vehicles (name,brand,model,year,license_plate,vin,fuel_type,color,purchase_date,purchase_price,current_km,photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$d['name']??'', $d['brand']??'', $d['model']??'', $d['year']??null, $d['license_plate']??null, $d['vin']??null, $d['fuel_type']??'Essence', $d['color']??null, $d['purchase_date']??null, $d['purchase_price']??null, $d['current_km']??0, $photo, $d['notes']??null]);
+        // Ajout de consumption dans la liste des champs et d'un '?' supplémentaire
+        $stmt = $pdo->prepare("INSERT INTO pf_vehicles (name,brand,model,year,license_plate,vin,fuel_type,consumption,color,purchase_date,purchase_price,current_km,photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([
+            $d['name']??'', 
+            $d['brand']??'', 
+            $d['model']??'', 
+            $d['year']??null, 
+            $d['license_plate']??null, 
+            $d['vin']??null, 
+            $d['fuel_type']??'Essence', 
+            ($d['consumption'] !== '' && $d['consumption'] !== null) ? (float)$d['consumption'] : null, // Cast propre en float
+            $d['color']??null, 
+            $d['purchase_date']??null, 
+            $d['purchase_price']??null, 
+            $d['current_km']??0, 
+            $photo, 
+            $d['notes']??null
+        ]);
         gOk(['id' => $pdo->lastInsertId()]);
     }
     if ($method === 'PUT') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant'); $d = gBody();
-        $int_fields = ['year','current_km']; $float_fields = ['purchase_price'];
-        $fields = ['name','brand','model','year','license_plate','vin','fuel_type','color','purchase_date','purchase_price','current_km','notes'];
+        $int_fields = ['year','current_km']; 
+        $float_fields = ['purchase_price', 'consumption'];
+        $fields = ['name','brand','model','year','license_plate','vin','fuel_type','consumption','color','purchase_date','purchase_price','current_km','notes']; 
         $sets = array_map(fn($f) => "$f = ?", $fields);
         $vals = array_map(function($f) use ($d, $int_fields, $float_fields) {
             $v = $d[$f] ?? null;
