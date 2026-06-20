@@ -138,6 +138,14 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 </div>
             </div>
 
+            <div class="hol-summary-item" id="block_total_distance" style="display:none;">
+                <div class="hol-summary-label">Distance totale</div>
+                <div class="hol-summary-value" style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size: 1.1rem;">🛣️</span> 
+                    <strong><span id="global_total_distance">0</span> km</strong>
+                </div>
+            </div>
+
             <div class="hol-summary-item">
                 <div class="hol-summary-label"><?= tr('hdl_label_budget_food_extras') ?></div>
                 <div class="hol-summary-value">🍔 <?= number_format($holiday['budget_food'], 0) ?> € | 🎁 <?= number_format($holiday['budget_extra'], 0) ?> €</div>
