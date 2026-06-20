@@ -297,13 +297,12 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                     <div class="hol-step-actions">
                                         <span class="hol-step-price"><?= number_format($step['total_amount'], 2, ',', ' ') ?> €</span>
                                         
-                                        <a href="https://www.google.com/maps/dir/?api=1&destination=<?= $step['lat'] ?>,<?= $step['lng'] ?>" 
-                                           target="_blank" 
+                                        <button onclick="openGpsModal(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" 
                                            class="btn-icon-small" 
-                                           title="Y aller avec le GPS (Maps/Waze)" 
-                                           style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">
-                                            🗺️
-                                        </a>
+                                           title="Y aller avec le GPS" 
+                                           style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">
+                                            🧭
+                                        </button>
 
                                         <button onclick='openPlanningModal(<?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('hdl_view_planning') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">📅</button>
                                         <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('btn_edit') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">✏️</button>
@@ -468,6 +467,32 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
         </div>
         <div class="modal-footer" style="padding-top:15px; border-top:1px solid var(--border-light); margin-top:15px;">
             <button type="button" onclick="closeTransitModal()" class="pf-btn btn-secondary"><?= tr('btn_close') ?></button>
+        </div>
+    </div>
+</div>
+
+<div id="gpsModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width: 320px; text-align: center; padding: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0; font-size: 1.2rem; color: var(--text-main);">🧭 Y aller avec...</h3>
+            <button type="button" onclick="closeGpsModal()" class="pf-modal-close">×</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button onclick="launchGpsApp('waze')" class="pf-btn btn-secondary" style="font-size: 1.1rem; padding: 12px; display:flex; align-items:center; justify-content:center; gap:10px;">
+                <img src="https://cdn.simpleicons.org/waze/05C8F0" alt="Waze" style="width: 24px; height: 24px;"> 
+                Waze
+            </button>
+            
+            <button onclick="launchGpsApp('gmaps')" class="pf-btn btn-secondary" style="font-size: 1.1rem; padding: 12px; display:flex; align-items:center; justify-content:center; gap:10px;">
+                <img src="https://cdn.simpleicons.org/googlemaps" alt="Google Maps" style="width: 24px; height: 24px;"> 
+                Google Maps
+            </button>
+            
+            <button onclick="launchGpsApp('amaps')" class="pf-btn btn-secondary" style="font-size: 1.1rem; padding: 12px; display:flex; align-items:center; justify-content:center; gap:10px;">
+                <img src="https://cdn.simpleicons.org/apple/000000" alt="Apple Maps" style="width: 24px; height: 24px;"> 
+                Apple Maps
+            </button>
         </div>
     </div>
 </div>
