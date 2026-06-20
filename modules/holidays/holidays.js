@@ -5,26 +5,21 @@ function tr(key) {
   return window.I18N && window.I18N[key] ? window.I18N[key] : key;
 }
 
-// On utilise 'var' au lieu de 'const/let' pour éviter les crashs si le fichier est lu 2 fois
 var currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
-var selectedItemIdForMove = null; // Déplacé ici pour plus de clarté
+var selectedItemIdForMove = null;
 
 // ============================================================================
 // UTILITAIRES MÉTÉO
 // ============================================================================
 function getWeatherInfo(code) {
-  // Transformation en conditions pour regrouper les codes WMO
   if (code === 0) return { icon: "☀️", label: tr("weather_sunny") };
   if ([1, 2].includes(code)) return { icon: "🌤️", label: tr("weather_sunny") };
   if ([3, 45, 48].includes(code))
     return { icon: "☁️", label: tr("weather_cloudy") };
-  // Les codes 51 à 67 et 80 à 82 couvrent toutes les formes de pluie et bruine
   if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code))
     return { icon: "🌧️", label: tr("weather_rainy") };
-  // Les codes neigeux
   if ([71, 73, 75, 77, 85, 86].includes(code))
     return { icon: "❄️", label: tr("weather_snowy") };
-  // Orages
   if ([95, 96, 99].includes(code))
     return { icon: "⛈️", label: tr("weather_rainy") };
 
@@ -45,12 +40,8 @@ async function loadWeatherForStep(pt) {
     );
     const res = await resp.json();
 
-    console.log(`Météo pour ${pt.location_name} :`, res);
-
     if (res.success) {
       const info = getWeatherInfo(res.data.code);
-
-      // Si c'est une estimation basée sur le passé, on adapte l'affichage
       const approxSymbol = res.data.is_historical ? "~" : "";
       const badgeTitle = res.data.is_historical
         ? `${info.label} (${tr("weather_historical")})`
@@ -80,8 +71,9 @@ window.addEventListener("click", function (event) {
   }
 });
 
-// --- 1. GESTION DE LA MODALE D'ÉDITION RAPIDE ---
-
+// ============================================================================
+// 1. GESTION DE LA MODALE D'ÉDITION RAPIDE (BASES VOYAGE)
+// ============================================================================
 function openHolidayModal(mode) {
   const modal = document.getElementById("holidayModal");
   const form = document.getElementById("holidayForm");
@@ -89,9 +81,6 @@ function openHolidayModal(mode) {
 
   form.reset();
   document.getElementById("inp_id").value = "";
-  document.getElementById("list_transport").innerHTML = "";
-  document.getElementById("list_accommodation").innerHTML = "";
-  document.getElementById("list_activity").innerHTML = "";
 
   if (mode === "add") {
     document.getElementById("modalTitle").innerText = tr("hdl_modal_title");
@@ -131,65 +120,10 @@ function editHoliday(data) {
     h.budget_extra > 0 ? h.budget_extra : "";
   document.getElementById("inp_notes").value = h.notes || "";
 
-  document.getElementById("list_transport").innerHTML = "";
-  document.getElementById("list_accommodation").innerHTML = "";
-  document.getElementById("list_activity").innerHTML = "";
-
-  if (data.items) {
-    data.items.forEach((item) => {
-      if (item.name !== "PF_TECHNICAL_POINT") {
-        // On passe maintenant l'ID et le lieu à addItem
-        addItem(
-          item.category,
-          item.name,
-          item.amount,
-          item.is_paid,
-          item.id,
-          item.location_name || "",
-        );
-      }
-    });
+  const vehicleInput = document.getElementById("inp_vehicle_id");
+  if (vehicleInput) {
+    vehicleInput.value = h.vehicle_id || "";
   }
-}
-
-// --- 2. GESTION DES LISTES DYNAMIQUES DANS LA MODALE ---
-
-function addItem(
-  category,
-  name = "",
-  amount = "",
-  isPaid = 0,
-  id = "",
-  location = "",
-) {
-  const container = document.getElementById("list_" + category);
-  const div = document.createElement("div");
-  div.className = "savings-line-item"; // Utilisation de ta classe existante
-  div.style.marginBottom = "10px";
-
-  const checkedAttr = isPaid == 1 ? "checked" : "";
-  // Optimisation : Affichage du badge d'étape si existant
-  const locationBadge = location
-    ? `<span style="font-size:0.65rem; background:#e2e8f0; padding:2px 6px; border-radius:4px; margin-right:5px; color:#64748b; font-weight:bold;">📍 ${location}</span>`
-    : "";
-
-  div.innerHTML = `
-        <input type="hidden" name="items[id][]" value="${id}">
-        <input type="hidden" name="items[cat][]" value="${category}">
-        <input type="hidden" name="items[location][]" value="${location}">
-        <div style="flex: 2; display:flex; flex-direction:column; gap:4px;">
-            ${locationBadge}
-            <input type="text" name="items[name][]" class="pf-input" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}" style="padding: 8px; font-size:0.9rem;" required>
-        </div>
-        <input type="number" step="0.01" name="items[amount][]" class="pf-input" placeholder="0.00" value="${amount}" style="width: 90px; text-align: right; padding: 8px; font-size:0.9rem;">
-        <label title="${tr("hdl_paid")}" style="display: flex; align-items: center; cursor: pointer; padding: 0 5px;">
-            <input type="checkbox" ${checkedAttr} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="margin:0;">
-            <input type="hidden" name="items[paid][]" value="${isPaid}">
-            <span style="font-size:0.75rem; margin-left:4px; font-weight:bold; color:#64748b;">${tr("hdl_paid")}</span>
-        </label>
-        <button type="button" onclick="this.parentElement.remove()" class="btn-icon-action delete" title="${tr("btn_delete")}">🗑️</button>
-    `;
-  container.appendChild(div);
 }
 
 function deleteHoliday() {
@@ -203,55 +137,9 @@ function deleteHoliday() {
   form.submit();
 }
 
-// --- 3. GESTION DE LA CARTE ---
-
-var map = null;
-
-function toggleMap() {
-  const modal = document.getElementById("hol-map-modal");
-  if (!modal) return;
-  if (modal.style.display === "flex") {
-    modal.style.display = "none";
-  } else {
-    modal.style.display = "flex";
-    setTimeout(initMap, 100);
-  }
-}
-
-function initMap() {
-  if (map) {
-    map.invalidateSize();
-    return;
-  }
-  if (typeof L === "undefined") return;
-
-  map = L.map("hol-map").setView([46.6, 2.4], 4);
-  L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    {
-      attribution: "© OpenStreetMap",
-    },
-  ).addTo(map);
-
-  if (typeof HOL_MAP_POINTS !== "undefined") {
-    HOL_MAP_POINTS.forEach((pt) => {
-      const color =
-        pt.status === "planned" || pt.status === "booked" ? "green" : "blue";
-      L.circleMarker([pt.lat, pt.lng], {
-        color: color,
-        radius: 8,
-        fillOpacity: 0.8,
-      })
-        .addTo(map)
-        .bindPopup(`<b>${pt.title}</b><br>${pt.status}`);
-    });
-  }
-}
-
 // ============================================================================
-// 4. GESTION DE LA CARTE DÉTAILLÉE (ROADTRIP) ET GÉOCODAGE
+// 4. GESTION DE LA CARTE DÉTAILLÉE (ROADTRIP) ET TRACÉS OSRM
 // ============================================================================
-
 var detailMap = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -263,7 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
 function initDetailMap() {
   if (typeof L === "undefined" || typeof MAP_POINTS === "undefined") return;
 
-  // 1. 🧹 NETTOYAGE PROPRE : On détruit l'ancienne instance si elle existe (Évite le bug de la souris bloquée)
   if (detailMap !== null) {
     detailMap.remove();
     detailMap = null;
@@ -272,17 +159,12 @@ function initDetailMap() {
   const mapContainer = document.getElementById("tripMap");
   if (!mapContainer) return;
 
-  // 2. 🛡️ BOUCLIER FIREFOX DESKTOP : Empêche le drag natif HTML5 de voler le clic
   mapContainer.style.touchAction = "none";
   mapContainer.ondragstart = function (e) {
     e.preventDefault();
   };
 
-  // 3. 🛠️ INITIALISATION DE LA CARTE
-  detailMap = L.map("tripMap", {
-    tap: false, // Désactive le tap simulé (anti-warning mobile/Firefox)
-    dragging: true, // Force l'autorisation du déplacement à la souris
-  });
+  detailMap = L.map("tripMap", { tap: false, dragging: true });
 
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -290,25 +172,21 @@ function initDetailMap() {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   }).addTo(detailMap);
 
-  // Cas : Aucun point
   if (MAP_POINTS.length === 0) {
-    detailMap.setView([46.6, 2.4], 5); // France par défaut
+    detailMap.setView([46.6, 2.4], 5);
     return;
   }
 
   const latlngs = [];
   const bounds = L.latLngBounds();
 
-  // 4. PLACEMENT DES MARQUEURS
   MAP_POINTS.forEach((pt, index) => {
     const pos = [pt.lat, pt.lng];
     latlngs.push(pos);
     bounds.extend(pos);
 
-    const color = "#2563eb";
-
     const marker = L.circleMarker(pos, {
-      color: color,
+      color: "#2563eb",
       radius: window.innerWidth < 768 ? 6 : 8,
       fillOpacity: 1,
       fillColor: "white",
@@ -323,11 +201,10 @@ function initDetailMap() {
         <div style="text-align:center;">
             <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">${stepLabel} ${index + 1}</div>
             <strong style="font-size:1rem; color:#0f172a;">${pt.location_name}</strong><br>
-            <span style="font-weight:bold; color:${color};">${parseFloat(pt.total_amount).toFixed(2)} €</span>
+            <span style="font-weight:bold; color:#2563eb;">${parseFloat(pt.total_amount).toFixed(2)} €</span>
         </div>
     `);
 
-    // Animation au clic sur le marqueur
     marker.on("click", function () {
       const card = document.getElementById("step-card-" + pt.sort_order);
       if (card) {
@@ -345,7 +222,6 @@ function initDetailMap() {
 
   const mapPadding = window.innerWidth < 768 ? [20, 20] : [50, 50];
 
-  // 5. CENTRAGE ET TRACÉS (OSRM)
   if (latlngs.length === 1) {
     detailMap.setView(latlngs[0], 12);
   } else if (latlngs.length > 1) {
@@ -379,9 +255,16 @@ function initDetailMap() {
       results.sort((a, b) => a.index - b.index);
 
       let returnStartIndex = latlngs.length - 2;
-      const customReturnStep = MAP_POINTS.findIndex((p) => p.is_return == 1);
-      if (customReturnStep > 0) {
-        returnStartIndex = customReturnStep;
+      if (
+        typeof window.GLOBAL_RETURN_STEP_ID !== "undefined" &&
+        window.GLOBAL_RETURN_STEP_ID !== null
+      ) {
+        const customReturnStep = MAP_POINTS.findIndex(
+          (p) => p.sort_order == window.GLOBAL_RETURN_STEP_ID,
+        );
+        if (customReturnStep > 0) {
+          returnStartIndex = customReturnStep;
+        }
       }
 
       results.forEach((res) => {
@@ -408,6 +291,52 @@ function initDetailMap() {
             lineCap: "round",
             lineJoin: "round",
           }).addTo(detailMap);
+
+          // 🔥 CALCUL AUTO DU COUT ET KILOMÈTRES
+          const distanceKm = res.data.routes[0].distance / 1000;
+          const fuelL100 = window.VEHICLE_CONSUMPTION || 7;
+          const fuelPrice = window.FUEL_PRICE || 1.85;
+          const cost = (distanceKm / 100) * fuelL100 * fuelPrice;
+
+          const targetOrder = MAP_POINTS[res.index + 1].sort_order;
+          const targetCard = document.getElementById(
+            "step-card-" + targetOrder,
+          );
+
+          if (targetCard) {
+            const existingTransit =
+              targetCard.querySelectorAll(".transit-auto-info");
+            existingTransit.forEach((el) => el.remove());
+
+            const rawLocationName = MAP_POINTS[res.index].location_name;
+            const safeLocationName = rawLocationName.replace(/'/g, "\\'");
+            const expenseDesc = `Essence depuis ${rawLocationName}`;
+
+            const targetStepData = MAP_POINTS[res.index + 1];
+            const isAlreadyAdded = targetStepData.items.some(
+              (it) => it.name === expenseDesc,
+            );
+
+            const summaryHtml = `
+              <div class="transit-auto-info" style="font-size: 0.8rem; color: var(--text-muted); padding: 4px 0 10px 42px; display: flex; align-items: center; gap: 8px;">
+                  🚗 ${Math.round(distanceKm)} km 
+                  <span style="opacity: 0.5;">|</span> 
+                  **⛽ ~${cost.toFixed(2)} €**
+                  ${
+                    !isAlreadyAdded
+                      ? `<button type="button" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.8rem; padding:0; margin-left: 5px;" 
+                               onclick="addQuickTransitExpense(${document.querySelector("input[name=holiday_id]").value}, ${targetOrder}, ${cost.toFixed(2)}, 'Essence depuis ${safeLocationName}', this)">
+                           + Ajouter
+                       </button>`
+                      : `<span style="color:var(--success); font-weight:bold; margin-left: 5px;" title="Dépense déjà ajoutée à cette étape">✓ Ajouté</span>`
+                  }
+              </div>`;
+
+            const cpHeader = targetCard.querySelector(".hol-cp-header");
+            if (cpHeader) {
+              cpHeader.insertAdjacentHTML("afterend", summaryHtml);
+            }
+          }
         } else {
           drawFallbackLine(res.coords, routeColor, routeWeight);
         }
@@ -415,7 +344,6 @@ function initDetailMap() {
     });
   }
 
-  // 6. LANCEMENT DE LA MÉTÉO
   if (typeof MAP_POINTS !== "undefined") {
     MAP_POINTS.forEach((pt) => {
       if (typeof loadWeatherForStep === "function") {
@@ -424,14 +352,12 @@ function initDetailMap() {
     });
   }
 
-  // 7. FIX FINAL : Force Leaflet à recalculer sa taille une fois le DOM stabilisé
   setTimeout(() => {
     if (detailMap) {
       detailMap.invalidateSize();
     }
   }, 300);
 
-  // Fonction utilitaire locale
   function drawFallbackLine(coords, color, weight) {
     L.polyline(coords, {
       color: color,
@@ -446,7 +372,6 @@ function panMapTo(lat, lng) {
   if (detailMap) {
     detailMap.setView([lat, lng], 14, { animate: true });
 
-    // 🛠️ ERGONOMIE MOBILE : Auto-scroll vers la carte si on est sur petit écran
     if (window.innerWidth < 768) {
       const mapDiv = document.getElementById("tripMap");
       if (mapDiv) {
@@ -456,8 +381,9 @@ function panMapTo(lat, lng) {
   }
 }
 
-// --- LOGIQUE DE LA MODALE CHECKPOINT ---
-
+// ============================================================================
+// 5. LOGIQUE DE LA MODALE CHECKPOINT (ÉTAPES)
+// ============================================================================
 function openCheckpointModal(mode, data = null) {
   const searchBlock = document.getElementById("cpSearchBlock");
   const formBlock = document.getElementById("formCheckpoint");
@@ -470,8 +396,10 @@ function openCheckpointModal(mode, data = null) {
     document.getElementById("cp_start_date").value = "";
   if (document.getElementById("cp_end_date"))
     document.getElementById("cp_end_date").value = "";
-  document.getElementById("searchPlaceInput").value = "";
-  document.getElementById("searchResults").innerHTML = "";
+  if (document.getElementById("searchPlaceInput"))
+    document.getElementById("searchPlaceInput").value = "";
+  if (document.getElementById("searchResults"))
+    document.getElementById("searchResults").innerHTML = "";
 
   searchBlock.style.display = "block";
 
@@ -481,8 +409,16 @@ function openCheckpointModal(mode, data = null) {
     btnDel.style.display = "none";
     document.getElementById("cp_old_sort_order").value = "";
     document.getElementById("cp_name").value = "";
+
+    if (document.getElementById("cp_step_type")) {
+      document.getElementById("cp_step_type").value = "stop";
+      toggleStepDates("stop");
+    }
+    if (document.getElementById("cp_set_as_return")) {
+      document.getElementById("cp_set_as_return").checked = false;
+    }
+
     addCpExpenseLine();
-    document.getElementById("cp_is_return").checked = false;
   } else if (mode === "edit" && data) {
     document.getElementById("cpModalTitle").innerText = tr("hdl_js_edit_step");
     formBlock.style.display = "block";
@@ -494,7 +430,19 @@ function openCheckpointModal(mode, data = null) {
     document.getElementById("cp_name").value = data.location_name;
     document.getElementById("cp_start_date").value = data.step_start_date || "";
     document.getElementById("cp_end_date").value = data.step_end_date || "";
-    document.getElementById("cp_is_return").checked = data.is_return == 1;
+
+    // 🔥 PRE-REMPLISSAGE DU TYPE D'ÉTAPE ET UI DATES
+    if (document.getElementById("cp_step_type")) {
+      const type = data.step_type || "stop";
+      document.getElementById("cp_step_type").value = type;
+      toggleStepDates(type);
+    }
+
+    // 🔥 PRE-REMPLISSAGE DE LA CASE RETOUR BASEE SUR LA GLOBALE
+    if (document.getElementById("cp_set_as_return")) {
+      document.getElementById("cp_set_as_return").checked =
+        window.GLOBAL_RETURN_STEP_ID == data.sort_order;
+    }
 
     if (data.items && data.items.length > 0) {
       let visibleCount = 0;
@@ -589,6 +537,10 @@ function addCpExpenseLine(
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
+            <select name="items[context][]" class="pf-input hol-form-select" style="width:auto; margin-left:5px; font-size:0.75rem;">
+                <option value="local">📍 Sur place</option>
+                <option value="transit">🛣️ Transit</option>
+            </select>
             <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}">
             <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
@@ -621,10 +573,8 @@ function deleteCheckpoint() {
 }
 
 // ============================================================================
-// 5. RÉORDONNANCEMENT DES ÉTAPES (DRAG & DROP PC + FLÈCHES MOBILE)
+// 6. REORDONNANCEMENT DES ÉTAPES (DRAG & DROP PC + MOBILE)
 // ============================================================================
-
-// On sort cette fonction pour pouvoir l'appeler depuis les boutons fléchés sur mobile
 function saveCheckpointOrder() {
   const locations = [
     ...document.querySelectorAll(".hol-checkpoint-draggable"),
@@ -641,7 +591,6 @@ function saveCheckpointOrder() {
   }).then(() => window.location.reload());
 }
 
-// Fonction appelée par les flèches Haut/Bas sur mobile
 function moveStepMobile(btn, direction) {
   const item = btn.closest(".hol-checkpoint-draggable");
   const container = item.parentElement;
@@ -672,7 +621,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let draggedItem = null;
 
   checkpoints.forEach((item) => {
-    // Si on est sur mobile, on supprime l'attribut draggable pour éviter les conflits de scroll
     if (isMobile) {
       item.removeAttribute("draggable");
       return;
@@ -724,9 +672,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ============================================================================
-// MOTEUR DRAG & DROP DU PLANNING
+// 7. MOTEUR DRAG & DROP DU PLANNING CARNET DE BORD
 // ============================================================================
-
 function closePlanningModal() {
   document.getElementById("planningModal").style.display = "none";
   document.body.classList.remove("no-scroll");
@@ -798,7 +745,6 @@ function openPlanningModal(step) {
   html += `</div></div>`;
   container.innerHTML = html;
 
-  // 1. On détecte si on est sur mobile juste avant la boucle
   const isMobile = window.innerWidth <= 768;
   const dragAttr = isMobile ? "" : 'draggable="true"';
 
@@ -819,7 +765,6 @@ function openPlanningModal(step) {
       ? `<div class="hol-drag-note">${it.notes}</div>`
       : "";
 
-    // 2. MODIFICATION ICI : On remplace le texte en dur draggable="true" par la variable ${dragAttr}
     const elHtml = `
             <div class="hol-drag-item ${catClass}" ${dragAttr} 
                  id="drag-item-${it.id}" data-id="${it.id}" 
@@ -957,18 +902,6 @@ function updateItemMemory(itemId, changes) {
   });
 }
 
-function saveItemDateTime(itemId, dateStr, timeStr) {
-  const formData = new FormData();
-  formData.append("action", "update_item_datetime");
-  formData.append("item_id", itemId);
-  formData.append("item_date", dateStr);
-  formData.append("item_time", timeStr);
-  fetch("/modules/holidays/includes/api/save_checkpoint.php", {
-    method: "POST",
-    body: formData,
-  }).catch((err) => console.error("Erreur:", err));
-}
-
 // ============================================================================
 // MÉTÉO SPÉCIFIQUE AU HEADER DU PLANNING
 // ============================================================================
@@ -995,5 +928,78 @@ async function loadWeatherForPlanning(lat, lng, dateStr) {
     }
   } catch (e) {
     console.error("Erreur météo planning", e);
+  }
+}
+
+// Gère l'affichage des dates dans la modale d'étape
+function toggleStepDates(type) {
+  const grpEnd = document.getElementById("grp_end_date");
+  const lblStart = document.getElementById("lbl_start_date");
+
+  if (type === "origin") {
+    grpEnd.style.display = "none";
+    lblStart.innerText = "📅 Date de départ";
+  } else if (type === "destination") {
+    grpEnd.style.display = "none";
+    lblStart.innerText = "📅 Date d'arrivée";
+  } else {
+    grpEnd.style.display = "block";
+    lblStart.innerText = tr("hdl_label_arrival");
+  }
+}
+
+// Ajout magique d'une dépense d'essence SÉCURISÉE
+function addQuickTransitExpense(
+  holidayId,
+  sortOrder,
+  amount,
+  description,
+  btnElement,
+) {
+  if (
+    !confirm(
+      `Ajouter une dépense de carburant de ${amount}€ pour cette étape ?`,
+    )
+  )
+    return;
+
+  if (btnElement) {
+    btnElement.disabled = true;
+    btnElement.innerText = "⏳...";
+    btnElement.style.cursor = "not-allowed";
+    btnElement.style.opacity = "0.7";
+  }
+
+  const fd = new FormData();
+  fd.append("action", "add_single_item");
+  fd.append("holiday_id", holidayId);
+  fd.append("sort_order", sortOrder);
+  fd.append("category", "transport");
+  fd.append("name", description);
+  fd.append("amount", amount);
+  fd.append("context", "transit");
+
+  fetch("/modules/holidays/includes/api/save_checkpoint.php", {
+    method: "POST",
+    body: fd,
+  }).then(() => window.location.reload());
+}
+
+// Permet de modifier le prix du carburant à la volée
+function updateFuelPrice() {
+  const currentPrice = window.FUEL_PRICE || 1.85;
+  let newPrice = prompt(
+    "Définit le prix du carburant estimé (€/L) pour tes trajets :",
+    currentPrice,
+  );
+
+  if (newPrice !== null) {
+    newPrice = parseFloat(newPrice.replace(",", "."));
+    if (!isNaN(newPrice) && newPrice > 0) {
+      localStorage.setItem("holidays_fuel_price", newPrice);
+      window.location.reload();
+    } else {
+      alert("Prix invalide.");
+    }
   }
 }

@@ -1400,8 +1400,88 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* --- Toll cost estimator panel --- */
-.hol-cost-stat { background: var(--bg-page, #f8fafc); border: 1px solid var(--border-light, #e2e8f0); border-radius: 10px; padding: .75rem 1rem; text-align: center; }
-.hol-cost-stat-val { font-size: 1.2rem; font-weight: 700; color: var(--text-main, #0f172a); }
-.hol-cost-stat-label { font-size: .72rem; color: var(--text-muted, #64748b); margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
-.hol-cost-total { border-color: var(--primary, #4361ee); }
-.hol-cost-total .hol-cost-stat-val { color: var(--primary, #4361ee); }
+.hol-cost-stat {
+  background: var(--bg-page, #f8fafc);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+.hol-cost-stat-val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main, #0f172a);
+}
+.hol-cost-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hol-cost-total {
+  border-color: var(--primary, #4361ee);
+}
+.hol-cost-total .hol-cost-stat-val {
+  color: var(--primary, #4361ee);
+}
+
+/* ==========================================================================
+   17. ENCART D'ESTIMATION DE TRAJET (OSRM)
+   ========================================================================== */
+.hol-transit-info {
+  margin: 0 15px 15px 15px;
+  padding: 12px 16px;
+  background: var(--hol-info-bg);
+  border-radius: var(--radius-m);
+  border: 1px dashed #7dd3fc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.hol-transit-details {
+  font-size: 0.85rem;
+  color: var(--hol-info-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hol-transit-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.hol-transit-text strong {
+  font-size: 0.95rem;
+}
+
+.hol-transit-text span {
+  opacity: 0.85;
+  font-size: 0.8rem;
+  display: block;
+  margin-top: 2px;
+}
+
+.hol-transit-btn {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .hol-transit-info {
+    margin: 0 10px 15px 10px;
+    padding: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hol-transit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
