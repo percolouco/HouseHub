@@ -4,24 +4,25 @@ require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
 require_login();
 
-// --------------------------------===========================================
-// INTERCEPTIONS AJAX (Execution ultra rapide sans rechargement de page)
-// --------------------------------===========================================
+// ---------------------------------------------------------------------------
+// INTERCEPTIONS AJAX (Exécution ultra rapide sans rechargement lourd)
+// ---------------------------------------------------------------------------
 if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime', 'update_item_duration', 'add_single_item'])) {
     header('Content-Type: application/json');
+    session_write_close(); // 🚀 LIBÈRE LA SESSION : Permet d'autres requêtes simultanées sans bloquer le navigateur
     
     try {
-        // 🔥 AJOUT SÉCURISÉ D'UNE DÉPENSE UNIQUE (Essence OSRM)
         if ($_POST['action'] === 'add_single_item') {
             $holiday_id = (int)$_POST['holiday_id'];
             $sort_order = (int)$_POST['sort_order'];
             
-            // On récupère proprement les métadonnées de l'étape pour lier le frais
             $stmt = $pdo->prepare("SELECT location_name, lat, lng, step_start_date, step_end_date, step_type FROM pf_holidays_items WHERE holiday_id = ? AND sort_order = ? LIMIT 1");
             $stmt->execute([$holiday_id, $sort_order]);
             $stepInfo = $stmt->fetch();
 
             if ($stepInfo) {
+                // Utilisation de transactions isolées pour l'AJAX
+                $pdo->beginTransaction();
                 $ins = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, step_start_date, step_end_date, step_type, expense_context, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
                 $ins->execute([
                     $holiday_id, $_POST['category'], $_POST['name'], (float)$_POST['amount'], 0,
@@ -29,6 +30,7 @@ if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime
                     $sort_order, $stepInfo['step_start_date'], $stepInfo['step_end_date'],
                     $stepInfo['step_type'], $_POST['context']
                 ]);
+                $pdo->commit();
                 echo json_encode(['success' => true]);
                 exit;
             }
@@ -57,6 +59,7 @@ if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime
             exit;
         }
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         exit;
     }
