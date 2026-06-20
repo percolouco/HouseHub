@@ -1123,3 +1123,41 @@ function closeTransitModal() {
   document.getElementById("transitModal").style.display = "none";
   document.body.classList.remove("no-scroll");
 }
+
+// ============================================================================
+// CHOIX DE L'APPLICATION GPS (Google Maps, Waze, Apple Maps)
+// ============================================================================
+window.currentGpsTarget = { lat: 0, lng: 0 };
+
+function openGpsModal(lat, lng) {
+  window.currentGpsTarget = { lat: lat, lng: lng };
+  document.getElementById("gpsModal").style.display = "flex";
+  document.body.classList.add("no-scroll");
+}
+
+function closeGpsModal() {
+  document.getElementById("gpsModal").style.display = "none";
+  document.body.classList.remove("no-scroll");
+}
+
+function launchGpsApp(app) {
+  const lat = window.currentGpsTarget.lat;
+  const lng = window.currentGpsTarget.lng;
+  let url = "";
+
+  if (app === "waze") {
+    // Force l'ouverture de Waze en mode navigation
+    url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+  } else if (app === "gmaps") {
+    // Force l'ouverture de Google Maps en mode itinéraire
+    url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  } else if (app === "amaps") {
+    // Force l'ouverture d'Apple Maps
+    url = `http://maps.apple.com/?daddr=${lat},${lng}`;
+  }
+
+  if (url !== "") {
+    window.open(url, "_blank");
+    closeGpsModal();
+  }
+}
