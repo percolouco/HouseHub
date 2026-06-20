@@ -472,7 +472,8 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 </div>
 
 <div id="gpsModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 320px; text-align: center; padding: 20px;">
+    <div class="pf-modal-content" style="max-width: 320px; height: auto !important; min-height: 0 !important; text-align: center; padding: 20px; margin: auto;">
+        
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="margin:0; font-size: 1.2rem; color: var(--text-main);">🧭 Y aller avec...</h3>
             <button type="button" onclick="closeGpsModal()" class="pf-modal-close">×</button>
