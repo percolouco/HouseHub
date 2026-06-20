@@ -295,7 +295,32 @@ CREATE TABLE IF NOT EXISTS pf_holidays (
   status       VARCHAR(50) DEFAULT 'draft',
   budget_food  DECIMAL(10,2) DEFAULT 0,
   budget_extra DECIMAL(10,2) DEFAULT 0,
-  notes        TEXT DEFAULT NULL
+  notes        TEXT DEFAULT NULL,
+  vehicle_id   INT DEFAULT NULL,
+  return_step_id INT DEFAULT NULL, -- 🔥 NOUVEAU : Point de bascule du retour
+  FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_holidays_items (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  holiday_id      INT NOT NULL,
+  category        VARCHAR(100),
+  name            VARCHAR(255),
+  amount          DECIMAL(10,2) DEFAULT 0,
+  is_paid         TINYINT(1) DEFAULT 0,
+  location_name   VARCHAR(255) DEFAULT NULL,
+  lat             DECIMAL(10,7) DEFAULT NULL,
+  lng             DECIMAL(10,7) DEFAULT NULL,
+  sort_order      INT DEFAULT 0,
+  notes           TEXT DEFAULT NULL,
+  item_date       DATE DEFAULT NULL,
+  item_time       TIME DEFAULT NULL,
+  step_type       VARCHAR(20) DEFAULT 'stop', 
+  step_start_date DATE DEFAULT NULL,
+  step_end_date   DATE DEFAULT NULL,
+  duration        INT DEFAULT NULL,
+  expense_context VARCHAR(20) DEFAULT NULL,   
+  FOREIGN KEY (holiday_id) REFERENCES pf_holidays(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_holidays_items (

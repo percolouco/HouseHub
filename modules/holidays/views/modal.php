@@ -1,6 +1,5 @@
 <div id="holidayModal" class="pf-modal">
-    <div class="pf-modal-content hol-modal-content">
-        <h3 id="modalTitle" class="pf-modal-title"><?= tr('hdl_modal_title') ?></h3>
+    <div class="pf-modal-content hol-modal-content" style="max-width: 500px;"> <h3 id="modalTitle" class="pf-modal-title"><?= tr('hdl_modal_title') ?></h3>
         
         <form action="/modules/holidays/includes/api/save_holiday.php" method="POST" id="holidayForm">
             <input type="hidden" name="id" id="inp_id">
@@ -40,32 +39,14 @@
                 </div>
             </div>
 
-            <hr class="hol-divider">
-
-            <div class="hol-columns-wrapper">
-                <div class="hol-col">
-                    <div class="hol-col-header">
-                        <h4 class="hol-cat-transport">🚗 <?= tr('hdl_cat_transport') ?></h4>
-                        <button type="button" class="btn-add-item" onclick="addItem('transport')" title="<?= tr('hdl_add_transport') ?>">＋</button>
-                    </div>
-                    <div id="list_transport" class="dynamic-list"></div>
-                </div>
-
-                <div class="hol-col">
-                    <div class="hol-col-header">
-                        <h4 class="hol-cat-accommodation">🏨 <?= tr('hdl_cat_accommodation') ?></h4>
-                        <button type="button" class="btn-add-item" onclick="addItem('accommodation')" title="<?= tr('hdl_add_accommodation') ?>">＋</button>
-                    </div>
-                    <div id="list_accommodation" class="dynamic-list"></div>
-                </div>
-
-                <div class="hol-col">
-                    <div class="hol-col-header">
-                        <h4 class="hol-cat-activity">🎫 <?= tr('hdl_cat_activity') ?></h4>
-                        <button type="button" class="btn-add-item" onclick="addItem('activity')" title="<?= tr('hdl_add_activity') ?>">＋</button>
-                    </div>
-                    <div id="list_activity" class="dynamic-list"></div>
-                </div>
+            <div class="form-group" style="margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <label class="pf-label" style="margin-bottom: 5px;">🚗 Véhicule utilisé (Optionnel)</label>
+                <select name="vehicle_id" id="inp_vehicle_id" class="pf-input">
+                    <option value="">-- Aucun / Autre transport --</option>
+                    <?php foreach($garageVehicles as $v): ?>
+                        <option value="<?= $v['id'] ?>"><?= htmlspecialchars($v['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <hr class="hol-divider">
@@ -81,7 +62,7 @@
                 </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="margin-top: 10px;">
                 <label class="pf-label"><?= tr('hdl_label_notes') ?></label>
                 <textarea name="notes" id="inp_notes" class="pf-input" rows="2" placeholder="<?= tr('hdl_ph_notes') ?>"></textarea>
             </div>

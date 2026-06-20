@@ -22,6 +22,9 @@ $pageCss    = "/modules/holidays/holidays.css";
 
 require __DIR__ . '/header.php';
 
+$stmtVehicles = $pdo->query("SELECT id, name FROM pf_vehicles ORDER BY name ASC");
+$garageVehicles = $stmtVehicles->fetchAll(PDO::FETCH_ASSOC);
+
 // 3. ROUTEUR DU MODULE VACANCES
 if ($tab === 'holiday_detail' && isset($_GET['id'])) {
     // Si on demande le détail ET qu'un ID est fourni

@@ -11,10 +11,15 @@ if ($id === 0) {
 // Récupération des données du voyage
 $stmt = $pdo->prepare("
     SELECT h.*, 
+           v.name as vehicle_name,
+           v.consumption as vehicle_consumption,
            (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE((SELECT SUM(amount) FROM pf_holidays_items WHERE holiday_id = h.id), 0)) as total_cost,
            (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND is_paid = 1) as total_paid,
-           (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved
-    FROM pf_holidays h WHERE h.id = ?
+           (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved,
+           (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND expense_context = 'transit') as total_transit
+    FROM pf_holidays h 
+    LEFT JOIN pf_vehicles v ON h.vehicle_id = v.id
+    WHERE h.id = ?
 ");
 $stmt->execute([$id]);
 $holiday = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -42,7 +47,7 @@ foreach ($items as $it) {
                 'sort_order' => $it['sort_order'],
                 'step_start_date' => $it['step_start_date'],
                 'step_end_date' => $it['step_end_date'],
-                'is_return' => (int)$it['is_return'], 
+                'step_type' => $it['step_type'] ?? 'stop', 
                 'total_amount' => 0,
                 'items' => []
             ];
@@ -105,10 +110,34 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
     <div class="hol-summary-card">
         <div class="hol-summary-grid">
+            
+            <?php if (!empty($holiday['vehicle_name'])): ?>
             <div class="hol-summary-item">
-                <div class="hol-summary-label"><?= tr('hdl_label_period') ?></div>
-                <div class="hol-summary-value"><?= $dateDisplay ?: tr('hdl_dates_to_define') ?></div>
+                <div class="hol-summary-label">Transport</div>
+                <div class="hol-summary-value">🚗 <?= htmlspecialchars($holiday['vehicle_name']) ?></div>
             </div>
+            <?php endif; ?>
+
+            <div class="hol-summary-item">
+                <div class="hol-summary-label">
+                    Frais de route (Essence/Péages)
+                </div>
+                <div class="hol-summary-value" style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size: 1.1rem;">⛽</span> 
+                    <strong><?= number_format($holiday['total_transit'], 0) ?> €</strong>
+                    
+                    <span onclick="updateFuelPrice()" style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; transition: color 0.2s; display: inline-flex; align-items: center; gap: 3px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';" title="Modifier le prix estimé du carburant">
+                        (<span id="display_fuel_price">1.85</span> €/L) <span style="font-size:0.7rem; opacity:0.8;">✏️</span>
+                    </span>
+                    
+                    <?php if ($holiday['total_transit'] > 0): ?>
+                        <span onclick="alert('Bientôt : Liste détaillée des frais de route !')" style="font-size: 1rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; margin-left: 4px; display: inline-flex; align-items: center;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="Voir le détail">
+                            👁️
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div class="hol-summary-item">
                 <div class="hol-summary-label"><?= tr('hdl_label_budget_food_extras') ?></div>
                 <div class="hol-summary-value">🍔 <?= number_format($holiday['budget_food'], 0) ?> € | 🎁 <?= number_format($holiday['budget_extra'], 0) ?> €</div>
@@ -211,8 +240,14 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                         </div>
                                     <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
                                         📍 <?= htmlspecialchars($step['location_name']) ?>
-                                        <?php if (!empty($step['is_return'])): ?>
+                                        <?php if ($holiday['return_step_id'] !== null && $holiday['return_step_id'] == $step['sort_order']): ?>
                                             <span style="background: #fff7ed; color: #ea580c; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #ffedd5; vertical-align: middle;">🏁 <?= tr('hdl_return') ?></span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if ($step['step_type'] === 'origin'): ?>
+                                            <span style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #d1fae5; vertical-align: middle;">🛫 DÉPART</span>
+                                        <?php elseif ($step['step_type'] === 'destination'): ?>
+                                            <span style="background: #fef2f2; color: #e11d48; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #fee2e2; vertical-align: middle;">🛬 ARRIVÉE FINALE</span>
                                         <?php endif; ?>
                                         <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
                                             <div class="hol-date-weather-wrapper">
@@ -260,22 +295,6 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             </div>
         </div>
     </div>
-
-    <?php if (count($mapPoints) >= 2): ?>
-    <div class="hol-summary-card" id="hol-cost-panel" style="margin-top:24px;">
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
-        <h3 style="margin:0; display:flex; align-items:center; gap:8px;">🚗 Coût du trajet</h3>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          <label style="font-size:.82rem; color:var(--text-muted);">Conso (L/100km)</label>
-          <input type="number" id="fuel-l100" value="7" min="3" max="30" step="0.5" style="width:65px; padding:.3rem .5rem; border:1px solid var(--border-light); border-radius:8px; font-size:.85rem;">
-          <label style="font-size:.82rem; color:var(--text-muted);">Prix carburant (€/L)</label>
-          <input type="number" id="fuel-price" value="1.85" min="1" max="4" step="0.01" style="width:65px; padding:.3rem .5rem; border:1px solid var(--border-light); border-radius:8px; font-size:.85rem;">
-          <button onclick="estimateTripCost()" class="pf-btn pf-btn-small">Calculer</button>
-        </div>
-      </div>
-      <div id="hol-cost-result" style="color:var(--text-muted); font-size:.9rem;">Cliquez sur Calculer pour estimer le coût du trajet.</div>
-    </div>
-    <?php endif; ?>
 
     <?php if (!empty($holiday['notes'])): ?>
     <div class="hol-summary-card" style="margin-top: 24px; padding: 25px; border-left: 5px solid #f59e0b;">
@@ -328,22 +347,32 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 <input type="text" name="location_name" id="cp_name" class="pf-input" style="font-weight:bold; color:var(--primary);" required>
             </div>
 
+            <div class="form-group" style="margin-bottom:15px; background:#fff7ed; padding:10px; border-radius:8px; border:1px solid #ffedd5;">
+                <label class="pf-label" style="color:#ea580c;">📍 Type d'étape</label>
+                <select name="step_type" id="cp_step_type" class="pf-input" onchange="toggleStepDates(this.value)">
+                    <option value="origin">DÉPART (Point de départ du voyage)</option>
+                    <option value="stop">SÉJOUR (Étape classique avec arrivée et départ)</option>
+                    <option value="destination">ARRIVÉE FINALE (Fin du voyage)</option>
+                </select>
+            </div>
+
             <div style="display:flex; gap:15px; margin-bottom:15px; background:#f8fafc; padding:12px; border-radius:8px;">
-                <div class="form-group" style="flex:1;">
-                    <label class="pf-label"><?= tr('hdl_label_arrival') ?></label>
+                <div class="form-group" id="grp_start_date" style="flex:1;">
+                    <label class="pf-label" id="lbl_start_date"><?= tr('hdl_label_arrival') ?></label>
                     <input type="date" name="step_start_date" id="cp_start_date" class="pf-input">
                 </div>
-                <div class="form-group" style="flex:1;">
-                    <label class="pf-label"><?= tr('hdl_label_departure') ?></label>
+                <div class="form-group" id="grp_end_date" style="flex:1;">
+                    <label class="pf-label" id="lbl_end_date"><?= tr('hdl_label_departure') ?></label>
                     <input type="date" name="step_end_date" id="cp_end_date" class="pf-input">
                 </div>
             </div>
 
-            <div style="margin-bottom: 15px;">
-                <label style="display:flex; align-items:center; cursor:pointer; color:#ea580c; font-weight:600;">
-                    <input type="checkbox" name="is_return" id="cp_is_return" value="1" style="margin-right:8px;">
-                    🏁 <?= tr('hdl_return') ?>
+            <div style="margin-bottom: 20px; padding-top: 15px; border-top: 1px dashed #e2e8f0;">
+                <label style="display:flex; align-items:center; cursor:pointer; color:#ea580c; font-weight:600; font-size:0.9rem;">
+                    <input type="checkbox" name="set_as_return" id="cp_set_as_return" value="1" style="margin-right:8px; width:16px; height:16px;">
+                    🏁 Définir comme retour
                 </label>
+                <p style="margin: 4px 0 0 24px; font-size: 0.75rem; color: #64748b;">La route sera tracée en orange à partir d'ici.</p>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -385,109 +414,64 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 <?php include __DIR__ . '/modal.php'; ?>
 
 <script>
-// --- 1. SÉCURISATION TRADUCTIONS ET VARIABLES ---
-window.MAP_POINTS = <?= json_encode($mapPoints ?? []) ?>;
-window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
+    // --- 1. SÉCURISATION TRADUCTIONS ET VARIABLES ---
+    window.MAP_POINTS = <?= json_encode($mapPoints ?? []) ?>;
+    window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
 
-window.I18N = {
-    ...(window.I18N || {}),
-    'hdl_js_search_loading': "<?= tr('hdl_js_search_loading') ?>",
-    'hdl_js_no_result': "<?= tr('hdl_js_no_result') ?>",
-    'hdl_js_confirm_del_trip': "<?= tr('hdl_js_confirm_del_trip') ?>",
-    'hdl_js_confirm_del_step': "<?= tr('hdl_js_confirm_del_step') ?>",
-    'hdl_js_step_label': "<?= tr('hdl_js_step_label') ?>",
-    'hdl_js_ph_expense_name': "<?= tr('hdl_js_ph_expense_name') ?>",
-    'hdl_js_delete_line': "<?= tr('btn_delete') ?>",
-    'hdl_planning_title': "<?= tr('hdl_planning_title') ?>",
-    'hdl_to_place': "<?= tr('hdl_to_place') ?>",
-    'hdl_js_missing_dates_title': "<?= tr('hdl_js_missing_dates_title') ?>",
-    'hdl_js_missing_dates_msg': "<?= tr('hdl_js_missing_dates_msg') ?>",
-    'hdl_modal_title': "<?= tr('hdl_modal_title') ?>",
-    'hdl_js_edit_step': "<?= tr('hdl_js_edit_step') ?>",
-    'hdl_ph_notes': "<?= tr('hdl_ph_notes') ?>",
-    'hdl_btn_add_step': "<?= tr('hdl_btn_add_step') ?>",
-    'hdl_quick_edit_title': "<?= tr('hdl_quick_edit_title') ?>",
-    'hdl_paid': "<?= tr('hdl_paid') ?>",
+    window.I18N = {
+        ...(window.I18N || {}),
+        'hdl_js_search_loading': "<?= tr('hdl_js_search_loading') ?>",
+        'hdl_js_no_result': "<?= tr('hdl_js_no_result') ?>",
+        'hdl_js_confirm_del_trip': "<?= tr('hdl_js_confirm_del_trip') ?>",
+        'hdl_js_confirm_del_step': "<?= tr('hdl_js_confirm_del_step') ?>",
+        'hdl_js_step_label': "<?= tr('hdl_js_step_label') ?>",
+        'hdl_js_ph_expense_name': "<?= tr('hdl_js_ph_expense_name') ?>",
+        'hdl_js_delete_line': "<?= tr('btn_delete') ?>",
+        'hdl_planning_title': "<?= tr('hdl_planning_title') ?>",
+        'hdl_to_place': "<?= tr('hdl_to_place') ?>",
+        'hdl_js_missing_dates_title': "<?= tr('hdl_js_missing_dates_title') ?>",
+        'hdl_js_missing_dates_msg': "<?= tr('hdl_js_missing_dates_msg') ?>",
+        'hdl_modal_title': "<?= tr('hdl_modal_title') ?>",
+        'hdl_js_edit_step': "<?= tr('hdl_js_edit_step') ?>",
+        'hdl_ph_notes': "<?= tr('hdl_ph_notes') ?>",
+        'hdl_btn_add_step': "<?= tr('hdl_btn_add_step') ?>",
+        'hdl_quick_edit_title': "<?= tr('hdl_quick_edit_title') ?>",
+        'hdl_paid': "<?= tr('hdl_paid') ?>",
+        
+        // --- NOUVELLES CLÉS MÉTÉO ICI ---
+        'weather_sunny': "<?= tr('weather_sunny') ?>",
+        'weather_cloudy': "<?= tr('weather_cloudy') ?>",
+        'weather_rainy': "<?= tr('weather_rainy') ?>",
+        'weather_snowy': "<?= tr('weather_snowy') ?>",
+        'weather_forecast': "<?= tr('weather_forecast') ?>",
+        'weather_historical': "<?= tr('weather_historical') ?>"
+    };
 
+    // Fallback de sécurité pour s'assurer que les modales peuvent toujours se fermer
+    window.closeCheckpointModal = window.closeCheckpointModal || function() {
+        const modal = document.getElementById('checkpointModal');
+        if(modal) modal.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+    };
+
+    window.closePlanningModal = window.closePlanningModal || function() {
+        const modal = document.getElementById('planningModal');
+        if(modal) modal.style.display = 'none';
+        document.body.classList.remove('no-scroll');
+    };
+
+    // 1. On charge le prix depuis le navigateur (ou 1.85 par défaut)
+    const savedFuelPrice = localStorage.getItem('holidays_fuel_price') || 1.85;
+    window.FUEL_PRICE = parseFloat(savedFuelPrice);
     
-    // --- NOUVELLES CLÉS MÉTÉO ICI ---
-    'weather_sunny': "<?= tr('weather_sunny') ?>",
-    'weather_cloudy': "<?= tr('weather_cloudy') ?>",
-    'weather_rainy': "<?= tr('weather_rainy') ?>",
-    'weather_snowy': "<?= tr('weather_snowy') ?>",
-    'weather_forecast': "<?= tr('weather_forecast') ?>",
-    'weather_historical': "<?= tr('weather_historical') ?>"
-};
+    // 2. On met à jour le texte du petit bouton "✏️" en haut de la page
+    const displayFuelEl = document.getElementById('display_fuel_price');
+    if (displayFuelEl) displayFuelEl.innerText = window.FUEL_PRICE.toFixed(2);
 
-// Fallback de sécurité pour s'assurer que les modales peuvent toujours se fermer
-window.closeCheckpointModal = window.closeCheckpointModal || function() {
-    const modal = document.getElementById('checkpointModal');
-    if(modal) modal.style.display = 'none';
-    document.body.classList.remove('no-scroll');
-};
+    // 3. Variables voiture et retour
+    window.VEHICLE_CONSUMPTION = <?= !empty($holiday['vehicle_consumption']) ? (float)$holiday['vehicle_consumption'] : 7 ?>;
+    window.GLOBAL_RETURN_STEP_ID = <?= $holiday['return_step_id'] !== null ? $holiday['return_step_id'] : 'null' ?>;
 
-window.closePlanningModal = window.closePlanningModal || function() {
-    const modal = document.getElementById('planningModal');
-    if(modal) modal.style.display = 'none';
-    document.body.classList.remove('no-scroll');
-};
-
-async function estimateTripCost() {
-  const l100 = parseFloat(document.getElementById('fuel-l100').value) || 7;
-  const price = parseFloat(document.getElementById('fuel-price').value) || 1.85;
-  const result = document.getElementById('hol-cost-result');
-  result.innerHTML = '⏳ Calcul en cours…';
-
-  const stops = (window.MAP_POINTS || []).map(p => ({lat: p.lat, lng: p.lng, name: p.location_name}));
-  if (stops.length < 2) { result.innerHTML = 'Pas assez d\'étapes pour calculer.'; return; }
-
-  try {
-    const resp = await fetch('/modules/voyage/api.php?action=estimate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({stops, fuel_l100: l100, fuel_price: price})
-    });
-    const data = await resp.json();
-    if (!data.ok) { result.innerHTML = 'Erreur : ' + (data.error || 'inconnue'); return; }
-
-    let html = '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;">';
-    html += `<div class="hol-cost-stat"><div class="hol-cost-stat-val">${Math.round(data.total_km)} km</div><div class="hol-cost-stat-label">Distance totale</div></div>`;
-    html += `<div class="hol-cost-stat"><div class="hol-cost-stat-val">${data.total_toll.toFixed(2)} €</div><div class="hol-cost-stat-label">Péages estimés</div></div>`;
-    html += `<div class="hol-cost-stat"><div class="hol-cost-stat-val">${data.fuel_cost.toFixed(2)} €</div><div class="hol-cost-stat-label">Carburant</div></div>`;
-    html += `<div class="hol-cost-stat hol-cost-total"><div class="hol-cost-stat-val">${data.grand_total.toFixed(2)} €</div><div class="hol-cost-stat-label">Total aller</div></div>`;
-    html += '</div>';
-
-    if (data.segments && data.segments.length) {
-      html += '<div style="border-top:1px solid var(--border-light); padding-top:12px; margin-top:4px;">';
-      html += '<div style="font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); margin-bottom:10px;">Détail du trajet</div>';
-      data.segments.forEach(s => {
-        html += `<div style="padding:8px 0; border-bottom:1px solid var(--border-light);">`;
-        html += `<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
-          <span style="font-weight:600; font-size:.88rem;">📍 ${esc(s.from)} → ${esc(s.to)}</span>
-          <span style="font-size:.88rem; color:var(--primary);">péage : <strong>${s.toll.toFixed(2)} €</strong></span>
-        </div>`;
-        html += `<div style="font-size:.78rem; color:var(--text-muted);">🛣️ ${Math.round(s.distance_km)} km`;
-        if (s.entry_plaza && s.exit_plaza) {
-          html += ` · ${esc(s.entry_plaza)} → ${esc(s.exit_plaza)}`;
-          if (s.op) html += ` <span style="background:var(--bg-page); border:1px solid var(--border-light); border-radius:4px; padding:0 4px; font-size:.7rem;">${esc(s.op)}</span>`;
-        } else if (s.note) {
-          html += ` · <em>${esc(s.note)}</em>`;
-        }
-        html += '</div></div>';
-      });
-      html += '</div>';
-    }
-
-    function esc(s) {
-      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    result.innerHTML = html;
-  } catch(e) {
-    result.innerHTML = 'Erreur de connexion.';
-    console.error(e);
-  }
-}
 </script>
 
-<script src="/modules/holidays/holidays.js"></script>
+<script src="/modules/holidays/holidays.js?v=<?= time() ?>"></script>
