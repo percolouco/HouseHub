@@ -131,7 +131,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                     </span>
                     
                     <?php if ($holiday['total_transit'] > 0): ?>
-                        <span onclick="alert('Bientôt : Liste détaillée des frais de route !')" style="font-size: 1rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; margin-left: 4px; display: inline-flex; align-items: center;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="Voir le détail">
+                        <span onclick="openTransitModal()" style="font-size: 1rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; margin-left: 4px; display: inline-flex; align-items: center;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="Voir le détail des trajets">
                             👁️
                         </span>
                     <?php endif; ?>
@@ -139,10 +139,13 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             </div>
 
             <div class="hol-summary-item" id="block_total_distance" style="display:none;">
-                <div class="hol-summary-label">Distance totale</div>
+                <div class="hol-summary-label">Route & Temps de conduite</div>
                 <div class="hol-summary-value" style="display:flex; align-items:center; gap:6px;">
                     <span style="font-size: 1.1rem;">🛣️</span> 
                     <strong><span id="global_total_distance">0</span> km</strong>
+                    <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 5px;">
+                        (⏱️ <span id="global_total_duration">0h00</span>)
+                    </span>
                 </div>
             </div>
 
@@ -193,17 +196,18 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
                     <?php if (!empty($generalItems) || $holiday['budget_food'] > 0 || $holiday['budget_extra'] > 0): ?>
                         <div class="hol-checkpoint" style="border-left-color: #64748b; background: #f8fafc; margin-bottom: 20px;">
-                            <div class="hol-cp-header" style="background: transparent;">
-                                <div class="hol-cp-info-group">
-                                    <span style="font-size:1.4rem;">🌍</span>
-                                    <div class="hol-cp-title"><?= tr('hdl_general_costs') ?></div>
+                            <div class="hol-cp-header">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 1.2rem;">🌍</span>
+                                    <strong style="color: #0f172a;"><?= tr('hdl_general_costs') ?></strong>
                                 </div>
+                                
                                 <?php 
                                     $generalTotal = $holiday['budget_food'] + $holiday['budget_extra'];
                                     foreach ($generalItems as $gi) { $generalTotal += $gi['amount']; }
                                 ?>
-                                <div class="hol-cp-actions-group">
-                                    <div class="hol-cp-total"><?= number_format($generalTotal, 2, ',', ' ') ?> €</div>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary); white-space: nowrap;"><?= number_format($generalTotal, 2, ',', ' ') ?> €</div>
                                     <button onclick='editHoliday(JSON.parse(document.getElementById("holidayDataJson").textContent))' class="btn-icon-small" title="<?= tr('btn_edit') ?>">⚙️</button>
                                 </div>
                             </div>
@@ -225,13 +229,20 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                 <?php foreach ($generalItems as $it): 
                                     $icon = match($it['category']) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
                                 ?>
-                                    <div class="hol-expense-wrapper"><div class="hol-expense-main">
-                                        <span class="hol-expense-name"><?= $icon ?> <?= htmlspecialchars($it['name']) ?></span>
-                                        <span>
-                                            <strong class="hol-expense-amount"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
-                                            <span class="<?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
-                                        </span>
-                                    </div></div>
+                                    <div class="hol-expense-wrapper">
+                                        <div class="hol-expense-main">
+                                            <span class="hol-expense-name">
+                                                <?= $icon ?> <?= htmlspecialchars($it['name']) ?>
+                                            </span>
+                                            
+                                            <span class="hol-expense-price-group">
+                                                <strong class="hol-expense-amount"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
+                                                <span class="<?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>">
+                                                    <?= $it['is_paid'] ? '✓' : '⏳' ?>
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                         </div>
@@ -239,39 +250,66 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
                     <?php foreach ($steps as $step): ?>
                         <div id="step-card-<?= $step['sort_order'] ?>" class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-location="<?= htmlspecialchars($step['location_name']) ?>">
-                            <div class="hol-cp-header">
-                                <div class="hol-cp-info-group">
-                                    <span class="desktop-only" style="color:#94a3b8; font-size:1.1rem; cursor:grab; user-select:none;">☰</span>
-                                        <div class="mobile-only" style="flex-direction:column; gap:4px; margin-right:8px;">
-                                            <button type="button" onclick="moveStepMobile(this, -1)" class="btn-icon-small" style="width:24px!important; height:24px!important; font-size:0.6rem;">▲</button>
-                                            <button type="button" onclick="moveStepMobile(this, 1)" class="btn-icon-small" style="width:24px!important; height:24px!important; font-size:0.6rem;">▼</button>
-                                        </div>
-                                    <div class="hol-cp-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
-                                        📍 <?= htmlspecialchars($step['location_name']) ?>
-                                        <?php if ($holiday['return_step_id'] !== null && $holiday['return_step_id'] == $step['sort_order']): ?>
-                                            <span style="background: #fff7ed; color: #ea580c; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #ffedd5; vertical-align: middle;">🏁 <?= tr('hdl_return') ?></span>
-                                        <?php endif; ?>
+                            <div class="hol-step-header">
+                                
+                                <div class="hol-step-row-top">
+                                    <?php
+                                        $stepIcon = '📍'; $iconBg = 'transparent'; $iconColor = '#64748b';
+                                        $isReturn = ($holiday['return_step_id'] !== null && $holiday['return_step_id'] == $step['sort_order']);
                                         
-                                        <?php if ($step['step_type'] === 'origin'): ?>
-                                            <span style="background: #ecfdf5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #d1fae5; vertical-align: middle;">🛫 DÉPART</span>
-                                        <?php elseif ($step['step_type'] === 'destination'): ?>
-                                            <span style="background: #fef2f2; color: #e11d48; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-left: 5px; border: 1px solid #fee2e2; vertical-align: middle;">🛬 ARRIVÉE FINALE</span>
-                                        <?php endif; ?>
-                                        <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
-                                            <div class="hol-date-weather-wrapper">
-                                                <span class="hol-step-dates">
-                                                    <?= tr('hdl_from') ?> <?= date('d/m', strtotime($step['step_start_date'])) ?> <?= tr('hdl_to') ?> <?= date('d/m', strtotime($step['step_end_date'])) ?>
-                                                </span>
-                                                <div class="hol-weather-info"></div>
-                                            </div>
-                                        <?php endif; ?>
+                                        if ($step['step_type'] === 'origin') {
+                                            $stepIcon = '🛫'; $iconBg = '#ecfdf5'; $iconColor = '#059669';
+                                        } elseif ($step['step_type'] === 'destination') {
+                                            $stepIcon = '🛬'; $iconBg = '#fef2f2'; $iconColor = '#e11d48';
+                                        }
+                                    ?>
+                                    <div class="hol-step-icon" style="background: <?= $iconBg ?>; color: <?= $iconColor ?>;">
+                                        <?= $stepIcon ?>
+                                    </div>
+
+                                    <div class="hol-step-title" onclick="panMapTo(<?= $step['lat'] ?>, <?= $step['lng'] ?>)" title="<?= htmlspecialchars($step['location_name']) ?>">
+                                        <?= htmlspecialchars($step['location_name']) ?>
+                                    </div>
+
+                                    <div class="hol-step-controls">
+                                        <span class="desktop-only hol-drag-handle">⣿</span>
+                                        <div class="mobile-only hol-step-arrows">
+                                            <button type="button" onclick="moveStepMobile(this, -1)">▲</button>
+                                            <button type="button" onclick="moveStepMobile(this, 1)">▼</button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="hol-cp-actions-group">
-                                    <div class="hol-cp-total"><?= number_format($step['total_amount'], 2, ',', ' ') ?> €</div>
-                                    <button onclick='openPlanningModal(<?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('hdl_view_planning') ?>">📅</button>
-                                    <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('btn_edit') ?>">✏️</button>
+
+                                <div class="hol-step-row-bottom">
+                                    <div class="hol-step-meta">
+                                        <?php if ($isReturn): ?>
+                                            <span class="hol-tag-return">🏁 Retour</span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
+                                            <span class="hol-step-date">
+                                                <?= date('d/m', strtotime($step['step_start_date'])) ?> ➔ <?= date('d/m', strtotime($step['step_end_date'])) ?>
+                                            </span>
+                                            <div class="hol-weather-info" style="display:inline-flex;"></div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="hol-step-actions">
+                                        <span class="hol-step-price"><?= number_format($step['total_amount'], 2, ',', ' ') ?> €</span>
+                                        
+                                        <a href="https://www.google.com/maps/dir/?api=1&destination=<?= $step['lat'] ?>,<?= $step['lng'] ?>" 
+                                           target="_blank" 
+                                           class="btn-icon-small" 
+                                           title="Y aller avec le GPS (Maps/Waze)" 
+                                           style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">
+                                            🗺️
+                                        </a>
+
+                                        <button onclick='openPlanningModal(<?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('hdl_view_planning') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">📅</button>
+                                        <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('btn_edit') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">✏️</button>
+                                    </div>
                                 </div>
+                                
                             </div>
 
                             <div class="hol-cp-body">
@@ -415,6 +453,21 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
         <div id="planningContainer" style="width: 100%;"></div>
         <div class="modal-footer">
             <button type="button" onclick="closePlanningModal()" class="pf-btn btn-secondary"><?= tr('btn_close') ?></button>
+        </div>
+    </div>
+</div>
+
+<div id="transitModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width: 500px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+            <h3 style="margin:0; color:var(--text-main);">🛣️ Détail des trajets</h3>
+            <button type="button" onclick="closeTransitModal()" class="pf-modal-close">&times;</button>
+        </div>
+        <div id="transitDetailsContainer" style="max-height: 60vh; overflow-y: auto; padding-right: 5px;">
+            <p style="text-align:center; color:var(--text-muted); font-style:italic;">Calcul en cours...</p>
+        </div>
+        <div class="modal-footer" style="padding-top:15px; border-top:1px solid var(--border-light); margin-top:15px;">
+            <button type="button" onclick="closeTransitModal()" class="pf-btn btn-secondary"><?= tr('btn_close') ?></button>
         </div>
     </div>
 </div>

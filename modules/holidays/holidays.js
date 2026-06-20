@@ -257,10 +257,11 @@ function initDetailMap() {
     Promise.all(routePromises).then((results) => {
       results.sort((a, b) => a.index - b.index);
 
-      // Compteur global de distance
+      // 🔥 NOUVEAU : Compteurs et HTML de la modale
       let totalTripDistance = 0;
+      let totalTripDuration = 0; // en secondes
+      let transitDetailsHtml = "";
 
-      // Détection de l'étape de retour (Ligne Orange)
       let returnStartIndex = latlngs.length - 2;
       if (
         typeof window.GLOBAL_RETURN_STEP_ID !== "undefined" &&
@@ -269,22 +270,21 @@ function initDetailMap() {
         const customReturnStep = MAP_POINTS.findIndex(
           (p) => p.sort_order == window.GLOBAL_RETURN_STEP_ID,
         );
-        if (customReturnStep > 0) {
-          returnStartIndex = customReturnStep;
-        }
+        if (customReturnStep > 0) returnStartIndex = customReturnStep;
       }
 
       results.forEach((res) => {
         const i = res.index;
-        let routeColor = "#3b82f6";
-        let routeWeight = window.innerWidth < 768 ? 4 : 6;
-        let routeDash = null;
-
-        if (i >= returnStartIndex) {
-          routeColor = "#f97316";
-          routeWeight = window.innerWidth < 768 ? 3 : 4;
-          routeDash = "10, 10";
-        }
+        let routeColor = i >= returnStartIndex ? "#f97316" : "#3b82f6";
+        let routeWeight =
+          window.innerWidth < 768
+            ? i >= returnStartIndex
+              ? 3
+              : 4
+            : i >= returnStartIndex
+              ? 4
+              : 6;
+        let routeDash = i >= returnStartIndex ? "10, 10" : null;
 
         if (res.data && res.data.code === "Ok" && res.data.routes.length > 0) {
           const routeCoords = res.data.routes[0].geometry.coordinates.map(
@@ -299,30 +299,54 @@ function initDetailMap() {
             lineJoin: "round",
           }).addTo(detailMap);
 
-          // CALCUL AUTO DU COUT ET KILOMÈTRES
+          // CALCULS
           const distanceKm = res.data.routes[0].distance / 1000;
+          const durationSec = res.data.routes[0].duration; // Durée en secondes
+
           totalTripDistance += distanceKm;
+          totalTripDuration += durationSec;
 
           const fuelL100 = window.VEHICLE_CONSUMPTION || 7;
           const fuelPrice = window.FUEL_PRICE || 1.85;
           const cost = (distanceKm / 100) * fuelL100 * fuelPrice;
 
-          const targetOrder = MAP_POINTS[res.index + 1].sort_order;
+          // 1. ON DÉCLARE LES POINTS D'ABORD
+          const startPt = MAP_POINTS[res.index];
+          const endPt = MAP_POINTS[res.index + 1];
+
+          // 2. ON SAUVEGARDE EN MÉMOIRE ENSUITE (Correction du bug !)
+          window.TRANSIT_DATA = window.TRANSIT_DATA || {};
+          window.TRANSIT_DATA[endPt.sort_order] = {
+            sec: durationSec,
+            from: startPt.location_name,
+            cost: cost,
+          };
+
+          // 🔥 CONSTRUCTION DU CONTENU DE LA MODALE
+          transitDetailsHtml += `
+            <div style="padding: 12px 0; border-bottom: 1px dashed var(--border-light);">
+                <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 4px;">
+                    📍 ${startPt.location_name} ➔ ${endPt.location_name}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                    <span>🚗 ${Math.round(distanceKm)} km &nbsp;•&nbsp; ⏱️ ${formatDuration(durationSec)}</span>
+                    <strong style="color: var(--primary);">⛽ ${cost.toFixed(2)} €</strong>
+                </div>
+            </div>
+          `;
+
+          // INJECTION DANS LA CARTE (Sous l'étape)
           const targetCard = document.getElementById(
-            "step-card-" + targetOrder,
+            "step-card-" + endPt.sort_order,
           );
-
           if (targetCard) {
-            const existingTransit =
-              targetCard.querySelectorAll(".transit-auto-info");
-            existingTransit.forEach((el) => el.remove());
-
-            const rawLocationName = MAP_POINTS[res.index].location_name;
+            targetCard
+              .querySelectorAll(".transit-auto-info")
+              .forEach((el) => el.remove());
+            const rawLocationName = startPt.location_name;
             const safeLocationName = rawLocationName.replace(/'/g, "\\'");
             const expenseDesc = `Essence depuis ${rawLocationName}`;
-
-            const targetStepData = MAP_POINTS[res.index + 1];
-            const isAlreadyAdded = targetStepData.items.some(
+            const isAlreadyAdded = endPt.items.some(
               (it) => it.name === expenseDesc,
             );
 
@@ -331,59 +355,52 @@ function initDetailMap() {
                   🚗 ${Math.round(distanceKm)} km 
                   <span style="opacity: 0.5;">|</span> 
                   <strong>⛽ ~${cost.toFixed(2)} €</strong>
-                  ${
-                    !isAlreadyAdded
-                      ? `<button type="button" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.8rem; padding:0; margin-left: 5px;" 
-                               onclick="addQuickTransitExpense(${document.querySelector("input[name=holiday_id]").value}, ${targetOrder}, ${cost.toFixed(2)}, 'Essence depuis ${safeLocationName}', this)">
-                           + Ajouter
-                       </button>`
-                      : `<span style="color:var(--success); font-weight:bold; margin-left: 5px;" title="Dépense déjà ajoutée à cette étape">✓ Ajouté</span>`
-                  }
+                  ${!isAlreadyAdded ? `<button type="button" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.8rem; padding:0; margin-left: 5px;" onclick="addQuickTransitExpense(${document.querySelector('input[name="holiday_id"]').value}, ${endPt.sort_order}, ${cost.toFixed(2)}, 'Essence depuis ${safeLocationName}', this, ${durationSec})">+ Ajouter</button>` : `<span style="color:var(--success); font-weight:bold; margin-left: 5px;" title="Dépense déjà ajoutée à cette étape">✓ Ajouté</span>`}
               </div>`;
 
             const cpHeader = targetCard.querySelector(".hol-cp-header");
-            if (cpHeader) {
-              cpHeader.insertAdjacentHTML("afterend", summaryHtml);
-            }
+            if (cpHeader) cpHeader.insertAdjacentHTML("afterend", summaryHtml);
           }
         } else {
           drawFallbackLine(res.coords, routeColor, routeWeight);
         }
       });
 
-      // Affichage du total global en haut de page
+      // 🔥 AFFICHAGE DES TOTAUX (KM + TEMPS) EN HAUT DE PAGE
       const distEl = document.getElementById("global_total_distance");
+      const timeEl = document.getElementById("global_total_duration");
       const distBlock = document.getElementById("block_total_distance");
-      if (distEl && distBlock) {
+
+      if (distEl && timeEl && distBlock) {
         distEl.innerText = Math.round(totalTripDistance);
-        distBlock.style.display = "Block";
+        timeEl.innerText = formatDuration(totalTripDuration);
+        distBlock.style.display = "block";
+      }
+
+      // 🔥 INJECTION DU HTML DANS LA MODALE
+      const modalContainer = document.getElementById("transitDetailsContainer");
+      if (modalContainer) {
+        modalContainer.innerHTML =
+          transitDetailsHtml ||
+          '<p style="text-align:center; color:var(--text-muted);">Aucun trajet calculé.</p>';
       }
     });
-  }
 
-  // 4. Chargement des badges Météo
-  if (typeof MAP_POINTS !== "undefined") {
-    MAP_POINTS.forEach((pt) => {
-      if (typeof loadWeatherForStep === "function") {
-        loadWeatherForStep(pt);
+    // 5. Fix Leaflet Resize
+    setTimeout(() => {
+      if (detailMap) {
+        detailMap.invalidateSize();
       }
-    });
-  }
+    }, 300);
 
-  // 5. Fix Leaflet Resize
-  setTimeout(() => {
-    if (detailMap) {
-      detailMap.invalidateSize();
+    function drawFallbackLine(coords, color, weight) {
+      L.polyline(coords, {
+        color: color,
+        weight: weight || 3,
+        dashArray: "8, 8",
+        opacity: 0.7,
+      }).addTo(detailMap);
     }
-  }, 300);
-
-  function drawFallbackLine(coords, color, weight) {
-    L.polyline(coords, {
-      color: color,
-      weight: weight || 3,
-      dashArray: "8, 8",
-      opacity: 0.7,
-    }).addTo(detailMap);
   }
 }
 
@@ -706,6 +723,26 @@ function openPlanningModal(step) {
 
   let validItems = step.items.filter((it) => it.name !== "PF_TECHNICAL_POINT");
 
+  window.CURRENT_PLANNING_STEP = step; // Mémorise l'étape en cours
+
+  if (window.TRANSIT_DATA && window.TRANSIT_DATA[step.sort_order]) {
+    // Est-ce qu'on a déjà planifié ou ajouté ce trajet ?
+    let hasTransit = validItems.some((it) => it.expense_context === "transit");
+    if (!hasTransit) {
+      const tData = window.TRANSIT_DATA[step.sort_order];
+      const h = Math.max(1, Math.round(tData.sec / 3600)); // Arrondi en heures
+      validItems.push({
+        id: "virtual-transit",
+        name: `Essence depuis ${tData.from}`, // Garde ce nom pour lier avec le budget
+        category: "transport",
+        expense_context: "transit",
+        duration: h,
+        notes: `Trajet GPS (${Math.round(tData.sec / 60)} min). Déplacez pour planifier la route.`,
+        is_virtual: true,
+      });
+    }
+  }
+
   if (!step.step_start_date || !step.step_end_date) {
     container.innerHTML = `<div style="text-align:center; padding:40px;"><h3>${tr("hdl_js_missing_dates_title")}</h3><p style="color:#64748b;">${tr("hdl_js_missing_dates_msg")}</p></div>`;
     document.getElementById("planningModal").style.display = "flex";
@@ -784,18 +821,33 @@ function openPlanningModal(step) {
       ? `<div class="hol-drag-note">${it.notes}</div>`
       : "";
 
+    const isVirtual = it.is_virtual === true;
+    const isTransit = it.expense_context === "transit";
+
+    const durControls =
+      isVirtual || isTransit
+        ? `<span class="hol-dur-text" style="background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:bold;">${dur}h (Auto)</span>`
+        : `<button class="hol-dur-btn" onclick="changeDuration(event, '${it.id}', -1)">-</button>
+           <span class="hol-dur-text" id="dur-text-${it.id}">${dur}h</span>
+           <button class="hol-dur-btn" onclick="changeDuration(event, '${it.id}', 1)">+</button>`;
+
+    const bgStyle = isVirtual
+      ? "background: repeating-linear-gradient(45deg, #ffffff, #ffffff 10px, #f8fafc 10px, #f8fafc 20px); border: 2px dashed var(--primary);"
+      : "";
+    const visualName = isTransit
+      ? `🛣️ Trajet & ` + it.name
+      : `${icon} ${it.name}`;
+
     const elHtml = `
             <div class="hol-drag-item ${catClass}" ${dragAttr} 
                  id="drag-item-${it.id}" data-id="${it.id}" 
-                 style="--duration: ${dur};"
-                 ondragstart="dragStart(event)" onclick="handleItemTap(event, ${it.id})">
+                 style="--duration: ${dur}; ${bgStyle}"
+                 ondragstart="dragStart(event)" onclick="handleItemTap(event, '${it.id}')">
                 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 5px;">
-                    <div class="hol-drag-title" style="flex:1;">${icon} ${it.name}</div>
+                    <div class="hol-drag-title" style="flex:1;">${visualName}</div>
                     <div class="hol-item-duration-controls">
-                        <button class="hol-dur-btn" onclick="changeDuration(event, ${it.id}, -1)">-</button>
-                        <span class="hol-dur-text" id="dur-text-${it.id}">${dur}h</span>
-                        <button class="hol-dur-btn" onclick="changeDuration(event, ${it.id}, 1)">+</button>
+                        ${durControls}
                     </div>
                 </div>
                 ${noteHtml}
@@ -898,19 +950,29 @@ function handleDropEvent(e, dateStr, timeStr) {
 }
 
 function handleDropLogic(itemId, dateStr, timeStr, dropZone) {
-  const draggedEl = document.getElementById("drag-item-" + itemId);
-  if (dropZone && draggedEl) {
-    dropZone.appendChild(draggedEl);
-    updateItemMemory(itemId, { item_date: dateStr, item_time: timeStr });
-    const formData = new FormData();
-    formData.append("action", "update_item_datetime");
-    formData.append("item_id", itemId);
-    formData.append("item_date", dateStr);
-    formData.append("item_time", timeStr);
+  if (itemId === "virtual-transit") {
+    const step = window.CURRENT_PLANNING_STEP;
+    const tData = window.TRANSIT_DATA[step.sort_order];
+    const holidayId = document.querySelector('input[name="holiday_id"]').value;
+    const h = Math.max(1, Math.round(tData.sec / 3600));
+
+    const fd = new FormData();
+    fd.append("action", "add_single_item");
+    fd.append("holiday_id", holidayId);
+    fd.append("sort_order", step.sort_order);
+    fd.append("category", "transport");
+    fd.append("context", "transit");
+    fd.append("name", `Essence depuis ${tData.from}`);
+    fd.append("amount", tData.cost);
+    fd.append("duration", h);
+    fd.append("item_date", dateStr);
+    fd.append("item_time", timeStr);
+
     fetch("/modules/holidays/includes/api/save_checkpoint.php", {
       method: "POST",
-      body: formData,
-    });
+      body: fd,
+    }).then(() => window.location.reload());
+    return;
   }
 }
 
@@ -974,6 +1036,7 @@ function addQuickTransitExpense(
   amount,
   description,
   btnElement,
+  durationSec = 3600,
 ) {
   if (
     !confirm(
@@ -1006,16 +1069,17 @@ function addQuickTransitExpense(
   fd.append("amount", amount);
   fd.append("context", "transit");
 
-  // 3. Envoi en arrière-plan sans bloquer l'utilisateur
+  // 🔥 On sécurise la durée en base de données
+  const h = Math.max(1, Math.round(durationSec / 3600));
+  fd.append("duration", h);
+
   fetch("/modules/holidays/includes/api/save_checkpoint.php", {
     method: "POST",
     body: fd,
   })
     .then((res) => res.json())
     .then((data) => {
-      if (!data.success) {
-        alert("Erreur lors de la sauvegarde en arrière-plan : " + data.error);
-      }
+      if (!data.success) alert("Erreur : " + data.error);
     });
 }
 
@@ -1036,4 +1100,26 @@ function updateFuelPrice() {
       alert("Prix invalide.");
     }
   }
+}
+
+// Formatte les secondes en "XXhYY" ou "YYmin"
+function formatDuration(seconds) {
+  if (!seconds || isNaN(seconds)) return "0min";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) {
+    return `${h}h${m.toString().padStart(2, "0")}`;
+  }
+  return `${m}min`;
+}
+
+// Ouvre et ferme la modale des détails (L'œil)
+function openTransitModal() {
+  document.getElementById("transitModal").style.display = "flex";
+  document.body.classList.add("no-scroll");
+}
+
+function closeTransitModal() {
+  document.getElementById("transitModal").style.display = "none";
+  document.body.classList.remove("no-scroll");
 }
