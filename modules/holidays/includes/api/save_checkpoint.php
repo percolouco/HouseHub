@@ -21,14 +21,17 @@ if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime
             $stepInfo = $stmt->fetch();
 
             if ($stepInfo) {
-                // Utilisation de transactions isolées pour l'AJAX
+                $dur  = isset($_POST['duration']) ? (int)$_POST['duration'] : 1;
+                $date = !empty($_POST['item_date']) ? $_POST['item_date'] : null;
+                $time = !empty($_POST['item_time']) ? $_POST['item_time'] : null;
+
                 $pdo->beginTransaction();
-                $ins = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, step_start_date, step_end_date, step_type, expense_context, duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
+                $ins = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, step_start_date, step_end_date, step_type, expense_context, duration, item_date, item_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([
                     $holiday_id, $_POST['category'], $_POST['name'], (float)$_POST['amount'], 0,
                     $stepInfo['location_name'], $stepInfo['lat'], $stepInfo['lng'],
                     $sort_order, $stepInfo['step_start_date'], $stepInfo['step_end_date'],
-                    $stepInfo['step_type'], $_POST['context']
+                    $stepInfo['step_type'], $_POST['context'], $dur, $date, $time
                 ]);
                 $pdo->commit();
                 echo json_encode(['success' => true]);
