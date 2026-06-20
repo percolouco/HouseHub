@@ -217,15 +217,25 @@ require __DIR__ . '/header.php';
             </select>
           </div>
         </div>
+        
         <div class="form-row">
           <div class="form-group"><label class="form-label">Kilométrage</label><input class="form-control" id="vehicle-current-km" name="current_km" type="number" placeholder="85000"></div>
-          <div class="form-group"><label class="form-label">Couleur</label><input class="form-control" id="vehicle-color" name="color" placeholder="Blanc nacré"></div>
+          <div class="form-group">
+            <label class="form-label">Conso. moy. (L/100km)</label>
+            <input class="form-control" id="vehicle-consumption" name="consumption" type="number" step="0.1" min="0" placeholder="ex: 6.5">
+          </div>
         </div>
+
         <div class="form-row">
           <div class="form-group"><label class="form-label">Date d'achat</label><input class="form-control" id="vehicle-purchase-date" name="purchase_date" type="date"></div>
           <div class="form-group"><label class="form-label">Prix d'achat (€)</label><input class="form-control" id="vehicle-purchase-price" name="purchase_price" type="number" step="0.01"></div>
         </div>
-        <div class="form-group"><label class="form-label">VIN</label><input class="form-control" id="vehicle-vin" name="vin" placeholder="VF1..."></div>
+        
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">VIN</label><input class="form-control" id="vehicle-vin" name="vin" placeholder="VF1..."></div>
+            <div class="form-group"><label class="form-label">Couleur</label><input class="form-control" id="vehicle-color" name="color" placeholder="Blanc nacré"></div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Photo</label>
           <input class="form-control" id="vehicle-photo" name="photo" type="file" accept="image/*" onchange="previewPhoto('vehicle-photo','vehicle-photo-preview')">
