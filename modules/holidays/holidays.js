@@ -948,7 +948,7 @@ function toggleStepDates(type) {
   }
 }
 
-// Ajout magique d'une dépense d'essence SÉCURISÉE
+// Ajout magique d'une dépense d'essence SÉCURISÉE et INSTANTANÉE
 function addQuickTransitExpense(
   holidayId,
   sortOrder,
@@ -963,11 +963,19 @@ function addQuickTransitExpense(
   )
     return;
 
-  if (btnElement) {
-    btnElement.disabled = true;
-    btnElement.innerText = "⏳...";
-    btnElement.style.cursor = "not-allowed";
-    btnElement.style.opacity = "0.7";
+  // 1. UI OPTIMISTE : On change visuellement le bouton tout de suite sans attendre le serveur
+  const parentContainer = btnElement.parentElement;
+  if (parentContainer) {
+    parentContainer.innerHTML = `<span style="color:var(--success); font-weight:bold; margin-left: 5px;">✓ Ajouté</span>`;
+  }
+
+  // 2. On met à jour discrètement le compteur global en haut de page (+ montant)
+  const totalTransitEl = document.querySelector(".hol-summary-value strong");
+  if (totalTransitEl) {
+    const currentTotal =
+      parseFloat(totalTransitEl.innerText.replace(" €", "").replace(" ", "")) ||
+      0;
+    totalTransitEl.innerText = Math.round(currentTotal + amount) + " €";
   }
 
   const fd = new FormData();
@@ -979,10 +987,17 @@ function addQuickTransitExpense(
   fd.append("amount", amount);
   fd.append("context", "transit");
 
+  // 3. Envoi en arrière-plan sans bloquer l'utilisateur
   fetch("/modules/holidays/includes/api/save_checkpoint.php", {
     method: "POST",
     body: fd,
-  }).then(() => window.location.reload());
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data.success) {
+        alert("Erreur lors de la sauvegarde en arrière-plan : " + data.error);
+      }
+    });
 }
 
 // Permet de modifier le prix du carburant à la volée
