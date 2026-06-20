@@ -108,24 +108,30 @@ if ($action === 'vehicles') {
         gOk($stmt->fetchAll());
     }
     if ($method === 'POST') {
-        $photo = handleUpload('photo', $UPLOAD_DIR); $d = $_POST ?: gBody();
-        // Ajout de consumption dans la liste des champs et d'un '?' supplémentaire
+        $photo = handleUpload('photo', $UPLOAD_DIR); 
+        $d = $_POST ?: gBody();
+        
+        // 🔥 LE FIX EST ICI : Fonctions boucliers pour MySQL Strict Mode
+        $nullInt   = fn($v) => ($v === '' || $v === null) ? null : (int)$v;
+        $nullFloat = fn($v) => ($v === '' || $v === null) ? null : (float)$v;
+        $nullStr   = fn($v) => ($v === '' || $v === null) ? null : $v;
+
         $stmt = $pdo->prepare("INSERT INTO pf_vehicles (name,brand,model,year,license_plate,vin,fuel_type,consumption,color,purchase_date,purchase_price,current_km,photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
         $stmt->execute([
-            $d['name']??'', 
-            $d['brand']??'', 
-            $d['model']??'', 
-            $d['year']??null, 
-            $d['license_plate']??null, 
-            $d['vin']??null, 
-            $d['fuel_type']??'Essence', 
-            ($d['consumption'] !== '' && $d['consumption'] !== null) ? (float)$d['consumption'] : null, // Cast propre en float
-            $d['color']??null, 
-            $d['purchase_date']??null, 
-            $d['purchase_price']??null, 
-            $d['current_km']??0, 
+            $d['name'] ?? '', 
+            $d['brand'] ?? '', 
+            $d['model'] ?? '', 
+            $nullInt($d['year'] ?? null), 
+            $nullStr($d['license_plate'] ?? null), 
+            $nullStr($d['vin'] ?? null), 
+            $d['fuel_type'] ?? 'Essence', 
+            $nullFloat($d['consumption'] ?? null), 
+            $nullStr($d['color'] ?? null), 
+            $nullStr($d['purchase_date'] ?? null), 
+            $nullFloat($d['purchase_price'] ?? null), 
+            $nullInt($d['current_km'] ?? null) ?? 0, 
             $photo, 
-            $d['notes']??null
+            $nullStr($d['notes'] ?? null)
         ]);
         gOk(['id' => $pdo->lastInsertId()]);
     }
@@ -276,9 +282,9 @@ if ($action === 'maintenances') {
         $photo = handleUpload('invoice_photo', $UPLOAD_DIR); $d = $_POST ?: gBody();
         if (!($d['vehicle_id'] ?? null)) gErr('vehicle_id manquant');
         $stmt = $pdo->prepare("INSERT INTO pf_maintenances (vehicle_id,type,description,date,km,cost,mechanic,garage_name,next_km,next_date,invoice_photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $nullInt   = fn($v) => ($v ?? '') !== '' ? (int)$v   : null;
-        $nullFloat = fn($v) => ($v ?? '') !== '' ? (float)$v : null;
-        $nullStr   = fn($v) => ($v ?? '') !== '' ? $v        : null;
+        $nullInt   = fn($v) => ($v === '' || $v === null) ? null : (int)$v;
+        $nullFloat = fn($v) => ($v === '' || $v === null) ? null : (float)$v;
+        $nullStr   = fn($v) => ($v === '' || $v === null) ? null : $v;
         $stmt->execute([
             $d['vehicle_id'],
             $d['type'] ?? '',
@@ -340,8 +346,26 @@ if ($action === 'parts') {
     }
     if ($method === 'POST') {
         $photo = handleUpload('photo', $UPLOAD_DIR); $d = $_POST ?: gBody();
+        $nullInt   = fn($v) => ($v === '' || $v === null) ? null : (int)$v;
+        $nullFloat = fn($v) => ($v === '' || $v === null) ? null : (float)$v;
+        $nullStr   = fn($v) => ($v === '' || $v === null) ? null : $v;
+
         $stmt = $pdo->prepare("INSERT INTO pf_parts (vehicle_id,maintenance_id,brand,reference,name,category,price,quantity,unit,supplier,purchase_date,photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$d['vehicle_id']??null, $d['maintenance_id']??null, $d['brand']??null, $d['reference']??null, $d['name']??'', $d['category']??'Autre', $d['price']??0, $d['quantity']??1, $d['unit']??'pièce', $d['supplier']??null, $d['purchase_date']??null, $photo, $d['notes']??null]);
+        $stmt->execute([
+            $nullInt($d['vehicle_id'] ?? null), 
+            $nullInt($d['maintenance_id'] ?? null), 
+            $nullStr($d['brand'] ?? null), 
+            $nullStr($d['reference'] ?? null), 
+            $d['name'] ?? '', 
+            $d['category'] ?? 'Autre', 
+            $nullFloat($d['price'] ?? null) ?? 0, 
+            $nullInt($d['quantity'] ?? null) ?? 1, 
+            $d['unit'] ?? 'pièce', 
+            $nullStr($d['supplier'] ?? null), 
+            $nullStr($d['purchase_date'] ?? null), 
+            $photo, 
+            $nullStr($d['notes'] ?? null)
+        ]);
         gOk(['id' => $pdo->lastInsertId()]);
     }
     if ($method === 'PUT') {
