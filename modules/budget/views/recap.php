@@ -154,6 +154,20 @@ foreach ($items as $item):
         }
     }
 
+    // C. Absorption des orphelines par catégories (Le lien Macro/Micro)
+    if (!empty($item['category'])) {
+        $catCodes = array_map('trim', explode(',', $item['category']));
+        foreach ($catCodes as $cCode) {
+            // Si la catégorie existe dans les orphelines et n'a pas encore été consommée
+            if (!empty($cCode) && isset($realTotalsByCat[$cCode]) && $realTotalsByCat[$cCode] != 0) {
+                $realSum += $realTotalsByCat[$cCode];
+                $hasMatchingExpense = true;
+                // On la vide pour ne pas la compter 2 fois si une autre ligne utilise la même catégorie
+                $realTotalsByCat[$cCode] = 0; 
+            }
+        }
+    }   
+
     // 3. Finalisation des variables d'affichage
     $realAbs = abs($realSum);
     $isAutoChecked = ($hasMatchingExpense && ($realAbs >= ($targetAbs - 0.10)));
@@ -265,11 +279,12 @@ foreach ($items as $item):
 
             <div style="display:flex; gap:15px; margin-bottom:15px;">
                 <div style="flex:1;">
-                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Catégorie Cible (La jauge)</label>
-                    <select name="category" id="item_category" class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:white;" required>
-                        <option value="" disabled selected>-- Choisir --</option>
+                    <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">
+                        Catégorie(s) Cible(s) <small style="font-weight:normal;">(Maintenez Ctrl/Cmd pour choix multiple)</small>
+                    </label>
+                    <select name="category_multi[]" id="item_category" class="pf-input" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:white; min-height: 120px;" multiple required>
                         <?php foreach ($dbCategories as $c): ?>
-                            <?php if(strtolower($c['type']) === 'expense'): // On n'affiche que les catégories de dépenses ?>
+                            <?php if(strtolower($c['type']) === 'expense'): ?>
                             <option value="<?= htmlspecialchars($c['code']) ?>">
                                 <?= htmlspecialchars($c['icon'] . ' ' . $c['label']) ?>
                             </option>
@@ -327,7 +342,11 @@ function editRecapItem(item) {
     document.getElementById("item_name").value = data.name;
     document.getElementById("item_keywords").value = data.mapping_keywords || ''; 
     document.getElementById("item_amount").value = Math.abs(data.amount);
-    document.getElementById("item_category").value = data.category;
+    const selectedCats = data.category ? data.category.split(',') : [];
+    const selectEl = document.getElementById("item_category");
+    Array.from(selectEl.options).forEach(opt => {
+        opt.selected = selectedCats.includes(opt.value);
+    });
     document.getElementById("item_type").value = data.type;
     document.getElementById("item_is_estimate").value = data.is_estimate;
 
@@ -341,6 +360,11 @@ document.getElementById('recapForm').addEventListener('submit', async function(e
     btn.disabled = true; btn.innerText = '⏳ ...';
 
     const formData = new FormData(this);
+    
+    const cats = formData.getAll('category_multi[]');
+    formData.delete('category_multi[]');
+    formData.append('category', cats.join(','));
+    
     formData.append('ajax', '1');
     const url = this.getAttribute('action');
 

@@ -237,12 +237,15 @@ $fixedChargesList = []; $incomeList = []; $pending_charges = [];
 // ============================================================================
 // MAPPING DYNAMIQUE DES BUDGETS PRÉVISIONNELS (NOUVELLE LOGIQUE)
 // ============================================================================
-$stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, mapping_keywords FROM pf_budget_items ORDER BY name ASC");
+// On exclut "SAVINGS" pour s'aligner à 100% avec le recap.php
+$stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, mapping_keywords FROM pf_budget_items WHERE category != 'SAVINGS' ORDER BY name ASC");
+$estimatesList = []; // On prépare la liste pour retenir nos estimations multi-catégories
+
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $absAmount = abs((float)$item['amount']); 
     $amt = ($item['type'] === 'Annuel') ? $absAmount / 12 : $absAmount;
     $name = trim($item['name']);
-    $catCode = $item['category']; // Ex: FIXED, FMCG, INCOME ou income
+    $catCode = $item['category']; 
     
     $isIncome = (strtoupper($catCode) === 'INCOME');
     
@@ -251,18 +254,16 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $total_income += $amt;
         $budget_income_prevu += $amt;
         
-        // Attribution au compte de revenu défini, sinon au premier disponible
         if (!empty($catCode) && isset($categoriesConfig[$catCode])) {
             $categoriesConfig[$catCode]['budget'] += $amt;
         } else {
             $incomeCatKey = array_key_first(array_filter($categoriesConfig, fn($c) => $c['db_type'] === 'Income'));
             if ($incomeCatKey) $categoriesConfig[$incomeCatKey]['budget'] += $amt;
         }
-        
     } else {
         $total_expenses_prevues += $amt;
         
-        // C'est une charge fixe (Mensuel + Is_Estimate = 0)
+        // 1. C'est une charge fixe (Non-variable)
         if ($item['type'] === 'Mensuel' && (int)$item['is_estimate'] === 0) {
             $fixedChargesList[] = ['id' => $item['id'], 'name' => $name, 'amount' => $absAmount]; 
             
@@ -279,13 +280,28 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
             if (!$isPaid) {
                 $reste_a_venir_calc += $absAmount;
-                $pending_charges[] = ['name' => $name, 'amount' => $absAmount];
+                // Ajouté dans le tableau avec un tooltip vide
+                $pending_charges[] = ['name' => $name, 'amount' => $absAmount, 'tooltip' => 'Charge fixe en attente'];
             }
         }
 
-        // NOUVEAU : Attribution du budget prévisionnel (le Plafond) via la catégorie dynamique
-        if (!empty($catCode) && isset($categoriesConfig[$catCode])) {
-            $categoriesConfig[$catCode]['budget'] += $amt;
+        // 2. C'est une estimation (Variable)
+        if ((int)$item['is_estimate'] === 1) {
+            $estimatesList[] = [
+                'name' => $name,
+                'amount' => $amt,
+                'categories' => !empty($catCode) ? array_map('trim', explode(',', $catCode)) : []
+            ];
+        }
+
+        // 3. Attribution du budget aux jauges visuelles de la page
+        // Pour ne pas tout casser, on donne tout le plafond visuel à la 1ère catégorie de la liste
+        if (!empty($catCode)) {
+            $catCodesArray = array_map('trim', explode(',', $catCode));
+            $firstCat = $catCodesArray[0];
+            if (isset($categoriesConfig[$firstCat])) {
+                $categoriesConfig[$firstCat]['budget'] += $amt;
+            }
         }
     }
 }
@@ -331,15 +347,31 @@ foreach ($allExpenses as $exp) {
     }
 }
 
-// RESTE A VENIR PAR CATEGORIE (Remplace les variables codées en dur)
-foreach ($categoriesConfig as $code => $conf) {
-    if ($conf['db_type'] === 'Expense' && $conf['budget'] > 0) {
-        $spent = $totals[$code] ?? 0;
-        $rem = max(0, $conf['budget'] - $spent);
-        if ($rem > 0) {
-            $reste_a_venir_calc += $rem;
-            $pending_charges[] = ['name' => 'Reste ' . strip_tags($conf['label']), 'amount' => $rem];
+// CALCUL DES RESTES À VENIR BASÉ SUR LES ESTIMATIONS (MACRO)
+foreach ($estimatesList as $est) {
+    $spentForEstimate = 0;
+    $detailsHover = [];
+    
+    // On additionne les dépenses de toutes les catégories liées à cette estimation
+    foreach ($est['categories'] as $cCode) {
+        if (!empty($cCode) && isset($totals[$cCode])) {
+            $spentForEstimate += $totals[$cCode];
+            // On prépare le détail pour la petite bulle d'info (hover)
+            if ($totals[$cCode] > 0 && isset($categoriesConfig[$cCode])) {
+                $detailsHover[] = strip_tags($categoriesConfig[$cCode]['label']) . " : " . number_format($totals[$cCode], 0) . "€";
+            }
         }
+    }
+    
+    $rem = max(0, $est['amount'] - $spentForEstimate);
+    if ($rem > 0) {
+        $reste_a_venir_calc += $rem;
+        $tooltip = !empty($detailsHover) ? implode(' | ', $detailsHover) : 'Aucune dépense pour le moment';
+        $pending_charges[] = [
+            'name' => 'Reste ' . $est['name'], 
+            'amount' => $rem,
+            'tooltip' => $tooltip
+        ];
     }
 }
 
@@ -468,7 +500,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                         <div style="text-align:center; font-style:italic; opacity:0.8;"><?= tr('bud_all_paid') ?></div>
                     <?php else: ?>
                         <?php foreach($pending_charges as $pc): ?>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;" <?= !empty($pc['tooltip']) ? 'title="'.htmlspecialchars($pc['tooltip']).'" style="cursor:help;"' : '' ?>>
                                 <span><?= htmlspecialchars($pc['name']) ?></span>
                                 <strong><?= number_format($pc['amount'], 0, ',', ' ') ?> €</strong>
                             </div>
