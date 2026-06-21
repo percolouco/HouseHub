@@ -167,7 +167,7 @@ if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
 // ============================================================================
 
 // --- LECTURE DYNAMIQUE DES CATEGORIES ---
-$stmtCats = $pdo->query("SELECT * FROM pf_budget_categories ORDER BY type DESC, label ASC");
+$stmtCats = $pdo->query("SELECT * FROM pf_budget_categories ORDER BY type DESC, sort_order ASC, label ASC");
 $dbCategories = $stmtCats->fetchAll(PDO::FETCH_ASSOC);
 
 $categoriesConfig = [];
