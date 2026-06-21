@@ -168,6 +168,19 @@ try {
         exit;
     }
 
+    // SAUVEGARDE DU NOUVEL ORDRE DES CATÉGORIES
+    if (isset($_POST['action']) && $_POST['action'] === 'save_categories_order') {
+        $ids = json_decode($_POST['order'], true);
+        if (is_array($ids)) {
+            $stmt = $pdo->prepare("UPDATE pf_budget_categories SET sort_order = ? WHERE id = ?");
+            foreach ($ids as $index => $id) {
+                $stmt->execute([$index, (int)$id]);
+            }
+        }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     throw new Exception("Action API inconnue.");
 
 } catch (Exception $e) {

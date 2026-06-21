@@ -305,21 +305,59 @@ function renderCategories(categories) {
         container.innerHTML = `<em class="text-muted">${tr('bs_empty_categories')}</em>`;
         return;
     }
+
+    // Tri JS pour respecter l'ordre au chargement de la modale
+    categories.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'Income' ? -1 : 1;
+        return (a.sort_order || 0) - (b.sort_order || 0);
+    });
+
     let html = '';
     categories.forEach(cat => {
         let typeLabel = cat.type === 'Income' ? tr('bs_type_income') : cat.type === 'Expense' ? tr('bs_type_expense') : tr('bs_type_savings_cat');
         html += `
-            <div class="bs-list-item" style="border-left: 4px solid ${cat.color || '#ccc'};">
+            <div class="bs-list-item" data-id="${cat.id}" style="border-left: 4px solid ${cat.color || '#ccc'};">
                 <div>
                     <span style="font-size:1.2rem; margin-right:8px;">${cat.icon || '📌'}</span>
                     <strong>${cat.label}</strong> <small class="text-muted">(${cat.code} — ${typeLabel})</small>
                 </div>
                 <div class="pf-flex-gap-8">
+                    <button type="button" class="btn-icon-action" onclick="moveCatUp(this)" title="Monter">⬆️</button>
+                    <button type="button" class="btn-icon-action" onclick="moveCatDown(this)" title="Descendre">⬇️</button>
                     <button type="button" class="btn-icon-action delete" onclick="deleteCategory(${cat.id})" title="${tr('btn_delete')}">🗑️</button>
                 </div>
             </div>`;
     });
     container.innerHTML = html;
+}
+
+// Nouvelles fonctions pour réordonner visuellement et sauvegarder
+function moveCatUp(btn) {
+    let row = btn.closest('.bs-list-item');
+    if (row.previousElementSibling) {
+        row.parentNode.insertBefore(row, row.previousElementSibling);
+        saveCategoriesOrder();
+    }
+}
+
+function moveCatDown(btn) {
+    let row = btn.closest('.bs-list-item');
+    if (row.nextElementSibling) {
+        row.parentNode.insertBefore(row.nextElementSibling, row);
+        saveCategoriesOrder();
+    }
+}
+
+async function saveCategoriesOrder() {
+    let ids = Array.from(document.querySelectorAll('#bs-list-categories .bs-list-item')).map(el => el.dataset.id);
+    let fd = new FormData();
+    fd.append('action', 'save_categories_order');
+    fd.append('order', JSON.stringify(ids));
+    try {
+        await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd });
+    } catch (err) {
+        console.error("Erreur de sauvegarde de l'ordre :", err);
+    }
 }
 
 // 3. ONGLET : RÈGLES D'IMPORT
