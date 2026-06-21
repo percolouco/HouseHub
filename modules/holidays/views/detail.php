@@ -90,6 +90,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 <div class="pf-holidays-detail">
     
     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        
         <div style="display: flex; flex-direction: column; gap: 12px;">
             <a href="?tab=list" class="pf-btn btn-secondary pf-btn-small" style="width: fit-content; text-decoration: none;"><?= tr('btn_back') ?></a>
             <div style="display: flex; align-items: center; gap: 15px;">
@@ -98,14 +99,20 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
             </div>
         </div>
 
-        <div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <script id="holidayDataJson" type="application/json">
                 <?= json_encode(['main' => $holiday, 'items' => $generalItems], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>
             </script>
+            
+            <button type="button" class="pf-btn btn-primary pf-btn-small" onclick="generateTravelBook()" style="display: flex; align-items: center; gap: 6px;">
+                📖 Carnet de Voyage
+            </button>
+
             <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="editHoliday(JSON.parse(document.getElementById('holidayDataJson').textContent))">
                 <?= tr('btn_edit_bases') ?>
             </button>
         </div>
+        
     </div>
 
     <div class="hol-summary-card">
@@ -303,6 +310,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                            style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">
                                             🧭
                                         </button>
+                                        <button onclick="openDocsModal(<?= $step['sort_order'] ?>)" class="btn-icon-small" title="Documents & Billets" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">📎</button>
 
                                         <button onclick='openPlanningModal(<?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('hdl_view_planning') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">📅</button>
                                         <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('btn_edit') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">✏️</button>
@@ -353,6 +361,8 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
     <?php endif; ?>
 
 </div> 
+
+
 
 <div id="checkpointModal" class="pf-modal">
     <div class="pf-modal-content" style="max-width: 600px;">
@@ -498,6 +508,30 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
     </div>
 </div>
 
+<div id="docsModal" class="pf-modal">
+    <div class="pf-modal-content" style="max-width: 450px; padding: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+            <h3 style="margin:0; font-size: 1.2rem; color: var(--text-main);">📎 Porte-documents</h3>
+            <button type="button" onclick="closeDocsModal()" class="pf-modal-close">×</button>
+        </div>
+        
+        <div style="text-align: center; padding: 20px; background: var(--bg-page); border: 2px dashed var(--border-light); border-radius: 8px; margin-bottom: 15px;">
+            <p style="margin-top:0; color: var(--text-muted); font-size: 0.9rem;">Ajoutez vos billets, réservations ou PDFs pour cette étape.</p>
+            
+            <input type="file" id="docFileInput" style="display: none;" accept=".pdf,.png,.jpg,.jpeg" onchange="handleFileUpload(this)">
+            
+            <button type="button" class="pf-btn btn-primary" onclick="document.getElementById('docFileInput').click()" style="margin: 10px 0;">
+                + Sélectionner un fichier
+            </button>
+            <div id="uploadStatus" style="font-size: 0.85rem; font-weight: bold; margin-top: 10px;"></div>
+        </div>
+
+        <div id="docsListContainer" style="display: flex; flex-direction: column; gap: 8px;">
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>
+        </div>
+    </div>
+</div>
+
 <?php include __DIR__ . '/modal.php'; ?>
 
 <script>
@@ -560,5 +594,9 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
     window.GLOBAL_RETURN_STEP_ID = <?= $holiday['return_step_id'] !== null ? $holiday['return_step_id'] : 'null' ?>;
 
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<?php include __DIR__ . '/pdf_template.php'; ?>
 
 <script src="/modules/holidays/holidays.js?v=<?= time() ?>"></script>

@@ -1161,3 +1161,219 @@ function launchGpsApp(app) {
     closeGpsModal();
   }
 }
+
+// ============================================================================
+// GESTION DU PORTE-DOCUMENTS (UPLOAD)
+// ============================================================================
+window.currentDocsStepId = null;
+
+// 🔥 On attache le verrou à window pour éviter les erreurs de redéclaration
+window.isUploadingDocs = window.isUploadingDocs || false;
+
+function openDocsModal(sortOrder) {
+  window.currentDocsStepId = sortOrder;
+  document.getElementById("docsModal").style.display = "flex";
+  document.body.classList.add("no-scroll");
+  document.getElementById("uploadStatus").innerHTML = "";
+
+  const listContainer = document.getElementById("docsListContainer");
+  listContainer.innerHTML =
+    '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted);">⏳ Chargement des documents...</p>';
+
+  const holidayId = document.querySelector('input[name="holiday_id"]').value;
+
+  // 🔥 On va chercher les documents existants !
+  fetch(
+    `/modules/holidays/includes/api/get_attachments.php?holiday_id=${holidayId}&item_id=${sortOrder}`,
+  )
+    .then((response) => response.json())
+    .then((data) => {
+      listContainer.innerHTML = ""; // On vide le message de chargement
+
+      if (data.success && data.files.length > 0) {
+        data.files.forEach((f) => {
+          // On rend le nom du fichier cliquable pour ouvrir le document dans un nouvel onglet
+          const docHtml = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden; cursor: pointer;" onclick="window.open('/${f.file_path}', '_blank')">
+                            <span style="font-size: 1.2rem;">📄</span>
+                            <span style="font-size: 0.9rem; color: var(--primary); font-weight: bold; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="Ouvrir ${f.file_name}">${f.file_name}</span>
+                        </div>
+                        <button type="button" onclick="deleteAttachment(${f.id}, this)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;" title="Supprimer">🗑️</button>
+                    </div>
+                `;
+          listContainer.insertAdjacentHTML("beforeend", docHtml);
+        });
+      } else {
+        listContainer.innerHTML =
+          '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>';
+      }
+    })
+    .catch(() => {
+      listContainer.innerHTML =
+        '<p style="text-align: center; color: var(--danger);">Erreur lors du chargement.</p>';
+    });
+}
+
+function closeDocsModal() {
+  document.getElementById("docsModal").style.display = "none";
+  document.body.classList.remove("no-scroll");
+}
+
+function handleFileUpload(input) {
+  // 1. LE VERROU : Si un envoi est déjà en cours, on bloque tout !
+  if (window.isUploadingDocs) return;
+
+  if (!input.files || input.files.length === 0) return;
+
+  // On ferme le verrou
+  window.isUploadingDocs = true;
+
+  const file = input.files[0];
+  const holidayId = document.querySelector('input[name="holiday_id"]').value;
+  const statusDiv = document.getElementById("uploadStatus");
+  const listContainer = document.getElementById("docsListContainer");
+
+  if (file.size > 5 * 1024 * 1024) {
+    statusDiv.innerHTML =
+      "<span style='color: var(--danger);'>Fichier trop lourd (Max 5Mo).</span>";
+    input.value = "";
+    window.isUploadingDocs = false; // On rouvre le verrou
+    return;
+  }
+
+  statusDiv.innerHTML =
+    "<span style='color: var(--primary);'>⏳ Envoi en cours...</span>";
+
+  const fd = new FormData();
+  fd.append("holiday_id", holidayId);
+  fd.append("item_id", window.currentDocsStepId);
+  fd.append("file", file);
+
+  fetch("/modules/holidays/includes/api/upload_attachment.php", {
+    method: "POST",
+    body: fd,
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        statusDiv.innerHTML = `<span style='color: var(--success);'>✅ Sauvegardé !</span>`;
+
+        const emptyMsg = listContainer.querySelector("p");
+        if (emptyMsg) emptyMsg.remove();
+
+        const docHtml = `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px;">
+                    <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                        <span style="font-size: 1.2rem;">📄</span>
+                        <span style="font-size: 0.9rem; color: var(--text-main); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="${data.file_name}">${data.file_name}</span>
+                    </div>
+                    <button type="button" onclick="deleteAttachment(${data.id}, this)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;" title="Supprimer">🗑️</button>
+                </div>
+            `;
+        listContainer.insertAdjacentHTML("beforeend", docHtml);
+      } else {
+        statusDiv.innerHTML = `<span style='color: var(--danger);'>❌ Erreur: ${data.error}</span>`;
+      }
+    })
+    .catch((err) => {
+      statusDiv.innerHTML =
+        "<span style='color: var(--danger);'>❌ Erreur réseau.</span>";
+    })
+    .finally(() => {
+      input.value = "";
+      // 🔥 2. On rouvre le verrou SEULEMENT quand tout est terminé
+      setTimeout(() => {
+        window.isUploadingDocs = false;
+      }, 500);
+    });
+}
+
+// Fonction pour supprimer un document
+function deleteAttachment(fileId, btnElement) {
+  if (!confirm("Voulez-vous vraiment supprimer ce document définitivement ?"))
+    return;
+
+  const holidayId = document.querySelector('input[name="holiday_id"]').value;
+  const row = btnElement.closest('div[style*="border: 1px solid"]'); // Cible la ligne d'affichage
+  row.style.opacity = "0.4"; // Effet visuel d'attente
+
+  const fd = new FormData();
+  fd.append("file_id", fileId);
+  fd.append("holiday_id", holidayId);
+
+  fetch("/modules/holidays/includes/api/delete_attachment.php", {
+    method: "POST",
+    body: fd,
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        row.remove(); // On efface la ligne
+
+        // Si c'était le dernier fichier, on remet le texte "Aucun document"
+        const listContainer = document.getElementById("docsListContainer");
+        if (listContainer.children.length === 0) {
+          listContainer.innerHTML =
+            '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>';
+        }
+      } else {
+        alert("Erreur : " + data.error);
+        row.style.opacity = "1";
+      }
+    })
+    .catch(() => {
+      alert("Erreur réseau lors de la suppression.");
+      row.style.opacity = "1";
+    });
+}
+
+// ============================================================================
+// GÉNÉRATION DU CARNET DE VOYAGE (PDF Côté Client) - VERSION TEXTE BRUT
+// ============================================================================
+window.generateTravelBook = function () {
+  const element = document.getElementById("travelBookTemplate");
+  const btn = document.querySelector('button[onclick="generateTravelBook()"]');
+
+  if (!element) {
+    alert("Erreur : Le modèle de carnet de voyage est introuvable.");
+    return;
+  }
+
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "⏳ Génération...";
+  btn.disabled = true;
+
+  // Options ajustées avec un fond blanc forcé
+  const opt = {
+    margin: 10, // 10mm de marge
+    filename: "Carnet_de_Route.pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+  };
+
+  // 🔥 L'ASTUCE MAGIQUE :
+  // On extrait le HTML en texte brut et on l'encapsule dans un bloc 100% blanc.
+  // Plus aucun conflit possible avec l'affichage de ta page web !
+  const htmlString = `
+        <div style="background-color: #ffffff; color: #000000; width: 100%;">
+            ${element.outerHTML}
+        </div>
+    `;
+
+  // Génération directe depuis la chaîne de texte
+  html2pdf()
+    .set(opt)
+    .from(htmlString)
+    .save()
+    .then(() => {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    })
+    .catch((err) => {
+      console.error("Erreur html2pdf:", err);
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    });
+};
