@@ -355,6 +355,17 @@ CREATE TABLE IF NOT EXISTS pf_holidays_ideas (
   notes        TEXT DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `pf_holidays_attachments` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `holiday_id` INT NOT NULL,
+  `item_id` INT DEFAULT NULL,
+  `file_name` VARCHAR(255) NOT NULL,
+  `file_path` VARCHAR(255) NOT NULL,
+  `uploaded_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_holiday_attachment` FOREIGN KEY (`holiday_id`) REFERENCES `pf_holidays`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pf_geocode_cache (
   q_hash       CHAR(64) PRIMARY KEY,
   q            VARCHAR(255),
