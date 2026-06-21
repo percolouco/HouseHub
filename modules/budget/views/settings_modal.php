@@ -235,6 +235,7 @@ function openBudgetSettings() {
 function closeBudgetSettings() {
     document.getElementById('modal-budget-settings').classList.remove('show');
     document.body.classList.remove('no-scroll');
+    window.location.reload();
 }
 
 document.getElementById('modal-budget-settings')?.addEventListener('click', (e) => {
