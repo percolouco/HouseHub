@@ -3,15 +3,23 @@ require __DIR__ . '/../../../../includes/auth.php';
 require __DIR__ . '/../../../../includes/db.php';
 require_login();
 
+// 1. Déclaration propre des variables d'entrée
+$action = $_POST['action'] ?? '';
+$isAjax = !empty($_POST['ajax']);
+
+// Si c'est de l'AJAX, on force les en-têtes HTTP pour garantir du JSON
+if ($isAjax) {
+    header('Content-Type: application/json; charset=utf-8');
+}
+
 // =================================================================
 // MISE À JOUR D'UNE CELLULE EN DIRECT (AJAX)
 // =================================================================
 if ($action === 'update_single_entry') {
-    header('Content-Type: application/json');
-    $month = $_POST['month_date'];
-    $cat = $_POST['category'];
-    $owner = $_POST['owner'];
-    $amount = (float)$_POST['amount'];
+    $month = $_POST['month_date'] ?? '';
+    $cat = $_POST['category'] ?? '';
+    $owner = $_POST['owner'] ?? '';
+    $amount = (float)($_POST['amount'] ?? 0);
 
     try {
         if ($amount == 0 && $cat !== 'TOTAL_BANQUE') {
@@ -31,10 +39,10 @@ if ($action === 'update_single_entry') {
 }
 
 // --- ACTION : SUPPRESSION D'UNE ENTRÉE UNIQUE ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_entry') {
-    $owner = $_POST['owner'];
-    $date = $_POST['month_date'];
-    $cat = $_POST['category'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete_entry') {
+    $owner = $_POST['owner'] ?? '';
+    $date = $_POST['month_date'] ?? '';
+    $cat = $_POST['category'] ?? '';
 
     $stmt = $pdo->prepare("DELETE FROM pf_savings WHERE owner = ? AND month_date = ? AND category = ?");
     $stmt->execute([$owner, $date, $cat]);
@@ -44,11 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 }
 
 // --- ACTION : DUPLICATION DE MOIS ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'duplicate_month') {
-    $owner = $_POST['owner'];
-    $sourceDate = $_POST['source_date'];
-    $targetDate = $_POST['target_date'];
-    $newTotal = floatval($_POST['new_total']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'duplicate_month') {
+    $owner = $_POST['owner'] ?? '';
+    $sourceDate = $_POST['source_date'] ?? '';
+    $targetDate = $_POST['target_date'] ?? '';
+    $newTotal = floatval($_POST['new_total'] ?? 0);
 
     try {
         $pdo->beginTransaction();
@@ -78,16 +86,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'dupli
         echo json_encode(['success' => true]);
 
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) $pdo->rollBack();
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;
 }
 
 // --- ACTION : SUPPRESSION GLOBALE D'UN MOIS ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_month_global') {
-    $owner = $_POST['owner'];
-    $date = $_POST['month_date'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete_month_global') {
+    $owner = $_POST['owner'] ?? '';
+    $date = $_POST['month_date'] ?? '';
 
     try {
         $stmt = $pdo->prepare("DELETE FROM pf_savings WHERE owner = ? AND month_date = ?");
@@ -101,18 +109,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 }
 
 // --- ACTION : SAUVEGARDE CLASSIQUE (MODALE) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $owner = $_POST['owner'];
-    
-    // CORRECTION ICI : On récupère l'onglet de redirection (Nens, Alex ou Laia)
+// Cette action s'exécute si c'est un POST général sans action précise (le form HTML) ou l'action explicitement nommée.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['save_modal', ''])) {
+    $owner = $_POST['owner'] ?? '';
     $redirectTab = $_POST['redirect_tab'] ?? $owner; 
     
-    $dateInput = $_POST['month_date']; 
-    $dateObj = new DateTime($dateInput);
-    $monthDate = $dateObj->format('Y-m-01');
+    $dateInput = $_POST['month_date'] ?? ''; 
     $values = $_POST['values'] ?? []; // Tableau généré par nos champs JS: values[Catégorie]
 
     try {
+        $dateObj = new DateTime($dateInput);
+        $monthDate = $dateObj->format('Y-m-01');
+
         $pdo->beginTransaction();
         
         // On supprime d'abord les anciennes données du mois pour cet utilisateur
@@ -130,11 +138,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $pdo->commit();
         
-        // Redirection vers le bon onglet
-        header("Location: /budget.php?tab=epargne&owner=" . urlencode($redirectTab));        
+        // On répond proprement selon le contexte (AJAX ou Fallback classique)
+        if ($isAjax) {
+            echo json_encode(['success' => true]);
+        } else {
+            header("Location: /budget.php?tab=epargne&owner=" . urlencode($redirectTab));        
+        }
         exit;
     } catch (Exception $e) {
-        $pdo->rollBack();
-        die("Erreur : " . $e->getMessage());
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        
+        if ($isAjax) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        } else {
+            die("Erreur : " . $e->getMessage());
+        }
+        exit;
     }
+}
+
+// Sécurité finale : Si l'action n'est pas reconnue
+if ($isAjax) {
+    echo json_encode(['success' => false, 'error' => 'Action inconnue']);
+    exit;
 }
