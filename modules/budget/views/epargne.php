@@ -22,7 +22,7 @@ while ($row = $stmtPeople->fetch(PDO::FETCH_ASSOC)) {
 // Sécurité anti-page blanche si la BDD est mal configurée
 if (empty($familyParents)) $familyParents = ['Parent 1', 'Parent 2'];
 
-$requestedOwner = $_GET['owner'] ?? ($familyParents[0] ?? 'KIDS'); 
+$requestedOwner = $_GET['owner'] ?? (!empty($familyKids) ? 'KIDS' : ($familyParents[0] ?? 'KIDS')); 
 $ownersToDisplay = ($requestedOwner === 'KIDS') ? $familyKids : [$requestedOwner];
 
 // --- RÉCUPÉRATION CONFIGURATION DES MOIS ---
@@ -46,17 +46,18 @@ function getMonthName($dateString) {
 <div class="budget-view">
     <div class="view-header">
         <div class="owner-tabs">
-            <?php foreach ($familyParents as $p): ?>
-                <a href="?tab=epargne&owner=<?= urlencode($p) ?>" class="owner-tab <?= $requestedOwner === $p ? 'active' : '' ?>">
-                    <?= htmlspecialchars($p) ?>
-                </a>
-            <?php endforeach; ?>
             
             <?php if (!empty($familyKids)): ?>
             <a href="?tab=epargne&owner=KIDS" class="owner-tab <?= $requestedOwner === 'KIDS' ? 'active' : '' ?>">
                 <?= tr('budget_tab_kids') ?? 'Enfants 👶' ?>
             </a>
             <?php endif; ?>
+
+            <?php foreach ($familyParents as $p): ?>
+                <a href="?tab=epargne&owner=<?= urlencode($p) ?>" class="owner-tab <?= $requestedOwner === $p ? 'active' : '' ?>">
+                    <?= htmlspecialchars($p) ?>
+                </a>
+            <?php endforeach; ?>
         </div>
     </div>
 
@@ -290,10 +291,10 @@ window.I18N = {
 // Sécurisation de la devise pour la calculatrice
 const systemCurrency = (typeof window.CONFIG !== 'undefined' && window.CONFIG.CURRENCY) ? window.CONFIG.CURRENCY : '€';
 
-// --- 2. GESTION DE L'ÉDITION INVISIBLE EN DIRECT ---
+// --- 2. GESTION DE L'ÉDITION INVISIBLE EN DIRECT (CORRIGÉE 🚀) ---
 const cycleConfigs = <?= json_encode($cycleConfigs ?? []) ?>;
 
-function updateEpargneCell(month, category, owner, inputEl) {
+async function updateEpargneCell(month, category, owner, inputEl) {
     const val = parseFloat(inputEl.value) || 0;
     const formData = new FormData();
     formData.append('action', 'update_single_entry');
@@ -301,15 +302,28 @@ function updateEpargneCell(month, category, owner, inputEl) {
     formData.append('category', category);
     formData.append('owner', owner);
     formData.append('amount', val);
+    formData.append('ajax', '1'); // 🚀 CRITIQUE : Informe l'API
 
-    fetch('modules/budget/includes/api/save-savings.php', {
-        method: 'POST',
-        body: formData
-    }).catch(err => alert(window.I18N['bud_err_tech'] || 'Erreur technique'));
+    try {
+        // 🚀 CRITIQUE : pachaFetch + Chemin absolu
+        const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', {
+            method: 'POST',
+            body: formData
+        });
 
-    // Gère les IDs proprement
+        if (!result.success) {
+            console.error("Erreur de sauvegarde :", result.error);
+            alert(window.I18N['bud_err_tech'] + " : " + (result.error || "Erreur serveur"));
+            return; // On stoppe la mise à jour visuelle si la BDD a refusé
+        }
+    } catch (err) {
+        console.error("Erreur réseau :", err);
+        alert(window.I18N['bud_err_tech'] || 'Erreur technique');
+        return;
+    }
+
+    // Si on arrive ici, la BDD est bien à jour ! On met à jour le visuel.
     const safeOwnerClass = owner.replace(/\s+/g, '_');
-    
     const totalInput = document.querySelector(`.total-input-${CSS.escape(safeOwnerClass)}-${month}`);
     const totalVal = parseFloat(totalInput ? totalInput.value : 0) || 0;
 
@@ -423,7 +437,7 @@ window.onclick = function(event) {
 
 const savingsForm = document.getElementById('savingsForm');
 if (savingsForm) {
-    savingsForm.addEventListener('submit', function(e) {
+    savingsForm.addEventListener('submit', async function(e) {
         e.preventDefault(); 
         
         const ym = document.getElementById('sav_month').value;
@@ -437,23 +451,32 @@ if (savingsForm) {
         submitBtn.disabled = true;
 
         const formData = new FormData(this);
+        formData.append('ajax', '1'); // 🚀 CRITIQUE
 
-        const actionUrl = this.getAttribute('action'); 
-        const finalUrl = actionUrl.startsWith('/') ? actionUrl.substring(1) : actionUrl;
-
-        fetch(finalUrl, { method: 'POST', body: formData })
-        .then(response => response.text()) 
-        .then(text => { window.location.reload(); })
-        .catch(error => {
-            console.error("Erreur:", error);
+        try {
+            // 🚀 CRITIQUE : pachaFetch + Chemin absolu forcé
+            const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { 
+                method: 'POST', 
+                body: formData 
+            });
+            
+            if (result.success) {
+                window.location.reload(); // Ne recharge QUE si le serveur a dit OK
+            } else {
+                alert((window.I18N['bud_err_server'] || 'Erreur serveur : ') + (result.error || "Inconnue"));
+                submitBtn.innerText = originalText;
+                submitBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error("Erreur catch:", error);
             alert(window.I18N['bud_err_tech'] || 'Erreur Technique');
             submitBtn.innerText = originalText;
             submitBtn.disabled = false;
-        });
+        }
     });
 }
 
-function deleteEntireMonth(monthDate, owner) {
+async function deleteEntireMonth(monthDate, owner) {
     const rawMsg = window.I18N['bud_sav_confirm_delete_month'] || "Supprimer %m pour %o ?";
     const msg = rawMsg.replace('%m', monthDate).replace('%o', owner);
     if (!confirm(msg)) return;
@@ -462,13 +485,18 @@ function deleteEntireMonth(monthDate, owner) {
     formData.append("action", "delete_month_global"); 
     formData.append("month_date", monthDate);
     formData.append("owner", owner);
+    formData.append("ajax", "1"); // 🚀 CRITIQUE
     
-    fetch("modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
-    .then(() => window.location.reload())
-    .catch(err => alert(window.I18N['bud_err_delete'] || 'Erreur lors de la suppression'));
+    try {
+        const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { method: "POST", body: formData });
+        if (result.success) window.location.reload();
+        else alert(result.error || window.I18N['bud_err_delete']);
+    } catch(err) {
+        alert(window.I18N['bud_err_delete'] || 'Erreur lors de la suppression');
+    }
 }
 
-function duplicateLastMonth(lastMonthDate, owner) {
+async function duplicateLastMonth(lastMonthDate, owner) {
     let dateObj = new Date(lastMonthDate);
     dateObj.setMonth(dateObj.getMonth() + 1);
     let year = dateObj.getFullYear();
@@ -480,16 +508,13 @@ function duplicateLastMonth(lastMonthDate, owner) {
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
-    const sourceName = formatMonth(lastMonthDate); 
-    const targetName = formatMonth(nextMonthStr); 
-
     let defaultTotal = "";
     if (cycleConfigs[nextMonthStr] && cycleConfigs[nextMonthStr].start_balance !== undefined) {
         defaultTotal = cycleConfigs[nextMonthStr].start_balance;
     }
 
-    const rawMsg = window.I18N['bud_sav_prompt_duplicate'] || "Dupliquer %s vers %t1 ?";
-    const message = rawMsg.replace('%s', sourceName).replace('%t1', targetName).replace('%t2', targetName);
+    const rawMsg = window.I18N['bud_sav_prompt_duplicate'] || "Dupliquer vers le mois suivant ?";
+    const message = rawMsg.replace('%s', formatMonth(lastMonthDate)).replace(/%t[12]/g, formatMonth(nextMonthStr));
 
     let newTotal = prompt(message, defaultTotal);
 
@@ -500,22 +525,19 @@ function duplicateLastMonth(lastMonthDate, owner) {
         formData.append("target_date", nextMonthStr);
         formData.append("new_total", newTotal);
         formData.append("owner", owner);
+        formData.append("ajax", "1"); // 🚀 CRITIQUE
 
-        fetch("modules/budget/includes/api/save-savings.php", { method: "POST", body: formData })
-        .then(async r => {
-            const text = await r.text(); 
-            try {
-                const d = JSON.parse(text); 
-                if (d.success) window.location.reload();
-                else alert((window.I18N['bud_err_server'] || 'Erreur serveur : ') + (d.error || "Inconnue"));
-            } catch(e) {
+        try {
+            const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { method: "POST", body: formData });
+            if (result.success) {
                 window.location.reload();
+            } else {
+                alert((window.I18N['bud_err_server'] || 'Erreur serveur : ') + (result.error || "Inconnue"));
             }
-        })
-        .catch(err => {
+        } catch(err) {
             console.error(err);
             alert(window.I18N['bud_err_network_dup'] || 'Erreur réseau.');
-        });
+        }
     }
 }
 
