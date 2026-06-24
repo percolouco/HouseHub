@@ -642,7 +642,7 @@ return [
     'bud_bar_max_cap' => "Capacitat Màx.",
     'bud_edit_title'            => 'Modificar la transacció',
     'bud_to_define_js'          => 'per definir',
-    'bud_select_beneficiary'    => 'Triar un ingrés esperat', /
+    'bud_select_beneficiary'    => 'Triar un ingrés esperat', 
     'bud_bar_actual'            => 'Actual',
 
     // ONBOARDING BUDGET
