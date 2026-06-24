@@ -153,7 +153,7 @@ function renderAttachmentsView(atts,noteId){
       <div class="memo-att-title">🖼️ Images</div>
       <div class="att-img-grid">${images.map(a=>`
         <div class="att-img-item" onclick="openLightbox('${API}?action=file&id=${a.id}')">
-          <img src="${API}?action=file&id=${a.id}" loading="lazy" alt="${escHtml(a.original_name||'')}">
+          <img src="${API}?action=file&id=${a.id}" alt="${escHtml(a.original_name||'')}">
           <button class="att-del" onclick="event.stopPropagation();deleteAttachment(${a.id},${noteId})" title="Supprimer">✕</button>
         </div>`).join('')}</div></div>`;
   }
