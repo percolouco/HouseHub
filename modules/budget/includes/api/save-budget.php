@@ -8,6 +8,28 @@ require_login();
 $action = $_POST['action'] ?? '';
 
 // =================================================================
+// LECTURE D'UNE NOTE (AJAX)
+// =================================================================
+if ($action === 'get_note') {
+    $noteType = $_POST['note_type'] ?? '';
+    $refId = $_POST['reference_id'] ?? '';
+
+    try {
+        $stmt = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type = ? AND reference_id = ?");
+        $stmt->execute([$noteType, $refId]);
+        
+        // fetchColumn() renvoie false si aucune ligne n'est trouvée, on sécurise avec un coalesce (?? '')
+        $content = $stmt->fetchColumn();
+        $content = $content !== false ? $content : '';
+        
+        echo json_encode(['success' => true, 'content' => $content]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// =================================================================
 // 7. SAUVEGARDE D'UNE NOTE GÉNÉRIQUE (pf_notes)
 // =================================================================
 if ($action === 'save_note') {

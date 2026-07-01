@@ -333,14 +333,41 @@ if (count($parentMapping) >= 2) {
 
     <div class="budget-notes-section">
         <div class="notes-header">
-            <h3>📝 <?= tr('bud_prev_notes_for') ?> <span><?= getTranslatedMonthName($focusDate) ?></span></h3>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <h3 style="margin: 0;">📝 <?= tr('bud_prev_notes_for') ?></h3>
+                
+                <?php 
+                    $focusY = date('Y', strtotime($focusDate));
+                    $focusM = date('m', strtotime($focusDate));
+                ?>
+                <div style="display: flex; gap: 5px;">
+                    <select id="noteMonthSel" class="pf-input" style="width: auto; padding: 4px 10px; font-weight: bold; cursor: pointer; height: auto;" onchange="handleNoteDateChange()">
+                        <?php for($i = 1; $i <= 12; $i++): 
+                            $mVal = str_pad((string)$i, 2, '0', STR_PAD_LEFT);
+                        ?>
+                            <option value="<?= $mVal ?>" <?= $mVal === $focusM ? 'selected' : '' ?>>
+                                <?= tr('month_' . $mVal) ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                    
+                    <select id="noteYearSel" class="pf-input" style="width: auto; padding: 4px 10px; font-weight: bold; cursor: pointer; height: auto;" onchange="handleNoteDateChange()">
+                        <?php 
+                            $currentY = (int)date('Y');
+                            for($y = $currentY - 3; $y <= $currentY + 3; $y++): 
+                        ?>
+                            <option value="<?= $y ?>" <?= $y == $focusY ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+            </div>
             <span id="note-save-indicator" class="note-save-indicator">✓ <?= tr('bud_prev_saved') ?></span>
         </div>
 
         <textarea id="monthNoteArea" class="pf-input" rows="3" placeholder="<?= tr('bud_prev_notes_ph') ?>"><?= htmlspecialchars((string)$currentNote) ?></textarea>
 
         <div class="notes-footer">
-            <button type="button" class="pf-btn" onclick="saveGenericNote('budget_prev', '<?= $focusDate ?>', document.getElementById('monthNoteArea').value)"><?= tr('bud_prev_save_note') ?></button>
+            <button type="button" class="pf-btn" onclick="saveSelectedNote()"><?= tr('bud_prev_save_note') ?></button>
         </div>
     </div>
 
@@ -1135,4 +1162,53 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
         }
     });
 });
+
+/* --- LOGIQUE DES NOTES INDÉPENDANTES --- */
+
+function handleNoteDateChange() {
+    const m = document.getElementById('noteMonthSel').value;
+    const y = document.getElementById('noteYearSel').value;
+    if (m && y) {
+        // Formate en YYYY-MM
+        loadSpecificNote(`${y}-${m}`);
+    }
+}
+
+async function loadSpecificNote(ym) {
+    if (!ym) return;
+    
+    const refId = ym + '-01'; 
+    const formData = new FormData();
+    
+    formData.append('action', 'get_note');
+    formData.append('note_type', 'budget_prev');
+    formData.append('reference_id', refId);
+    formData.append('ajax', '1');
+
+    try {
+        const result = await pachaFetch('/modules/budget/includes/api/save-budget.php', { 
+            method: 'POST', 
+            body: formData 
+        });
+        
+        if (result.success) {
+            document.getElementById('monthNoteArea').value = result.content || '';
+        } else {
+            console.error("Erreur chargement note:", result.error);
+        }
+    } catch (e) {
+        console.error("Erreur technique chargement note:", e);
+    }
+}
+
+function saveSelectedNote() {
+    const m = document.getElementById('noteMonthSel').value;
+    const y = document.getElementById('noteYearSel').value;
+    if (!m || !y) return;
+    
+    const refId = `${y}-${m}-01`;
+    const content = document.getElementById('monthNoteArea').value;
+    
+    saveGenericNote('budget_prev', refId, content);
+}
 </script>
