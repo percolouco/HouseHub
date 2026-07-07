@@ -172,6 +172,18 @@ CREATE TABLE IF NOT EXISTS pf_expenses (
   salary_id INT DEFAULT NULL -- 🔥 AJOUT : Lien vers le salaire configuré
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `pf_expected_expenses` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `title` VARCHAR(150) NOT NULL,
+  `amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `expected_date` DATE NOT NULL,
+  `is_paid` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  INDEX `idx_expected_date` (`expected_date`),
+  INDEX `idx_is_paid` (`is_paid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pf_alloc_categories (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,

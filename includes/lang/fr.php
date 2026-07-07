@@ -771,6 +771,34 @@ return [
     'bud_sav_sum_mode_title'       => 'Activer/Désactiver la calculatrice',
     'bud_sav_selection'            => 'Sélection :',
     'bud_sav_ph_name'              => 'Nom du compte',
+
+
+        // --- BUDGET : PREVISION ---
+
+    'budget_provisions_title' => 'Provisions & Optimisation de Trésorerie',
+'btn_optimize_cashflow' => 'Optimiser mes Économies',
+'add_new_provision' => 'Anticiper une grosse dépense à venir',
+'provision_label' => 'Libellé de la dépense',
+'provision_placeholder_wood' => 'Ex: Commande bois de chauffage, Révision voiture...',
+'amount' => 'Montant',
+'expected_date' => 'Date prévue',
+'btn_add' => 'Ajouter',
+'upcoming_provisions_list' => 'Dépenses prévues au calendrier',
+'optimization_assistant_title' => 'Assistant d\'Optimisation des Quinzaines',
+'error_generic' => 'Une erreur est survenue',
+'success_add_provision' => 'Dépense prévisionnelle ajoutée !',
+'no_provisions' => 'Aucune dépense prévisionnelle enregistrée pour le moment.',
+'btn_delete' => 'Supprimer',
+'savings_this_month' => 'Économies globales à placer ce mois-ci',
+'calculate' => 'Calculer la stratégie optimale',
+'date_past_warning' => 'La date sélectionnée est déjà passée !',
+'budget_tab_provisions' => 'Provisions',
+'budget_opti_base' => 'Base',
+'budget_opti_debt' => 'Dette compensée',
+'budget_opti_no_config' => 'Aucune configuration de salaire trouvée pour cette année.',
+'budget_opti_recap_apports' => 'Résumé des apports (Clearing) :',
+'budget_opti_total_disp' => 'Total disponible pour l\'optimisation :',
+'budget_opti_must_pay' => 'doit verser',
     
     
     // JS & Erreurs

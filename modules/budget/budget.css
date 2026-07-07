@@ -1798,3 +1798,121 @@ body.sum-mode-active .sum-target {
     padding: 12px 10px;
   }
 }
+
+/* ==========================================================================
+   14. PROVISIONS & OPTIMISATION (CASHFLOW)
+   ========================================================================== */
+
+/* Formulaire d'ajout */
+.provisions-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+}
+.provisions-form-grid .pf-form-group {
+  margin-bottom: 0;
+}
+.provisions-form-grid .pf-btn {
+  height: 42px;
+  margin: 0;
+}
+
+/* Tableau des provisions */
+.budget-table-card {
+  background: var(--bg-panel);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+.provisions-table th {
+  text-align: center;
+}
+.provisions-table th:first-child {
+  text-align: left;
+  padding-left: 15px;
+}
+.provisions-table th:last-child {
+  text-align: right;
+  padding-right: 15px;
+}
+.provisions-table td {
+  border-bottom: 1px solid var(--border-light);
+}
+.prov-title-cell {
+  font-weight: 500;
+  color: var(--text-main);
+  padding-left: 15px;
+}
+.prov-amount-cell {
+  color: #2563eb;
+  font-weight: bold;
+  text-align: center;
+}
+.prov-date-cell {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Modale d'optimisation */
+.provisions-modal-content {
+  max-width: 600px;
+  width: 95%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.provision-person-card {
+  background: var(--bg-subtle);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  margin-bottom: 10px;
+}
+.provision-person-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.provision-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.input-amount-highlight {
+  font-weight: bold;
+  color: #2563eb !important;
+}
+.input-amount-success {
+  font-weight: bold;
+  color: var(--success) !important;
+  flex: 1;
+  margin: 0;
+}
+.currency-symbol {
+  font-weight: bold;
+  color: var(--text-muted);
+}
+.optimization-hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 15px;
+}
+.pf-divider {
+  border: 0;
+  border-top: 1px solid var(--border-light);
+  margin: 20px 0;
+}
+.btn-block {
+  width: 100%;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+  .provisions-form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
