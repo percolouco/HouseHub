@@ -774,6 +774,27 @@ return [
     'bud_sav_sum_mode_title'       => 'Activar/Desactivar la calculadora',
     'bud_sav_selection'            => 'Selecció:',
     'bud_sav_ph_name'              => 'Nom del compte',
+
+
+    // --- Module Budget : Provisions & Optimisation ---
+'budget_provisions_title' => 'Provisions & Optimisation de Trésorerie',
+'btn_optimize_cashflow' => 'Optimiser mes Économies',
+'add_new_provision' => 'Anticiper une grosse dépense à venir',
+'provision_label' => 'Libellé de la dépense',
+'provision_placeholder_wood' => 'Ex: Commande de bois, Révision de l\'auto...',
+'amount' => 'Montant',
+'expected_date' => 'Date prévue',
+'btn_add' => 'Ajouter',
+'upcoming_provisions_list' => 'Dépenses prévues au calendrier',
+'optimization_assistant_title' => 'Assistant d\'Optimisation des Quinzaines',
+'error_generic' => 'Une erreur est survenue',
+'success_add_provision' => 'Dépense prévisionnelle ajoutée !',
+'no_provisions' => 'Aucune dépense prévisionnelle enregistrée pour le moment.',
+'btn_delete' => 'Supprimer',
+'savings_this_month' => 'Économies globales à placer ce mois-ci',
+'calculate' => 'Calculer la stratégie optimale',
+'date_past_warning' => 'La date sélectionnée est déjà passée !',
+'budget_tab_provisions' => 'Provisions',
     
     // JS & Errors
     'bud_sav_confirm_delete_month' => 'Estàs segur que vols suprimir totes les dades de %m per a %o?',

@@ -824,6 +824,26 @@ return [
     'bud_prev_target_ph'    => 'E.g., 150',
     'bud_prev_transfer_to'  => 'To',
 
+    // --- Module Budget : Provisions & Optimisation ---
+'budget_provisions_title' => 'Provisions & Cashflow Optimization',
+'btn_optimize_cashflow' => 'Optimize My Savings',
+'add_new_provision' => 'Anticipate an upcoming major expense',
+'provision_label' => 'Expense description',
+'provision_placeholder_wood' => 'E.g., Firewood order, Car service...',
+'amount' => 'Amount',
+'expected_date' => 'Expected date',
+'btn_add' => 'Add',
+'upcoming_provisions_list' => 'Scheduled expenses',
+'optimization_assistant_title' => 'Fortnightly Interest Optimization Assistant',
+'error_generic' => 'An error occurred',
+'success_add_provision' => 'Forecasted expense added successfully!',
+'no_provisions' => 'No forecasted expenses registered at the moment.',
+'btn_delete' => 'Delete',
+'savings_this_month' => 'Total savings to allocate this month',
+'calculate' => 'Calculate optimal strategy',
+'date_past_warning' => 'The selected date has already passed!',
+'budget_tab_provisions' => 'Forecasts', 
+
     // ==========================================
     // MODULE: GIFTS (gift-list)
     // ==========================================

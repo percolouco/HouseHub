@@ -59,12 +59,18 @@ require __DIR__ . '/header.php';
                 <span class="tab-icon">📊</span> 
                 <span><?= tr('budget_tab_recap') ?></span>
             </a>
+
+            <a href="?tab=provisions" class="tab-item <?= $tab == 'provisions' ? 'active' : '' ?>">
+                <span class="tab-icon">🧮</span> 
+                <span><?= tr('budget_tab_provisions') ?></span>
+            </a>
+
         </nav>
     </div>
 
     <section class="pf-section">
     <?php 
-    $allowedTabs = ['recap', 'suivi', 'epargne', 'budget_prev'];
+    $allowedTabs = ['recap', 'suivi', 'epargne', 'budget_prev', 'provisions'];
     
     if (in_array($tab, $allowedTabs)) {
         $viewPath = __DIR__ . "/modules/budget/views/" . $tab . ".php";
