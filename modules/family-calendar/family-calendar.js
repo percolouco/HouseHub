@@ -1289,46 +1289,78 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     generateMonthSummaryHTML(year, month) {
-      const stats = { off: 0, extra: 0, sick: 0, presence: 0 };
+      // 1. Identifier UNIQUEMENT les enfants qui ont le mode de garde "Nounou"
+      const nounouKids = (window.FAMILY_CONFIG.kids || []).filter(
+        (k) => k.modes && k.modes.some((m) => m.toLowerCase() === "nounou"),
+      );
+
+      // S'il n'y a pas d'enfant avec ce mode, on ne retourne rien pour ce bloc
+      if (nounouKids.length === 0) return "";
+
       const daysInMonth = new Date(year, month + 1, 0).getDate();
+      let html = "";
 
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateObj = new Date(year, month, d);
-        const dayOfWeek = dateObj.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+      // 2. Boucler sur chaque enfant concerné pour un calcul individuel
+      nounouKids.forEach((kid) => {
+        let workingDays = 0;
+        let off = 0;
+        let extra = 0;
+        let sick = 0;
 
-        const iso = this.getLocalIsoDate(dateObj);
-        const dayEvents = this.events.filter((e) => e.date === iso);
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateObj = new Date(year, month, d);
+          const dayOfWeek = dateObj.getDay();
 
-        dayEvents.forEach((e) => {
-          const dur = parseFloat(e.duration) || 1;
-          if (e.type === "HELPER_OFF") stats.off += dur;
-          if (e.type === "HELPER_EXTRA") stats.extra += dur;
-          if (e.type === "CHILD_SICK") stats.sick += dur;
-        });
+          // Exclure les week-ends des jours ouvrés (0 = Dimanche, 6 = Samedi)
+          if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
-        if (
-          !this.publicHolidayDates.has(iso) &&
-          !dayEvents.some((e) => e.type === "VACANCES_SCOLAIRES")
-        ) {
-          let dayAbsence = 0;
+          const iso = this.getLocalIsoDate(dateObj);
+
+          // Exclure les jours fériés des jours ouvrés
+          if (this.publicHolidayDates.has(iso)) continue;
+
+          // C'est un jour ouvré valide
+          workingDays += 1;
+
+          const dayEvents = this.events.filter((e) => e.date === iso);
+
           dayEvents.forEach((e) => {
-            if (["HELPER_OFF", "HELPER_EXTRA", "CHILD_SICK"].includes(e.type)) {
-              dayAbsence += parseFloat(e.duration) || 1;
+            const dur = parseFloat(e.duration) || 1;
+
+            if (e.type === "HELPER_OFF") off += dur;
+            if (e.type === "HELPER_EXTRA") extra += dur;
+
+            // On vérifie que la maladie concerne BIEN cet enfant précis !
+            if (
+              e.type === "CHILD_SICK" &&
+              Number(e.person_id) === Number(kid.id)
+            ) {
+              sick += dur;
             }
           });
-          stats.presence += Math.max(0, 1 - dayAbsence);
         }
-      }
 
-      return `
-          <div class="fc-month-summary-inline" style="display:flex; justify-content:space-around; gap:10px; margin-top:8px; font-size:0.75rem; background: var(--bg-panel); padding: 8px; border-radius: 8px; border: 1px solid var(--border-light);">
-              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Off</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(stats.off.toFixed(1))} j</strong></div>
-              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Extra</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(stats.extra.toFixed(1))} j</strong></div>
-              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Maladie</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(stats.sick.toFixed(1))} j</strong></div>
-              <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Présence</span> <strong style="color:var(--primary); font-size:0.95rem;">${parseFloat(stats.presence.toFixed(1))} j</strong></div>
+        // Calcul final strict : Jours ouvrés - Maladie (de l'enfant) - Extra - Off
+        const presence = Math.max(0, workingDays - sick - extra - off);
+
+        // Rendu HTML individuel
+        html += `
+          <div style="margin-top: 10px;">
+              <div style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">
+                 👧👦 Présence ${kid.name} (Nounou)
+              </div>
+              <div class="fc-month-summary-inline" style="display:flex; justify-content:space-around; gap:10px; font-size:0.75rem; background: var(--bg-panel); padding: 8px; border-radius: 8px; border: 1px solid var(--border-light);">
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Ouvrés</span> <strong style="color:var(--text-main); font-size:0.95rem;">${workingDays} j</strong></div>
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Off</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(off.toFixed(1))} j</strong></div>
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Extra</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(extra.toFixed(1))} j</strong></div>
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Maladie</span> <strong style="color:var(--danger); font-size:0.95rem;">${parseFloat(sick.toFixed(1))} j</strong></div>
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Présence</span> <strong style="color:var(--primary); font-size:0.95rem;">${parseFloat(presence.toFixed(1))} j</strong></div>
+              </div>
           </div>
-      `;
+        `;
+      });
+
+      return html;
     }
 
     scrollToCurrentMonth() {

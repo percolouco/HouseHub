@@ -441,18 +441,18 @@ require __DIR__ . '/header.php';
                                     <span style="font-size:1.1rem; line-height:1; margin-right:6px;">🏫</span>
                                     <span><?= htmlspecialchars($mode) ?></span>
                                 </div>
-                            <?php else: 
-                                $hue = ($index * 137) % 360; ?>
+                            <?php else: ?>
                                 <div class="pf-legend-item">
-                                    <div class="pf-legend-color" style="background: hsl(<?= $hue ?>, 70%, 50%);"></div>
+                                    <div class="pf-legend-color" style="background: var(--primary);"></div>
                                     <span><?= htmlspecialchars($mode) ?></span>
                                 </div>
-                            <?php endif; 
+                            <?php endif;
                         endforeach; ?>
 
                         <!-- Enfants Malades (Dynamique avec couleur BDD) -->
                         <?php foreach ($kids as $kid): 
-                            $color = !empty($kid['color']) ? $kid['color'] : 'var(--danger)';
+                            // Fallback aligné exactement sur celui du JS (#e11d48)
+                            $color = !empty($kid['color']) ? $kid['color'] : '#e11d48';
                         ?>
                             <div class="pf-legend-item">
                                 <div class="pf-legend-color" style="background: <?= htmlspecialchars($color) ?>; opacity: 0.8;"></div>
@@ -477,5 +477,6 @@ window.FAMILY_CONFIG = {
     }
 };
 </script>
-<script src="/modules/family-calendar/family-calendar.js"></script>
+
+<script src="/modules/family-calendar/family-calendar.js?v=<?= time() ?>"></script>
 <?php require __DIR__ . '/footer.php'; ?>
