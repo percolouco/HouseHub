@@ -785,7 +785,7 @@ function openPlanningModal(step) {
                 <div class="hol-time-slots-container">
         `;
 
-    for (let h = 8; h <= 22; h++) {
+    for (let h = 6; h <= 23; h++) {
       let hourStr = h.toString().padStart(2, "0") + ":00";
       html += `
                 <div class="hol-time-slot" data-date="${dateStr}" data-time="${hourStr}" 
