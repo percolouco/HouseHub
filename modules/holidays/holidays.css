@@ -1196,7 +1196,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   top: 1px;
   left: 45px;
   right: 5px;
-  height: calc(75px * var(--duration) - 2px);
+  height: calc(60px * var(--duration) - 2px);
 }
 /* Dans la boîte d'attente : Position normale */
 .hol-unmapped-zone .hol-drag-item {
@@ -1253,7 +1253,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .hol-time-slot {
-  height: 75px;
+  height: 60px;
   border-bottom: 1px solid var(--border-light);
   position: relative;
   transition: background 0.2s;

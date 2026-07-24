@@ -7,11 +7,20 @@ require_login();
 // ---------------------------------------------------------------------------
 // INTERCEPTIONS AJAX (Exécution ultra rapide sans rechargement lourd)
 // ---------------------------------------------------------------------------
-if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime', 'update_item_duration', 'add_single_item'])) {
+if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime', 'update_item_duration', 'add_single_item', 'update_holiday_note'])) {
     header('Content-Type: application/json');
-    session_write_close(); // 🚀 LIBÈRE LA SESSION : Permet d'autres requêtes simultanées sans bloquer le navigateur
+    session_write_close(); 
     
     try {
+        if ($_POST['action'] === 'update_holiday_note') {
+            $hId = (int)$_POST['holiday_id'];
+            $notes = $_POST['notes'] ?? '';
+            $stmt = $pdo->prepare("UPDATE pf_holidays SET notes = ? WHERE id = ?");
+            $stmt->execute([$notes, $hId]);
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
         if ($_POST['action'] === 'add_single_item') {
             $holiday_id = (int)$_POST['holiday_id'];
             $sort_order = (int)$_POST['sort_order'];
@@ -25,16 +34,28 @@ if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime
                 $date = !empty($_POST['item_date']) ? $_POST['item_date'] : null;
                 $time = !empty($_POST['item_time']) ? $_POST['item_time'] : null;
 
+                $context = $_POST['expense_context'] ?? ($_POST['context'] ?? 'local');
+
                 $pdo->beginTransaction();
+                
+                if ($context === 'transit') {
+                    $stmtDel = $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND sort_order = ? AND expense_context = 'transit'");
+                    $stmtDel->execute([$holiday_id, $sort_order]);
+                }
+
                 $ins = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, step_start_date, step_end_date, step_type, expense_context, duration, item_date, item_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([
                     $holiday_id, $_POST['category'], $_POST['name'], (float)$_POST['amount'], 0,
                     $stepInfo['location_name'], $stepInfo['lat'], $stepInfo['lng'],
                     $sort_order, $stepInfo['step_start_date'], $stepInfo['step_end_date'],
-                    $stepInfo['step_type'], $_POST['context'], $dur, $date, $time
+                    $stepInfo['step_type'], $context, $dur, $date, $time
                 ]);
+                
+                $newId = $pdo->lastInsertId();
+                
                 $pdo->commit();
-                echo json_encode(['success' => true]);
+                
+                echo json_encode(['success' => true, 'id' => $newId]);
                 exit;
             }
             echo json_encode(['success' => false, 'error' => 'Etape introuvable']);
@@ -61,6 +82,18 @@ if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime
             echo json_encode(['success' => true]);
             exit;
         }
+
+        // Mise à jour de la note globale du voyage
+        if ($_POST['action'] === 'update_holiday_note') {
+            $hId = (int)$_POST['holiday_id'];
+            $notes = $_POST['notes'] ?? '';
+            $stmt = $pdo->prepare("UPDATE pf_holidays SET notes = ? WHERE id = ?");
+            $stmt->execute([$notes, $hId]);
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
+
     } catch (Exception $e) {
         if ($pdo->inTransaction()) { $pdo->rollBack(); }
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
