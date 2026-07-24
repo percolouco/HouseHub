@@ -62,10 +62,6 @@
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 10px;">
-                <label class="pf-label"><?= tr('hdl_label_notes') ?></label>
-                <textarea name="notes" id="inp_notes" class="pf-input" rows="2" placeholder="<?= tr('hdl_ph_notes') ?>"></textarea>
-            </div>
 
             <div class="modal-footer">
                 <button type="button" onclick="deleteHoliday()" id="btn_delete" class="pf-btn btn-secondary hol-btn-delete"><?= tr('btn_delete') ?></button>

@@ -16,7 +16,8 @@ $stmt = $pdo->prepare("
            (COALESCE(h.budget_food, 0) + COALESCE(h.budget_extra, 0) + COALESCE((SELECT SUM(amount) FROM pf_holidays_items WHERE holiday_id = h.id), 0)) as total_cost,
            (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND is_paid = 1) as total_paid,
            (SELECT COALESCE(SUM(amount), 0) FROM pf_savings WHERE holiday_id = h.id) as total_saved,
-           (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND expense_context = 'transit') as total_transit
+           (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND (expense_context = 'transit' OR (category = 'transport' AND (name LIKE '%Essence%' OR name LIKE '%Carburant%')))) as total_fuel,
+           (SELECT COALESCE(SUM(amount), 0) FROM pf_holidays_items WHERE holiday_id = h.id AND category = 'transport' AND (name LIKE '%Péage%' OR name LIKE '%Peage%')) as total_tolls
     FROM pf_holidays h 
     LEFT JOIN pf_vehicles v ON h.vehicle_id = v.id
     WHERE h.id = ?
@@ -108,6 +109,10 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                 📖 Carnet de Voyage
             </button>
 
+            <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="openGlobalPlanningModal()" style="display: flex; align-items: center; gap: 6px; margin-right: 10px;">
+                📅 Planning Global
+            </button>
+
             <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="editHoliday(JSON.parse(document.getElementById('holidayDataJson').textContent))">
                 <?= tr('btn_edit_bases') ?>
             </button>
@@ -127,18 +132,30 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
             <div class="hol-summary-item">
                 <div class="hol-summary-label">
-                    Frais de route (Essence/Péages)
+                    Frais de route
                 </div>
-                <div class="hol-summary-value" style="display:flex; align-items:center; gap:6px;">
-                    <span style="font-size: 1.1rem;">⛽</span> 
-                    <strong><?= number_format($holiday['total_transit'], 0) ?> €</strong>
+                <div class="hol-summary-value" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
                     
+                    <!-- Bloc Péages -->
+                    <span style="display:flex; align-items:center; gap:4px;" title="Péages">
+                        <span style="font-size: 1.1rem;">💳</span> 
+                        <strong><?= number_format($holiday['total_tolls'], 0) ?> €</strong>
+                    </span>
+
+                    <!-- Bloc Essence -->
+                    <span style="display:flex; align-items:center; gap:4px;" title="Carburant estimé et manuel">
+                        <span style="font-size: 1.1rem;">⛽</span> 
+                        <strong><span id="global_fuel_cost"><?= number_format($holiday['total_fuel'], 0) ?></span> €</strong>
+                    </span>
+                    
+                    <!-- Paramètres prix essence -->
                     <span onclick="updateFuelPrice()" style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; transition: color 0.2s; display: inline-flex; align-items: center; gap: 3px;" onmouseover="this.style.color='var(--primary)';" onmouseout="this.style.color='var(--text-muted)';" title="Modifier le prix estimé du carburant">
                         (<span id="display_fuel_price">1.85</span> €/L) <span style="font-size:0.7rem; opacity:0.8;">✏️</span>
                     </span>
                     
-                    <?php if ($holiday['total_transit'] > 0): ?>
-                        <span onclick="openTransitModal()" style="font-size: 1rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; margin-left: 4px; display: inline-flex; align-items: center;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="Voir le détail des trajets">
+                    <!-- Bouton Détails (Oeil) -->
+                    <?php if ($holiday['total_fuel'] > 0 || $holiday['total_tolls'] > 0): ?>
+                        <span onclick="openTransitModal()" style="font-size: 1rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; display: inline-flex; align-items: center;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="Voir le détail des trajets">
                             👁️
                         </span>
                     <?php endif; ?>
@@ -201,59 +218,7 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                     <p style="color:var(--text-muted); font-style:italic; text-align:center; margin-top:40px;"><?= tr('hdl_no_steps') ?></p>
                 <?php else: ?>
 
-                    <?php if (!empty($generalItems) || $holiday['budget_food'] > 0 || $holiday['budget_extra'] > 0): ?>
-                        <div class="hol-checkpoint" style="border-left-color: #64748b; background: #f8fafc; margin-bottom: 20px;">
-                            <div class="hol-cp-header">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span style="font-size: 1.2rem;">🌍</span>
-                                    <strong style="color: #0f172a;"><?= tr('hdl_general_costs') ?></strong>
-                                </div>
-                                
-                                <?php 
-                                    $generalTotal = $holiday['budget_food'] + $holiday['budget_extra'];
-                                    foreach ($generalItems as $gi) { $generalTotal += $gi['amount']; }
-                                ?>
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary); white-space: nowrap;"><?= number_format($generalTotal, 2, ',', ' ') ?> €</div>
-                                    <button onclick='editHoliday(JSON.parse(document.getElementById("holidayDataJson").textContent))' class="btn-icon-small" title="<?= tr('btn_edit') ?>">⚙️</button>
-                                </div>
-                            </div>
-
-                            <div class="hol-cp-body">
-                                <?php if ($holiday['budget_food'] > 0): ?>
-                                    <div class="hol-expense-wrapper"><div class="hol-expense-main">
-                                        <span class="hol-expense-name" style="color:#64748b;">🍔 <?= tr('hdl_food_bev') ?></span>
-                                        <span><strong class="hol-expense-amount"><?= number_format($holiday['budget_food'], 2, ',', ' ') ?> €</strong><span class="status-pending">⏳</span></span>
-                                    </div></div>
-                                <?php endif; ?>
-                                <?php if ($holiday['budget_extra'] > 0): ?>
-                                    <div class="hol-expense-wrapper"><div class="hol-expense-main">
-                                        <span class="hol-expense-name" style="color:#64748b;">🎁 <?= tr('hdl_extras') ?></span>
-                                        <span><strong class="hol-expense-amount"><?= number_format($holiday['budget_extra'], 2, ',', ' ') ?> €</strong><span class="status-pending">⏳</span></span>
-                                    </div></div>
-                                <?php endif; ?>
-
-                                <?php foreach ($generalItems as $it): 
-                                    $icon = match($it['category']) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
-                                ?>
-                                    <div class="hol-expense-wrapper">
-                                        <div class="hol-expense-main">
-                                            <span class="hol-expense-name">
-                                                <?= $icon ?> <?= htmlspecialchars($it['name']) ?>
-                                            </span>
-                                            
-                                            <span class="hol-expense-price-group">
-                                                <strong class="hol-expense-amount"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
-                                                <span class="<?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>">
-                                                    <?= $it['is_paid'] ? '✓' : '⏳' ?>
-                                                </span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    
 
                     <?php foreach ($steps as $step): ?>
                         <div id="step-card-<?= $step['sort_order'] ?>" class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-location="<?= htmlspecialchars($step['location_name']) ?>">
@@ -312,7 +277,6 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                         </button>
                                         <button onclick="openDocsModal(<?= $step['sort_order'] ?>)" class="btn-icon-small" title="Documents & Billets" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">📎</button>
 
-                                        <button onclick='openPlanningModal(<?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('hdl_view_planning') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">📅</button>
                                         <button onclick='openCheckpointModal("edit", <?= htmlspecialchars(json_encode($step), ENT_QUOTES, "UTF-8") ?>)' class="btn-icon-small" title="<?= tr('btn_edit') ?>" style="width:26px!important; height:26px!important; font-size:0.8rem; min-width:26px!important; min-height:26px!important;">✏️</button>
                                     </div>
                                 </div>
@@ -349,16 +313,17 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
         </div>
     </div>
 
-    <?php if (!empty($holiday['notes'])): ?>
-    <div class="hol-summary-card" style="margin-top: 24px; padding: 25px; border-left: 5px solid #f59e0b;">
-        <h3 style="margin: 0 0 15px 0; font-size: 1.2rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-            📝 <?= tr('hdl_label_notes') ?>
-        </h3>
-        <div style="font-size: 0.95rem; color: #334155; white-space: pre-wrap; line-height: 1.6;">
-            <?= htmlspecialchars($holiday['notes']) ?>
+    <div class="pf-card" style="margin-top: 24px;">
+    <h2 class="pf-card-title">📝 <?= tr('hdl_label_notes') ?></h2>
+    <div class="pf-card-body">
+        <textarea id="holidayGlobalNotes" class="pf-input" rows="6" placeholder="<?= tr('hdl_ph_notes') ?>" style="resize: vertical; width: 100%; line-height: 1.5; padding: 12px;"><?= htmlspecialchars($holiday['notes'] ?? '') ?></textarea>
+        <div style="text-align: right; margin-top: 12px;">
+            <button id="btnSaveHolidayNote" class="pf-btn" onclick="saveHolidayGlobalNote(<?= (int)$_GET['id'] ?>)">
+                💾 <?= tr('btn_save') ?>
+            </button>
         </div>
     </div>
-    <?php endif; ?>
+</div>
 
 </div> 
 
@@ -454,13 +419,16 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 </div>
 
 <div id="planningModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 550px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="planningModalTitle" style="margin:0; color:var(--primary);">📅 <?= tr('hdl_planning_title') ?></h3>
+    <div class="pf-modal-content" style="max-width: 95vw; width: 1400px; height: 90vh; display: flex; flex-direction: column; padding: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-shrink: 0; padding-bottom: 10px; border-bottom: 1px solid var(--border-light);">
+            <h3 id="planningModalTitle" style="margin:0; color:var(--primary);">📅 Planning Global</h3>
             <button type="button" onclick="closePlanningModal()" class="pf-modal-close">&times;</button>
         </div>
-        <div id="planningContainer" style="width: 100%;"></div>
-        <div class="modal-footer">
+        
+        <!-- Conteneur Injecté en JS -->
+        <div id="planningContainer" style="flex: 1; overflow: hidden; display: flex;"></div>
+        
+        <div class="modal-footer" style="flex-shrink: 0; padding-top: 15px; margin-top: 15px; border-top: 1px solid var(--border-light);">
             <button type="button" onclick="closePlanningModal()" class="pf-btn btn-secondary"><?= tr('btn_close') ?></button>
         </div>
     </div>

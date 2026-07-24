@@ -257,9 +257,9 @@ function initDetailMap() {
     Promise.all(routePromises).then((results) => {
       results.sort((a, b) => a.index - b.index);
 
-      // 🔥 NOUVEAU : Compteurs et HTML de la modale
       let totalTripDistance = 0;
       let totalTripDuration = 0; // en secondes
+      let totalFuelCost = 0; // Coût exact accumulé
       let transitDetailsHtml = "";
 
       let returnStartIndex = latlngs.length - 2;
@@ -310,6 +310,8 @@ function initDetailMap() {
           const fuelPrice = window.FUEL_PRICE || 1.85;
           const cost = (distanceKm / 100) * fuelL100 * fuelPrice;
 
+          totalFuelCost += cost;
+
           // 1. ON DÉCLARE LES POINTS D'ABORD
           const startPt = MAP_POINTS[res.index];
           const endPt = MAP_POINTS[res.index + 1];
@@ -322,14 +324,41 @@ function initDetailMap() {
             cost: cost,
           };
 
+          // 🔥 DÉTECTION DES PÉAGES MANUELS DE L'ÉTAPE
+          let stepTollCost = 0;
+          if (endPt.items && endPt.items.length > 0) {
+            endPt.items.forEach((it) => {
+              const normalizedName = (it.name || "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+              if (
+                it.category === "transport" &&
+                normalizedName.includes("peage")
+              ) {
+                stepTollCost += parseFloat(it.amount);
+              }
+            });
+          }
+
+          let tollHtml =
+            stepTollCost > 0
+              ? `<strong style="color: var(--text-main);">💳 ${stepTollCost.toFixed(2)} €</strong>`
+              : "";
+
           // 🔥 CONSTRUCTION DU CONTENU DE LA MODALE
           transitDetailsHtml += `
-            <div style="padding: 12px 0; border-bottom: 1px dashed var(--border-light);">
-                <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 4px;">
-                    📍 ${startPt.location_name} ➔ ${endPt.location_name}
+            <div style="padding: 12px 0; border-bottom: 1px dashed var(--border-light); display: flex; justify-content: space-between; align-items: flex-end;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">
+                        📍 ${startPt.location_name} ➔ ${endPt.location_name}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        🚗 ${Math.round(distanceKm)} km &nbsp;•&nbsp; ⏱️ ${formatDuration(durationSec)}
+                    </div>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-                    <span>🚗 ${Math.round(distanceKm)} km &nbsp;•&nbsp; ⏱️ ${formatDuration(durationSec)}</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 0.8rem;">
+                    ${tollHtml}
                     <strong style="color: var(--primary);">⛽ ${cost.toFixed(2)} €</strong>
                 </div>
             </div>
@@ -370,11 +399,16 @@ function initDetailMap() {
       const distEl = document.getElementById("global_total_distance");
       const timeEl = document.getElementById("global_total_duration");
       const distBlock = document.getElementById("block_total_distance");
+      const globalFuelCostEl = document.getElementById("global_fuel_cost");
 
       if (distEl && timeEl && distBlock) {
         distEl.innerText = Math.round(totalTripDistance);
         timeEl.innerText = formatDuration(totalTripDuration);
         distBlock.style.display = "block";
+      }
+
+      if (globalFuelCostEl) {
+        globalFuelCostEl.innerText = Math.round(totalFuelCost);
       }
 
       // 🔥 INJECTION DU HTML DANS LA MODALE
@@ -573,10 +607,7 @@ function addCpExpenseLine(
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
-            <select name="items[context][]" class="pf-input hol-form-select" style="width:auto; margin-left:5px; font-size:0.75rem;">
-                <option value="local">📍 Sur place</option>
-                <option value="transit">🛣️ Transit</option>
-            </select>
+            <input type="hidden" name="items[context][]" value="local">
             <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}">
             <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
@@ -708,63 +739,129 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ============================================================================
-// 7. MOTEUR DRAG & DROP DU PLANNING CARNET DE BORD
+// 7. MOTEUR DRAG & DROP DU PLANNING GLOBAL
 // ============================================================================
+window.PLANNING_ALL_UNPLACED = [];
+window.CURRENT_PLANNING_FILTER_DATE = null;
+window.PLANNING_ITEM_MAP = {};
+window.CURRENT_DRAG_DURATION = 1; // Variable pour la surbrillance multi-cases
+
 function closePlanningModal() {
   document.getElementById("planningModal").style.display = "none";
   document.body.classList.remove("no-scroll");
 }
 
-function openPlanningModal(step) {
-  document.getElementById("planningModalTitle").innerText =
-    tr("hdl_planning_title") + " : " + step.location_name;
-  const container = document.getElementById("planningContainer");
-  selectedItemIdForMove = null;
+function openGlobalPlanningModal() {
+  const holidayDataJsonEl = document.getElementById("holidayDataJson");
+  if (!holidayDataJsonEl) return;
 
-  let validItems = step.items.filter((it) => it.name !== "PF_TECHNICAL_POINT");
+  const holidayData = JSON.parse(holidayDataJsonEl.textContent).main;
 
-  window.CURRENT_PLANNING_STEP = step; // Mémorise l'étape en cours
-
-  if (window.TRANSIT_DATA && window.TRANSIT_DATA[step.sort_order]) {
-    // Est-ce qu'on a déjà planifié ou ajouté ce trajet ?
-    let hasTransit = validItems.some((it) => it.expense_context === "transit");
-    if (!hasTransit) {
-      const tData = window.TRANSIT_DATA[step.sort_order];
-      const h = Math.max(1, Math.round(tData.sec / 3600)); // Arrondi en heures
-      validItems.push({
-        id: "virtual-transit",
-        name: `Essence depuis ${tData.from}`, // Garde ce nom pour lier avec le budget
-        category: "transport",
-        expense_context: "transit",
-        duration: h,
-        notes: `Trajet GPS (${Math.round(tData.sec / 60)} min). Déplacez pour planifier la route.`,
-        is_virtual: true,
-      });
-    }
-  }
-
-  if (!step.step_start_date || !step.step_end_date) {
-    container.innerHTML = `<div style="text-align:center; padding:40px;"><h3>${tr("hdl_js_missing_dates_title")}</h3><p style="color:#64748b;">${tr("hdl_js_missing_dates_msg")}</p></div>`;
-    document.getElementById("planningModal").style.display = "flex";
+  if (!holidayData.start_date || !holidayData.end_date) {
+    alert(
+      "Veuillez d'abord définir les dates globales du voyage dans 'Modifier les bases' ⚙️",
+    );
     return;
   }
 
+  document.getElementById("planningModalTitle").innerText =
+    "📅 Planning Global : " + holidayData.title;
+  const container = document.getElementById("planningContainer");
+
+  selectedItemIdForMove = null;
+  let allPlaced = [];
+  window.PLANNING_ALL_UNPLACED = [];
+  window.PLANNING_ITEM_MAP = {};
+
+  // 1. Collecte de TOUS les éléments
+  window.MAP_POINTS.forEach((step) => {
+    let validItems = step.items.filter((it) => {
+      if (it.name === "PF_TECHNICAL_POINT") return false;
+      if (it.category === "transport" && it.expense_context !== "transit")
+        return false;
+      return true;
+    });
+
+    if (window.TRANSIT_DATA && window.TRANSIT_DATA[step.sort_order]) {
+      let hasTransit = validItems.some(
+        (it) => it.expense_context === "transit",
+      );
+      if (!hasTransit) {
+        const tData = window.TRANSIT_DATA[step.sort_order];
+        const h = Math.max(1, Math.round(tData.sec / 3600));
+        validItems.push({
+          id: "virtual-transit-" + step.sort_order,
+          sort_order: step.sort_order,
+          name: `Essence depuis ${tData.from}`,
+          category: "transport",
+          expense_context: "transit",
+          duration: h,
+          notes: `Trajet GPS (~${Math.round(tData.sec / 60)} min).`,
+          is_virtual: true,
+          amount: tData.cost,
+        });
+      }
+    }
+
+    validItems.forEach((it) => {
+      it.step_start_date = step.step_start_date;
+      it.step_end_date = step.step_end_date;
+      it.step_location = step.location_name;
+      it.sort_order = step.sort_order;
+
+      const htmlId = it.is_virtual ? it.id : `drag-item-${it.id}`;
+      window.PLANNING_ITEM_MAP[htmlId] = it;
+
+      if (it.item_date && it.item_time) {
+        allPlaced.push(it);
+      } else {
+        window.PLANNING_ALL_UNPLACED.push(it);
+      }
+    });
+  });
+
+  // 2. Génération des dates globales
   let datesToDisplay = [];
-  let curr = new Date(step.step_start_date);
-  let end = new Date(step.step_end_date);
-  while (curr <= end) {
+  let curr = new Date(holidayData.start_date);
+  let endD = new Date(holidayData.end_date);
+  while (curr <= endD) {
     datesToDisplay.push(curr.toISOString().split("T")[0]);
     curr.setDate(curr.getDate() + 1);
   }
 
+  // 3. Construction de l'interface (Avec règles CSS injectées)
   let html = `
-        <div class="hol-planning-layout">
-            <div class="hol-unmapped-zone" id="unmapped-pool" 
-                 ondragover="allowDrop(event)" ondrop="handleDropEvent(event, '', '')"
-                 onclick="handleZoneTap(event, '', '')">
-                <div class="hol-unmapped-title" style="width:100%;">📥 ${tr("hdl_to_place")}</div>
+        <style>
+            /* 🌟 MAGIE CSS : Ajustement adaptatif des tailles selon la zone */
+            #unmapped-pool .hol-drag-item {
+                /* Base 40px + 10px par heure supp, capé à +30px max (soit environ 4h visuelles max) */
+                min-height: calc(40px + (min(var(--duration) - 1, 3) * 10px)) !important;
+            }
+            .hol-time-slots-container .hol-drag-item {
+                /* Dans le calendrier : taille 100% fidèle (40px par heure) */
+                min-height: calc(var(--duration) * 40px - 8px) !important;
+            }
+            /* 🌟 Surbrillance bleue pour chaque case survolée correspondante à la durée */
+            .hol-time-slot.drag-over-duration {
+                background: rgba(59, 130, 246, 0.15) !important;
+                border-left: 3px solid var(--primary) !important;
+            }
+        </style>
+        <div style="display: flex; width: 100%; height: 100%; gap: 15px;">
+            <!-- Panneau Gauche : À Placer -->
+            <div class="hol-unmapped-zone" style="width: 280px; display: flex; flex-direction: column; background: var(--bg-subtle); border-radius: 8px; border: 1px solid var(--border-light); padding: 12px; flex-shrink: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink: 0;">
+                    <div class="hol-unmapped-title" style="margin:0; font-weight:700; color:var(--text-main);">📥 ${tr("hdl_to_place")}</div>
+                    <button onclick="filterPoolByDate(null)" class="pf-btn btn-secondary pf-btn-small" style="padding: 2px 8px; font-size: 0.75rem;">🔄 Tous</button>
+                </div>
+                <div id="unmapped-pool" style="flex: 1; overflow-y: auto; padding-right: 5px; display: flex; flex-direction: column; gap: 8px;"
+                     ondragover="allowDrop(event)" ondrop="handleDropEvent(event, '', '')"
+                     onclick="handleZoneTap(event, '', '')">
+                </div>
             </div>
-            <div class="hol-calendar-zone">
+
+            <!-- Grille Droite : Jours -->
+            <div class="hol-calendar-zone" id="calendarZoneContainer" style="cursor: grab; flex: 1; display: flex; overflow: auto; gap: 12px; padding: 4px 4px 10px 4px; margin-top: -4px; align-items: flex-start;">
     `;
 
   datesToDisplay.forEach((dateStr) => {
@@ -775,118 +872,254 @@ function openPlanningModal(step) {
       month: "short",
     });
 
+    let unplacedForDay = window.PLANNING_ALL_UNPLACED.filter((it) =>
+      isDateInStep(dateStr, it.step_start_date, it.step_end_date),
+    );
+
+    let badgeHtml = `<span class="pf-badge" id="badge-${dateStr}" style="display: ${unplacedForDay.length > 0 ? "inline-block" : "none"}; background: var(--danger); color: white; border-radius: 12px; padding: 3px 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: transform 0.2s;" onclick="filterPoolByDate('${dateStr}')">${unplacedForDay.length}</span>`;
+
     html += `
-            <div class="hol-day-column">
-                <div class="hol-calendar-day-header">
-                    <div class="hol-cal-weekday">${dayName}</div>
-                    <div class="hol-cal-date">${dayNum}</div>
-                    <div id="plan-weather-${dateStr}" style="margin-top: 5px; display: flex; justify-content: center; min-height: 20px;"></div>
+            <div class="hol-day-column" id="col-${dateStr}" style="width: 240px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 8px;">
+                <div class="hol-calendar-day-header" style="position: sticky; top: 0; z-index: 20; text-align: center; padding: 12px 12px 8px 12px; background: var(--bg-page); border-bottom: 1px solid var(--border-light); border-radius: 8px 8px 0 0;">
+                    <div style="position: absolute; top: 10px; right: 10px;">${badgeHtml}</div>
+                    <div class="hol-cal-weekday" style="text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; line-height: 1.4; margin-bottom: 2px;">${dayName}</div>
+                    <div class="hol-cal-date" style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); line-height: 1.2;">${dayNum}</div>
+                    <div id="plan-weather-${dateStr}" style="margin-top: 5px; display: flex; justify-content: center; min-height: 22px;"></div>
                 </div>
-                <div class="hol-time-slots-container">
+                <div class="hol-time-slots-container" style="flex: 1; overflow: visible; padding-top: 12px;">
         `;
 
     for (let h = 6; h <= 23; h++) {
       let hourStr = h.toString().padStart(2, "0") + ":00";
       html += `
-                <div class="hol-time-slot" data-date="${dateStr}" data-time="${hourStr}" 
-                     ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" 
+                <div class="hol-time-slot" data-date="${dateStr}" data-time="${hourStr}"
+                     style="min-height: 40px; border-bottom: 1px dashed var(--border-light); position: relative; padding: 6px; display: flex; flex-direction: column; gap: 4px;"
+                     ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"
                      ondrop="handleDropEvent(event, '${dateStr}', '${hourStr}')"
                      onclick="handleZoneTap(event, '${dateStr}', '${hourStr}')">
-                    <span class="hol-slot-label">${hourStr}</span>
+                    <span class="hol-slot-label" style="position: absolute; top: -8px; left: 4px; font-size: 0.65rem; color: var(--text-muted); background: var(--bg-panel); padding: 0 4px;">${hourStr}</span>
                 </div>
             `;
     }
     html += `</div></div>`;
   });
+
   html += `</div></div>`;
   container.innerHTML = html;
 
-  const isMobile = window.innerWidth <= 768;
-  const dragAttr = isMobile ? "" : 'draggable="true"';
-
-  validItems.forEach((it) => {
-    let icon = "🏷️";
-    let catClass = "cat-activity";
-    if (it.category === "accommodation") {
-      icon = "🏨";
-      catClass = "cat-accommodation";
-    }
-    if (it.category === "transport") {
-      icon = "🚗";
-      catClass = "cat-transport";
-    }
-
-    const dur = it.duration || 1;
-    const noteHtml = it.notes
-      ? `<div class="hol-drag-note">${it.notes}</div>`
-      : "";
-
-    const isVirtual = it.is_virtual === true;
-    const isTransit = it.expense_context === "transit";
-
-    const durControls =
-      isVirtual || isTransit
-        ? `<span class="hol-dur-text" style="background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:bold;">${dur}h (Auto)</span>`
-        : `<button class="hol-dur-btn" onclick="changeDuration(event, '${it.id}', -1)">-</button>
-           <span class="hol-dur-text" id="dur-text-${it.id}">${dur}h</span>
-           <button class="hol-dur-btn" onclick="changeDuration(event, '${it.id}', 1)">+</button>`;
-
-    const bgStyle = isVirtual
-      ? "background: repeating-linear-gradient(45deg, #ffffff, #ffffff 10px, #f8fafc 10px, #f8fafc 20px); border: 2px dashed var(--primary);"
-      : "";
-    const visualName = isTransit
-      ? `🛣️ Trajet & ` + it.name
-      : `${icon} ${it.name}`;
-
-    const elHtml = `
-            <div class="hol-drag-item ${catClass}" ${dragAttr} 
-                 id="drag-item-${it.id}" data-id="${it.id}" 
-                 style="--duration: ${dur}; ${bgStyle}"
-                 ondragstart="dragStart(event)" onclick="handleItemTap(event, '${it.id}')">
-                
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 5px;">
-                    <div class="hol-drag-title" style="flex:1;">${visualName}</div>
-                    <div class="hol-item-duration-controls">
-                        ${durControls}
-                    </div>
-                </div>
-                ${noteHtml}
-            </div>
-        `;
-
-    if (it.item_date && it.item_time && datesToDisplay.includes(it.item_date)) {
+  // 4. Placement des éléments
+  allPlaced.forEach((it) => {
+    if (datesToDisplay.includes(it.item_date)) {
       const hourPrefix = it.item_time.substring(0, 2) + ":00";
       const targetSlot = container.querySelector(
         `.hol-time-slot[data-date="${it.item_date}"][data-time="${hourPrefix}"]`,
       );
-      if (targetSlot) {
-        targetSlot.insertAdjacentHTML("beforeend", elHtml);
-        return;
-      }
+      if (targetSlot)
+        targetSlot.insertAdjacentHTML("beforeend", buildDragItemHtml(it));
     }
-    document
-      .getElementById("unmapped-pool")
-      .insertAdjacentHTML("beforeend", elHtml);
+  });
+
+  // 5. Météo et Focus auto
+  datesToDisplay.forEach((dateStr) => {
+    let activeStep = window.MAP_POINTS.find((step) =>
+      isDateInStep(dateStr, step.step_start_date, step.step_end_date),
+    );
+    if (activeStep && activeStep.lat && activeStep.lng) {
+      loadWeatherForPlanning(activeStep.lat, activeStep.lng, dateStr);
+    }
   });
 
   document.getElementById("planningModal").style.display = "flex";
   document.body.classList.add("no-scroll");
 
-  datesToDisplay.forEach((dateStr) => {
-    loadWeatherForPlanning(step.lat, step.lng, dateStr);
+  let todayStr = new Date().toISOString().split("T")[0];
+  let defaultFocusDate =
+    todayStr >= holidayData.start_date && todayStr <= holidayData.end_date
+      ? todayStr
+      : holidayData.start_date;
+
+  filterPoolByDate(defaultFocusDate);
+
+  setTimeout(() => {
+    const activeCol = document.getElementById("col-" + defaultFocusDate);
+    if (activeCol) {
+      document.getElementById("calendarZoneContainer").scrollTo({
+        left: activeCol.offsetLeft - 300,
+        behavior: "smooth",
+      });
+    }
+  }, 200);
+
+  // Moteur Scroll Natif (Drag To Scroll)
+  const slider = document.getElementById("calendarZoneContainer");
+  let isDown = false;
+  let startX, startY, scrollLeft, scrollTop;
+
+  slider.addEventListener("mousedown", (e) => {
+    if (e.target.closest(".hol-drag-item") || e.target.closest("button"))
+      return;
+    isDown = true;
+    slider.style.cursor = "grabbing";
+    startX = e.pageX - slider.offsetLeft;
+    startY = e.pageY - slider.offsetTop;
+    scrollLeft = slider.scrollLeft;
+    scrollTop = slider.scrollTop;
   });
+  slider.addEventListener("mouseleave", () => {
+    isDown = false;
+    slider.style.cursor = "grab";
+  });
+  slider.addEventListener("mouseup", () => {
+    isDown = false;
+    slider.style.cursor = "grab";
+  });
+  slider.addEventListener("mousemove", (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    const y = e.pageY - slider.offsetTop;
+    const walkX = (x - startX) * 1.5;
+    const walkY = (y - startY) * 1.5;
+    slider.scrollLeft = scrollLeft - walkX;
+    slider.scrollTop = scrollTop - walkY;
+  });
+}
+
+function isDateInStep(targetDate, stepStart, stepEnd) {
+  if (!stepStart || !stepEnd) return false;
+  return targetDate >= stepStart && targetDate <= stepEnd;
+}
+
+function filterPoolByDate(dateStr) {
+  window.CURRENT_PLANNING_FILTER_DATE = dateStr;
+  const pool = document.getElementById("unmapped-pool");
+  pool.innerHTML = "";
+
+  let poolItemsHtml = "";
+  let count = 0;
+
+  // Itération sur la MAP, donc l'ordre natif de tri (sort_order/ID) est préservé !
+  Object.values(window.PLANNING_ITEM_MAP).forEach((it) => {
+    const htmlId = it.is_virtual ? it.id : `drag-item-${it.id}`;
+    const isPlaced = document.querySelector(`.hol-time-slot #${htmlId}`);
+
+    if (!isPlaced) {
+      if (
+        !dateStr ||
+        isDateInStep(dateStr, it.step_start_date, it.step_end_date)
+      ) {
+        poolItemsHtml += buildDragItemHtml(it);
+        count++;
+      }
+    }
+  });
+
+  if (count === 0) {
+    pool.innerHTML = `<div style="text-align:center; margin-top:30px; color:var(--text-muted);"><span style="font-size:2rem;">🎉</span><br><br>Rien à placer${dateStr ? " pour cette journée" : ""}.</div>`;
+  } else {
+    pool.innerHTML = poolItemsHtml;
+  }
+}
+
+function recalcAllBadges() {
+  const pool = document.getElementById("unmapped-pool");
+  const unmappedIds = Array.from(pool.children).map((el) => el.id);
+
+  document.querySelectorAll(".hol-day-column").forEach((col) => {
+    const dateStr = col.id.replace("col-", "");
+    const badge = document.getElementById("badge-" + dateStr);
+    if (!badge) return;
+
+    let dayCount = 0;
+    unmappedIds.forEach((htmlId) => {
+      const it = window.PLANNING_ITEM_MAP[htmlId];
+      if (it && isDateInStep(dateStr, it.step_start_date, it.step_end_date))
+        dayCount++;
+    });
+
+    badge.innerText = dayCount;
+    badge.style.display = dayCount > 0 ? "inline-block" : "none";
+  });
+}
+
+function buildDragItemHtml(it) {
+  let icon = "🏷️";
+  let catClass = "cat-activity";
+  if (it.category === "accommodation") {
+    icon = "🏨";
+    catClass = "cat-accommodation";
+  }
+  if (it.category === "transport") {
+    icon = "🚗";
+    catClass = "cat-transport";
+  }
+
+  const dur = it.duration || 1;
+  const noteHtml = it.notes
+    ? `<div class="hol-drag-note" style="font-size:0.7rem; color:var(--text-muted); line-height:1.2; margin-top:4px;">${it.notes}</div>`
+    : "";
+  const isVirtual = it.is_virtual === true;
+  const isTransit = it.expense_context === "transit";
+
+  const durControls = `<button class="hol-dur-btn" style="border:none;background:transparent;cursor:pointer;font-weight:bold;padding:0 4px;" onclick="changeDuration(event, '${it.id}', -1)">-</button>
+                         <span class="hol-dur-text" id="dur-text-${it.id}" style="font-size:0.75rem;font-weight:bold;">${dur}h</span>
+                         <button class="hol-dur-btn" style="border:none;background:transparent;cursor:pointer;font-weight:bold;padding:0 4px;" onclick="changeDuration(event, '${it.id}', 1)">+</button>`;
+
+  const bgStyle =
+    isVirtual || isTransit
+      ? "background: repeating-linear-gradient(45deg, var(--bg-page), var(--bg-page) 10px, rgba(59, 130, 246, 0.05) 10px, rgba(59, 130, 246, 0.05) 20px); border: 2px dashed var(--primary);"
+      : "background: var(--bg-panel); border: 1px solid var(--border-strong);";
+
+  const visualName = isTransit ? `🛣️ Trajet & Essence` : `${icon} ${it.name}`;
+  const isMobile = window.innerWidth <= 768;
+  const dragAttr = isMobile ? "" : 'draggable="true"';
+  const htmlId = isVirtual ? it.id : `drag-item-${it.id}`;
+  const locHint =
+    !it.item_date && it.step_location
+      ? `<div style="font-size:0.65rem; color:var(--primary); font-weight:800; margin-bottom:4px; text-transform:uppercase;">📍 ${it.step_location}</div>`
+      : "";
+
+  // Suppression du calcul de hauteur en ligne, c'est désormais géré via CSS et la variable "--duration"
+  return `
+        <div class="hol-drag-item ${catClass}" ${dragAttr}
+             id="${htmlId}" data-id="${it.id}" data-virtual="${isVirtual}" data-sort="${it.sort_order}"
+             style="--duration: ${dur}; flex-shrink: 0; ${bgStyle} padding: 8px 10px; border-radius: 6px; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s; z-index: 10;"
+             ondragstart="dragStart(event)" ondragend="dragEnd(event)" onclick="handleItemTap(event, '${htmlId}')">
+            ${locHint}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                <div class="hol-drag-title" style="flex:1; font-size: 0.85rem; font-weight: 700; color: var(--text-main); line-height:1.2;">${visualName}</div>
+                <div class="hol-item-duration-controls" style="display:flex; align-items:center; background:var(--bg-subtle); border-radius:4px; border:1px solid var(--border-light);">
+                    ${durControls}
+                </div>
+            </div>
+            ${noteHtml}
+        </div>
+    `;
 }
 
 function changeDuration(e, itemId, delta) {
   e.stopPropagation();
-  const itemEl = document.getElementById("drag-item-" + itemId);
+  const itemEl =
+    document.getElementById("drag-item-" + itemId) ||
+    document.getElementById(itemId);
+  if (!itemEl) return;
+
   let currentDur = parseInt(itemEl.style.getPropertyValue("--duration")) || 1;
   let newDur = currentDur + delta;
   if (newDur < 1) newDur = 1;
   if (newDur > 12) newDur = 12;
+
   itemEl.style.setProperty("--duration", newDur);
   document.getElementById(`dur-text-${itemId}`).innerText = newDur + "h";
+
+  if (itemEl.getAttribute("data-virtual") === "true") {
+    const it = window.PLANNING_ITEM_MAP[itemEl.id];
+    if (it) it.duration = newDur;
+    return;
+  }
+
   updateItemMemory(itemId, { duration: newDur });
+
   const formData = new FormData();
   formData.append("action", "update_item_duration");
   formData.append("item_id", itemId);
@@ -897,24 +1130,32 @@ function changeDuration(e, itemId, delta) {
   });
 }
 
-function handleItemTap(e, itemId) {
+function handleItemTap(e, htmlId) {
   e.stopPropagation();
   document
     .querySelectorAll(".hol-drag-item")
     .forEach((el) => el.classList.remove("selected-for-move"));
-  if (selectedItemIdForMove === itemId) {
+  if (selectedItemIdForMove === htmlId) {
     selectedItemIdForMove = null;
   } else {
-    selectedItemIdForMove = itemId;
-    document
-      .getElementById("drag-item-" + itemId)
-      .classList.add("selected-for-move");
+    selectedItemIdForMove = htmlId;
+    const el = document.getElementById(htmlId);
+    if (el) el.classList.add("selected-for-move");
   }
 }
 
 function handleZoneTap(e, dateStr, timeStr) {
   if (selectedItemIdForMove) {
-    handleDropLogic(selectedItemIdForMove, dateStr, timeStr, e.currentTarget);
+    const itemEl = document.getElementById(selectedItemIdForMove);
+    if (itemEl) {
+      const targetZone = e.currentTarget;
+      if (targetZone.id === "unmapped-pool") {
+        handleDropLogic(selectedItemIdForMove, "", "");
+      } else {
+        targetZone.appendChild(itemEl);
+        handleDropLogic(selectedItemIdForMove, dateStr, timeStr);
+      }
+    }
     selectedItemIdForMove = null;
     document
       .querySelectorAll(".hol-drag-item")
@@ -925,62 +1166,178 @@ function handleZoneTap(e, dateStr, timeStr) {
 function dragStart(e) {
   e.dataTransfer.setData("text/plain", e.target.id);
   e.dataTransfer.effectAllowed = "move";
+  // Mémorisation de la durée pour le survol dynamique (Fix #2)
+  window.CURRENT_DRAG_DURATION =
+    parseInt(e.target.style.getPropertyValue("--duration")) || 1;
 }
+
+function dragEnd(e) {
+  window.CURRENT_DRAG_DURATION = 1;
+  document
+    .querySelectorAll(".hol-time-slot")
+    .forEach((s) => s.classList.remove("drag-over-duration"));
+}
+
 function allowDrop(e) {
   e.preventDefault();
 }
+
 function dragEnter(e) {
   e.preventDefault();
-  let s = e.target.closest(".hol-time-slot");
-  if (s) s.classList.add("drag-over");
+  let slot = e.target.closest(".hol-time-slot");
+  if (slot) {
+    // Retirer toutes les anciennes surbrillances
+    document
+      .querySelectorAll(".hol-time-slot")
+      .forEach((s) => s.classList.remove("drag-over-duration"));
+
+    // Appliquer la surbrillance sur les N cases consécutives
+    let dur = window.CURRENT_DRAG_DURATION || 1;
+    let currentSlot = slot;
+    for (let i = 0; i < dur; i++) {
+      if (currentSlot) {
+        currentSlot.classList.add("drag-over-duration");
+        currentSlot = currentSlot.nextElementSibling;
+      }
+    }
+  }
 }
+
 function dragLeave(e) {
-  let s = e.target.closest(".hol-time-slot");
-  if (s) s.classList.remove("drag-over");
+  // La gestion précise des surbrillances se fait via le dragEnter et dragEnd pour éviter le scintillement (flickering).
 }
 
 function handleDropEvent(e, dateStr, timeStr) {
   e.preventDefault();
-  let slot = e.target.closest(".hol-time-slot");
-  if (slot) slot.classList.remove("drag-over");
+  document
+    .querySelectorAll(".hol-time-slot")
+    .forEach((s) => s.classList.remove("drag-over-duration"));
+
   const idStr = e.dataTransfer.getData("text/plain");
-  const itemId = idStr.replace("drag-item-", "");
-  const dropZone = slot || document.getElementById("unmapped-pool");
-  handleDropLogic(itemId, dateStr, timeStr, dropZone);
+  const itemEl = document.getElementById(idStr);
+  const dropZone =
+    e.target.closest(".hol-time-slot") ||
+    document.getElementById("unmapped-pool");
+
+  if (itemEl && dropZone) {
+    if (dropZone.id === "unmapped-pool") {
+      // FIX #3 : Contourner l'appendChild (qui met tout en bas) et déléguer à la fonction pour re-trier la colonne !
+      handleDropLogic(idStr, "", "");
+    } else {
+      dropZone.appendChild(itemEl);
+      handleDropLogic(idStr, dateStr, timeStr);
+    }
+  }
 }
 
-function handleDropLogic(itemId, dateStr, timeStr, dropZone) {
-  if (itemId === "virtual-transit") {
-    const step = window.CURRENT_PLANNING_STEP;
-    const tData = window.TRANSIT_DATA[step.sort_order];
-    const holidayId = document.querySelector('input[name="holiday_id"]').value;
-    const h = Math.max(1, Math.round(tData.sec / 3600));
+function handleDropLogic(htmlId, dateStr, timeStr) {
+  const itemEl = document.getElementById(htmlId);
+  if (!itemEl) return;
 
+  const isVirtual = itemEl.getAttribute("data-virtual") === "true";
+  const holidayId = document.querySelector('input[name="holiday_id"]').value;
+  const sortOrder = itemEl.getAttribute("data-sort");
+  const dur = parseInt(itemEl.style.getPropertyValue("--duration")) || 1;
+  const realId = itemEl.getAttribute("data-id");
+
+  // DÉSASSIGNER : Si on replace la carte dans la zone de gauche
+  if (dateStr === "" || timeStr === "") {
+    if (!isVirtual) {
+      updateItemMemory(realId, { item_date: null, item_time: null });
+      const fd = new FormData();
+      fd.append("action", "update_item_datetime");
+      fd.append("item_id", realId);
+      fd.append("item_date", "");
+      fd.append("item_time", "");
+      fetch("/modules/holidays/includes/api/save_checkpoint.php", {
+        method: "POST",
+        body: fd,
+      });
+    }
+    // 🔥 FIX #3 : Re-filtrer reconstruit la colonne de gauche dans SON ORDRE D'ORIGINE !
+    filterPoolByDate(window.CURRENT_PLANNING_FILTER_DATE);
+    recalcAllBadges();
+    return;
+  }
+
+  // AFFECTATION CALENDRIER
+  if (isVirtual) {
+    const tData = window.TRANSIT_DATA[sortOrder];
     const fd = new FormData();
     fd.append("action", "add_single_item");
     fd.append("holiday_id", holidayId);
-    fd.append("sort_order", step.sort_order);
+    fd.append("sort_order", sortOrder);
     fd.append("category", "transport");
     fd.append("context", "transit");
+    fd.append("expense_context", "transit");
     fd.append("name", `Essence depuis ${tData.from}`);
     fd.append("amount", tData.cost);
-    fd.append("duration", h);
+    fd.append("duration", dur);
+    fd.append("item_date", dateStr);
+    fd.append("item_time", timeStr);
+    fd.append("ajax", "1");
+
+    itemEl.setAttribute("data-virtual", "false");
+
+    fetch("/modules/holidays/includes/api/save_checkpoint.php", {
+      method: "POST",
+      body: fd,
+    })
+      .then((res) => res.json())
+      .then(async (data) => {
+        if (data && data.id) {
+          itemEl.id = `drag-item-${data.id}`;
+          itemEl.setAttribute("data-id", data.id);
+
+          const fdDate = new FormData();
+          fdDate.append("action", "update_item_datetime");
+          fdDate.append("item_id", data.id);
+          fdDate.append("item_date", dateStr);
+          fdDate.append("item_time", timeStr);
+          await fetch("/modules/holidays/includes/api/save_checkpoint.php", {
+            method: "POST",
+            body: fdDate,
+          });
+
+          window.PLANNING_ITEM_MAP[itemEl.id] = {
+            id: data.id,
+            step_start_date: dateStr,
+            step_end_date: dateStr,
+            expense_context: "transit",
+            category: "transport",
+            is_virtual: false,
+          };
+        } else {
+          window.location.reload();
+        }
+      })
+      .catch(() => {
+        window.location.reload();
+      });
+  } else {
+    updateItemMemory(realId, { item_date: dateStr, item_time: timeStr });
+    const fd = new FormData();
+    fd.append("action", "update_item_datetime");
+    fd.append("item_id", realId);
     fd.append("item_date", dateStr);
     fd.append("item_time", timeStr);
 
     fetch("/modules/holidays/includes/api/save_checkpoint.php", {
       method: "POST",
       body: fd,
-    }).then(() => window.location.reload());
-    return;
+    });
   }
+
+  recalcAllBadges();
 }
 
 function updateItemMemory(itemId, changes) {
-  MAP_POINTS.forEach((step) => {
-    let item = step.items.find((i) => i.id == itemId);
-    if (item) Object.assign(item, changes);
-  });
+  if (typeof MAP_POINTS !== "undefined") {
+    MAP_POINTS.forEach((step) => {
+      let item = step.items.find((i) => i.id == itemId);
+      if (item) Object.assign(item, changes);
+    });
+  }
 }
 
 // ============================================================================
@@ -1377,3 +1734,47 @@ window.generateTravelBook = function () {
       btn.disabled = false;
     });
 };
+
+// ============================================================================
+// SAUVEGARDE DES NOTES GLOBALES DU VOYAGE (AJAX)
+// ============================================================================
+async function saveHolidayGlobalNote(holidayId) {
+  const btn = document.getElementById("btnSaveHolidayNote");
+  const textarea = document.getElementById("holidayGlobalNotes");
+  if (!textarea || !btn) return;
+
+  const originalText = btn.innerHTML;
+  btn.innerHTML = "⏳...";
+  btn.disabled = true;
+
+  const fd = new FormData();
+  fd.append("action", "update_holiday_note");
+  fd.append("holiday_id", holidayId);
+  fd.append("notes", textarea.value);
+
+  try {
+    const res = await pachaFetch(
+      "/modules/holidays/includes/api/save_checkpoint.php",
+      {
+        method: "POST",
+        body: fd,
+      },
+    );
+
+    if (res.success) {
+      // L'appel utilise bien ta fonction showToast() globale pour le design des notifications !
+      showToast(
+        window.I18N["bud_prev_saved"] || "Notes sauvegardées !",
+        "success",
+      );
+    } else {
+      showToast(res.error || "Erreur lors de la sauvegarde", "error");
+    }
+  } catch (e) {
+    console.error("Erreur saveHolidayGlobalNote:", e);
+    showToast("Erreur réseau.", "error");
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
