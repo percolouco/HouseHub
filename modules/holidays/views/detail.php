@@ -66,8 +66,9 @@ $mapPoints = array_values($steps);
 // Affichage de la date
 $dateDisplay = htmlspecialchars($holiday['period_hint'] ?? '');
 if (empty($dateDisplay) && $holiday['start_date']) {
-    $dateDisplay = date('d/m/Y', strtotime($holiday['start_date']));
-    if ($holiday['end_date']) $dateDisplay .= ' → ' . date('d/m/Y', strtotime($holiday['end_date']));
+    // 💡 Format Jour/Mois uniquement
+    $dateDisplay = date('d/m', strtotime($holiday['start_date']));
+    if ($holiday['end_date']) $dateDisplay .= ' → ' . date('d/m', strtotime($holiday['end_date']));
 }
 
 $cost = (float)$holiday['total_cost'];
@@ -331,89 +332,99 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
 
 <div id="checkpointModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 600px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="cpModalTitle" style="margin:0;">📍 <?= tr('hdl_btn_add_step') ?></h3>
-            <button type="button" onclick="closeCheckpointModal()" class="pf-modal-close">&times;</button>
+    <div class="pf-modal-content" style="max-width: 600px; padding: 0; overflow: hidden;">
+        
+        <!-- HEADER MODALE -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 20px 20px 0 20px;">
+            <h3 id="cpModalTitle" style="margin:0; font-size:1.3rem;">📍 Ajouter une étape</h3>
+            <button type="button" onclick="closeCheckpointModal()" class="pf-modal-close" style="margin-top:-10px;">&times;</button>
+        </div>
+
+        <!-- NOUVEAU : SYSTÈME D'ONGLETS -->
+        <div style="display:flex; border-bottom: 1px solid var(--border-light); margin-top: 15px; padding: 0 20px;">
+            <button type="button" id="tabBtnInfo" onclick="switchCpTab('info')" style="flex:1; padding:10px; background:none; border:none; border-bottom:3px solid var(--primary); font-weight:bold; color:var(--primary); cursor:pointer; font-size:0.95rem;">📍 Infos de l'étape</button>
+            <button type="button" id="tabBtnProg" onclick="switchCpTab('prog')" style="flex:1; padding:10px; background:none; border:none; border-bottom:3px solid transparent; font-weight:bold; color:var(--text-muted); cursor:pointer; font-size:0.95rem;">🎟️ Programme & Frais</button>
         </div>
         
-        <div id="cpSearchBlock" style="margin-bottom:20px;">
-            <?php if (!empty($favorites)): ?>
-            <div style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap;">
-                <?php foreach($favorites as $fav): ?>
-                    <button type="button" class="pf-btn btn-secondary" style="padding:4px 10px; font-size:0.8rem; border-radius:20px;" onclick="selectPlace(<?= $fav['lat'] ?>, <?= $fav['lng'] ?>, '<?= htmlspecialchars(addslashes($fav['name'])) ?>')">
-                        ⭐ <?= htmlspecialchars($fav['name']) ?>
-                    </button>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-
-            <label class="pf-label"><?= tr('hdl_search_location') ?></label>
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="searchPlaceInput" class="pf-input" placeholder="<?= tr('hdl_ph_search') ?>" onkeypress="if(event.key === 'Enter') { searchPlace(); return false; }">
-                <button type="button" class="pf-btn btn-secondary" onclick="searchPlace()">🔍</button>
-            </div>
-            <div id="searchResults" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>
-        </div>
-
-        <form action="/modules/holidays/includes/api/save_checkpoint.php" method="POST" id="formCheckpoint" style="display:none; border-top:1px solid #e2e8f0; padding-top:20px;">
+        <!-- DÉBUT DU FORMULAIRE UNIQUE -->
+        <form action="/modules/holidays/includes/api/save_checkpoint.php" method="POST" id="formCheckpoint" style="display:flex; flex-direction:column; max-height: calc(90vh - 100px);">
             <input type="hidden" name="holiday_id" value="<?= $id ?>">
             <input type="hidden" name="old_location_name" id="cp_old_name">
             <input type="hidden" name="lat" id="cp_lat">
             <input type="hidden" name="lng" id="cp_lng">
             <input type="hidden" name="old_sort_order" id="cp_old_sort_order">
-            
-            <div class="form-group" style="margin-bottom:15px;">
-                <label class="pf-label"><?= tr('hdl_label_step_name') ?></label>
-                <input type="text" name="location_name" id="cp_name" class="pf-input" style="font-weight:bold; color:var(--primary);" required>
-            </div>
 
-            <div class="form-group" style="margin-bottom:15px; background:#fff7ed; padding:10px; border-radius:8px; border:1px solid #ffedd5;">
-                <label class="pf-label" style="color:#ea580c;">📍 Type d'étape</label>
-                <select name="step_type" id="cp_step_type" class="pf-input" onchange="toggleStepDates(this.value)">
-                    <option value="origin">DÉPART (Point de départ du voyage)</option>
-                    <option value="stop">SÉJOUR (Étape classique avec arrivée et départ)</option>
-                    <option value="destination">ARRIVÉE FINALE (Fin du voyage)</option>
-                </select>
-            </div>
-
-            <div style="display:flex; gap:15px; margin-bottom:15px; background:#f8fafc; padding:12px; border-radius:8px;">
-                <div class="form-group" id="grp_start_date" style="flex:1;">
-                    <label class="pf-label" id="lbl_start_date"><?= tr('hdl_label_arrival') ?></label>
-                    <input type="date" name="step_start_date" id="cp_start_date" class="pf-input">
+            <!-- ONGLET 1 : INFOS GÉNÉRIQUES -->
+            <div id="cpTabInfo" style="padding: 20px; overflow-y: auto;">
+                
+                <div id="cpSearchBlock" style="margin-bottom:15px; background:var(--bg-subtle); padding:12px; border-radius:8px; border: 1px dashed var(--border-strong);">
+                    <label class="pf-label" style="margin-bottom:4px; font-size:0.8rem;">🔍 Chercher un lieu (Autocomplétion)</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="searchPlaceInput" class="pf-input" placeholder="Ville, hôtel, adresse..." onkeypress="if(event.key === 'Enter') { searchPlace(); return false; }">
+                        <button type="button" class="pf-btn btn-secondary" onclick="searchPlace()" style="padding: 0 15px;">Go</button>
+                    </div>
+                    <div id="searchResults" style="margin-top:8px; max-height:150px; overflow-y:auto; display:flex; flex-direction:column; gap:4px;"></div>
                 </div>
-                <div class="form-group" id="grp_end_date" style="flex:1;">
-                    <label class="pf-label" id="lbl_end_date"><?= tr('hdl_label_departure') ?></label>
-                    <input type="date" name="step_end_date" id="cp_end_date" class="pf-input">
+
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label class="pf-label">Nom de l'étape</label>
+                    <input type="text" name="location_name" id="cp_name" class="pf-input" style="font-weight:bold; color:var(--primary); font-size:1.1rem;" required>
+                </div>
+
+                <!-- DATES COMPACTES AVEC FLATPICKR -->
+                <div class="form-group" style="margin-bottom:15px; background:var(--bg-subtle); padding:12px; border-radius:8px; border: 1px dashed var(--border-strong);">
+                    <label class="pf-label" id="lbl_date_range" style="margin-bottom:8px;">📅 Période de l'étape (Arrivée ➔ Départ)</label>
+                    <input type="text" id="cp_date_range" class="pf-input" placeholder="Sélectionnez les dates..." readonly style="cursor: pointer; background-color: var(--bg-panel); color: var(--primary); font-weight: bold; text-align: center; letter-spacing: 0.5px;">
+                    <!-- Les vraies valeurs envoyées au serveur -->
+                    <input type="hidden" name="step_start_date" id="cp_start_date">
+                    <input type="hidden" name="step_end_date" id="cp_end_date">
+                </div>
+
+                <div class="form-group" id="cp_insert_group" style="margin-bottom:15px;">
+                    <label class="pf-label">🔽 Où placer cette étape ?</label>
+                    <select name="insert_after" id="cp_insert_after" class="pf-input" onchange="injectDynamicDates(this)">
+                        <!-- Rempli dynamiquement en JS avec Noms + Dates -->
+                    </select>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1; margin:0;">
+                        <label class="pf-label">📍 Type d'étape</label>
+                        <select name="step_type" id="cp_step_type" class="pf-input" onchange="toggleStepDates(this.value)">
+                            <option value="origin">DÉPART</option>
+                            <option value="stop" selected>SÉJOUR</option>
+                            <option value="destination">ARRIVÉE FINALE</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; display:flex; flex-direction:column; gap:8px;">
+                    <label style="display:flex; align-items:center; cursor:pointer; font-size:0.85rem; color:var(--text-main);">
+                        <input type="checkbox" name="set_as_return" id="cp_set_as_return" value="1" style="margin-right:8px; width:16px; height:16px; accent-color:#ea580c;">
+                        🏁 Définir comme étape de retour (Tracé Orange)
+                    </label>
+                    <label style="display:flex; align-items:center; cursor:pointer; font-size:0.85rem; color:var(--text-main);">
+                        <input type="checkbox" name="save_favorite" value="1" style="margin-right:8px; width:16px; height:16px;">
+                        ⭐ Sauvegarder dans mes favoris
+                    </label>
                 </div>
             </div>
 
-            <div style="margin-bottom: 20px; padding-top: 15px; border-top: 1px dashed #e2e8f0;">
-                <label style="display:flex; align-items:center; cursor:pointer; color:#ea580c; font-weight:600; font-size:0.9rem;">
-                    <input type="checkbox" name="set_as_return" id="cp_set_as_return" value="1" style="margin-right:8px; width:16px; height:16px;">
-                    🏁 Définir comme retour
-                </label>
-                <p style="margin: 4px 0 0 24px; font-size: 0.75rem; color: #64748b;">La route sera tracée en orange à partir d'ici.</p>
+            <!-- ONGLET 2 : PROGRAMME ET DEPENSES -->
+            <div id="cpTabProg" style="display:none; padding: 20px; overflow-y: auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; position:sticky; top:0; background:var(--bg-panel); z-index:10; padding-bottom:10px; border-bottom:1px solid var(--border-light);">
+                    <label class="pf-label" style="margin:0;">🎟️ Liste des activités & frais</label>
+                    <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="addCpExpenseLine()">+ Ajouter</button>
+                </div>
+
+                <div id="cpExpensesContainer" style="display:flex; flex-direction:column; gap:10px;"></div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <label class="pf-label" style="margin:0;"><?= tr('hdl_planned_expenses') ?></label>
-                <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="addCpExpenseLine()"><?= tr('hdl_btn_add_expense') ?></button>
-            </div>
-
-            <div id="cpExpensesContainer" style="margin-bottom:15px;"></div>
-
-            <div style="margin-bottom: 20px;">
-                <label style="display:flex; align-items:center; cursor:pointer; font-size:0.85rem; color:#475569;">
-                    <input type="checkbox" name="save_favorite" value="1" style="margin-right:8px;">
-                    ⭐ <?= tr('hdl_save_fav') ?>
-                </label>
-            </div>
-
-            <div class="modal-footer" style="padding-top:15px; border-top:1px solid #e2e8f0;">
-                <button type="button" onclick="deleteCheckpoint()" id="btnDeleteCp" class="pf-btn btn-secondary" style="color:#ef4444; border-color:#fca5a5; display:none;"><?= tr('btn_delete') ?></button>
+            <!-- FOOTER FIXE -->
+            <div class="modal-footer" style="padding: 15px 20px; border-top:1px solid var(--border-light); background:var(--bg-page); margin-top:auto;">
+                <button type="button" onclick="deleteCheckpoint()" id="btnDeleteCp" class="pf-btn btn-secondary" style="color:var(--danger); border-color:var(--border-danger-soft); display:none; margin-right:auto;">Supprimer</button>
                 <button type="button" onclick="closeCheckpointModal()" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
-                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
+                <button type="submit" class="pf-btn">💾 <?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>

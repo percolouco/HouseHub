@@ -1,5 +1,6 @@
 <div id="holidayModal" class="pf-modal">
-    <div class="pf-modal-content hol-modal-content" style="max-width: 500px;"> <h3 id="modalTitle" class="pf-modal-title"><?= tr('hdl_modal_title') ?></h3>
+    <div class="pf-modal-content hol-modal-content" style="max-width: 500px;">
+        <h3 id="modalTitle" class="pf-modal-title"><?= tr('hdl_modal_title') ?></h3>
         
         <form action="/modules/holidays/includes/api/save_holiday.php" method="POST" id="holidayForm">
             <input type="hidden" name="id" id="inp_id">
@@ -23,23 +24,21 @@
             </div>
 
             <div class="form-row">
-                <div>
+                <div class="hol-flex-1">
                     <label class="pf-label"><?= tr('hdl_label_period') ?></label>
                     <input type="text" name="period_hint" id="inp_period" class="pf-input" placeholder="<?= tr('hdl_ph_period') ?>">
                 </div>
-                <div class="hol-date-range-group">
-                    <div class="hol-flex-1">
-                        <label class="pf-label"><?= tr('hdl_label_from') ?></label>
-                        <input type="date" name="start_date" id="inp_start" class="pf-input">
-                    </div>
-                    <div class="hol-flex-1">
-                        <label class="pf-label"><?= tr('hdl_label_to') ?></label>
-                        <input type="date" name="end_date" id="inp_end" class="pf-input">
-                    </div>
+                <!-- DATES AVEC FLATPICKR -->
+                <div class="hol-flex-2">
+                    <label class="pf-label">📅 Dates du voyage</label>
+                    <input type="text" id="hol_date_range" class="pf-input" placeholder="Sélectionnez les dates..." readonly style="cursor: pointer; background-color: var(--bg-panel); color: var(--primary); font-weight: bold; text-align: center; letter-spacing: 0.5px;">
+                    <!-- Vraies données pour save_holiday.php -->
+                    <input type="hidden" name="start_date" id="inp_start">
+                    <input type="hidden" name="end_date" id="inp_end">
                 </div>
             </div>
 
-            <div class="form-group" style="margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div class="form-group" style="margin-top: 15px; padding: 10px; background: var(--bg-subtle); border-radius: 8px; border: 1px solid var(--border-light);">
                 <label class="pf-label" style="margin-bottom: 5px;">🚗 Véhicule utilisé (Optionnel)</label>
                 <select name="vehicle_id" id="inp_vehicle_id" class="pf-input">
                     <option value="">-- Aucun / Autre transport --</option>
@@ -52,16 +51,15 @@
             <hr class="hol-divider">
 
             <div class="form-row">
-                <div>
+                <div class="hol-flex-1">
                     <label class="pf-label">🍔 <?= tr('hdl_label_budget_food') ?></label>
                     <input type="number" step="0.01" name="budget_food" id="inp_food" class="pf-input" placeholder="0.00">
                 </div>
-                <div>
+                <div class="hol-flex-1">
                     <label class="pf-label">🎁 <?= tr('hdl_label_budget_extras') ?></label>
                     <input type="number" step="0.01" name="budget_extra" id="inp_extra" class="pf-input" placeholder="0.00">
                 </div>
             </div>
-
 
             <div class="modal-footer">
                 <button type="button" onclick="deleteHoliday()" id="btn_delete" class="pf-btn btn-secondary hol-btn-delete"><?= tr('btn_delete') ?></button>

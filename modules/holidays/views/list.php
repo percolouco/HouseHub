@@ -122,9 +122,11 @@ window.closeHolidayModal = window.closeHolidayModal || function() {
     if(modal) modal.style.display = 'none';
     document.body.classList.remove('no-scroll');
 };
-</script>
 
+
+</script>
 <script src="/modules/holidays/holidays.js"></script>
+
 
 <?php
 function renderHolidayCard($h, $pdo) {
@@ -136,8 +138,9 @@ function renderHolidayCard($h, $pdo) {
     $dateDisplay = htmlspecialchars($h['period_hint'] ?? '');
     
     if (empty($dateDisplay) && $h['start_date']) {
-        $dateDisplay = date('d/m/Y', strtotime($h['start_date']));
-        if ($h['end_date']) $dateDisplay .= ' → ' . date('d/m/Y', strtotime($h['end_date']));
+        // 💡 Format Jour/Mois uniquement
+        $dateDisplay = date('d/m', strtotime($h['start_date']));
+        if ($h['end_date']) $dateDisplay .= ' → ' . date('d/m', strtotime($h['end_date']));
     }
     
     $statusClass = match($h['status']) {

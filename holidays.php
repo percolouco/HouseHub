@@ -34,7 +34,17 @@ if ($tab === 'holiday_detail' && isset($_GET['id'])) {
     require __DIR__ . '/modules/holidays/views/list.php';
 }
 
-// 4. Inclusion du JS global du module (Pont i18n déjà géré dans le header)
-echo '<script src="/modules/holidays/holidays.js"></script>';
+// 4. Inclusion des librairies globales du module (Flatpickr)
+?>
+<!-- Flatpickr (Vanilla JS Date Range) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css" id="flatpickr-dark-theme" disabled>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/cat.js"></script>
+
+<?php
+// On ajoute un paramètre de version (time) pour forcer le navigateur à recharger tes récentes modifications dans holidays.js
+echo '<script src="/modules/holidays/holidays.js?v=' . time() . '"></script>';
 
 require __DIR__ . '/footer.php';

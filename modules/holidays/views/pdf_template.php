@@ -19,7 +19,7 @@ $grandTotal = $totalGeneral + $totalSteps;
             <h1 style="font-size: 2.5rem; color: #0f172a; margin-bottom: 10px;"><?= htmlspecialchars($holiday['title'] ?? $holiday['name'] ?? 'Mon Voyage') ?></h1>
             <h2 style="font-size: 1.5rem; color: #64748b; font-weight: normal; margin-top: 0;">
                 <?php if (!empty($holiday['start_date']) && !empty($holiday['end_date'])): ?>
-                    Du <?= date('d/m/Y', strtotime($holiday['start_date'])) ?> au <?= date('d/m/Y', strtotime($holiday['end_date'])) ?>
+                    Du <?= date('d/m', strtotime($holiday['start_date'])) ?> au <?= date('d/m', strtotime($holiday['end_date'])) ?>
                 <?php else: ?>
                     Dates à définir
                 <?php endif; ?>
