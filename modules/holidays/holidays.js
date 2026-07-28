@@ -1,3 +1,5 @@
+window.PLANNING_MODIFIED = false;
+
 // ============================================================================
 // FONCTION DE TRADUCTION JS & LANGUE COURANTE
 // ============================================================================
@@ -528,6 +530,7 @@ function openCheckpointModal(mode, data = null) {
             it.item_date || "",
             it.item_time || "",
             it.duration || 1,
+            it.expense_context || "local",
           );
           visibleCount++;
         }
@@ -594,6 +597,7 @@ function addCpExpenseLine(
   itemDate = "",
   itemTime = "",
   itemDur = 1,
+  expenseContext = "local", // 🔥 FIX : On accepte le contexte dynamique
 ) {
   const container = document.getElementById("cpExpensesContainer");
   const div = document.createElement("div");
@@ -607,7 +611,8 @@ function addCpExpenseLine(
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
-            <input type="hidden" name="items[context][]" value="local">
+            <!-- 🔥 FIX : Le champ hidden prend la vraie valeur -->
+            <input type="hidden" name="items[context][]" value="${expenseContext}">
             <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}">
             <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
@@ -616,7 +621,8 @@ function addCpExpenseLine(
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
                 <span class="hol-form-paid-text">${tr("hdl_paid")}</span>
             </label>
-          <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>        </div>
+          <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>
+        </div>
         <div class="hol-form-subrow">
             <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("hdl_ph_notes")}" value="${notes}">
         </div>
@@ -679,7 +685,8 @@ function moveStepMobile(btn, direction) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+// 🔥 NOUVEAU : Fonction réutilisable pour ré-attacher les événements
+function initStepDragAndDrop() {
   const checkpoints = document.querySelectorAll(".hol-checkpoint-draggable");
   const container = checkpoints[0]?.parentElement;
   if (!container) return;
@@ -687,7 +694,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const isMobile = window.innerWidth <= 768;
   let draggedItem = null;
 
+  // Nettoyage des anciens écouteurs en clonant les nœuds (Indispensable après un refresh silencieux)
   checkpoints.forEach((item) => {
+    const clone = item.cloneNode(true);
+    if (item.parentNode) item.parentNode.replaceChild(clone, item);
+  });
+
+  const freshCheckpoints = document.querySelectorAll(
+    ".hol-checkpoint-draggable",
+  );
+
+  freshCheckpoints.forEach((item) => {
     if (isMobile) {
       item.removeAttribute("draggable");
       return;
@@ -727,16 +744,17 @@ document.addEventListener("DOMContentLoaded", () => {
       (closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
+        if (offset < 0 && offset > closest.offset)
           return { offset: offset, element: child };
-        } else {
-          return closest;
-        }
+        else return closest;
       },
       { offset: Number.NEGATIVE_INFINITY },
     ).element;
   }
-});
+}
+
+// On lance l'initialisation au démarrage de la page
+document.addEventListener("DOMContentLoaded", initStepDragAndDrop);
 
 // ============================================================================
 // 7. MOTEUR DRAG & DROP DU PLANNING GLOBAL
@@ -986,8 +1004,12 @@ function openGlobalPlanningModal() {
 }
 
 function isDateInStep(targetDate, stepStart, stepEnd) {
-  if (!stepStart || !stepEnd) return false;
-  return targetDate >= stepStart && targetDate <= stepEnd;
+  if (!stepStart && !stepEnd) return false;
+
+  const start = stepStart || stepEnd;
+  const end = stepEnd || stepStart;
+
+  return targetDate >= start && targetDate <= end;
 }
 
 function filterPoolByDate(dateStr) {
@@ -1079,7 +1101,6 @@ function buildDragItemHtml(it) {
       ? `<div style="font-size:0.65rem; color:var(--primary); font-weight:800; margin-bottom:4px; text-transform:uppercase;">📍 ${it.step_location}</div>`
       : "";
 
-  // Suppression du calcul de hauteur en ligne, c'est désormais géré via CSS et la variable "--duration"
   return `
         <div class="hol-drag-item ${catClass}" ${dragAttr}
              id="${htmlId}" data-id="${it.id}" data-virtual="${isVirtual}" data-sort="${it.sort_order}"
@@ -1088,13 +1109,24 @@ function buildDragItemHtml(it) {
             ${locHint}
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
                 <div class="hol-drag-title" style="flex:1; font-size: 0.85rem; font-weight: 700; color: var(--text-main); line-height:1.2;">${visualName}</div>
-                <div class="hol-item-duration-controls" style="display:flex; align-items:center; background:var(--bg-subtle); border-radius:4px; border:1px solid var(--border-light);">
-                    ${durControls}
+                
+                <div style="display:flex; align-items:center;">
+                    <div class="hol-item-duration-controls" style="display:flex; align-items:center; background:var(--bg-subtle); border-radius:4px; border:1px solid var(--border-light);">
+                        ${durControls}
+                    </div>
+                    <!-- 🔄 Le fameux bouton d'annulation (Géré par CSS) -->
+                    <button type="button" class="hol-unplace-btn" onclick="unplaceItem(event, '${htmlId}')" title="Retirer du planning">↩️</button>
                 </div>
+
             </div>
             ${noteHtml}
         </div>
     `;
+}
+
+function unplaceItem(e, htmlId) {
+  e.stopPropagation();
+  handleDropLogic(htmlId, "", "");
 }
 
 function changeDuration(e, itemId, delta) {
@@ -1240,7 +1272,7 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
   const dur = parseInt(itemEl.style.getPropertyValue("--duration")) || 1;
   const realId = itemEl.getAttribute("data-id");
 
-  // DÉSASSIGNER : Si on replace la carte dans la zone de gauche
+  // DÉSASSIGNER (Annulation) : Si on replace la carte dans la zone "À placer"
   if (dateStr === "" || timeStr === "") {
     if (!isVirtual) {
       updateItemMemory(realId, { item_date: null, item_time: null });
@@ -1249,14 +1281,23 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
       fd.append("item_id", realId);
       fd.append("item_date", "");
       fd.append("item_time", "");
+
+      // Enregistrement en base + Toast
       fetch("/modules/holidays/includes/api/save_checkpoint.php", {
         method: "POST",
         body: fd,
+      }).then(() => {
+        if (typeof showToast === "function")
+          showToast("📍 Élément remis en attente", "success");
       });
     }
-    // 🔥 FIX #3 : Re-filtrer reconstruit la colonne de gauche dans SON ORDRE D'ORIGINE !
+
+    // 🔥 C'EST LA CLÉ : On enlève physiquement la carte du calendrier !
+    itemEl.remove();
+
     filterPoolByDate(window.CURRENT_PLANNING_FILTER_DATE);
     recalcAllBadges();
+    window.PLANNING_MODIFIED = true;
     return;
   }
 
@@ -1307,13 +1348,35 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
             category: "transport",
             is_virtual: false,
           };
+
+          if (typeof window.MAP_POINTS !== "undefined") {
+            const stepObj = window.MAP_POINTS.find(
+              (s) => s.sort_order == sortOrder,
+            );
+            if (stepObj) {
+              stepObj.items.push({
+                id: data.id,
+                category: "transport",
+                name: `Essence depuis ${tData.from}`,
+                amount: tData.cost,
+                expense_context: "transit",
+                duration: dur,
+                item_date: dateStr,
+                item_time: timeStr,
+              });
+            }
+          }
+
+          if (typeof showToast === "function")
+            showToast("🚗 Trajet généré et sauvegardé !", "success");
+          itemEl.style.transition = "box-shadow 0.3s ease";
+          itemEl.style.boxShadow = "0 0 0 3px var(--success)";
+          setTimeout(() => (itemEl.style.boxShadow = ""), 1500);
         } else {
           window.location.reload();
         }
       })
-      .catch(() => {
-        window.location.reload();
-      });
+      .catch(() => window.location.reload());
   } else {
     updateItemMemory(realId, { item_date: dateStr, item_time: timeStr });
     const fd = new FormData();
@@ -1325,10 +1388,22 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
     fetch("/modules/holidays/includes/api/save_checkpoint.php", {
       method: "POST",
       body: fd,
-    });
+    })
+      .then(() => {
+        if (typeof showToast === "function")
+          showToast("📅 Activité planifiée !", "success");
+        itemEl.style.transition = "box-shadow 0.3s ease";
+        itemEl.style.boxShadow = "0 0 0 3px var(--success)";
+        setTimeout(() => (itemEl.style.boxShadow = ""), 1500);
+      })
+      .catch(() => {
+        if (typeof showToast === "function")
+          showToast("❌ Erreur de sauvegarde", "error");
+      });
   }
 
   recalcAllBadges();
+  silentlyRefreshSteps();
 }
 
 function updateItemMemory(itemId, changes) {
@@ -1337,6 +1412,53 @@ function updateItemMemory(itemId, changes) {
       let item = step.items.find((i) => i.id == itemId);
       if (item) Object.assign(item, changes);
     });
+  }
+}
+
+/**
+ * Rafraîchit uniquement le conteneur des étapes sans recharger toute la page
+ */
+async function silentlyRefreshSteps() {
+  try {
+    const res = await fetch(window.location.href);
+    const html = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    // 🕵️ CIBLAGE INTELLIGENT : On trouve le panel-body qui contient les étapes (ou le texte "Aucune étape")
+    const getTargetContainer = (documentObj) =>
+      Array.from(documentObj.querySelectorAll(".hol-panel-body")).find(
+        (el) =>
+          el.querySelector(".hol-checkpoint") ||
+          el.innerHTML.toLowerCase().includes("aucune étape") ||
+          el.innerHTML.toLowerCase().includes("cap etapa"),
+      );
+
+    const currentContainer = getTargetContainer(document);
+    const newContainer = getTargetContainer(doc);
+
+    if (currentContainer && newContainer) {
+      // Un léger effet de flash pour indiquer à l'utilisateur que ça s'est mis à jour
+      currentContainer.style.opacity = "0.5";
+
+      setTimeout(() => {
+        currentContainer.innerHTML = newContainer.innerHTML;
+        currentContainer.style.opacity = "1";
+
+        // Mise à jour du prix global de l'essence en haut
+        const globalFuel = document.getElementById("global_fuel_cost");
+        const newGlobalFuel = doc.getElementById("global_fuel_cost");
+        if (globalFuel && newGlobalFuel)
+          globalFuel.innerHTML = newGlobalFuel.innerHTML;
+
+        // 🚀 On relance le Drag & Drop des étapes !
+        initStepDragAndDrop();
+      }, 150);
+    } else {
+      window.location.reload(); // Fallback de sécurité ultime
+    }
+  } catch (e) {
+    console.error("Erreur lors du rafraîchissement silencieux", e);
   }
 }
 
@@ -1426,7 +1548,8 @@ function addQuickTransitExpense(
   fd.append("amount", amount);
   fd.append("context", "transit");
 
-  // 🔥 On sécurise la durée en base de données
+  fd.append("expense_context", "transit");
+
   const h = Math.max(1, Math.round(durationSec / 3600));
   fd.append("duration", h);
 
@@ -1778,3 +1901,46 @@ async function saveHolidayGlobalNote(holidayId) {
     btn.disabled = false;
   }
 }
+
+// ============================================================================
+// SOUMISSION AJAX DU FORMULAIRE "MODIFIER LES BASES"
+// ============================================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const holidayForm = document.getElementById("holidayForm");
+  if (holidayForm) {
+    holidayForm.addEventListener("submit", async function (e) {
+      // Si on demande la suppression, on laisse le comportement natif faire le travail
+      if (this.querySelector('input[name="action_delete"]')) return;
+
+      e.preventDefault();
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = "⏳...";
+      submitBtn.disabled = true;
+
+      const fd = new FormData(this);
+      // On s'assure d'appeler l'API de sauvegarde
+      const actionUrl =
+        this.getAttribute("action") ||
+        "/modules/holidays/includes/api/save_holiday.php";
+
+      try {
+        // On utilise pachaFetch en mode raw/text car save_holiday.php fait sûrement un header('Location: ...') au lieu d'un JSON
+        const response = await fetch(actionUrl, {
+          method: "POST",
+          body: fd,
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+
+        // Quoi qu'il arrive, on recharge la page COURANTE (detail.php) pour afficher les modifications
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        if (typeof showToast === "function")
+          showToast("Erreur lors de la sauvegarde", "error");
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+  }
+});

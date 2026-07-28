@@ -22,6 +22,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN pf_vehicles v ON h.vehicle_id = v.id
     WHERE h.id = ?
 ");
+
 $stmt->execute([$id]);
 $holiday = $stmt->fetch(PDO::FETCH_ASSOC);
 
