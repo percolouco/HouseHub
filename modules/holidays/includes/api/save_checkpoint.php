@@ -34,25 +34,40 @@ if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime
                 $date = !empty($_POST['item_date']) ? $_POST['item_date'] : null;
                 $time = !empty($_POST['item_time']) ? $_POST['item_time'] : null;
 
-                $context = $_POST['expense_context'] ?? ($_POST['context'] ?? 'local');
+                // Récupération sécurisée du contexte
+                $context = !empty($_POST['expense_context']) ? $_POST['expense_context'] : (!empty($_POST['context']) ? $_POST['context'] : 'local');
+                $amount = (float)$_POST['amount'];
+                $name = $_POST['name'] ?? 'Trajet';
+                $category = $_POST['category'] ?? 'transport';
 
                 $pdo->beginTransaction();
                 
+                // 🛡️ ANTI-DOUBLON ABSOLU
                 if ($context === 'transit') {
-                    $stmtDel = $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND sort_order = ? AND expense_context = 'transit'");
-                    $stmtDel->execute([$holiday_id, $sort_order]);
+                    $stmtCheck = $pdo->prepare("SELECT id FROM pf_holidays_items WHERE holiday_id = ? AND sort_order = ? AND expense_context = 'transit'");
+                    $stmtCheck->execute([$holiday_id, $sort_order]);
+                    $existingId = $stmtCheck->fetchColumn();
+
+                    if ($existingId) {
+                        // Mise à jour de la ligne existante
+                        $stmtUp = $pdo->prepare("UPDATE pf_holidays_items SET item_date = ?, item_time = ?, amount = ?, duration = ?, name = ? WHERE id = ?");
+                        $stmtUp->execute([$date, $time, $amount, $dur, $name, $existingId]);
+                        $pdo->commit();
+                        echo json_encode(['success' => true, 'id' => $existingId]);
+                        exit;
+                    }
                 }
 
+                // Insertion si aucun doublon n'existe
                 $ins = $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, step_start_date, step_end_date, step_type, expense_context, duration, item_date, item_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $ins->execute([
-                    $holiday_id, $_POST['category'], $_POST['name'], (float)$_POST['amount'], 0,
+                    $holiday_id, $category, $name, $amount, 0,
                     $stepInfo['location_name'], $stepInfo['lat'], $stepInfo['lng'],
                     $sort_order, $stepInfo['step_start_date'], $stepInfo['step_end_date'],
                     $stepInfo['step_type'], $context, $dur, $date, $time
                 ]);
                 
                 $newId = $pdo->lastInsertId();
-                
                 $pdo->commit();
                 
                 echo json_encode(['success' => true, 'id' => $newId]);
@@ -82,17 +97,6 @@ if (isset($_POST['action']) && in_array($_POST['action'], ['update_item_datetime
             echo json_encode(['success' => true]);
             exit;
         }
-
-        // Mise à jour de la note globale du voyage
-        if ($_POST['action'] === 'update_holiday_note') {
-            $hId = (int)$_POST['holiday_id'];
-            $notes = $_POST['notes'] ?? '';
-            $stmt = $pdo->prepare("UPDATE pf_holidays SET notes = ? WHERE id = ?");
-            $stmt->execute([$notes, $hId]);
-            echo json_encode(['success' => true]);
-            exit;
-        }
-
 
     } catch (Exception $e) {
         if ($pdo->inTransaction()) { $pdo->rollBack(); }
