@@ -1,5 +1,22 @@
 window.PLANNING_MODIFIED = false;
 
+// Variable globale pour Flatpickr
+let cpDateRangePicker = null;
+
+// Écouteur pour activer le thème sombre de Flatpickr selon le thème global HouseHub
+document.addEventListener("DOMContentLoaded", () => {
+  const checkDarkTheme = () => {
+    const isDark =
+      document.documentElement.getAttribute("data-theme") === "dark";
+    const themeLink = document.getElementById("flatpickr-dark-theme");
+    if (themeLink) themeLink.disabled = !isDark;
+  };
+  checkDarkTheme();
+  document
+    .getElementById("theme-toggle")
+    ?.addEventListener("click", () => setTimeout(checkDarkTheme, 50));
+});
+
 // ============================================================================
 // FONCTION DE TRADUCTION JS & LANGUE COURANTE
 // ============================================================================
@@ -87,6 +104,11 @@ function openHolidayModal(mode) {
   if (mode === "add") {
     document.getElementById("modalTitle").innerText = tr("hdl_modal_title");
     btnDelete.style.display = "none";
+
+    // Réinitialisation du calendrier global
+    document.getElementById("inp_start").value = "";
+    document.getElementById("inp_end").value = "";
+    initHolFlatpickr("", "");
   } else {
     document.getElementById("modalTitle").innerText = tr(
       "hdl_quick_edit_title",
@@ -114,18 +136,27 @@ function editHoliday(data) {
   document.getElementById("inp_title").value = h.title;
   document.getElementById("inp_status").value = h.status;
   document.getElementById("inp_period").value = h.period_hint || "";
-  document.getElementById("inp_start").value = h.start_date || "";
-  document.getElementById("inp_end").value = h.end_date || "";
   document.getElementById("inp_food").value =
     h.budget_food > 0 ? h.budget_food : "";
   document.getElementById("inp_extra").value =
     h.budget_extra > 0 ? h.budget_extra : "";
-  document.getElementById("inp_notes").value = h.notes || "";
+
+  if (document.getElementById("inp_notes")) {
+    document.getElementById("inp_notes").value = h.notes || "";
+  }
 
   const vehicleInput = document.getElementById("inp_vehicle_id");
   if (vehicleInput) {
     vehicleInput.value = h.vehicle_id || "";
   }
+
+  // Initialisation des dates
+  const startD = h.start_date || "";
+  const endD = h.end_date || "";
+  document.getElementById("inp_start").value = startD;
+  document.getElementById("inp_end").value = endD;
+
+  initHolFlatpickr(startD, endD);
 }
 
 function deleteHoliday() {
@@ -458,63 +489,99 @@ function panMapTo(lat, lng) {
 // ============================================================================
 function openCheckpointModal(mode, data = null) {
   const searchBlock = document.getElementById("cpSearchBlock");
-  const formBlock = document.getElementById("formCheckpoint");
   const container = document.getElementById("cpExpensesContainer");
   const btnDel = document.getElementById("btnDeleteCp");
+  const insertGroup = document.getElementById("cp_insert_group");
+  const insertSelect = document.getElementById("cp_insert_after");
 
   container.innerHTML = "";
-
-  if (document.getElementById("cp_start_date"))
-    document.getElementById("cp_start_date").value = "";
-  if (document.getElementById("cp_end_date"))
-    document.getElementById("cp_end_date").value = "";
   if (document.getElementById("searchPlaceInput"))
     document.getElementById("searchPlaceInput").value = "";
   if (document.getElementById("searchResults"))
     document.getElementById("searchResults").innerHTML = "";
 
-  searchBlock.style.display = "block";
+  const holidayData = JSON.parse(
+    document.getElementById("holidayDataJson").textContent,
+  ).main;
+  let tripStartDate =
+    holidayData.start_date || new Date().toISOString().split("T")[0];
+
+  // ==========================================
+  // CONFIGURATION DES DATES FLATPICKR
+  // ==========================================
+  let defaultStart = "";
+  let defaultEnd = "";
 
   if (mode === "add") {
     document.getElementById("cpModalTitle").innerText = tr("hdl_btn_add_step");
-    formBlock.style.display = "none";
     btnDel.style.display = "none";
+    searchBlock.style.display = "block";
+    insertGroup.style.display = "block";
+
     document.getElementById("cp_old_sort_order").value = "";
     document.getElementById("cp_name").value = "";
+
+    switchCpTab("info");
 
     if (document.getElementById("cp_step_type")) {
       document.getElementById("cp_step_type").value = "stop";
       toggleStepDates("stop");
     }
-    if (document.getElementById("cp_set_as_return")) {
+    if (document.getElementById("cp_set_as_return"))
       document.getElementById("cp_set_as_return").checked = false;
+
+    let lastDate = tripStartDate;
+    if (window.MAP_POINTS && window.MAP_POINTS.length > 0) {
+      const lastStep = window.MAP_POINTS[window.MAP_POINTS.length - 1];
+      lastDate =
+        lastStep.step_end_date || lastStep.step_start_date || tripStartDate;
     }
 
+    insertSelect.innerHTML = `<option value="end" data-enddate="${lastDate}">-- À la fin du voyage --</option>`;
+    if (window.MAP_POINTS && window.MAP_POINTS.length > 0) {
+      window.MAP_POINTS.forEach((step) => {
+        let dateStr = "";
+        if (
+          step.step_start_date &&
+          step.step_end_date &&
+          step.step_start_date !== step.step_end_date
+        ) {
+          dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })} > ${new Date(step.step_end_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
+        } else if (step.step_start_date) {
+          dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
+        }
+        insertSelect.innerHTML += `<option value="${step.sort_order}" data-enddate="${step.step_end_date || step.step_start_date || tripStartDate}">Après : ${step.location_name}${dateStr}</option>`;
+      });
+    }
+
+    defaultStart = lastDate;
+    defaultEnd = lastDate;
     addCpExpenseLine();
   } else if (mode === "edit" && data) {
     document.getElementById("cpModalTitle").innerText = tr("hdl_js_edit_step");
-    formBlock.style.display = "block";
     btnDel.style.display = "block";
+    searchBlock.style.display = "none";
+    insertGroup.style.display = "none";
+
+    switchCpTab("prog");
 
     document.getElementById("cp_lat").value = data.lat;
     document.getElementById("cp_lng").value = data.lng;
     document.getElementById("cp_old_sort_order").value = data.sort_order;
     document.getElementById("cp_name").value = data.location_name;
-    document.getElementById("cp_start_date").value = data.step_start_date || "";
-    document.getElementById("cp_end_date").value = data.step_end_date || "";
 
-    // 🔥 PRE-REMPLISSAGE DU TYPE D'ÉTAPE ET UI DATES
     if (document.getElementById("cp_step_type")) {
       const type = data.step_type || "stop";
       document.getElementById("cp_step_type").value = type;
       toggleStepDates(type);
     }
-
-    // 🔥 PRE-REMPLISSAGE DE LA CASE RETOUR BASEE SUR LA GLOBALE
     if (document.getElementById("cp_set_as_return")) {
       document.getElementById("cp_set_as_return").checked =
         window.GLOBAL_RETURN_STEP_ID == data.sort_order;
     }
+
+    defaultStart = data.step_start_date || tripStartDate;
+    defaultEnd = data.step_end_date || tripStartDate;
 
     if (data.items && data.items.length > 0) {
       let visibleCount = 0;
@@ -540,8 +607,135 @@ function openCheckpointModal(mode, data = null) {
       addCpExpenseLine();
     }
   }
+
+  // Destruction et ré-instanciation de Flatpickr pour forcer le saut au bon mois
+  if (cpDateRangePicker) cpDateRangePicker.destroy();
+
+  document.getElementById("cp_start_date").value = defaultStart;
+  document.getElementById("cp_end_date").value = defaultEnd;
+
+  cpDateRangePicker = flatpickr("#cp_date_range", {
+    mode: "range",
+    altInput: true, // 💡 NOUVEAU : Crée un champ de présentation séparé
+    altFormat: "d/m", // 💡 NOUVEAU : Format ultra compact (ex: 15/08)
+    dateFormat: "Y-m-d", // Format technique (MariaDB) conservé en arrière-plan
+    defaultDate:
+      defaultStart && defaultEnd && defaultStart !== defaultEnd
+        ? [defaultStart, defaultEnd]
+        : [defaultStart],
+    locale: window.appLang === "ca-ES" ? "cat" : "fr",
+    onChange: function (selectedDates, dateStr, instance) {
+      if (selectedDates.length === 2) {
+        document.getElementById("cp_start_date").value = instance.formatDate(
+          selectedDates[0],
+          "Y-m-d",
+        );
+        document.getElementById("cp_end_date").value = instance.formatDate(
+          selectedDates[1],
+          "Y-m-d",
+        );
+      } else if (selectedDates.length === 1) {
+        document.getElementById("cp_start_date").value = instance.formatDate(
+          selectedDates[0],
+          "Y-m-d",
+        );
+        document.getElementById("cp_end_date").value = instance.formatDate(
+          selectedDates[0],
+          "Y-m-d",
+        );
+      } else {
+        document.getElementById("cp_start_date").value = "";
+        document.getElementById("cp_end_date").value = "";
+      }
+    },
+  });
+
   document.getElementById("checkpointModal").style.display = "flex";
   document.body.classList.add("no-scroll");
+}
+
+// ==========================================
+// 🎯 DATES GLOBALES DU VOYAGE (MODALE PRINCIPALE)
+// ==========================================
+let holDateRangePicker = null;
+
+function initHolFlatpickr(defaultStart, defaultEnd) {
+  if (holDateRangePicker) holDateRangePicker.destroy();
+
+  holDateRangePicker = flatpickr("#hol_date_range", {
+    mode: "range",
+    altInput: true,
+    altFormat: "d/m", // 💡 Format ultra compact (ex: 15/08)
+    dateFormat: "Y-m-d", // 💡 Le vrai format envoyé au serveur
+    defaultDate:
+      defaultStart && defaultEnd && defaultStart !== defaultEnd
+        ? [defaultStart, defaultEnd]
+        : defaultStart
+          ? [defaultStart]
+          : [],
+    locale: window.appLang === "ca-ES" ? "cat" : "fr",
+    onChange: function (selectedDates, dateStr, instance) {
+      if (selectedDates.length === 2) {
+        document.getElementById("inp_start").value = instance.formatDate(
+          selectedDates[0],
+          "Y-m-d",
+        );
+        document.getElementById("inp_end").value = instance.formatDate(
+          selectedDates[1],
+          "Y-m-d",
+        );
+      } else if (selectedDates.length === 1) {
+        document.getElementById("inp_start").value = instance.formatDate(
+          selectedDates[0],
+          "Y-m-d",
+        );
+        document.getElementById("inp_end").value = instance.formatDate(
+          selectedDates[0],
+          "Y-m-d",
+        );
+      } else {
+        document.getElementById("inp_start").value = "";
+        document.getElementById("inp_end").value = "";
+      }
+    },
+  });
+}
+
+function switchCpTab(tabId) {
+  const btnInfo = document.getElementById("tabBtnInfo");
+  const btnProg = document.getElementById("tabBtnProg");
+  const tabInfo = document.getElementById("cpTabInfo");
+  const tabProg = document.getElementById("cpTabProg");
+
+  if (tabId === "info") {
+    btnInfo.style.borderBottomColor = "var(--primary)";
+    btnInfo.style.color = "var(--primary)";
+    btnProg.style.borderBottomColor = "transparent";
+    btnProg.style.color = "var(--text-muted)";
+    tabInfo.style.display = "block";
+    tabProg.style.display = "none";
+  } else {
+    btnProg.style.borderBottomColor = "var(--primary)";
+    btnProg.style.color = "var(--primary)";
+    btnInfo.style.borderBottomColor = "transparent";
+    btnInfo.style.color = "var(--text-muted)";
+    tabProg.style.display = "block";
+    tabInfo.style.display = "none";
+  }
+}
+
+function injectDynamicDates(selectEl) {
+  const selectedOpt = selectEl.options[selectEl.selectedIndex];
+  if (selectedOpt && selectedOpt.dataset.enddate) {
+    const dateToSet = selectedOpt.dataset.enddate;
+    document.getElementById("cp_start_date").value = dateToSet;
+    document.getElementById("cp_end_date").value = dateToSet;
+
+    // On met à jour l'UI du calendrier
+    if (cpDateRangePicker) {
+      cpDateRangePicker.setDate([dateToSet, dateToSet]);
+    }
+  }
 }
 
 function searchPlace() {
@@ -597,34 +791,41 @@ function addCpExpenseLine(
   itemDate = "",
   itemTime = "",
   itemDur = 1,
-  expenseContext = "local", // 🔥 FIX : On accepte le contexte dynamique
+  expenseContext = "local",
 ) {
   const container = document.getElementById("cpExpensesContainer");
   const div = document.createElement("div");
   div.className = "hol-form-row";
   const isChecked = isPaid == 1 ? "checked" : "";
 
+  // 💡 Nouveaux types (Les valeurs à 0 par défaut pour les visites gratuites)
+  let defaultAmount = amount;
+  if (category === "visit_free" && amount === "") defaultAmount = "0.00";
+
   div.innerHTML = `
         <div class="hol-form-inner">
-            <select name="items[cat][]" class="pf-input hol-form-select">
+            <select name="items[cat][]" class="pf-input hol-form-select" style="width:55px; padding:6px; font-size:1.1rem;" title="Catégorie">
                 <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
+                <option value="food" ${category === "food" ? "selected" : ""}>🍽️</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
+                <option value="visit_free" ${category === "visit_free" ? "selected" : ""}>🏞️</option>
+                <option value="other" ${category === "other" ? "selected" : ""}>🛍️</option>
             </select>
-            <!-- 🔥 FIX : Le champ hidden prend la vraie valeur -->
+            
             <input type="hidden" name="items[context][]" value="${expenseContext}">
-            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}">
-            <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
+            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="Description (Ex: Musée, Restaurant...)" value="${name}">
+            <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${defaultAmount}">
             
             <label class="hol-form-paid-label" title="${tr("hdl_paid")}">
-                <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
+                <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="accent-color:var(--success); width:16px; height:16px;">
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
-                <span class="hol-form-paid-text">${tr("hdl_paid")}</span>
+                <span class="hol-form-paid-text" style="display:none;">${tr("hdl_paid")}</span>
             </label>
-          <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>
+            <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>
         </div>
-        <div class="hol-form-subrow">
-            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("hdl_ph_notes")}" value="${notes}">
+        <div class="hol-form-subrow" style="padding-left:0; margin-top:4px;">
+            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="🔗 Réservation ou notes..." value="${notes}" style="margin-left:0; width:100%; border-radius:6px;">
         </div>
         <input type="hidden" name="items[id][]" value="${itemId}">
         <input type="hidden" name="items[date][]" value="${itemDate}">
@@ -1065,15 +1266,24 @@ function recalcAllBadges() {
 }
 
 function buildDragItemHtml(it) {
+  // Mapping intelligent des nouvelles icônes
   let icon = "🏷️";
   let catClass = "cat-activity";
+
   if (it.category === "accommodation") {
     icon = "🏨";
     catClass = "cat-accommodation";
-  }
-  if (it.category === "transport") {
+  } else if (it.category === "transport") {
     icon = "🚗";
     catClass = "cat-transport";
+  } else if (it.category === "food") {
+    icon = "🍽️";
+  } else if (it.category === "visit_free") {
+    icon = "🏞️";
+  } else if (it.category === "activity") {
+    icon = "🎫";
+  } else if (it.category === "other") {
+    icon = "🛍️";
   }
 
   const dur = it.duration || 1;
@@ -1096,28 +1306,38 @@ function buildDragItemHtml(it) {
   const isMobile = window.innerWidth <= 768;
   const dragAttr = isMobile ? "" : 'draggable="true"';
   const htmlId = isVirtual ? it.id : `drag-item-${it.id}`;
-  const locHint =
-    !it.item_date && it.step_location
-      ? `<div style="font-size:0.65rem; color:var(--primary); font-weight:800; margin-bottom:4px; text-transform:uppercase;">📍 ${it.step_location}</div>`
+
+  // 💡 NOUVEAU : Affichage compact des dates associées pour faciliter le placement
+  let locHintHtml = "";
+  if (!it.item_date) {
+    const datesStr =
+      it.step_start_date &&
+      it.step_end_date &&
+      it.step_start_date !== it.step_end_date
+        ? ` <span style="color:var(--text-muted); text-transform:none;">(${new Date(it.step_start_date).toLocaleDateString(currentLang, { day: "2-digit", month: "2-digit" })} > ${new Date(it.step_end_date).toLocaleDateString(currentLang, { day: "2-digit", month: "2-digit" })})</span>`
+        : it.step_start_date
+          ? ` <span style="color:var(--text-muted); text-transform:none;">(${new Date(it.step_start_date).toLocaleDateString(currentLang, { day: "2-digit", month: "2-digit" })})</span>`
+          : "";
+
+    locHintHtml = it.step_location
+      ? `<div style="font-size:0.65rem; color:var(--primary); font-weight:800; margin-bottom:4px; text-transform:uppercase;">📍 ${it.step_location}${datesStr}</div>`
       : "";
+  }
 
   return `
         <div class="hol-drag-item ${catClass}" ${dragAttr}
              id="${htmlId}" data-id="${it.id}" data-virtual="${isVirtual}" data-sort="${it.sort_order}"
              style="--duration: ${dur}; flex-shrink: 0; ${bgStyle} padding: 8px 10px; border-radius: 6px; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s; z-index: 10;"
              ondragstart="dragStart(event)" ondragend="dragEnd(event)" onclick="handleItemTap(event, '${htmlId}')">
-            ${locHint}
+            ${locHintHtml}
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
                 <div class="hol-drag-title" style="flex:1; font-size: 0.85rem; font-weight: 700; color: var(--text-main); line-height:1.2;">${visualName}</div>
-                
                 <div style="display:flex; align-items:center;">
                     <div class="hol-item-duration-controls" style="display:flex; align-items:center; background:var(--bg-subtle); border-radius:4px; border:1px solid var(--border-light);">
                         ${durControls}
                     </div>
-                    <!-- 🔄 Le fameux bouton d'annulation (Géré par CSS) -->
                     <button type="button" class="hol-unplace-btn" onclick="unplaceItem(event, '${htmlId}')" title="Retirer du planning">↩️</button>
                 </div>
-
             </div>
             ${noteHtml}
         </div>
@@ -1493,18 +1713,15 @@ async function loadWeatherForPlanning(lat, lng, dateStr) {
 
 // Gère l'affichage des dates dans la modale d'étape
 function toggleStepDates(type) {
-  const grpEnd = document.getElementById("grp_end_date");
-  const lblStart = document.getElementById("lbl_start_date");
+  const dateLabel = document.getElementById("lbl_date_range");
+  if (!dateLabel) return;
 
   if (type === "origin") {
-    grpEnd.style.display = "none";
-    lblStart.innerText = "📅 Date de départ";
+    dateLabel.innerText = "🛫 Date de départ";
   } else if (type === "destination") {
-    grpEnd.style.display = "none";
-    lblStart.innerText = "📅 Date d'arrivée";
+    dateLabel.innerText = "🛬 Date d'arrivée finale";
   } else {
-    grpEnd.style.display = "block";
-    lblStart.innerText = tr("hdl_label_arrival");
+    dateLabel.innerText = "📅 Période de l'étape (Arrivée ➔ Départ)";
   }
 }
 

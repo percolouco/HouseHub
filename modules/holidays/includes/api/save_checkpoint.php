@@ -129,10 +129,19 @@ if ($holiday_id > 0 && !empty($location_name)) {
             $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND sort_order = ?")->execute([$holiday_id, $old_sort_order]);
             $target_order = $old_sort_order;
         } else {
-            $stmtMax = $pdo->prepare("SELECT MAX(sort_order) FROM pf_holidays_items WHERE holiday_id = ?");
-            $stmtMax->execute([$holiday_id]);
-            $max = $stmtMax->fetchColumn();
-            $target_order = ($max !== null) ? (int)$max + 1 : 0;
+            // NOUVEAU : Logique d'intercalage d'étape
+            $insert_after = $_POST['insert_after'] ?? 'end';
+            
+            if ($insert_after === 'end') {
+                $stmtMax = $pdo->prepare("SELECT MAX(sort_order) FROM pf_holidays_items WHERE holiday_id = ?");
+                $stmtMax->execute([$holiday_id]);
+                $max = $stmtMax->fetchColumn();
+                $target_order = ($max !== null) ? (int)$max + 1 : 0;
+            } else {
+                $target_order = (int)$insert_after + 1;
+                // On décale toutes les étapes suivantes vers le bas
+                $pdo->prepare("UPDATE pf_holidays_items SET sort_order = sort_order + 1 WHERE holiday_id = ? AND sort_order >= ?")->execute([$holiday_id, $target_order]);
+            }
         }
 
         $step_start = !empty($_POST['step_start_date']) ? $_POST['step_start_date'] : null;
