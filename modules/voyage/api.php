@@ -26,31 +26,21 @@ $stops    = $params['stops'];
 $fuelL100 = (float)($params['fuel_l100'] ?? 7);
 $fuelPrice= (float)($params['fuel_price'] ?? 1.85);
 
-// --- Load databases ---
-$tollsPath  = __DIR__ . '/data/tolls.json';
-$gpsPath    = __DIR__ . '/data/toll_gps.json';
+// --- Load pre-indexed PHP database ---
+$tollsDataPath = __DIR__ . '/data/tolls.data.php';
+$gpsPath       = __DIR__ . '/data/toll_gps.json';
 
-if (!file_exists($tollsPath)) {
+if (!file_exists($tollsDataPath)) {
     echo json_encode(['ok' => false, 'error' => 'Base de péages introuvable']);
     exit;
 }
 
-$tollsRaw = json_decode(file_get_contents($tollsPath), true);
-$tollData = $tollsRaw['data'] ?? [];
+// Grâce à OPcache, le fichier est exécuté et stocké en RAM partagée
+$tollIndex = require $tollsDataPath;
 
 $gpsData = [];
 if (file_exists($gpsPath)) {
     $gpsData = json_decode(file_get_contents($gpsPath), true) ?? [];
-}
-
-// --- Build lookup index: [op][entry][exit] => c1_price ---
-$tollIndex = [];
-foreach ($tollData as $row) {
-    $op = $row['op'];
-    $e  = $row['e'];
-    $x  = $row['x'];
-    $c1 = (float)$row['c1'];
-    $tollIndex[$op][$e][$x] = $c1;
 }
 
 // --- Helper: great-circle distance (km) ---

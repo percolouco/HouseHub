@@ -170,7 +170,11 @@ if ($holiday_id > 0 && !empty($location_name)) {
                     $dur  = !empty($_POST['items']['duration'][$i]) ? (int)$_POST['items']['duration'][$i] : 1;
                     $context = !empty($_POST['items']['context'][$i]) ? $_POST['items']['context'][$i] : 'local';
 
-                    $stmt->execute([$holiday_id, $cat, $name, $amount, $paid, $location_name, $lat, $lng, $target_order, $note, $date, $time, $step_start, $step_end, $dur, $step_type, $context]);
+                    // Récupération des coordonnées spécifiques à l'activité (ou fallback sur l'étape)
+                    $itemLat = !empty($_POST['items']['lat'][$i]) ? (float)$_POST['items']['lat'][$i] : $lat;
+                    $itemLng = !empty($_POST['items']['lng'][$i]) ? (float)$_POST['items']['lng'][$i] : $lng;
+
+                    $stmt->execute([$holiday_id, $cat, $name, $amount, $paid, $location_name, $itemLat, $itemLng, $target_order, $note, $date, $time, $step_start, $step_end, $dur, $step_type, $context]);
                     $validItemsCount++;
                 }
             }

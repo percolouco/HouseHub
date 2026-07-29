@@ -292,15 +292,32 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
                                         if ($it['name'] === 'PF_TECHNICAL_POINT') continue; 
                                         $visibleItemsCount++;
                                         $icon = match($it['category']) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
+                                        
+                                        // On vérifie si l'activité possède ses propres coordonnées GPS
+                                        $hasCustomGps = (!empty($it['lat']) && !empty($it['lng']) && ((float)$it['lat'] !== (float)$step['lat'] || (float)$it['lng'] !== (float)$step['lng']));
                                 ?>
                                         <div class="hol-expense-wrapper">
                                             <div class="hol-expense-main">
-                                                <span class="hol-expense-name"><?= $icon ?> <?= htmlspecialchars($it['name']) ?></span>
+                                                <span class="hol-expense-name">
+                                                    <?= $icon ?> 
+                                                    <?php if ($hasCustomGps): ?>
+                                                        <span onclick="openGpsModal(<?= $it['lat'] ?>, <?= $it['lng'] ?>)" style="cursor:pointer; color:var(--primary); text-decoration:underline; font-weight:600;" title="Y aller (GPS)">
+                                                            <?= htmlspecialchars($it['name']) ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <?= htmlspecialchars($it['name']) ?>
+                                                    <?php endif; ?>
+                                                </span>
                                                 <span>
                                                     <strong class="hol-expense-amount"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
                                                     <span class="<?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>" title="<?= $it['is_paid'] ? tr('hdl_paid') : tr('hdl_to_pay') ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
                                                 </span>
                                             </div>
+                                            <?php if (!empty($it['notes'])): ?>
+                                                <div class="hol-expense-note" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                                    <?= htmlspecialchars($it['notes']) ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
                                 <?php endforeach; ?>
                                 

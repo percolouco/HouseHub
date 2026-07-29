@@ -598,6 +598,8 @@ function openCheckpointModal(mode, data = null) {
             it.item_time || "",
             it.duration || 1,
             it.expense_context || "local",
+            it.lat || "",
+            it.lng || "",
           );
           visibleCount++;
         }
@@ -792,47 +794,126 @@ function addCpExpenseLine(
   itemTime = "",
   itemDur = 1,
   expenseContext = "local",
+  itemLat = "",
+  itemLng = "",
 ) {
   const container = document.getElementById("cpExpensesContainer");
   const div = document.createElement("div");
   div.className = "hol-form-row";
   const isChecked = isPaid == 1 ? "checked" : "";
 
-  // 💡 Nouveaux types (Les valeurs à 0 par défaut pour les visites gratuites)
-  let defaultAmount = amount;
-  if (category === "visit_free" && amount === "") defaultAmount = "0.00";
+  const pinBtnStyle =
+    itemLat && itemLng
+      ? "background:var(--success);color:white;border-color:var(--success);"
+      : "";
 
   div.innerHTML = `
         <div class="hol-form-inner">
-            <select name="items[cat][]" class="pf-input hol-form-select" style="width:55px; padding:6px; font-size:1.1rem;" title="Catégorie">
+            <select name="items[cat][]" class="pf-input hol-form-select">
                 <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
-                <option value="food" ${category === "food" ? "selected" : ""}>🍽️</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
-                <option value="visit_free" ${category === "visit_free" ? "selected" : ""}>🏞️</option>
-                <option value="other" ${category === "other" ? "selected" : ""}>🛍️</option>
             </select>
-            
             <input type="hidden" name="items[context][]" value="${expenseContext}">
-            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="Description (Ex: Musée, Restaurant...)" value="${name}">
-            <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${defaultAmount}">
+            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}">
+            
+            <button type="button" class="btn-icon-action" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-light);border-radius:6px;${pinBtnStyle}" onclick="toggleItemSearch(this)" title="Adresse précise">📍</button>
+
+            <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
             
             <label class="hol-form-paid-label" title="${tr("hdl_paid")}">
-                <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="accent-color:var(--success); width:16px; height:16px;">
+                <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
                 <input type="hidden" name="items[paid][]" value="${isPaid}">
-                <span class="hol-form-paid-text" style="display:none;">${tr("hdl_paid")}</span>
+                <span class="hol-form-paid-text">${tr("hdl_paid")}</span>
             </label>
-            <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>
+          <button type="button" class="btn-icon-action delete btn-remove-expense" onclick="this.parentElement.parentElement.remove()" title="${tr("btn_delete")}">🗑️</button>
         </div>
-        <div class="hol-form-subrow" style="padding-left:0; margin-top:4px;">
-            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="🔗 Réservation ou notes..." value="${notes}" style="margin-left:0; width:100%; border-radius:6px;">
+        
+        <div class="hol-item-search-box" style="display:none; padding: 10px; background: var(--bg-subtle); border-radius: 8px; margin-top: 6px; width: 100%;">
+            <div style="display:flex; gap:10px;">
+                <input type="text" class="pf-input item-search-input" placeholder="Chercher une adresse..." onkeypress="if(event.key === 'Enter') { searchItemPlace(this); return false; }">
+                <button type="button" class="pf-btn btn-secondary" onclick="searchItemPlace(this)">🔍</button>
+            </div>
+            <div class="item-search-results" style="margin-top:10px; max-height:150px; overflow-y:auto;"></div>
+        </div>
+
+        <div class="hol-form-subrow">
+            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("hdl_ph_notes")}" value="${notes}">
         </div>
         <input type="hidden" name="items[id][]" value="${itemId}">
         <input type="hidden" name="items[date][]" value="${itemDate}">
         <input type="hidden" name="items[time][]" value="${itemTime}">
         <input type="hidden" name="items[duration][]" value="${itemDur}">
+        <input type="hidden" name="items[lat][]" value="${itemLat}">
+        <input type="hidden" name="items[lng][]" value="${itemLng}">
     `;
   container.appendChild(div);
+}
+
+function toggleItemSearch(btn) {
+  const searchBox = btn
+    .closest(".hol-form-row")
+    .querySelector(".hol-item-search-box");
+  searchBox.style.display =
+    searchBox.style.display === "none" ? "block" : "none";
+}
+
+function searchItemPlace(btn) {
+  const container = btn.closest(".hol-item-search-box");
+  const input = container.querySelector(".item-search-input");
+  const resultsDiv = container.querySelector(".item-search-results");
+  const q = input.value.trim();
+  if (q.length < 3) return;
+
+  resultsDiv.innerHTML = `<span style="color:#64748b; font-size:0.85rem;">Recherche en cours...</span>`;
+
+  fetch(
+    "/modules/holidays/includes/api/geocode.php?limit=5&q=" +
+      encodeURIComponent(q),
+  )
+    .then((res) => res.json())
+    .then((data) => {
+      resultsDiv.innerHTML = "";
+      if (data.error || !data.results || data.results.length === 0) {
+        resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Aucun résultat</span>`;
+        return;
+      }
+      data.results.forEach((place) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "pf-btn btn-secondary";
+        b.style.textAlign = "left";
+        b.style.padding = "8px";
+        b.style.marginBottom = "4px";
+        b.style.width = "100%";
+        b.innerText = "📍 " + place.display_name;
+        b.onclick = () =>
+          selectItemPlace(container, place.lat, place.lng, place.display_name);
+        resultsDiv.appendChild(b);
+      });
+    })
+    .catch((err) => {
+      resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Erreur de connexion</span>`;
+    });
+}
+
+function selectItemPlace(container, lat, lng, displayName) {
+  const row = container.closest(".hol-form-row");
+  row.querySelector('input[name="items[lat][]"]').value = lat;
+  row.querySelector('input[name="items[lng][]"]').value = lng;
+
+  const notesInput = row.querySelector('input[name="items[notes][]"]');
+  if (notesInput.value === "") {
+    notesInput.value = displayName;
+  }
+
+  container.style.display = "none";
+  const pinBtn = row.querySelector('button[title="Adresse précise"]');
+  if (pinBtn) {
+    pinBtn.style.background = "var(--success)";
+    pinBtn.style.color = "white";
+    pinBtn.style.borderColor = "var(--success)";
+  }
 }
 
 function deleteCheckpoint() {
