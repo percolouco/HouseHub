@@ -28,16 +28,51 @@ $vehicle_id = !empty($_POST['vehicle_id']) ? (int)$_POST['vehicle_id'] : null;
 try {
     $pdo->beginTransaction();
 
+    // 1. Détection d'un changement de nom pour refaire l'appel API
+    $image_url = null;
+    $old_title = null;
     if ($id) {
-        // UPDATE (avec vehicle_id)
-        $sql = "UPDATE pf_holidays SET title=?, period_hint=?, start_date=?, end_date=?, status=?, budget_food=?, budget_extra=?, notes=?, vehicle_id=? WHERE id=?";
+        $stmtOld = $pdo->prepare("SELECT title, image_url FROM pf_holidays WHERE id = ?");
+        $stmtOld->execute([$id]);
+        if ($row = $stmtOld->fetch()) {
+            $old_title = $row['title'];
+            $image_url = $row['image_url'];
+        }
+    }
+
+    // 2. Appel à Pixabay si nouveau voyage ou si le titre a changé
+    if (!$id || strcasecmp($old_title ?? '', $title) !== 0) {
+        $apiKey = '56931941-a86fbea4e14b88712cc1e9ed9'; 
+        $query = urlencode($title);
+        // On force des photos horizontales HD
+        $url = "https://pixabay.com/api/?key={$apiKey}&q={$query}&image_type=photo&orientation=horizontal&min_width=1280&per_page=3";
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3); // Timeout de 3s max pour ne pas bloquer l'UI
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        if ($response) {
+            $data = json_decode($response, true);
+            if (!empty($data['hits'][0]['largeImageURL'])) {
+                $image_url = $data['hits'][0]['largeImageURL'];
+            }
+        }
+    }
+
+    // 3. Sauvegarde en Base
+    if ($id) {
+        // UPDATE
+        $sql = "UPDATE pf_holidays SET title=?, period_hint=?, start_date=?, end_date=?, status=?, budget_food=?, budget_extra=?, notes=?, vehicle_id=?, image_url=? WHERE id=?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$title, $period, $start, $end, $status, $food, $extra, $notes, $vehicle_id, $id]);
+        $stmt->execute([$title, $period, $start, $end, $status, $food, $extra, $notes, $vehicle_id, $image_url, $id]);
     } else {
-        // INSERT (avec vehicle_id)
-        $sql = "INSERT INTO pf_holidays (title, period_hint, start_date, end_date, status, budget_food, budget_extra, notes, vehicle_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // INSERT
+        $sql = "INSERT INTO pf_holidays (title, period_hint, start_date, end_date, status, budget_food, budget_extra, notes, vehicle_id, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$title, $period, $start, $end, $status, $food, $extra, $notes, $vehicle_id]);
+        $stmt->execute([$title, $period, $start, $end, $status, $food, $extra, $notes, $vehicle_id, $image_url]);
         $id = $pdo->lastInsertId();
     }
 
