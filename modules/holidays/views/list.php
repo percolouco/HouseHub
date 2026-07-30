@@ -125,7 +125,6 @@ window.closeHolidayModal = window.closeHolidayModal || function() {
 
 
 </script>
-<script src="/modules/holidays/holidays.js"></script>
 
 
 <?php

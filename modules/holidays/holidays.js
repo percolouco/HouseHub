@@ -1411,12 +1411,14 @@ function buildDragItemHtml(it) {
              style="--duration: ${dur}; flex-shrink: 0; ${bgStyle} padding: 8px 10px; border-radius: 6px; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s; z-index: 10;"
              ondragstart="dragStart(event)" ondragend="dragEnd(event)" onclick="handleItemTap(event, '${htmlId}')">
             ${locHintHtml}
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                <div class="hol-drag-title" style="flex:1; font-size: 0.85rem; font-weight: 700; color: var(--text-main); line-height:1.2;">${visualName}</div>
-                <div style="display:flex; align-items:center;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+                <div class="hol-drag-title" style="flex:1; min-width: 110px; font-size: 0.85rem; font-weight: 700; color: var(--text-main); line-height:1.2;">${visualName}</div>
+                
+                <div style="display:flex; align-items:center; flex-shrink: 0; margin-left: auto;">
                     <div class="hol-item-duration-controls" style="display:flex; align-items:center; background:var(--bg-subtle); border-radius:4px; border:1px solid var(--border-light);">
                         ${durControls}
                     </div>
+                    <!-- 🔄 Le fameux bouton d'annulation (Géré par CSS) -->
                     <button type="button" class="hol-unplace-btn" onclick="unplaceItem(event, '${htmlId}')" title="Retirer du planning">↩️</button>
                 </div>
             </div>

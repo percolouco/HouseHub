@@ -44,7 +44,8 @@ if ($tab === 'holiday_detail' && isset($_GET['id'])) {
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/cat.js"></script>
 
 <?php
-// On ajoute un paramètre de version (time) pour forcer le navigateur à recharger tes récentes modifications dans holidays.js
-echo '<script src="/modules/holidays/holidays.js?v=' . time() . '"></script>';
+$jsPath = __DIR__ . '/modules/holidays/holidays.js';
+$jsVersion = file_exists($jsPath) ? filemtime($jsPath) : time();
+echo '<script src="/modules/holidays/holidays.js?v=' . $jsVersion . '"></script>';
 
 require __DIR__ . '/footer.php';

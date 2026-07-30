@@ -596,4 +596,3 @@ $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
 <?php include __DIR__ . '/pdf_template.php'; ?>
 
-<script src="/modules/holidays/holidays.js?v=<?= time() ?>"></script>
