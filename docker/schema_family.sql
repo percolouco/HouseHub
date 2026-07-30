@@ -309,7 +309,8 @@ CREATE TABLE IF NOT EXISTS pf_holidays (
   budget_extra DECIMAL(10,2) DEFAULT 0,
   notes        TEXT DEFAULT NULL,
   vehicle_id   INT DEFAULT NULL,
-  return_step_id INT DEFAULT NULL, -- 🔥 NOUVEAU : Point de bascule du retour
+  return_step_id INT DEFAULT NULL,
+  image_url    VARCHAR(500) DEFAULT NULL,
   FOREIGN KEY (vehicle_id) REFERENCES pf_vehicles(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
