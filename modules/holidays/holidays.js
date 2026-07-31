@@ -28,6 +28,42 @@ var currentLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
 var selectedItemIdForMove = null;
 
 // ============================================================================
+// UTILITAIRES DE GESTION DES MODALES / ONGLETS
+// ============================================================================
+
+function toggleTripMap() {
+  const mapWrapper = document.getElementById("tripMapWrapper");
+  if (!mapWrapper) return;
+
+  if (mapWrapper.classList.contains("hol-hidden")) {
+    mapWrapper.classList.remove("hol-hidden");
+    if (typeof detailMap !== "undefined" && detailMap !== null) {
+      setTimeout(() => detailMap.invalidateSize(), 100);
+    }
+  } else {
+    mapWrapper.classList.add("hol-hidden");
+  }
+}
+
+function switchHolTab(tabId, btn) {
+  document
+    .querySelectorAll(".hol-tab-btn")
+    .forEach((b) => b.classList.remove("active"));
+  document
+    .querySelectorAll(".hol-tab-content")
+    .forEach((c) => (c.style.display = "none"));
+  if (btn) btn.classList.add("active");
+  const tab = document.getElementById(tabId);
+  if (tab) tab.style.display = "block";
+}
+
+function closeCheckpointModal() {
+  const modal = document.getElementById("checkpointModal");
+  if (modal) modal.style.display = "none";
+  document.body.classList.remove("no-scroll");
+}
+
+// ============================================================================
 // UTILITAIRES MÉTÉO
 // ============================================================================
 function getWeatherInfo(code) {
@@ -98,30 +134,41 @@ function openHolidayModal(mode) {
   const form = document.getElementById("holidayForm");
   const btnDelete = document.getElementById("btn_delete");
 
-  form.reset();
-  document.getElementById("inp_id").value = "";
+  if (form) form.reset();
+  if (document.getElementById("inp_id"))
+    document.getElementById("inp_id").value = "";
 
   if (mode === "add") {
-    document.getElementById("modalTitle").innerText = tr("hdl_modal_title");
-    btnDelete.style.display = "none";
+    if (document.getElementById("modalTitle"))
+      document.getElementById("modalTitle").innerText = tr("hdl_modal_title");
+    if (btnDelete) btnDelete.style.display = "none";
 
     // Réinitialisation du calendrier global
-    document.getElementById("inp_start").value = "";
-    document.getElementById("inp_end").value = "";
+    if (document.getElementById("inp_start"))
+      document.getElementById("inp_start").value = "";
+    if (document.getElementById("inp_end"))
+      document.getElementById("inp_end").value = "";
     initHolFlatpickr("", "");
   } else {
-    document.getElementById("modalTitle").innerText = tr(
-      "hdl_quick_edit_title",
-    );
-    btnDelete.style.display = "block";
+    if (document.getElementById("modalTitle"))
+      document.getElementById("modalTitle").innerText = tr(
+        "hdl_quick_edit_title",
+      );
+    if (btnDelete) btnDelete.style.display = "block";
   }
 
-  modal.style.display = "flex";
-  setTimeout(() => document.getElementById("inp_title").focus(), 100);
+  if (modal) {
+    modal.style.display = "flex";
+    setTimeout(() => {
+      if (document.getElementById("inp_title"))
+        document.getElementById("inp_title").focus();
+    }, 100);
+  }
 }
 
 function closeHolidayModal() {
-  document.getElementById("holidayModal").style.display = "none";
+  const modal = document.getElementById("holidayModal");
+  if (modal) modal.style.display = "none";
   document.body.classList.remove("no-scroll");
 }
 
@@ -132,14 +179,23 @@ function editHoliday(data) {
 
   openHolidayModal("edit");
 
-  document.getElementById("inp_id").value = h.id;
-  document.getElementById("inp_title").value = h.title;
-  document.getElementById("inp_status").value = h.status;
-  document.getElementById("inp_period").value = h.period_hint || "";
-  document.getElementById("inp_food").value =
-    h.budget_food > 0 ? h.budget_food : "";
-  document.getElementById("inp_extra").value =
-    h.budget_extra > 0 ? h.budget_extra : "";
+  if (document.getElementById("inp_id"))
+    document.getElementById("inp_id").value = h.id;
+  if (document.getElementById("inp_title"))
+    document.getElementById("inp_title").value = h.title;
+  if (document.getElementById("inp_status"))
+    document.getElementById("inp_status").value = h.status;
+  if (document.getElementById("inp_period"))
+    document.getElementById("inp_period").value = h.period_hint || "";
+
+  if (document.getElementById("inp_food")) {
+    document.getElementById("inp_food").value =
+      h.budget_food > 0 ? h.budget_food : "";
+  }
+  if (document.getElementById("inp_extra")) {
+    document.getElementById("inp_extra").value =
+      h.budget_extra > 0 ? h.budget_extra : "";
+  }
 
   if (document.getElementById("inp_notes")) {
     document.getElementById("inp_notes").value = h.notes || "";
@@ -153,8 +209,10 @@ function editHoliday(data) {
   // Initialisation des dates
   const startD = h.start_date || "";
   const endD = h.end_date || "";
-  document.getElementById("inp_start").value = startD;
-  document.getElementById("inp_end").value = endD;
+  if (document.getElementById("inp_start"))
+    document.getElementById("inp_start").value = startD;
+  if (document.getElementById("inp_end"))
+    document.getElementById("inp_end").value = endD;
 
   initHolFlatpickr(startD, endD);
 }
@@ -489,22 +547,35 @@ function panMapTo(lat, lng) {
 // ============================================================================
 function openCheckpointModal(mode, data = null) {
   const searchBlock = document.getElementById("cpSearchBlock");
+  const formBlock = document.getElementById("formCheckpoint");
   const container = document.getElementById("cpExpensesContainer");
   const btnDel = document.getElementById("btnDeleteCp");
   const insertGroup = document.getElementById("cp_insert_group");
   const insertSelect = document.getElementById("cp_insert_after");
 
-  container.innerHTML = "";
+  if (container) container.innerHTML = "";
+
+  if (document.getElementById("cp_start_date"))
+    document.getElementById("cp_start_date").value = "";
+  if (document.getElementById("cp_end_date"))
+    document.getElementById("cp_end_date").value = "";
   if (document.getElementById("searchPlaceInput"))
     document.getElementById("searchPlaceInput").value = "";
   if (document.getElementById("searchResults"))
     document.getElementById("searchResults").innerHTML = "";
 
-  const holidayData = JSON.parse(
-    document.getElementById("holidayDataJson").textContent,
-  ).main;
-  let tripStartDate =
-    holidayData.start_date || new Date().toISOString().split("T")[0];
+  if (searchBlock) searchBlock.style.display = "block";
+  if (insertGroup) insertGroup.style.display = "block";
+
+  // Sécurisation de la lecture du JSON (Empêche un crash sur la vue "Liste")
+  const holidayDataJsonEl = document.getElementById("holidayDataJson");
+  let tripStartDate = new Date().toISOString().split("T")[0];
+  if (holidayDataJsonEl) {
+    try {
+      const parsed = JSON.parse(holidayDataJsonEl.textContent);
+      tripStartDate = parsed.main.start_date || tripStartDate;
+    } catch (e) {}
+  }
 
   // ==========================================
   // CONFIGURATION DES DATES FLATPICKR
@@ -513,68 +584,89 @@ function openCheckpointModal(mode, data = null) {
   let defaultEnd = "";
 
   if (mode === "add") {
-    document.getElementById("cpModalTitle").innerText = tr("hdl_btn_add_step");
-    btnDel.style.display = "none";
-    searchBlock.style.display = "block";
-    insertGroup.style.display = "block";
+    if (document.getElementById("cpModalTitle"))
+      document.getElementById("cpModalTitle").innerText =
+        tr("hdl_btn_add_step");
+    if (formBlock) formBlock.style.display = "none";
+    if (btnDel) btnDel.style.display = "none";
 
-    document.getElementById("cp_old_sort_order").value = "";
-    document.getElementById("cp_name").value = "";
+    if (document.getElementById("cp_old_sort_order"))
+      document.getElementById("cp_old_sort_order").value = "";
+    if (document.getElementById("cp_name"))
+      document.getElementById("cp_name").value = "";
 
     switchCpTab("info");
 
     if (document.getElementById("cp_step_type")) {
       document.getElementById("cp_step_type").value = "stop";
-      toggleStepDates("stop");
+      if (typeof toggleStepDates === "function") toggleStepDates("stop");
     }
-    if (document.getElementById("cp_set_as_return"))
+
+    if (document.getElementById("cp_set_as_return")) {
       document.getElementById("cp_set_as_return").checked = false;
+    }
 
     let lastDate = tripStartDate;
-    if (window.MAP_POINTS && window.MAP_POINTS.length > 0) {
+    if (
+      typeof window.MAP_POINTS !== "undefined" &&
+      window.MAP_POINTS.length > 0
+    ) {
       const lastStep = window.MAP_POINTS[window.MAP_POINTS.length - 1];
       lastDate =
         lastStep.step_end_date || lastStep.step_start_date || tripStartDate;
     }
 
-    insertSelect.innerHTML = `<option value="end" data-enddate="${lastDate}">-- À la fin du voyage --</option>`;
-    if (window.MAP_POINTS && window.MAP_POINTS.length > 0) {
-      window.MAP_POINTS.forEach((step) => {
-        let dateStr = "";
-        if (
-          step.step_start_date &&
-          step.step_end_date &&
-          step.step_start_date !== step.step_end_date
-        ) {
-          dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })} > ${new Date(step.step_end_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
-        } else if (step.step_start_date) {
-          dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
-        }
-        insertSelect.innerHTML += `<option value="${step.sort_order}" data-enddate="${step.step_end_date || step.step_start_date || tripStartDate}">Après : ${step.location_name}${dateStr}</option>`;
-      });
+    if (insertSelect) {
+      insertSelect.innerHTML = `<option value="end" data-enddate="${lastDate}">-- À la fin du voyage --</option>`;
+      if (
+        typeof window.MAP_POINTS !== "undefined" &&
+        window.MAP_POINTS.length > 0
+      ) {
+        window.MAP_POINTS.forEach((step) => {
+          let dateStr = "";
+          if (
+            step.step_start_date &&
+            step.step_end_date &&
+            step.step_start_date !== step.step_end_date
+          ) {
+            dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })} > ${new Date(step.step_end_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
+          } else if (step.step_start_date) {
+            dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
+          }
+          insertSelect.innerHTML += `<option value="${step.sort_order}" data-enddate="${step.step_end_date || step.step_start_date || tripStartDate}">Après : ${step.location_name}${dateStr}</option>`;
+        });
+      }
     }
 
     defaultStart = lastDate;
     defaultEnd = lastDate;
     addCpExpenseLine();
   } else if (mode === "edit" && data) {
-    document.getElementById("cpModalTitle").innerText = tr("hdl_js_edit_step");
-    btnDel.style.display = "block";
-    searchBlock.style.display = "none";
-    insertGroup.style.display = "none";
+    if (document.getElementById("cpModalTitle"))
+      document.getElementById("cpModalTitle").innerText =
+        tr("hdl_js_edit_step");
+    if (formBlock) formBlock.style.display = "block";
+    if (btnDel) btnDel.style.display = "block";
+    if (searchBlock) searchBlock.style.display = "none";
+    if (insertGroup) insertGroup.style.display = "none";
 
     switchCpTab("prog");
 
-    document.getElementById("cp_lat").value = data.lat;
-    document.getElementById("cp_lng").value = data.lng;
-    document.getElementById("cp_old_sort_order").value = data.sort_order;
-    document.getElementById("cp_name").value = data.location_name;
+    if (document.getElementById("cp_lat"))
+      document.getElementById("cp_lat").value = data.lat;
+    if (document.getElementById("cp_lng"))
+      document.getElementById("cp_lng").value = data.lng;
+    if (document.getElementById("cp_old_sort_order"))
+      document.getElementById("cp_old_sort_order").value = data.sort_order;
+    if (document.getElementById("cp_name"))
+      document.getElementById("cp_name").value = data.location_name;
 
     if (document.getElementById("cp_step_type")) {
       const type = data.step_type || "stop";
       document.getElementById("cp_step_type").value = type;
-      toggleStepDates(type);
+      if (typeof toggleStepDates === "function") toggleStepDates(type);
     }
+
     if (document.getElementById("cp_set_as_return")) {
       document.getElementById("cp_set_as_return").checked =
         window.GLOBAL_RETURN_STEP_ID == data.sort_order;
@@ -610,50 +702,62 @@ function openCheckpointModal(mode, data = null) {
     }
   }
 
-  // Destruction et ré-instanciation de Flatpickr pour forcer le saut au bon mois
-  if (cpDateRangePicker) cpDateRangePicker.destroy();
+  // Destruction et ré-instanciation de Flatpickr
+  if (typeof cpDateRangePicker !== "undefined" && cpDateRangePicker) {
+    cpDateRangePicker.destroy();
+  }
 
-  document.getElementById("cp_start_date").value = defaultStart;
-  document.getElementById("cp_end_date").value = defaultEnd;
+  if (document.getElementById("cp_start_date"))
+    document.getElementById("cp_start_date").value = defaultStart;
+  if (document.getElementById("cp_end_date"))
+    document.getElementById("cp_end_date").value = defaultEnd;
 
-  cpDateRangePicker = flatpickr("#cp_date_range", {
-    mode: "range",
-    altInput: true, // 💡 NOUVEAU : Crée un champ de présentation séparé
-    altFormat: "d/m", // 💡 NOUVEAU : Format ultra compact (ex: 15/08)
-    dateFormat: "Y-m-d", // Format technique (MariaDB) conservé en arrière-plan
-    defaultDate:
-      defaultStart && defaultEnd && defaultStart !== defaultEnd
-        ? [defaultStart, defaultEnd]
-        : [defaultStart],
-    locale: window.appLang === "ca-ES" ? "cat" : "fr",
-    onChange: function (selectedDates, dateStr, instance) {
-      if (selectedDates.length === 2) {
-        document.getElementById("cp_start_date").value = instance.formatDate(
-          selectedDates[0],
-          "Y-m-d",
-        );
-        document.getElementById("cp_end_date").value = instance.formatDate(
-          selectedDates[1],
-          "Y-m-d",
-        );
-      } else if (selectedDates.length === 1) {
-        document.getElementById("cp_start_date").value = instance.formatDate(
-          selectedDates[0],
-          "Y-m-d",
-        );
-        document.getElementById("cp_end_date").value = instance.formatDate(
-          selectedDates[0],
-          "Y-m-d",
-        );
-      } else {
-        document.getElementById("cp_start_date").value = "";
-        document.getElementById("cp_end_date").value = "";
-      }
-    },
-  });
+  if (typeof flatpickr !== "undefined") {
+    cpDateRangePicker = flatpickr("#cp_date_range", {
+      mode: "range",
+      altInput: true,
+      altFormat: "d/m",
+      dateFormat: "Y-m-d",
+      defaultDate:
+        defaultStart && defaultEnd && defaultStart !== defaultEnd
+          ? [defaultStart, defaultEnd]
+          : [defaultStart],
+      locale: window.appLang === "ca-ES" ? "cat" : "fr",
+      onChange: function (selectedDates, dateStr, instance) {
+        if (selectedDates.length === 2) {
+          if (document.getElementById("cp_start_date"))
+            document.getElementById("cp_start_date").value =
+              instance.formatDate(selectedDates[0], "Y-m-d");
+          if (document.getElementById("cp_end_date"))
+            document.getElementById("cp_end_date").value = instance.formatDate(
+              selectedDates[1],
+              "Y-m-d",
+            );
+        } else if (selectedDates.length === 1) {
+          if (document.getElementById("cp_start_date"))
+            document.getElementById("cp_start_date").value =
+              instance.formatDate(selectedDates[0], "Y-m-d");
+          if (document.getElementById("cp_end_date"))
+            document.getElementById("cp_end_date").value = instance.formatDate(
+              selectedDates[0],
+              "Y-m-d",
+            );
+        } else {
+          if (document.getElementById("cp_start_date"))
+            document.getElementById("cp_start_date").value = "";
+          if (document.getElementById("cp_end_date"))
+            document.getElementById("cp_end_date").value = "";
+        }
+      },
+    });
+  }
 
-  document.getElementById("checkpointModal").style.display = "flex";
-  document.body.classList.add("no-scroll");
+  // AFFICHER LA MODALE PROPREMENT
+  const modal = document.getElementById("checkpointModal");
+  if (modal) {
+    modal.style.display = "flex";
+    document.body.classList.add("no-scroll");
+  }
 }
 
 // ==========================================
@@ -663,12 +767,13 @@ let holDateRangePicker = null;
 
 function initHolFlatpickr(defaultStart, defaultEnd) {
   if (holDateRangePicker) holDateRangePicker.destroy();
+  if (typeof flatpickr === "undefined") return;
 
   holDateRangePicker = flatpickr("#hol_date_range", {
     mode: "range",
     altInput: true,
-    altFormat: "d/m", // 💡 Format ultra compact (ex: 15/08)
-    dateFormat: "Y-m-d", // 💡 Le vrai format envoyé au serveur
+    altFormat: "d/m",
+    dateFormat: "Y-m-d",
     defaultDate:
       defaultStart && defaultEnd && defaultStart !== defaultEnd
         ? [defaultStart, defaultEnd]
@@ -678,26 +783,32 @@ function initHolFlatpickr(defaultStart, defaultEnd) {
     locale: window.appLang === "ca-ES" ? "cat" : "fr",
     onChange: function (selectedDates, dateStr, instance) {
       if (selectedDates.length === 2) {
-        document.getElementById("inp_start").value = instance.formatDate(
-          selectedDates[0],
-          "Y-m-d",
-        );
-        document.getElementById("inp_end").value = instance.formatDate(
-          selectedDates[1],
-          "Y-m-d",
-        );
+        if (document.getElementById("inp_start"))
+          document.getElementById("inp_start").value = instance.formatDate(
+            selectedDates[0],
+            "Y-m-d",
+          );
+        if (document.getElementById("inp_end"))
+          document.getElementById("inp_end").value = instance.formatDate(
+            selectedDates[1],
+            "Y-m-d",
+          );
       } else if (selectedDates.length === 1) {
-        document.getElementById("inp_start").value = instance.formatDate(
-          selectedDates[0],
-          "Y-m-d",
-        );
-        document.getElementById("inp_end").value = instance.formatDate(
-          selectedDates[0],
-          "Y-m-d",
-        );
+        if (document.getElementById("inp_start"))
+          document.getElementById("inp_start").value = instance.formatDate(
+            selectedDates[0],
+            "Y-m-d",
+          );
+        if (document.getElementById("inp_end"))
+          document.getElementById("inp_end").value = instance.formatDate(
+            selectedDates[0],
+            "Y-m-d",
+          );
       } else {
-        document.getElementById("inp_start").value = "";
-        document.getElementById("inp_end").value = "";
+        if (document.getElementById("inp_start"))
+          document.getElementById("inp_start").value = "";
+        if (document.getElementById("inp_end"))
+          document.getElementById("inp_end").value = "";
       }
     },
   });
@@ -710,19 +821,27 @@ function switchCpTab(tabId) {
   const tabProg = document.getElementById("cpTabProg");
 
   if (tabId === "info") {
-    btnInfo.style.borderBottomColor = "var(--primary)";
-    btnInfo.style.color = "var(--primary)";
-    btnProg.style.borderBottomColor = "transparent";
-    btnProg.style.color = "var(--text-muted)";
-    tabInfo.style.display = "block";
-    tabProg.style.display = "none";
+    if (btnInfo) {
+      btnInfo.style.borderBottomColor = "var(--primary)";
+      btnInfo.style.color = "var(--primary)";
+    }
+    if (btnProg) {
+      btnProg.style.borderBottomColor = "transparent";
+      btnProg.style.color = "var(--text-muted)";
+    }
+    if (tabInfo) tabInfo.style.display = "block";
+    if (tabProg) tabProg.style.display = "none";
   } else {
-    btnProg.style.borderBottomColor = "var(--primary)";
-    btnProg.style.color = "var(--primary)";
-    btnInfo.style.borderBottomColor = "transparent";
-    btnInfo.style.color = "var(--text-muted)";
-    tabProg.style.display = "block";
-    tabInfo.style.display = "none";
+    if (btnProg) {
+      btnProg.style.borderBottomColor = "var(--primary)";
+      btnProg.style.color = "var(--primary)";
+    }
+    if (btnInfo) {
+      btnInfo.style.borderBottomColor = "transparent";
+      btnInfo.style.color = "var(--text-muted)";
+    }
+    if (tabProg) tabProg.style.display = "block";
+    if (tabInfo) tabInfo.style.display = "none";
   }
 }
 
@@ -730,8 +849,10 @@ function injectDynamicDates(selectEl) {
   const selectedOpt = selectEl.options[selectEl.selectedIndex];
   if (selectedOpt && selectedOpt.dataset.enddate) {
     const dateToSet = selectedOpt.dataset.enddate;
-    document.getElementById("cp_start_date").value = dateToSet;
-    document.getElementById("cp_end_date").value = dateToSet;
+    if (document.getElementById("cp_start_date"))
+      document.getElementById("cp_start_date").value = dateToSet;
+    if (document.getElementById("cp_end_date"))
+      document.getElementById("cp_end_date").value = dateToSet;
 
     // On met à jour l'UI du calendrier
     if (cpDateRangePicker) {
@@ -745,6 +866,8 @@ function searchPlace() {
   if (q.length < 3) return;
 
   const resultsDiv = document.getElementById("searchResults");
+  if (!resultsDiv) return;
+
   resultsDiv.innerHTML = `<span style="color:#64748b; font-size:0.85rem;">${tr("hdl_js_search_loading")}</span>`;
 
   fetch(
@@ -777,10 +900,14 @@ function searchPlace() {
 }
 
 function selectPlace(lat, lng, fullName) {
-  document.getElementById("cp_lat").value = lat;
-  document.getElementById("cp_lng").value = lng;
-  document.getElementById("cp_name").value = fullName.split(",")[0].trim();
-  document.getElementById("formCheckpoint").style.display = "block";
+  if (document.getElementById("cp_lat"))
+    document.getElementById("cp_lat").value = lat;
+  if (document.getElementById("cp_lng"))
+    document.getElementById("cp_lng").value = lng;
+  if (document.getElementById("cp_name"))
+    document.getElementById("cp_name").value = fullName.split(",")[0].trim();
+  if (document.getElementById("formCheckpoint"))
+    document.getElementById("formCheckpoint").style.display = "block";
 }
 
 function addCpExpenseLine(
@@ -798,6 +925,8 @@ function addCpExpenseLine(
   itemLng = "",
 ) {
   const container = document.getElementById("cpExpensesContainer");
+  if (!container) return; // Sécurité si l'élément n'existe pas dans le DOM (ex: page liste)
+
   const div = document.createElement("div");
   div.className = "hol-form-row";
   const isChecked = isPaid == 1 ? "checked" : "";
@@ -858,7 +987,7 @@ function toggleItemSearch(btn) {
     searchBox.style.display === "none" ? "block" : "none";
 }
 
-function searchItemPlace(btn) {
+async function searchItemPlace(btn) {
   const container = btn.closest(".hol-item-search-box");
   const input = container.querySelector(".item-search-input");
   const resultsDiv = container.querySelector(".item-search-results");
@@ -867,34 +996,33 @@ function searchItemPlace(btn) {
 
   resultsDiv.innerHTML = `<span style="color:#64748b; font-size:0.85rem;">Recherche en cours...</span>`;
 
-  fetch(
-    "/modules/holidays/includes/api/geocode.php?limit=5&q=" +
-      encodeURIComponent(q),
-  )
-    .then((res) => res.json())
-    .then((data) => {
-      resultsDiv.innerHTML = "";
-      if (data.error || !data.results || data.results.length === 0) {
-        resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Aucun résultat</span>`;
-        return;
-      }
-      data.results.forEach((place) => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "pf-btn btn-secondary";
-        b.style.textAlign = "left";
-        b.style.padding = "8px";
-        b.style.marginBottom = "4px";
-        b.style.width = "100%";
-        b.innerText = "📍 " + place.display_name;
-        b.onclick = () =>
-          selectItemPlace(container, place.lat, place.lng, place.display_name);
-        resultsDiv.appendChild(b);
-      });
-    })
-    .catch((err) => {
-      resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Erreur de connexion</span>`;
+  try {
+    const data = await pachaFetch(
+      "/modules/holidays/includes/api/geocode.php?limit=5&q=" +
+        encodeURIComponent(q),
+      { method: "GET" },
+    );
+    resultsDiv.innerHTML = "";
+    if (data.error || !data.results || data.results.length === 0) {
+      resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Aucun résultat</span>`;
+      return;
+    }
+    data.results.forEach((place) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "pf-btn btn-secondary";
+      b.style.textAlign = "left";
+      b.style.padding = "8px";
+      b.style.marginBottom = "4px";
+      b.style.width = "100%";
+      b.innerText = "📍 " + place.display_name;
+      b.onclick = () =>
+        selectItemPlace(container, place.lat, place.lng, place.display_name);
+      resultsDiv.appendChild(b);
     });
+  } catch (err) {
+    resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Erreur de connexion</span>`;
+  }
 }
 
 function selectItemPlace(container, lat, lng, displayName) {
@@ -940,10 +1068,12 @@ function saveCheckpointOrder() {
   formData.append("holiday_id", holidayId);
   formData.append("locations", JSON.stringify(locations));
 
-  fetch("/modules/holidays/includes/api/reorder_checkpoints.php", {
+  pachaFetch("/modules/holidays/includes/api/reorder_checkpoints.php", {
     method: "POST",
     body: formData,
-  }).then(() => window.location.reload());
+  })
+    .then(() => window.location.reload())
+    .catch(console.error);
 }
 
 function moveStepMobile(btn, direction) {
@@ -967,7 +1097,6 @@ function moveStepMobile(btn, direction) {
   }
 }
 
-// 🔥 NOUVEAU : Fonction réutilisable pour ré-attacher les événements
 function initStepDragAndDrop() {
   const checkpoints = document.querySelectorAll(".hol-checkpoint-draggable");
   const container = checkpoints[0]?.parentElement;
@@ -976,7 +1105,6 @@ function initStepDragAndDrop() {
   const isMobile = window.innerWidth <= 768;
   let draggedItem = null;
 
-  // Nettoyage des anciens écouteurs en clonant les nœuds (Indispensable après un refresh silencieux)
   checkpoints.forEach((item) => {
     const clone = item.cloneNode(true);
     if (item.parentNode) item.parentNode.replaceChild(clone, item);
@@ -1035,7 +1163,6 @@ function initStepDragAndDrop() {
   }
 }
 
-// On lance l'initialisation au démarrage de la page
 document.addEventListener("DOMContentLoaded", initStepDragAndDrop);
 
 // ============================================================================
@@ -1044,10 +1171,11 @@ document.addEventListener("DOMContentLoaded", initStepDragAndDrop);
 window.PLANNING_ALL_UNPLACED = [];
 window.CURRENT_PLANNING_FILTER_DATE = null;
 window.PLANNING_ITEM_MAP = {};
-window.CURRENT_DRAG_DURATION = 1; // Variable pour la surbrillance multi-cases
+window.CURRENT_DRAG_DURATION = 1;
 
 function closePlanningModal() {
-  document.getElementById("planningModal").style.display = "none";
+  const modal = document.getElementById("planningModal");
+  if (modal) modal.style.display = "none";
   document.body.classList.remove("no-scroll");
 }
 
@@ -1073,8 +1201,8 @@ function openGlobalPlanningModal() {
   window.PLANNING_ALL_UNPLACED = [];
   window.PLANNING_ITEM_MAP = {};
 
-  // 1. Collecte de TOUS les éléments
-  window.MAP_POINTS.forEach((step) => {
+  const mapPoints = window.MAP_POINTS || [];
+  mapPoints.forEach((step) => {
     let validItems = step.items.filter((it) => {
       if (it.name === "PF_TECHNICAL_POINT") return false;
       if (it.category === "transport" && it.expense_context !== "transit")
@@ -1120,7 +1248,6 @@ function openGlobalPlanningModal() {
     });
   });
 
-  // 2. Génération des dates globales
   let datesToDisplay = [];
   let curr = new Date(holidayData.start_date);
   let endD = new Date(holidayData.end_date);
@@ -1129,26 +1256,20 @@ function openGlobalPlanningModal() {
     curr.setDate(curr.getDate() + 1);
   }
 
-  // 3. Construction de l'interface (Avec règles CSS injectées)
   let html = `
         <style>
-            /* 🌟 MAGIE CSS : Ajustement adaptatif des tailles selon la zone */
             #unmapped-pool .hol-drag-item {
-                /* Base 40px + 10px par heure supp, capé à +30px max (soit environ 4h visuelles max) */
                 min-height: calc(40px + (min(var(--duration) - 1, 3) * 10px)) !important;
             }
             .hol-time-slots-container .hol-drag-item {
-                /* Dans le calendrier : taille 100% fidèle (40px par heure) */
                 min-height: calc(var(--duration) * 40px - 8px) !important;
             }
-            /* 🌟 Surbrillance bleue pour chaque case survolée correspondante à la durée */
             .hol-time-slot.drag-over-duration {
                 background: rgba(59, 130, 246, 0.15) !important;
                 border-left: 3px solid var(--primary) !important;
             }
         </style>
         <div style="display: flex; width: 100%; height: 100%; gap: 15px;">
-            <!-- Panneau Gauche : À Placer -->
             <div class="hol-unmapped-zone" style="width: 280px; display: flex; flex-direction: column; background: var(--bg-subtle); border-radius: 8px; border: 1px solid var(--border-light); padding: 12px; flex-shrink: 0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink: 0;">
                     <div class="hol-unmapped-title" style="margin:0; font-weight:700; color:var(--text-main);">📥 ${tr("hdl_to_place")}</div>
@@ -1160,7 +1281,6 @@ function openGlobalPlanningModal() {
                 </div>
             </div>
 
-            <!-- Grille Droite : Jours -->
             <div class="hol-calendar-zone" id="calendarZoneContainer" style="cursor: grab; flex: 1; display: flex; overflow: auto; gap: 12px; padding: 4px 4px 10px 4px; margin-top: -4px; align-items: flex-start;">
     `;
 
@@ -1207,7 +1327,6 @@ function openGlobalPlanningModal() {
   html += `</div></div>`;
   container.innerHTML = html;
 
-  // 4. Placement des éléments
   allPlaced.forEach((it) => {
     if (datesToDisplay.includes(it.item_date)) {
       const hourPrefix = it.item_time.substring(0, 2) + ":00";
@@ -1219,9 +1338,8 @@ function openGlobalPlanningModal() {
     }
   });
 
-  // 5. Météo et Focus auto
   datesToDisplay.forEach((dateStr) => {
-    let activeStep = window.MAP_POINTS.find((step) =>
+    let activeStep = mapPoints.find((step) =>
       isDateInStep(dateStr, step.step_start_date, step.step_end_date),
     );
     if (activeStep && activeStep.lat && activeStep.lng) {
@@ -1250,7 +1368,6 @@ function openGlobalPlanningModal() {
     }
   }, 200);
 
-  // Moteur Scroll Natif (Drag To Scroll)
   const slider = document.getElementById("calendarZoneContainer");
   let isDown = false;
   let startX, startY, scrollLeft, scrollTop;
@@ -1297,12 +1414,12 @@ function isDateInStep(targetDate, stepStart, stepEnd) {
 function filterPoolByDate(dateStr) {
   window.CURRENT_PLANNING_FILTER_DATE = dateStr;
   const pool = document.getElementById("unmapped-pool");
+  if (!pool) return;
   pool.innerHTML = "";
 
   let poolItemsHtml = "";
   let count = 0;
 
-  // Itération sur la MAP, donc l'ordre natif de tri (sort_order/ID) est préservé !
   Object.values(window.PLANNING_ITEM_MAP).forEach((it) => {
     const htmlId = it.is_virtual ? it.id : `drag-item-${it.id}`;
     const isPlaced = document.querySelector(`.hol-time-slot #${htmlId}`);
@@ -1327,6 +1444,7 @@ function filterPoolByDate(dateStr) {
 
 function recalcAllBadges() {
   const pool = document.getElementById("unmapped-pool");
+  if (!pool) return;
   const unmappedIds = Array.from(pool.children).map((el) => el.id);
 
   document.querySelectorAll(".hol-day-column").forEach((col) => {
@@ -1347,7 +1465,6 @@ function recalcAllBadges() {
 }
 
 function buildDragItemHtml(it) {
-  // Mapping intelligent des nouvelles icônes
   let icon = "🏷️";
   let catClass = "cat-activity";
 
@@ -1388,7 +1505,6 @@ function buildDragItemHtml(it) {
   const dragAttr = isMobile ? "" : 'draggable="true"';
   const htmlId = isVirtual ? it.id : `drag-item-${it.id}`;
 
-  // 💡 NOUVEAU : Affichage compact des dates associées pour faciliter le placement
   let locHintHtml = "";
   if (!it.item_date) {
     const datesStr =
@@ -1418,7 +1534,6 @@ function buildDragItemHtml(it) {
                     <div class="hol-item-duration-controls" style="display:flex; align-items:center; background:var(--bg-subtle); border-radius:4px; border:1px solid var(--border-light);">
                         ${durControls}
                     </div>
-                    <!-- 🔄 Le fameux bouton d'annulation (Géré par CSS) -->
                     <button type="button" class="hol-unplace-btn" onclick="unplaceItem(event, '${htmlId}')" title="Retirer du planning">↩️</button>
                 </div>
             </div>
@@ -1501,7 +1616,6 @@ function handleZoneTap(e, dateStr, timeStr) {
 function dragStart(e) {
   e.dataTransfer.setData("text/plain", e.target.id);
   e.dataTransfer.effectAllowed = "move";
-  // Mémorisation de la durée pour le survol dynamique (Fix #2)
   window.CURRENT_DRAG_DURATION =
     parseInt(e.target.style.getPropertyValue("--duration")) || 1;
 }
@@ -1521,12 +1635,10 @@ function dragEnter(e) {
   e.preventDefault();
   let slot = e.target.closest(".hol-time-slot");
   if (slot) {
-    // Retirer toutes les anciennes surbrillances
     document
       .querySelectorAll(".hol-time-slot")
       .forEach((s) => s.classList.remove("drag-over-duration"));
 
-    // Appliquer la surbrillance sur les N cases consécutives
     let dur = window.CURRENT_DRAG_DURATION || 1;
     let currentSlot = slot;
     for (let i = 0; i < dur; i++) {
@@ -1538,9 +1650,7 @@ function dragEnter(e) {
   }
 }
 
-function dragLeave(e) {
-  // La gestion précise des surbrillances se fait via le dragEnter et dragEnd pour éviter le scintillement (flickering).
-}
+function dragLeave(e) {}
 
 function handleDropEvent(e, dateStr, timeStr) {
   e.preventDefault();
@@ -1556,7 +1666,6 @@ function handleDropEvent(e, dateStr, timeStr) {
 
   if (itemEl && dropZone) {
     if (dropZone.id === "unmapped-pool") {
-      // FIX #3 : Contourner l'appendChild (qui met tout en bas) et déléguer à la fonction pour re-trier la colonne !
       handleDropLogic(idStr, "", "");
     } else {
       dropZone.appendChild(itemEl);
@@ -1575,7 +1684,6 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
   const dur = parseInt(itemEl.style.getPropertyValue("--duration")) || 1;
   const realId = itemEl.getAttribute("data-id");
 
-  // DÉSASSIGNER (Annulation) : Si on replace la carte dans la zone "À placer"
   if (dateStr === "" || timeStr === "") {
     if (!isVirtual) {
       updateItemMemory(realId, { item_date: null, item_time: null });
@@ -1585,7 +1693,6 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
       fd.append("item_date", "");
       fd.append("item_time", "");
 
-      // Enregistrement en base + Toast
       fetch("/modules/holidays/includes/api/save_checkpoint.php", {
         method: "POST",
         body: fd,
@@ -1595,7 +1702,6 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
       });
     }
 
-    // 🔥 C'EST LA CLÉ : On enlève physiquement la carte du calendrier !
     itemEl.remove();
 
     filterPoolByDate(window.CURRENT_PLANNING_FILTER_DATE);
@@ -1604,7 +1710,6 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
     return;
   }
 
-  // AFFECTATION CALENDRIER
   if (isVirtual) {
     const tData = window.TRANSIT_DATA[sortOrder];
     const fd = new FormData();
@@ -1652,22 +1757,19 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
             is_virtual: false,
           };
 
-          if (typeof window.MAP_POINTS !== "undefined") {
-            const stepObj = window.MAP_POINTS.find(
-              (s) => s.sort_order == sortOrder,
-            );
-            if (stepObj) {
-              stepObj.items.push({
-                id: data.id,
-                category: "transport",
-                name: `Essence depuis ${tData.from}`,
-                amount: tData.cost,
-                expense_context: "transit",
-                duration: dur,
-                item_date: dateStr,
-                item_time: timeStr,
-              });
-            }
+          const mapPoints = window.MAP_POINTS || [];
+          const stepObj = mapPoints.find((s) => s.sort_order == sortOrder);
+          if (stepObj) {
+            stepObj.items.push({
+              id: data.id,
+              category: "transport",
+              name: `Essence depuis ${tData.from}`,
+              amount: tData.cost,
+              expense_context: "transit",
+              duration: dur,
+              item_date: dateStr,
+              item_time: timeStr,
+            });
           }
 
           if (typeof showToast === "function")
@@ -1710,12 +1812,11 @@ function handleDropLogic(htmlId, dateStr, timeStr) {
 }
 
 function updateItemMemory(itemId, changes) {
-  if (typeof MAP_POINTS !== "undefined") {
-    MAP_POINTS.forEach((step) => {
-      let item = step.items.find((i) => i.id == itemId);
-      if (item) Object.assign(item, changes);
-    });
-  }
+  const mapPoints = window.MAP_POINTS || [];
+  mapPoints.forEach((step) => {
+    let item = step.items.find((i) => i.id == itemId);
+    if (item) Object.assign(item, changes);
+  });
 }
 
 /**
@@ -1728,7 +1829,6 @@ async function silentlyRefreshSteps() {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
 
-    // 🕵️ CIBLAGE INTELLIGENT : On trouve le panel-body qui contient les étapes (ou le texte "Aucune étape")
     const getTargetContainer = (documentObj) =>
       Array.from(documentObj.querySelectorAll(".hol-panel-body")).find(
         (el) =>
@@ -1741,24 +1841,21 @@ async function silentlyRefreshSteps() {
     const newContainer = getTargetContainer(doc);
 
     if (currentContainer && newContainer) {
-      // Un léger effet de flash pour indiquer à l'utilisateur que ça s'est mis à jour
       currentContainer.style.opacity = "0.5";
 
       setTimeout(() => {
         currentContainer.innerHTML = newContainer.innerHTML;
         currentContainer.style.opacity = "1";
 
-        // Mise à jour du prix global de l'essence en haut
         const globalFuel = document.getElementById("global_fuel_cost");
         const newGlobalFuel = doc.getElementById("global_fuel_cost");
         if (globalFuel && newGlobalFuel)
           globalFuel.innerHTML = newGlobalFuel.innerHTML;
 
-        // 🚀 On relance le Drag & Drop des étapes !
         initStepDragAndDrop();
       }, 150);
     } else {
-      window.location.reload(); // Fallback de sécurité ultime
+      window.location.reload();
     }
   } catch (e) {
     console.error("Erreur lors du rafraîchissement silencieux", e);
@@ -1794,22 +1891,25 @@ async function loadWeatherForPlanning(lat, lng, dateStr) {
   }
 }
 
-// Gère l'affichage des dates dans la modale d'étape
+// Gère l'affichage des dates dans la modale d'étape (Sécurisé)
 function toggleStepDates(type) {
-  const dateLabel = document.getElementById("lbl_date_range");
-  if (!dateLabel) return;
+  const grpEnd = document.getElementById("grp_end_date");
+  const lblStart = document.getElementById("lbl_start_date");
 
   if (type === "origin") {
-    dateLabel.innerText = "🛫 Date de départ";
+    if (grpEnd) grpEnd.style.display = "none";
+    if (lblStart) lblStart.innerText = "📅 Date de départ";
   } else if (type === "destination") {
-    dateLabel.innerText = "🛬 Date d'arrivée finale";
+    if (grpEnd) grpEnd.style.display = "none";
+    if (lblStart) lblStart.innerText = "📅 Date d'arrivée";
   } else {
-    dateLabel.innerText = "📅 Période de l'étape (Arrivée ➔ Départ)";
+    if (grpEnd) grpEnd.style.display = "block";
+    if (lblStart) lblStart.innerText = tr("hdl_label_arrival") || "Arrivée";
   }
 }
 
 // Ajout magique d'une dépense d'essence SÉCURISÉE et INSTANTANÉE
-function addQuickTransitExpense(
+async function addQuickTransitExpense(
   holidayId,
   sortOrder,
   amount,
@@ -1824,13 +1924,11 @@ function addQuickTransitExpense(
   )
     return;
 
-  // 1. UI OPTIMISTE : On change visuellement le bouton tout de suite sans attendre le serveur
   const parentContainer = btnElement.parentElement;
   if (parentContainer) {
     parentContainer.innerHTML = `<span style="color:var(--success); font-weight:bold; margin-left: 5px;">✓ Ajouté</span>`;
   }
 
-  // 2. On met à jour discrètement le compteur global en haut de page (+ montant)
   const totalTransitEl = document.querySelector(".hol-summary-value strong");
   if (totalTransitEl) {
     const currentTotal =
@@ -1847,20 +1945,18 @@ function addQuickTransitExpense(
   fd.append("name", description);
   fd.append("amount", amount);
   fd.append("context", "transit");
-
   fd.append("expense_context", "transit");
+  fd.append("duration", Math.max(1, Math.round(durationSec / 3600)));
 
-  const h = Math.max(1, Math.round(durationSec / 3600));
-  fd.append("duration", h);
-
-  fetch("/modules/holidays/includes/api/save_checkpoint.php", {
-    method: "POST",
-    body: fd,
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.success) alert("Erreur : " + data.error);
-    });
+  try {
+    const data = await pachaFetch(
+      "/modules/holidays/includes/api/save_checkpoint.php",
+      { method: "POST", body: fd },
+    );
+    if (!data.success) alert("Erreur : " + data.error);
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 // Permet de modifier le prix du carburant à la volée
@@ -1926,13 +2022,10 @@ function launchGpsApp(app) {
   let url = "";
 
   if (app === "waze") {
-    // Force l'ouverture de Waze en mode navigation
     url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
   } else if (app === "gmaps") {
-    // Force l'ouverture de Google Maps en mode itinéraire
     url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   } else if (app === "amaps") {
-    // Force l'ouverture d'Apple Maps
     url = `http://maps.apple.com/?daddr=${lat},${lng}`;
   }
 
@@ -1946,11 +2039,9 @@ function launchGpsApp(app) {
 // GESTION DU PORTE-DOCUMENTS (UPLOAD)
 // ============================================================================
 window.currentDocsStepId = null;
-
-// 🔥 On attache le verrou à window pour éviter les erreurs de redéclaration
 window.isUploadingDocs = window.isUploadingDocs || false;
 
-function openDocsModal(sortOrder) {
+async function openDocsModal(sortOrder) {
   window.currentDocsStepId = sortOrder;
   document.getElementById("docsModal").style.display = "flex";
   document.body.classList.add("no-scroll");
@@ -1962,18 +2053,16 @@ function openDocsModal(sortOrder) {
 
   const holidayId = document.querySelector('input[name="holiday_id"]').value;
 
-  // 🔥 On va chercher les documents existants !
-  fetch(
-    `/modules/holidays/includes/api/get_attachments.php?holiday_id=${holidayId}&item_id=${sortOrder}`,
-  )
-    .then((response) => response.json())
-    .then((data) => {
-      listContainer.innerHTML = ""; // On vide le message de chargement
+  try {
+    const data = await pachaFetch(
+      `/modules/holidays/includes/api/get_attachments.php?holiday_id=${holidayId}&item_id=${sortOrder}`,
+      { method: "GET" },
+    );
+    listContainer.innerHTML = "";
 
-      if (data.success && data.files.length > 0) {
-        data.files.forEach((f) => {
-          // On rend le nom du fichier cliquable pour ouvrir le document dans un nouvel onglet
-          const docHtml = `
+    if (data.success && data.files.length > 0) {
+      data.files.forEach((f) => {
+        const docHtml = `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px;">
                         <div style="display: flex; align-items: center; gap: 10px; overflow: hidden; cursor: pointer;" onclick="window.open('/${f.file_path}', '_blank')">
                             <span style="font-size: 1.2rem;">📄</span>
@@ -1982,17 +2071,16 @@ function openDocsModal(sortOrder) {
                         <button type="button" onclick="deleteAttachment(${f.id}, this)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;" title="Supprimer">🗑️</button>
                     </div>
                 `;
-          listContainer.insertAdjacentHTML("beforeend", docHtml);
-        });
-      } else {
-        listContainer.innerHTML =
-          '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>';
-      }
-    })
-    .catch(() => {
+        listContainer.insertAdjacentHTML("beforeend", docHtml);
+      });
+    } else {
       listContainer.innerHTML =
-        '<p style="text-align: center; color: var(--danger);">Erreur lors du chargement.</p>';
-    });
+        '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>';
+    }
+  } catch (err) {
+    listContainer.innerHTML =
+      '<p style="text-align: center; color: var(--danger);">Erreur lors du chargement.</p>';
+  }
 }
 
 function closeDocsModal() {
@@ -2000,13 +2088,10 @@ function closeDocsModal() {
   document.body.classList.remove("no-scroll");
 }
 
-function handleFileUpload(input) {
-  // 1. LE VERROU : Si un envoi est déjà en cours, on bloque tout !
+async function handleFileUpload(input) {
   if (window.isUploadingDocs) return;
-
   if (!input.files || input.files.length === 0) return;
 
-  // On ferme le verrou
   window.isUploadingDocs = true;
 
   const file = input.files[0];
@@ -2018,7 +2103,7 @@ function handleFileUpload(input) {
     statusDiv.innerHTML =
       "<span style='color: var(--danger);'>Fichier trop lourd (Max 5Mo).</span>";
     input.value = "";
-    window.isUploadingDocs = false; // On rouvre le verrou
+    window.isUploadingDocs = false;
     return;
   }
 
@@ -2030,19 +2115,16 @@ function handleFileUpload(input) {
   fd.append("item_id", window.currentDocsStepId);
   fd.append("file", file);
 
-  fetch("/modules/holidays/includes/api/upload_attachment.php", {
-    method: "POST",
-    body: fd,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.success) {
-        statusDiv.innerHTML = `<span style='color: var(--success);'>✅ Sauvegardé !</span>`;
-
-        const emptyMsg = listContainer.querySelector("p");
-        if (emptyMsg) emptyMsg.remove();
-
-        const docHtml = `
+  try {
+    const data = await pachaFetch(
+      "/modules/holidays/includes/api/upload_attachment.php",
+      { method: "POST", body: fd },
+    );
+    if (data.success) {
+      statusDiv.innerHTML = `<span style='color: var(--success);'>✅ Sauvegardé !</span>`;
+      const emptyMsg = listContainer.querySelector("p");
+      if (emptyMsg) emptyMsg.remove();
+      const docHtml = `
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px;">
                     <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
                         <span style="font-size: 1.2rem;">📄</span>
@@ -2051,65 +2133,57 @@ function handleFileUpload(input) {
                     <button type="button" onclick="deleteAttachment(${data.id}, this)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;" title="Supprimer">🗑️</button>
                 </div>
             `;
-        listContainer.insertAdjacentHTML("beforeend", docHtml);
-      } else {
-        statusDiv.innerHTML = `<span style='color: var(--danger);'>❌ Erreur: ${data.error}</span>`;
-      }
-    })
-    .catch((err) => {
-      statusDiv.innerHTML =
-        "<span style='color: var(--danger);'>❌ Erreur réseau.</span>";
-    })
-    .finally(() => {
-      input.value = "";
-      // 🔥 2. On rouvre le verrou SEULEMENT quand tout est terminé
-      setTimeout(() => {
-        window.isUploadingDocs = false;
-      }, 500);
-    });
+      listContainer.insertAdjacentHTML("beforeend", docHtml);
+    } else {
+      statusDiv.innerHTML = `<span style='color: var(--danger);'>❌ Erreur: ${data.error}</span>`;
+    }
+  } catch (err) {
+    statusDiv.innerHTML =
+      "<span style='color: var(--danger);'>❌ Erreur réseau.</span>";
+  } finally {
+    input.value = "";
+    setTimeout(() => {
+      window.isUploadingDocs = false;
+    }, 500);
+  }
 }
 
-// Fonction pour supprimer un document
-function deleteAttachment(fileId, btnElement) {
+async function deleteAttachment(fileId, btnElement) {
   if (!confirm("Voulez-vous vraiment supprimer ce document définitivement ?"))
     return;
 
   const holidayId = document.querySelector('input[name="holiday_id"]').value;
-  const row = btnElement.closest('div[style*="border: 1px solid"]'); // Cible la ligne d'affichage
-  row.style.opacity = "0.4"; // Effet visuel d'attente
+  const row = btnElement.closest('div[style*="border: 1px solid"]');
+  row.style.opacity = "0.4";
 
   const fd = new FormData();
   fd.append("file_id", fileId);
   fd.append("holiday_id", holidayId);
 
-  fetch("/modules/holidays/includes/api/delete_attachment.php", {
-    method: "POST",
-    body: fd,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.success) {
-        row.remove(); // On efface la ligne
-
-        // Si c'était le dernier fichier, on remet le texte "Aucun document"
-        const listContainer = document.getElementById("docsListContainer");
-        if (listContainer.children.length === 0) {
-          listContainer.innerHTML =
-            '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>';
-        }
-      } else {
-        alert("Erreur : " + data.error);
-        row.style.opacity = "1";
+  try {
+    const data = await pachaFetch(
+      "/modules/holidays/includes/api/delete_attachment.php",
+      { method: "POST", body: fd },
+    );
+    if (data.success) {
+      row.remove();
+      const listContainer = document.getElementById("docsListContainer");
+      if (listContainer.children.length === 0) {
+        listContainer.innerHTML =
+          '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>';
       }
-    })
-    .catch(() => {
-      alert("Erreur réseau lors de la suppression.");
+    } else {
+      alert("Erreur : " + data.error);
       row.style.opacity = "1";
-    });
+    }
+  } catch (err) {
+    alert("Erreur réseau lors de la suppression.");
+    row.style.opacity = "1";
+  }
 }
 
 // ============================================================================
-// GÉNÉRATION DU CARNET DE VOYAGE (PDF Côté Client) - VERSION TEXTE BRUT
+// GÉNÉRATION DU CARNET DE VOYAGE (PDF Côté Client)
 // ============================================================================
 window.generateTravelBook = function () {
   const element = document.getElementById("travelBookTemplate");
@@ -2124,25 +2198,20 @@ window.generateTravelBook = function () {
   btn.innerHTML = "⏳ Génération...";
   btn.disabled = true;
 
-  // Options ajustées avec un fond blanc forcé
   const opt = {
-    margin: 10, // 10mm de marge
+    margin: 10,
     filename: "Carnet_de_Route.pdf",
     image: { type: "jpeg", quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
   };
 
-  // 🔥 L'ASTUCE MAGIQUE :
-  // On extrait le HTML en texte brut et on l'encapsule dans un bloc 100% blanc.
-  // Plus aucun conflit possible avec l'affichage de ta page web !
   const htmlString = `
         <div style="background-color: #ffffff; color: #000000; width: 100%;">
             ${element.outerHTML}
         </div>
     `;
 
-  // Génération directe depuis la chaîne de texte
   html2pdf()
     .set(opt)
     .from(htmlString)
@@ -2185,17 +2254,17 @@ async function saveHolidayGlobalNote(holidayId) {
     );
 
     if (res.success) {
-      // L'appel utilise bien ta fonction showToast() globale pour le design des notifications !
-      showToast(
-        window.I18N["bud_prev_saved"] || "Notes sauvegardées !",
-        "success",
-      );
+      if (typeof showToast === "function")
+        showToast(
+          window.I18N["bud_prev_saved"] || "Notes sauvegardées !",
+          "success",
+        );
     } else {
-      showToast(res.error || "Erreur lors de la sauvegarde", "error");
+      if (typeof showToast === "function")
+        showToast(res.error || "Erreur lors de la sauvegarde", "error");
     }
   } catch (e) {
-    console.error("Erreur saveHolidayGlobalNote:", e);
-    showToast("Erreur réseau.", "error");
+    if (typeof showToast === "function") showToast("Erreur réseau.", "error");
   } finally {
     btn.innerHTML = originalText;
     btn.disabled = false;
@@ -2209,7 +2278,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const holidayForm = document.getElementById("holidayForm");
   if (holidayForm) {
     holidayForm.addEventListener("submit", async function (e) {
-      // Si on demande la suppression, on laisse le comportement natif faire le travail
       if (this.querySelector('input[name="action_delete"]')) return;
 
       e.preventDefault();
@@ -2219,20 +2287,17 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.disabled = true;
 
       const fd = new FormData(this);
-      // On s'assure d'appeler l'API de sauvegarde
       const actionUrl =
         this.getAttribute("action") ||
         "/modules/holidays/includes/api/save_holiday.php";
 
       try {
-        // On utilise pachaFetch en mode raw/text car save_holiday.php fait sûrement un header('Location: ...') au lieu d'un JSON
         const response = await fetch(actionUrl, {
           method: "POST",
           body: fd,
           headers: { "X-Requested-With": "XMLHttpRequest" },
         });
 
-        // Quoi qu'il arrive, on recharge la page COURANTE (detail.php) pour afficher les modifications
         window.location.reload();
       } catch (err) {
         console.error(err);

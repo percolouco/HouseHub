@@ -331,99 +331,102 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
 
 <div id="checkpointModal" class="pf-modal">
-    <div class="pf-modal-content hol-modal-cp">
-        
-        <!-- HEADER MODALE -->
-        <div class="hol-modal-header">
-            <h3 id="cpModalTitle" class="hol-modal-title">📍 Ajouter une étape</h3>
+    <div class="pf-modal-content" style="max-width: 600px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 id="cpModalTitle" style="margin:0;">📍 <?= tr('hdl_btn_add_step') ?></h3>
             <button type="button" onclick="closeCheckpointModal()" class="pf-modal-close">&times;</button>
         </div>
-
-        <!-- SYSTÈME D'ONGLETS -->
-        <div class="hol-modal-tabs">
-            <button type="button" id="tabBtnInfo" class="hol-modal-tab-btn active" onclick="switchCpTab('info')">📍 Infos de l'étape</button>
-            <button type="button" id="tabBtnProg" class="hol-modal-tab-btn" onclick="switchCpTab('prog')">🎟️ Programme & Frais</button>
-        </div>
         
-        <!-- DÉBUT DU FORMULAIRE UNIQUE -->
-        <form action="/modules/holidays/includes/api/save_checkpoint.php" method="POST" id="formCheckpoint" class="hol-modal-form">
+        <!-- LES ONGLETS SONT ICI -->
+        <div style="display: flex; gap: 15px; border-bottom: 1px solid var(--border-light); margin-bottom: 20px;">
+            <button type="button" id="tabBtnInfo" onclick="switchCpTab('info')" style="background: none; border: none; font-weight: bold; font-size: 1rem; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 8px; cursor: pointer; flex: 1;">📍 Infos de l'étape</button>
+            <button type="button" id="tabBtnProg" onclick="switchCpTab('prog')" style="background: none; border: none; font-weight: bold; font-size: 1rem; color: var(--text-muted); border-bottom: 2px solid transparent; padding-bottom: 8px; cursor: pointer; flex: 1;">🎟️ Programme & Frais</button>
+        </div>
+
+        <div id="cpSearchBlock" style="margin-bottom:20px;">
+            <?php if (!empty($favorites)): ?>
+            <div style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap;">
+                <?php foreach($favorites as $fav): ?>
+                    <button type="button" class="pf-btn btn-secondary" style="padding:4px 10px; font-size:0.8rem; border-radius:20px;" onclick="selectPlace(<?= $fav['lat'] ?>, <?= $fav['lng'] ?>, '<?= htmlspecialchars(addslashes($fav['name'])) ?>')">
+                        ⭐ <?= htmlspecialchars($fav['name']) ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <label class="pf-label"><?= tr('hdl_search_location') ?></label>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="searchPlaceInput" class="pf-input" placeholder="<?= tr('hdl_ph_search') ?>" onkeypress="if(event.key === 'Enter') { searchPlace(); return false; }">
+                <button type="button" class="pf-btn btn-secondary" onclick="searchPlace()">🔍</button>
+            </div>
+            <div id="searchResults" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>
+        </div>
+
+        <!-- FORMULAIRE (Le contenu apparaîtra ici) -->
+        <form action="/modules/holidays/includes/api/save_checkpoint.php" method="POST" id="formCheckpoint" style="display:none; border-top:1px solid #e2e8f0; padding-top:20px;">
             <input type="hidden" name="holiday_id" value="<?= $id ?>">
             <input type="hidden" name="old_location_name" id="cp_old_name">
             <input type="hidden" name="lat" id="cp_lat">
             <input type="hidden" name="lng" id="cp_lng">
             <input type="hidden" name="old_sort_order" id="cp_old_sort_order">
-
-            <!-- ONGLET 1 : INFOS GÉNÉRIQUES -->
-            <div id="cpTabInfo" class="hol-tab-content">
-                
-                <div id="cpSearchBlock" class="hol-search-block">
-                    <label class="pf-label hol-search-label">🔍 Chercher un lieu (Autocomplétion)</label>
-                    <div class="hol-search-input-group">
-                        <input type="text" id="searchPlaceInput" class="pf-input" placeholder="Ville, hôtel, adresse..." onkeypress="if(event.key === 'Enter') { searchPlace(); return false; }">
-                        <button type="button" class="pf-btn btn-secondary hol-search-btn" onclick="searchPlace()">Go</button>
-                    </div>
-                    <div id="searchResults" class="hol-search-results"></div>
+            
+            <!-- CONTENU DE L'ONGLET INFO -->
+            <div id="cpTabInfo">
+                <div class="form-group" style="margin-bottom:15px;">
+                    <label class="pf-label"><?= tr('hdl_label_step_name') ?></label>
+                    <input type="text" name="location_name" id="cp_name" class="pf-input" style="font-weight:bold; color:var(--primary);" required>
                 </div>
 
-                <div class="form-group">
-                    <label class="pf-label">Nom de l'étape</label>
-                    <input type="text" name="location_name" id="cp_name" class="pf-input hol-input-highlight" required>
-                </div>
-
-                <!-- DATES COMPACTES AVEC FLATPICKR -->
-                <div class="form-group hol-date-range-block">
-                    <label class="pf-label" id="lbl_date_range">📅 Période de l'étape (Arrivée ➔ Départ)</label>
-                    <input type="text" id="cp_date_range" class="pf-input hol-date-picker-input" placeholder="Sélectionnez les dates..." readonly>
-                    <!-- Les vraies valeurs envoyées au serveur -->
-                    <input type="hidden" name="step_start_date" id="cp_start_date">
-                    <input type="hidden" name="step_end_date" id="cp_end_date">
-                </div>
-
-                <div class="form-group" id="cp_insert_group">
-                    <label class="pf-label">🔽 Où placer cette étape ?</label>
-                    <select name="insert_after" id="cp_insert_after" class="pf-input" onchange="injectDynamicDates(this)">
-                        <!-- Rempli dynamiquement en JS avec Noms + Dates -->
+                <div class="form-group" style="margin-bottom:15px; background:#fff7ed; padding:10px; border-radius:8px; border:1px solid #ffedd5;">
+                    <label class="pf-label" style="color:#ea580c;">📍 Type d'étape</label>
+                    <select name="step_type" id="cp_step_type" class="pf-input" onchange="toggleStepDates(this.value)">
+                        <option value="origin">DÉPART (Point de départ du voyage)</option>
+                        <option value="stop">SÉJOUR (Étape classique avec arrivée et départ)</option>
+                        <option value="destination">ARRIVÉE FINALE (Fin du voyage)</option>
                     </select>
                 </div>
 
-                <div class="hol-form-row">
-                    <div class="form-group hol-flex-1">
-                        <label class="pf-label">📍 Type d'étape</label>
-                        <select name="step_type" id="cp_step_type" class="pf-input" onchange="toggleStepDates(this.value)">
-                            <option value="origin">DÉPART</option>
-                            <option value="stop" selected>SÉJOUR</option>
-                            <option value="destination">ARRIVÉE FINALE</option>
-                        </select>
+                <div style="display:flex; gap:15px; margin-bottom:15px; background:#f8fafc; padding:12px; border-radius:8px;">
+                    <div class="form-group" id="grp_start_date" style="flex:1;">
+                        <label class="pf-label" id="lbl_start_date"><?= tr('hdl_label_arrival') ?></label>
+                        <input type="date" name="step_start_date" id="cp_start_date" class="pf-input">
+                    </div>
+                    <div class="form-group" id="grp_end_date" style="flex:1;">
+                        <label class="pf-label" id="lbl_end_date"><?= tr('hdl_label_departure') ?></label>
+                        <input type="date" name="step_end_date" id="cp_end_date" class="pf-input">
                     </div>
                 </div>
 
-                <div class="hol-checkbox-group">
-                    <label class="hol-checkbox-label">
-                        <input type="checkbox" name="set_as_return" id="cp_set_as_return" value="1" class="hol-checkbox-return">
-                        🏁 Définir comme étape de retour (Tracé Orange)
+                <div style="margin-bottom: 20px; padding-top: 15px; border-top: 1px dashed #e2e8f0;">
+                    <label style="display:flex; align-items:center; cursor:pointer; color:#ea580c; font-weight:600; font-size:0.9rem;">
+                        <input type="checkbox" name="set_as_return" id="cp_set_as_return" value="1" style="margin-right:8px; width:16px; height:16px;">
+                        🏁 Définir comme retour
                     </label>
-                    <label class="hol-checkbox-label">
-                        <input type="checkbox" name="save_favorite" value="1" class="hol-checkbox">
-                        ⭐ Sauvegarder dans mes favoris
-                    </label>
+                    <p style="margin: 4px 0 0 24px; font-size: 0.75rem; color: #64748b;">La route sera tracée en orange à partir d'ici.</p>
                 </div>
             </div>
 
-            <!-- ONGLET 2 : PROGRAMME ET DEPENSES -->
-            <div id="cpTabProg" class="hol-tab-content hol-hidden">
-                <div class="hol-prog-header">
-                    <label class="pf-label">🎟️ Liste des activités & frais</label>
-                    <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="addCpExpenseLine()">+ Ajouter</button>
+            <!-- CONTENU DE L'ONGLET PROGRAMME & FRAIS -->
+            <div id="cpTabProg" class="hol-hidden" style="display: none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <label class="pf-label" style="margin:0;"><?= tr('hdl_planned_expenses') ?></label>
+                    <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="addCpExpenseLine()"><?= tr('hdl_btn_add_expense') ?></button>
                 </div>
 
-                <div id="cpExpensesContainer" class="hol-expenses-container"></div>
+                <div id="cpExpensesContainer" style="margin-bottom:15px;"></div>
             </div>
 
-            <!-- FOOTER FIXE -->
-            <div class="modal-footer">
-                <button type="button" onclick="deleteCheckpoint()" id="btnDeleteCp" class="pf-btn btn-secondary hol-btn-delete">Supprimer</button>
+            <div style="margin-bottom: 20px;">
+                <label style="display:flex; align-items:center; cursor:pointer; font-size:0.85rem; color:#475569;">
+                    <input type="checkbox" name="save_favorite" value="1" style="margin-right:8px;">
+                    ⭐ <?= tr('hdl_save_fav') ?>
+                </label>
+            </div>
+
+            <div class="modal-footer" style="padding-top:15px; border-top:1px solid #e2e8f0;">
+                <button type="button" onclick="deleteCheckpoint()" id="btnDeleteCp" class="pf-btn btn-secondary" style="color:#ef4444; border-color:#fca5a5; display:none;"><?= tr('btn_delete') ?></button>
                 <button type="button" onclick="closeCheckpointModal()" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
-                <button type="submit" class="pf-btn">💾 <?= tr('btn_save') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
@@ -512,6 +515,10 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
 <?php include __DIR__ . '/modal.php'; ?>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<?php include __DIR__ . '/pdf_template.php'; ?>
+
+
 <script>
     // --- 1. SÉCURISATION TRADUCTIONS ET VARIABLES ---
     window.MAP_POINTS = <?= json_encode($mapPoints ?? []) ?>;
@@ -519,80 +526,281 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
     window.I18N = {
         ...(window.I18N || {}),
-        'hdl_js_search_loading': "<?= tr('hdl_js_search_loading') ?>",
-        'hdl_js_no_result': "<?= tr('hdl_js_no_result') ?>",
-        'hdl_js_confirm_del_trip': "<?= tr('hdl_js_confirm_del_trip') ?>",
-        'hdl_js_confirm_del_step': "<?= tr('hdl_js_confirm_del_step') ?>",
-        'hdl_js_step_label': "<?= tr('hdl_js_step_label') ?>",
-        'hdl_js_ph_expense_name': "<?= tr('hdl_js_ph_expense_name') ?>",
-        'hdl_js_delete_line': "<?= tr('btn_delete') ?>",
-        'hdl_planning_title': "<?= tr('hdl_planning_title') ?>",
-        'hdl_to_place': "<?= tr('hdl_to_place') ?>",
-        'hdl_js_missing_dates_title': "<?= tr('hdl_js_missing_dates_title') ?>",
-        'hdl_js_missing_dates_msg': "<?= tr('hdl_js_missing_dates_msg') ?>",
-        'hdl_modal_title': "<?= tr('hdl_modal_title') ?>",
-        'hdl_js_edit_step': "<?= tr('hdl_js_edit_step') ?>",
-        'hdl_ph_notes': "<?= tr('hdl_ph_notes') ?>",
-        'hdl_btn_add_step': "<?= tr('hdl_btn_add_step') ?>",
-        'hdl_quick_edit_title': "<?= tr('hdl_quick_edit_title') ?>",
-        'hdl_paid': "<?= tr('hdl_paid') ?>",
-        
-        // --- NOUVELLES CLÉS MÉTÉO ICI ---
-        'weather_sunny': "<?= tr('weather_sunny') ?>",
-        'weather_cloudy': "<?= tr('weather_cloudy') ?>",
-        'weather_rainy': "<?= tr('weather_rainy') ?>",
-        'weather_snowy': "<?= tr('weather_snowy') ?>",
-        'weather_forecast': "<?= tr('weather_forecast') ?>",
-        'weather_historical': "<?= tr('weather_historical') ?>"
+        'hdl_js_search_loading': <?= json_encode(tr('hdl_js_search_loading')) ?>,
+        'hdl_js_no_result': <?= json_encode(tr('hdl_js_no_result')) ?>,
+        'hdl_js_confirm_del_trip': <?= json_encode(tr('hdl_js_confirm_del_trip')) ?>,
+        'hdl_js_confirm_del_step': <?= json_encode(tr('hdl_js_confirm_del_step')) ?>,
+        'hdl_js_step_label': <?= json_encode(tr('hdl_js_step_label')) ?>,
+        'hdl_js_ph_expense_name': <?= json_encode(tr('hdl_js_ph_expense_name')) ?>,
+        'hdl_js_delete_line': <?= json_encode(tr('btn_delete')) ?>,
+        'hdl_planning_title': <?= json_encode(tr('hdl_planning_title')) ?>,
+        'hdl_to_place': <?= json_encode(tr('hdl_to_place')) ?>,
+        'hdl_js_missing_dates_title': <?= json_encode(tr('hdl_js_missing_dates_title')) ?>,
+        'hdl_js_missing_dates_msg': <?= json_encode(tr('hdl_js_missing_dates_msg')) ?>,
+        'hdl_modal_title': <?= json_encode(tr('hdl_modal_title')) ?>,
+        'hdl_js_edit_step': <?= json_encode(tr('hdl_js_edit_step')) ?>,
+        'hdl_ph_notes': <?= json_encode(tr('hdl_ph_notes')) ?>,
+        'hdl_btn_add_step': <?= json_encode(tr('hdl_btn_add_step')) ?>,
+        'hdl_quick_edit_title': <?= json_encode(tr('hdl_quick_edit_title')) ?>,
+        'hdl_paid': <?= json_encode(tr('hdl_paid')) ?>,
+        'weather_sunny': <?= json_encode(tr('weather_sunny')) ?>,
+        'weather_cloudy': <?= json_encode(tr('weather_cloudy')) ?>,
+        'weather_rainy': <?= json_encode(tr('weather_rainy')) ?>,
+        'weather_snowy': <?= json_encode(tr('weather_snowy')) ?>,
+        'weather_forecast': <?= json_encode(tr('weather_forecast')) ?>,
+        'weather_historical': <?= json_encode(tr('weather_historical')) ?>
     };
 
-    // Fallback de sécurité pour s'assurer que les modales peuvent toujours se fermer
-    window.closeCheckpointModal = window.closeCheckpointModal || function() {
-        const modal = document.getElementById('checkpointModal');
-        if(modal) modal.style.display = 'none';
-        document.body.classList.remove('no-scroll');
-    };
-
-    window.closePlanningModal = window.closePlanningModal || function() {
-        const modal = document.getElementById('planningModal');
-        if(modal) modal.style.display = 'none';
-        document.body.classList.remove('no-scroll');
-    };
-
-    // 1. On charge le prix depuis le navigateur (ou 1.85 par défaut)
     const savedFuelPrice = localStorage.getItem('holidays_fuel_price') || 1.85;
     window.FUEL_PRICE = parseFloat(savedFuelPrice);
     
-    // 2. On met à jour le texte du petit bouton "✏️" en haut de la page
     const displayFuelEl = document.getElementById('display_fuel_price');
     if (displayFuelEl) displayFuelEl.innerText = window.FUEL_PRICE.toFixed(2);
 
-    // 3. Variables voiture et retour
     window.VEHICLE_CONSUMPTION = <?= !empty($holiday['vehicle_consumption']) ? (float)$holiday['vehicle_consumption'] : 7 ?>;
     window.GLOBAL_RETURN_STEP_ID = <?= $holiday['return_step_id'] !== null ? $holiday['return_step_id'] : 'null' ?>;
 
-    // --- GESTION DES ONGLETS LOGISTIQUES ---
-    window.switchHolTab = function(tabId, btn) {
-        document.querySelectorAll('.hol-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.hol-tab-content').forEach(c => c.style.display = 'none');
-        btn.classList.add('active');
-        document.getElementById(tabId).style.display = 'block';
-    };
+    // --- 2. SURCHARGE SÉCURISÉE DES FONCTIONS JS (APRÈS CHARGEMENT DE HOLIDAYS.JS) ---
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // 1. Correction du conflit d'onglet
+        window.switchCpTab = function(tabId) {
+            const btnInfo = document.getElementById('tabBtnInfo');
+            const btnProg = document.getElementById('tabBtnProg');
+            const tabInfo = document.getElementById('cpTabInfo');
+            const tabProg = document.getElementById('cpTabProg');
 
-    // --- BASCULE DE LA CARTE ---
-    window.toggleTripMap = function() {
-        const mapWrapper = document.getElementById('tripMapWrapper');
-        if (mapWrapper.classList.contains('hol-hidden')) {
-            mapWrapper.classList.remove('hol-hidden');
-            if (typeof detailMap !== 'undefined' && detailMap !== null) {
-                setTimeout(() => detailMap.invalidateSize(), 100);
+            if (tabId === 'info') {
+                if (btnInfo) { btnInfo.style.borderBottomColor = "var(--primary)"; btnInfo.style.color = "var(--primary)"; }
+                if (btnProg) { btnProg.style.borderBottomColor = "transparent"; btnProg.style.color = "var(--text-muted)"; }
+                if (tabInfo) { tabInfo.style.display = "block"; tabInfo.classList.remove("hol-hidden"); }
+                if (tabProg) { tabProg.style.display = "none"; tabProg.classList.add("hol-hidden"); }
+            } else {
+                if (btnProg) { btnProg.style.borderBottomColor = "var(--primary)"; btnProg.style.color = "var(--primary)"; }
+                if (btnInfo) { btnInfo.style.borderBottomColor = "transparent"; btnInfo.style.color = "var(--text-muted)"; }
+                if (tabProg) { tabProg.style.display = "block"; tabProg.classList.remove("hol-hidden"); }
+                if (tabInfo) { tabInfo.style.display = "none"; tabInfo.classList.add("hol-hidden"); }
             }
-        } else {
-            mapWrapper.classList.add('hol-hidden');
-        }
-    };
+        };
+
+        // 2. Correction modale : ajout de l'injection lat/lng aux items
+        window.openCheckpointModal = function(mode, data = null) {
+            const searchBlock = document.getElementById("cpSearchBlock");
+            const formBlock = document.getElementById("formCheckpoint");
+            const container = document.getElementById("cpExpensesContainer");
+            const btnDel = document.getElementById("btnDeleteCp");
+            const modalTitle = document.getElementById("cpModalTitle");
+
+            if(container) container.innerHTML = "";
+            if (document.getElementById("cp_start_date")) document.getElementById("cp_start_date").value = "";
+            if (document.getElementById("cp_end_date")) document.getElementById("cp_end_date").value = "";
+            if (document.getElementById("searchPlaceInput")) document.getElementById("searchPlaceInput").value = "";
+            if (document.getElementById("searchResults")) document.getElementById("searchResults").innerHTML = "";
+
+            window.switchCpTab('info');
+
+            if (mode === "add") {
+                if (modalTitle) modalTitle.innerText = "📍 " + (window.I18N['hdl_btn_add_step'] || "Ajouter une étape");
+                if (searchBlock) searchBlock.style.display = "block";
+                if (formBlock) formBlock.style.display = "block"; 
+                if (btnDel) btnDel.style.display = "none";
+
+                if (document.getElementById("cp_old_sort_order")) document.getElementById("cp_old_sort_order").value = "";
+                if (document.getElementById("cp_name")) document.getElementById("cp_name").value = "";
+
+                if (document.getElementById("cp_step_type")) {
+                    document.getElementById("cp_step_type").value = "stop";
+                    if (typeof toggleStepDates === 'function') toggleStepDates("stop");
+                }
+                if (document.getElementById("cp_set_as_return")) document.getElementById("cp_set_as_return").checked = false;
+
+                if (typeof window.addCpExpenseLine === 'function') window.addCpExpenseLine();
+
+            } else if (mode === "edit" && data) {
+                if (modalTitle) modalTitle.innerText = "✏️ " + (window.I18N['hdl_js_edit_step'] || "Modifier l'étape");
+                if (searchBlock) searchBlock.style.display = "none"; 
+                if (formBlock) formBlock.style.display = "block";    
+                if (btnDel) btnDel.style.display = "block";
+
+                if (document.getElementById("cp_lat")) document.getElementById("cp_lat").value = data.lat;
+                if (document.getElementById("cp_lng")) document.getElementById("cp_lng").value = data.lng;
+                if (document.getElementById("cp_old_sort_order")) document.getElementById("cp_old_sort_order").value = data.sort_order;
+                if (document.getElementById("cp_name")) document.getElementById("cp_name").value = data.location_name;
+                if (document.getElementById("cp_start_date")) document.getElementById("cp_start_date").value = data.step_start_date || "";
+                if (document.getElementById("cp_end_date")) document.getElementById("cp_end_date").value = data.step_end_date || "";
+
+                if (document.getElementById("cp_step_type")) {
+                    const type = data.step_type || "stop";
+                    document.getElementById("cp_step_type").value = type;
+                    if (typeof toggleStepDates === 'function') toggleStepDates(type);
+                }
+
+                if (document.getElementById("cp_set_as_return")) {
+                    document.getElementById("cp_set_as_return").checked = (window.GLOBAL_RETURN_STEP_ID == data.sort_order);
+                }
+
+                // Génération avec transmission de la latitude et longitude de chaque dépense
+                if (data.items && data.items.length > 0) {
+                    let visibleCount = 0;
+                    data.items.forEach((it) => {
+                        if (it.name !== "PF_TECHNICAL_POINT") {
+                            if (typeof window.addCpExpenseLine === 'function') {
+                                window.addCpExpenseLine(
+                                    it.category, it.name, it.amount, it.is_paid, it.notes || "", 
+                                    it.id || "", it.item_date || "", it.item_time || "", it.duration || 1, 
+                                    it.expense_context || "local", it.lat || "", it.lng || ""
+                                );
+                            }
+                            visibleCount++;
+                        }
+                    });
+                    if (visibleCount === 0 && typeof window.addCpExpenseLine === 'function') window.addCpExpenseLine();
+                } else {
+                    if (typeof window.addCpExpenseLine === 'function') window.addCpExpenseLine();
+                }
+            }
+
+            try {
+                if (typeof cpDateRangePicker !== 'undefined' && cpDateRangePicker && typeof cpDateRangePicker.destroy === 'function') {
+                    cpDateRangePicker.destroy();
+                }
+            } catch (e) {}
+
+            const modal = document.getElementById("checkpointModal");
+            if (modal) {
+                modal.style.display = "flex";
+                document.body.classList.add("no-scroll");
+            }
+        };
+
+        // 3. LA FONCTION AVEC LA CLASSE CSS PARFAITE ET LE BOUTON 📍
+        window.addCpExpenseLine = function(category = "accommodation", name = "", amount = "", isPaid = 0, notes = "", itemId = "", itemDate = "", itemTime = "", itemDur = 1, expenseContext = "local", itemLat = "", itemLng = "") {
+            const container = document.getElementById("cpExpensesContainer");
+            if (!container) return;
+            
+            const div = document.createElement("div");
+            div.className = "hol-form-row"; // Force l'utilisation du CSS
+            const isChecked = isPaid == 1 ? "checked" : "";
+
+            // Indicateur visuel (bouton vert) si on a déjà des coordonnées pour cette activité
+            const pinBtnStyle = (itemLat && itemLng) ? "background:var(--success);color:white;border-color:var(--success);" : "";
+
+            div.innerHTML = `
+                <div class="hol-form-inner">
+                    <select name="items[cat][]" class="pf-input hol-form-select">
+                        <option value="accommodation" ${category === "accommodation" ? "selected" : ""}>🏨</option>
+                        <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
+                        <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
+                    </select>
+                    <input type="hidden" name="items[context][]" value="${expenseContext}">
+                    
+                    <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${window.I18N['hdl_js_ph_expense_name'] || 'Nom de la dépense'}" value="${name}" required>
+                    
+                    <button type="button" class="btn-icon-action" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-light);border-radius:6px; margin:0; flex-shrink:0; ${pinBtnStyle}" onclick="window.toggleItemSearch(this)" title="Adresse précise">📍</button>
+
+                    <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}" required>
+                    
+                    <label class="hol-form-paid-label" title="${window.I18N['hdl_paid'] || 'Payé'}">
+                        <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="width:16px;height:16px;margin:0;accent-color:var(--primary);">
+                        <input type="hidden" name="items[paid][]" value="${isPaid}">
+                        <span class="hol-form-paid-text">Payé</span>
+                    </label>
+                    
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" title="${window.I18N['hdl_js_delete_line'] || 'Supprimer'}" class="btn-icon-action delete btn-remove-expense" style="margin: 0;">🗑️</button>
+                </div>
+                
+                <div class="hol-item-search-box" style="display:none; padding: 10px; background: var(--bg-subtle); border-radius: 8px; margin-top: 6px; width: 100%;">
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" class="pf-input item-search-input" placeholder="Chercher une adresse..." onkeypress="if(event.key === 'Enter') { window.searchItemPlace(this); return false; }">
+                        <button type="button" class="pf-btn btn-secondary" onclick="window.searchItemPlace(this)">🔍</button>
+                    </div>
+                    <div class="item-search-results" style="margin-top:10px; max-height:150px; overflow-y:auto;"></div>
+                </div>
+
+                <div class="hol-form-subrow" style="display: flex; padding-left: 58px; margin-top: 6px;">
+                    <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input" placeholder="${window.I18N['hdl_ph_notes'] || 'Notes...'}" value="${notes}" style="font-size: 0.8rem; padding: 6px 8px; border-style: dashed; color: var(--text-muted); width: 100%; background: transparent; margin: 0;">
+                </div>
+                <input type="hidden" name="items[id][]" value="${itemId}">
+                <input type="hidden" name="items[date][]" value="${itemDate}">
+                <input type="hidden" name="items[time][]" value="${itemTime}">
+                <input type="hidden" name="items[duration][]" value="${itemDur}">
+                <input type="hidden" name="items[lat][]" value="${itemLat}">
+                <input type="hidden" name="items[lng][]" value="${itemLng}">
+            `;
+            container.appendChild(div);
+        };
+
+        // 4. RÉINTÉGRATION DES FONCTIONS DE GÉOCODAGE DANS LE MÊME SCOPE
+        window.toggleItemSearch = function(btn) {
+            const searchBox = btn.closest(".hol-form-row").querySelector(".hol-item-search-box");
+            searchBox.style.display = searchBox.style.display === "none" ? "block" : "none";
+        };
+
+        window.searchItemPlace = async function(btn) {
+            const container = btn.closest(".hol-item-search-box");
+            const input = container.querySelector(".item-search-input");
+            const resultsDiv = container.querySelector(".item-search-results");
+            const q = input.value.trim();
+            if (q.length < 3) return;
+
+            resultsDiv.innerHTML = `<span style="color:#64748b; font-size:0.85rem;">Recherche en cours...</span>`;
+
+            try {
+                const data = await pachaFetch("/modules/holidays/includes/api/geocode.php?limit=5&q=" + encodeURIComponent(q), { method: 'GET' });
+                resultsDiv.innerHTML = "";
+                if (data.error || !data.results || data.results.length === 0) {
+                    resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Aucun résultat</span>`;
+                    return;
+                }
+                data.results.forEach((place) => {
+                    const b = document.createElement("button");
+                    b.type = "button";
+                    b.className = "pf-btn btn-secondary";
+                    b.style.textAlign = "left";
+                    b.style.padding = "8px";
+                    b.style.marginBottom = "4px";
+                    b.style.width = "100%";
+                    b.innerText = "📍 " + place.display_name;
+                    b.onclick = () => window.selectItemPlace(container, place.lat, place.lng, place.display_name);
+                    resultsDiv.appendChild(b);
+                });
+            } catch (err) {
+                resultsDiv.innerHTML = `<span style="color:#ef4444; font-size:0.85rem;">Erreur de connexion</span>`;
+            }
+        };
+
+        window.selectItemPlace = function(container, lat, lng, displayName) {
+            const row = container.closest(".hol-form-row");
+            row.querySelector('input[name="items[lat][]"]').value = lat;
+            row.querySelector('input[name="items[lng][]"]').value = lng;
+
+            // Si le champ note est vide, on l'utilise pour y placer le nom complet de l'adresse
+            const notesInput = row.querySelector('input[name="items[notes][]"]');
+            if (notesInput.value === "") {
+                notesInput.value = displayName;
+            }
+
+            container.style.display = "none";
+            
+            // Le bouton devient vert pour confirmer la présence de coordonnées
+            const pinBtn = row.querySelector('.btn-icon-action[title="Adresse précise"]');
+            if (pinBtn) {
+                pinBtn.style.background = "var(--success)";
+                pinBtn.style.color = "white";
+                pinBtn.style.borderColor = "var(--success)";
+            }
+        };
+
+        window.closeCheckpointModal = function() {
+            const modal = document.getElementById('checkpointModal');
+            if(modal) modal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
+        };
+
+        window.closePlanningModal = function() {
+            const modal = document.getElementById('planningModal');
+            if(modal) modal.style.display = 'none';
+            document.body.classList.remove('no-scroll');
+        };
+    });
 </script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-<?php include __DIR__ . '/pdf_template.php'; ?>
