@@ -280,6 +280,21 @@ return [
     
     'btn_save_rights'             => 'Guardar',
 
+    'fc_label_carry_over'    => 'Inclou dies reportats (Caducables) ⚠️',
+    'fc_carry_over_note'     => 'Part del saldo global que caducarà a la data límit.',
+    'fc_carry_max'           => 'Màx Reportable',
+    'fc_carry_deadline'      => 'Mes de Caducitat',
+    'fc_deadline_none'       => 'Cap',
+    'fc_allowance_help'      => 'Fix: Quota anual. Gradual: Afegit per mes.',
+    'fc_carry_max_short'     => 'Report màx',
+    'fc_edit_leave'          => '✏️ Modificar:',
+    'fc_not_modifiable'      => 'No modificable',
+    'fc_add_leave'           => '+ Afegir',
+    'fc_err_code_label'      => 'El Codi i l\'Etiqueta són obligatoris.',
+    'fc_catalog_updated'     => 'Catàleg actualitzat!',
+    'fc_balance_corrected'   => 'Saldo corregit!',
+    'fc_no_leave_configured' => 'Cap permís configurat.',
+
     // ==========================================
 // MODAL DE CONFIGURACIÓ DEL CALENDARI
 // ==========================================

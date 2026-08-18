@@ -185,17 +185,32 @@ require __DIR__ . '/header.php';
                     <div class="pf-form-group">
                         <label class="pf-label"><?= tr('fc_label_remaining_balance') ?></label>
                         <div style="display:flex; align-items:center;">
-                            <input type="number" step="0.5" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" style="border-radius: 8px 0 0 8px; border-right: none; font-weight: bold; color: var(--pf-primary);" required>
+                            <!-- 🔥 STEP 0.01 POUR DEUX DÉCIMALES STRICTES -->
+                            <input type="number" step="0.01" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" style="border-radius: 8px 0 0 8px; border-right: none; font-weight: bold; color: var(--pf-primary);" required>
                             <span style="background: var(--pf-bg-lighter); border: 1px solid var(--pf-border); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--pf-text-muted); font-size: 0.9rem; font-weight: 600;">
                                 <?= tr('fc_unit_days') ?>
                             </span>
                         </div>
                     </div>
+                    <!-- NOUVEAU BLOC : Solde reporté -->
+                    <div class="pf-form-group" style="margin-top: 15px;">
+                        <label class="pf-label"><?= tr('fc_label_carry_over') ?></label>
+                        <div style="display:flex; align-items:center;">
+                            <!-- 🔥 STEP 0.01 POUR DEUX DÉCIMALES STRICTES -->
+                            <input type="number" step="0.01" id="snapCarryOver" class="pf-input" placeholder="ex: 2.00" value="0" style="border-radius: 8px 0 0 8px; border-right: none; font-weight: bold; color: var(--danger);" required>
+                            <span style="background: var(--pf-bg-lighter); border: 1px solid var(--pf-border); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--pf-text-muted); font-size: 0.9rem; font-weight: 600;">
+                                <?= tr('fc_unit_days') ?>
+                            </span>
+                        </div>
+                        <small class="pf-muted-note"><?= tr('fc_carry_over_note') ?></small>
+                    </div>
+
+                    <!-- FOOTER INTÉGRÉ DANS LE FORMULAIRE POUR ÉVITER LE BUG DE CIBLAGE -->
+                    <div class="pf-modal-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--pf-border); display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
+                        <button type="submit" id="btnSubmitSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
+                    </div>
                 </form>
-            </div>
-            <div class="pf-modal-footer">
-                <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
-                <button type="submit" form="formSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
             </div>
         </div>
     </div>
@@ -286,6 +301,25 @@ require __DIR__ . '/header.php';
                                 <div style="flex: 1; min-width: 150px;">
                                     <label class="pf-label"><?= tr('fc_col_label') ?> *</label>
                                     <input type="text" id="lt-label" class="pf-input" placeholder="<?= tr('fc_leave_label_ph') ?>" required>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 5px;">
+                                <div style="flex: 1; min-width: 140px;">
+                                    <label class="pf-label"><?= tr('fc_carry_max') ?></label>
+                                    <input type="number" step="0.5" id="lt-carry-max" class="pf-input" placeholder="ex: 2" value="0" required>
+                                </div>
+                                <div style="flex: 1; min-width: 140px;">
+                                    <label class="pf-label"><?= tr('fc_carry_deadline') ?></label>
+                                    <select id="lt-carry-deadline" class="pf-input">
+                                        <option value="1"><?= tr('month_01') ?></option>
+                                        <option value="2"><?= tr('month_02') ?></option>
+                                        <option value="3"><?= tr('month_03') ?></option>
+                                        <option value="4"><?= tr('month_04') ?></option>
+                                        <option value="5"><?= tr('month_05') ?></option>
+                                        <option value="6"><?= tr('month_06') ?></option>
+                                        <option value="12"><?= tr('fc_deadline_none') ?></option>
+                                    </select>
                                 </div>
                             </div>
 

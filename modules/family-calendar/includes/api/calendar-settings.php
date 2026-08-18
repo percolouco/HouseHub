@@ -15,7 +15,7 @@ try {
         $stmtPeople = $pdo->query("SELECT id, name, role, care_modes, color FROM pf_people WHERE is_active = 1 ORDER BY role ASC, name ASC");
         $people = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
-        $stmtLeaves = $pdo->query("SELECT person_id, leave_type, anniversary_date, method, allowance FROM pf_person_leave_meta");
+        $stmtLeaves = $pdo->query("SELECT person_id, leave_type, anniversary_date, method, allowance, carry_over_max_days, carry_over_deadline_month FROM pf_person_leave_meta");
         $leavesRaw = $stmtLeaves->fetchAll(PDO::FETCH_ASSOC);
         
         $leavesMap = [];
@@ -24,7 +24,9 @@ try {
                 'type'      => $leave['leave_type'],
                 'method'    => $leave['method'] ?? 'FIXED',       
                 'allowance' => $leave['allowance'] ?? 0,          
-                'date'      => $leave['anniversary_date']
+                'date'      => $leave['anniversary_date'],
+                'carry_over_max_days' => $leave['carry_over_max_days'] ?? 0,
+                'carry_over_deadline_month' => $leave['carry_over_deadline_month'] ?? 12
             ];
         }
 
@@ -37,8 +39,8 @@ try {
             'calendar_working_hours' => $calendarSettingsRaw['calendar_working_hours'] ?? '08:00-19:00'
         ];
 
-        // Catalogue des congés
-        $stmtLeaveTypes = $pdo->query("SELECT code, label, default_allowance, reset_month, allow_carry_over FROM pf_leave_types ORDER BY label ASC");
+        // Catalogue des congés (Nettoyé des règles de report qui sont maintenant sur la personne)
+        $stmtLeaveTypes = $pdo->query("SELECT code, label, default_allowance, reset_month FROM pf_leave_types ORDER BY label ASC");
         $leaveTypes = $stmtLeaveTypes->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode([
@@ -97,20 +99,22 @@ try {
     }
 
     if ($action === 'save_leave_type') {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Méthode non autorisée");
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception(tr('error_occured'));
         
         $mode = $_POST['mode'] ?? 'add';
         $code = strtoupper(trim($_POST['code'] ?? ''));
         $label = trim($_POST['label'] ?? '');
+        $carryMax = (float)($_POST['carry_over_max_days'] ?? 0);
+        $carryDeadline = (int)($_POST['carry_over_deadline_month'] ?? 12);
 
-        if (empty($code) || empty($label)) throw new Exception("Le code et le label sont obligatoires.");
+        if (empty($code) || empty($label)) throw new Exception(tr('fc_err_code_label'));
 
         if ($mode === 'add') {
-            $stmt = $pdo->prepare("INSERT INTO pf_leave_types (code, label) VALUES (?, ?)");
-            $stmt->execute([$code, $label]);
+            $stmt = $pdo->prepare("INSERT INTO pf_leave_types (code, label, carry_over_max_days, carry_over_deadline_month) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$code, $label, $carryMax, $carryDeadline]);
         } else {
-            $stmt = $pdo->prepare("UPDATE pf_leave_types SET label = ? WHERE code = ?");
-            $stmt->execute([$label, $code]);
+            $stmt = $pdo->prepare("UPDATE pf_leave_types SET label = ?, carry_over_max_days = ?, carry_over_deadline_month = ? WHERE code = ?");
+            $stmt->execute([$label, $carryMax, $carryDeadline, $code]);
         }
         echo json_encode(['success' => true]);
         exit;
@@ -141,7 +145,7 @@ try {
     // ─── 5. GESTION DES CONGÉS INDIVIDUELS (MEMBRES) ───
     if ($action === 'get_person_leaves') {
         $personId = (int)($_GET['person_id'] ?? 0);
-        $stmt = $pdo->prepare("SELECT id, leave_type, allowance, method, anniversary_date FROM pf_person_leave_meta WHERE person_id = ? ORDER BY leave_type ASC");
+        $stmt = $pdo->prepare("SELECT id, leave_type, allowance, method, anniversary_date, carry_over_max_days, carry_over_deadline_month FROM pf_person_leave_meta WHERE person_id = ? ORDER BY leave_type ASC");
         $stmt->execute([$personId]);
         echo json_encode(['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
         exit;
@@ -150,25 +154,35 @@ try {
     if ($action === 'add_person_leave') {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new Exception("Méthode non autorisée");
 
+        $id = (int)($_POST['meta_id'] ?? 0); // Nouvel ID pour différencier l'Update de l'Insert
         $personId = (int)($_POST['person_id'] ?? 0);
         $type = strtoupper(trim($_POST['leave_type'] ?? ''));
         $allowance = (float)($_POST['allowance'] ?? 0);
         $resetMonth = (int)($_POST['reset_month'] ?? 1);
+        $carryMax = (float)($_POST['carry_over_max_days'] ?? 0);
+        $carryDeadline = (int)($_POST['carry_over_deadline_month'] ?? 12);
         
         $method = in_array($_POST['method'] ?? '', ['FIXED', 'ACCUMULATED']) ? $_POST['method'] : 'FIXED';
 
         if ($personId <= 0 || empty($type)) throw new Exception("Données invalides.");
 
-        // Vérification des doublons
-        $check = $pdo->prepare("SELECT id FROM pf_person_leave_meta WHERE person_id = ? AND leave_type = ?");
-        $check->execute([$personId, $type]);
-        if ($check->rowCount() > 0) throw new Exception("Ce congé est déjà attribué à cette personne.");
-
         // On construit la date anniversaire avec le mois choisi par l'utilisateur
         $anniversaryDate = "2000-" . str_pad((string)$resetMonth, 2, "0", STR_PAD_LEFT) . "-01";
 
-        $stmt = $pdo->prepare("INSERT INTO pf_person_leave_meta (person_id, leave_type, allowance, method, anniversary_date) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$personId, $type, $allowance, $method, $anniversaryDate]);
+        if ($id > 0) {
+            // ✏️ UPDATE (Modification)
+            $stmt = $pdo->prepare("UPDATE pf_person_leave_meta SET allowance = ?, method = ?, anniversary_date = ?, carry_over_max_days = ?, carry_over_deadline_month = ? WHERE id = ? AND person_id = ?");
+            $stmt->execute([$allowance, $method, $anniversaryDate, $carryMax, $carryDeadline, $id, $personId]);
+        } else {
+            // ➕ INSERT (Ajout)
+            // Vérification des doublons
+            $check = $pdo->prepare("SELECT id FROM pf_person_leave_meta WHERE person_id = ? AND leave_type = ?");
+            $check->execute([$personId, $type]);
+            if ($check->rowCount() > 0) throw new Exception("Ce congé est déjà attribué à cette personne.");
+
+            $stmt = $pdo->prepare("INSERT INTO pf_person_leave_meta (person_id, leave_type, allowance, method, anniversary_date, carry_over_max_days, carry_over_deadline_month) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$personId, $type, $allowance, $method, $anniversaryDate, $carryMax, $carryDeadline]);
+        }
         
         echo json_encode(['success' => true]);
         exit;
