@@ -4,7 +4,7 @@ require __DIR__ . '/../../../../includes/db.php';
 
 try {
     $stmt = $pdo->query("
-        SELECT person_id, leave_type, snapshot_date, remaining_balance
+        SELECT person_id, leave_type, snapshot_date, remaining_balance, carry_over_balance
         FROM pf_leave_snapshots
         ORDER BY snapshot_date ASC
     ");

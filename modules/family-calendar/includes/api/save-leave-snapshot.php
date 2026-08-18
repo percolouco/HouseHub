@@ -15,13 +15,16 @@ try {
     $stmtDel = $pdo->prepare("DELETE FROM pf_leave_snapshots WHERE person_id = ? AND leave_type = ? AND snapshot_date = ?");
     $stmtDel->execute([$input['person_id'], $input['leave_type'], $input['snapshot_date']]);
 
+    $carry_over_balance = isset($input['carry_over_balance']) ? (float)$input['carry_over_balance'] : 0.00;
+
     // Étape 2 : On insère le nouveau solde
-    $stmt = $pdo->prepare("INSERT INTO pf_leave_snapshots (person_id, leave_type, snapshot_date, remaining_balance) VALUES (?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO pf_leave_snapshots (person_id, leave_type, snapshot_date, remaining_balance, carry_over_balance) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([
         $input['person_id'],
         $input['leave_type'],
         $input['snapshot_date'],
-        $input['remaining_balance']
+        $input['remaining_balance'],
+        $carry_over_balance
     ]);
 
     echo json_encode(['status' => 'success']);

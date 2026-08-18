@@ -88,7 +88,8 @@ CREATE TABLE IF NOT EXISTS pf_leave_snapshots (
   person_id         INT NOT NULL,
   leave_type        VARCHAR(50) NOT NULL,
   snapshot_date     DATE NOT NULL,
-  remaining_balance DECIMAL(6,2) DEFAULT 0
+  remaining_balance DECIMAL(6,2) DEFAULT 0.00,
+  carry_over_balance DECIMAL(6,2) DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_person_leave_meta (
@@ -97,9 +98,12 @@ CREATE TABLE IF NOT EXISTS pf_person_leave_meta (
   leave_type VARCHAR(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   method VARCHAR(20) COLLATE utf8mb4_unicode_ci DEFAULT 'FIXED',
   allowance DECIMAL(5,2) DEFAULT 0.00,
+  carry_over_max_days DECIMAL(5,2) DEFAULT 0.00,
+  carry_over_deadline_month INT(11) DEFAULT 12,
   anniversary_date DATE DEFAULT NULL,
   INDEX (person_id),
-  INDEX (leave_type)
+  INDEX (leave_type),
+  UNIQUE KEY uq_person_leave (person_id, leave_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─── Types de Congés (Référentiel) ─────────────────────────────────────────
@@ -109,12 +113,11 @@ CREATE TABLE IF NOT EXISTS pf_leave_types (
   label VARCHAR(100) COLLATE utf8mb4_general_ci NOT NULL,
   default_allowance DECIMAL(5,2) DEFAULT 0.00,
   reset_month INT(11) DEFAULT 1,
-  allow_carry_over TINYINT(1) DEFAULT 0,
   UNIQUE KEY code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT IGNORE INTO pf_leave_types (code, label, default_allowance, reset_month, allow_carry_over) VALUES
-('CP', 'Congés Payés', 25.00, 6, 0);
+INSERT IGNORE INTO pf_leave_types (code, label, default_allowance, reset_month) VALUES
+('CP', 'Congés Payés', 25.00, 6);
 
 CREATE TABLE IF NOT EXISTS pf_calendar_weeks (
   id              INT AUTO_INCREMENT PRIMARY KEY,

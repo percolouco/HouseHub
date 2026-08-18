@@ -281,6 +281,21 @@ return [
     
     'btn_save_rights'             => 'Save',
 
+    'fc_label_carry_over'    => 'Incl. carried over days (Expiring) ⚠️',
+    'fc_carry_over_note'     => 'Portion of the overall balance that will expire on the deadline.',
+    'fc_carry_max'           => 'Max Carry Over',
+    'fc_carry_deadline'      => 'Expiration Month',
+    'fc_deadline_none'       => 'None',
+    'fc_allowance_help'      => 'Fixed: Annual quota. Accrued: Added per month.',
+    'fc_carry_max_short'     => 'Max carry-over',
+    'fc_edit_leave'          => '✏️ Edit:',
+    'fc_not_modifiable'      => 'Not modifiable',
+    'fc_add_leave'           => '+ Add',
+    'fc_err_code_label'      => 'Code and Label are required.',
+    'fc_catalog_updated'     => 'Catalog updated!',
+    'fc_balance_corrected'   => 'Balance corrected!',
+    'fc_no_leave_configured' => 'No leave configured.',
+
     // ==========================================
 // CALENDAR SETTINGS MODAL
 // ==========================================

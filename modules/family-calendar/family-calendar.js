@@ -198,20 +198,21 @@ function renderLeaveCatalog(types) {
   container.innerHTML = "";
 
   if (types.length === 0) {
-    container.innerHTML = `<p class="pf-muted-note">Aucun congé configuré.</p>`;
+    container.innerHTML = `<p class="pf-muted-note">${tr("fc_no_leave_configured") || "Aucun congé configuré."}</p>`;
     return;
   }
 
   types.forEach((lt) => {
+    // Fini l'injection des variables de report ici, elles n'existent plus au niveau global !
     container.innerHTML += `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-page); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-light); margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-page); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-light); margin-bottom: 8px;">
                 <div>
-                    <span style="font-weight: bold; color: var(--text-main);">${lt.label}</span>
-                    <span style="background: var(--bg-subtle); border: 1px solid var(--border-main); border-radius: 4px; padding: 2px 6px; font-size: 0.8rem; margin-left: 8px; color: var(--text-muted);">${lt.code}</span>
+                    <span style="font-weight: 700; color: var(--text-main); font-size: 1.05rem;">${lt.label}</span>
+                    <span style="background: var(--bg-subtle); border: 1px solid var(--border-strong); border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; margin-left: 8px; color: var(--text-muted); font-weight: bold;">${lt.code}</span>
                 </div>
-                <div style="display: flex; gap: 4px;">
-                    <button type="button" class="pf-btn btn-secondary" style="padding: 4px 8px;" onclick="editLeaveType('${lt.code}', '${lt.label.replace(/'/g, "\\'")}')">✏️</button>
-                    <button type="button" class="pf-btn btn-secondary" style="padding: 4px 8px; color: var(--danger);" onclick="deleteLeaveType('${lt.code}', '${lt.label.replace(/'/g, "\\'")}')">🗑️</button>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-icon-action edit" onclick="editLeaveType('${lt.code}', '${lt.label.replace(/'/g, "\\'")}')" title="${tr("fc_edit_leave") || "Modifier"}">✏️</button>
+                    <button type="button" class="btn-icon-action delete" onclick="deleteLeaveType('${lt.code}', '${lt.label.replace(/'/g, "\\'")}')" title="${tr("btn_delete") || "Supprimer"}">🗑️</button>
                 </div>
             </div>
         `;
@@ -220,7 +221,7 @@ function renderLeaveCatalog(types) {
 
 function editLeaveType(code, label) {
   document.getElementById("leaveTypeFormTitle").innerText =
-    "✏️ Modifier : " + label;
+    (tr("fc_edit_leave") || "✏️ Modifier :") + " " + label;
   document.getElementById("lt-mode").value = "edit";
 
   const codeInput = document.getElementById("lt-code");
@@ -230,12 +231,14 @@ function editLeaveType(code, label) {
   codeInput.style.opacity = "0.6";
   codeInput.style.cursor = "not-allowed";
 
-  document.getElementById("lt-code-note").innerText = "Non modifiable";
+  document.getElementById("lt-code-note").innerText =
+    tr("fc_not_modifiable") || "Non modifiable";
   document.getElementById("lt-label").value = label;
 }
 
 function resetLeaveTypeForm() {
-  document.getElementById("leaveTypeFormTitle").innerText = "+ Ajouter";
+  document.getElementById("leaveTypeFormTitle").innerText =
+    tr("fc_add_leave") || "+ Ajouter";
   document.getElementById("lt-mode").value = "add";
 
   const codeInput = document.getElementById("lt-code");
@@ -245,7 +248,8 @@ function resetLeaveTypeForm() {
   codeInput.style.opacity = "1";
   codeInput.style.cursor = "text";
 
-  document.getElementById("lt-code-note").innerText = "Irréversible";
+  document.getElementById("lt-code-note").innerText =
+    tr("fc_code_irreversible") || "Irréversible";
   document.getElementById("lt-label").value = "";
 }
 
@@ -283,17 +287,21 @@ async function deleteLeaveType(code, label) {
 async function saveLeaveType() {
   const code = document.getElementById("lt-code").value.toUpperCase();
   const label = document.getElementById("lt-label").value;
+  const carryMax = document.getElementById("lt-carry-max").value;
+  const carryDeadline = document.getElementById("lt-carry-deadline").value;
 
   if (!code || !label)
     return window.showToast
-      ? showToast("Code et Label requis", "error")
-      : alert("Code et Label requis");
+      ? showToast(tr("fc_err_code_label"), "error")
+      : alert(tr("fc_err_code_label"));
 
   const fd = new FormData();
   fd.append("action", "save_leave_type");
   fd.append("mode", document.getElementById("lt-mode").value);
   fd.append("code", code);
   fd.append("label", label);
+  fd.append("carry_over_max_days", carryMax);
+  fd.append("carry_over_deadline_month", carryDeadline);
 
   try {
     const res = await pachaFetch(
@@ -302,11 +310,11 @@ async function saveLeaveType() {
     );
     if (!res.success) throw new Error(res.error);
 
-    if (window.showToast) showToast("Catalogue mis à jour !", "success");
+    if (window.showToast) showToast(tr("fc_catalog_updated"), "success");
     resetLeaveTypeForm();
     loadLeaveCatalog();
   } catch (err) {
-    alert("Erreur d'enregistrement : " + err.message);
+    alert(tr("error_occured") + " " + err.message);
   }
 }
 
@@ -373,84 +381,194 @@ async function loadMemberConfigView() {
 
 function renderMemberLeavesView(personId, memberLeaves) {
   const zone = document.getElementById("memberConfigZone");
-  let html = `<h5 style="margin: 0 0 10px 0; color: var(--text-main);">Congés attribués</h5>`;
+  let html = `<h5 style="margin: 0 0 15px 0; color: var(--text-main); font-size: 1.05rem;">Congés attribués</h5>`;
 
   if (memberLeaves.length === 0) {
-    html += `<p class="pf-muted-note" style="font-size: 0.85rem;">Aucun congé attribué à ce membre.</p>`;
+    html += `<p class="pf-muted-note" style="font-size: 0.9rem; font-style: italic;">Aucun congé attribué à ce membre.</p>`;
   } else {
-    html += `<div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">`;
+    html += `<div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;">`;
     memberLeaves.forEach((ml) => {
       const moisRenouv = ml.anniversary_date
         ? parseInt(ml.anniversary_date.split("-")[1])
         : 1;
-      const methodeLabel = ml.method === "ACCUMULATED" ? "Graduel" : "Fixe";
+      const isGraduel = ml.method === "ACCUMULATED";
+      const methodeLabel = isGraduel ? "Graduel" : "Fixe";
+
+      // Construction des petits Badges
+      let badgesHtml = `
+        <span style="background: var(--bg-page); border: 1px solid var(--border-light); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
+            ⚖️ ${ml.allowance} j ${isGraduel ? "/ mois" : "/ an"}
+        </span>
+        <span style="background: var(--bg-page); border: 1px solid var(--border-light); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">
+            🔄 Mois ${moisRenouv}
+        </span>
+      `;
+
+      if (ml.carry_over_max_days > 0) {
+        badgesHtml += `
+            <span style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; color: #d97706; font-weight: 600;">
+                ⚠️ Report Max: ${ml.carry_over_max_days}j (Exp. M${ml.carry_over_deadline_month})
+            </span>`;
+      }
 
       html += `
-        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); padding: 8px; border-radius: 6px; border: 1px solid var(--border-light);">
-            <div>
-                <strong style="color: var(--text-main);">${ml.leave_type}</strong>
-                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 5px;">
-                    (Quota: <b>${ml.allowance}j</b> - Renouv: <b>Mois ${moisRenouv}</b> - Acquis: <b>${methodeLabel}</b>)
-                </span>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; background: var(--bg-subtle); padding: 12px 15px; border-radius: 10px; border: 1px solid var(--border-light);">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <strong style="color: var(--text-main); font-size: 1rem; line-height: 1;">${ml.leave_type} <span style="font-weight: normal; font-size: 0.8rem; color: var(--text-muted);">— ${methodeLabel}</span></strong>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    ${badgesHtml}
+                </div>
             </div>
-            <button class="pf-btn btn-secondary" style="padding: 2px 6px; color: var(--danger);" onclick="deleteMemberLeave(${ml.id}, ${personId})">🗑️</button>
+            <div style="display: flex; gap: 6px; margin-left: 15px;">
+                <button class="pf-btn btn-secondary" style="padding: 6px; height: 32px; width: 32px; display: flex; align-items: center; justify-content: center;" onclick="editMemberLeave(${ml.id}, '${ml.leave_type}', ${ml.allowance}, ${moisRenouv}, '${ml.method}', ${ml.carry_over_max_days}, ${ml.carry_over_deadline_month})" title="Modifier">✏️</button>
+                <button class="pf-btn btn-secondary" style="padding: 6px; height: 32px; width: 32px; display: flex; align-items: center; justify-content: center; color: var(--danger);" onclick="deleteMemberLeave(${ml.id}, ${personId})" title="Supprimer">🗑️</button>
+            </div>
         </div>
       `;
     });
     html += `</div>`;
   }
 
+  // --- LE FORMULAIRE RESTRUCTURÉ EN GRILLE ---
   html += `
-        <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 15px 0;">
-        <h5 style="margin: 0 0 10px 0;">+ Attribuer un congé</h5>
-        <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 120px;">
-                <label class="pf-label" style="font-size: 0.8rem;">Type de congé</label>
-                <select id="new-member-leave-type" class="pf-input" style="width: 100%;">
+        <hr style="border: 0; border-top: 1px solid var(--border-light); margin: 20px 0;">
+        <h5 id="formMemberLeaveTitle" style="margin: 0 0 15px 0; font-size: 1.05rem; color: var(--text-main);">+ Attribuer un congé</h5>
+        <input type="hidden" id="new-member-leave-id" value="">
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;">
+            <div>
+                <label class="pf-label" style="font-size: 0.85rem;">Type de congé</label>
+                <select id="new-member-leave-type" class="pf-input">
                     <option value="" disabled selected>-- Sélectionner --</option>
                     ${globalLeaveCatalog.map((lt) => `<option value="${lt.code}">${lt.label}</option>`).join("")}
                 </select>
             </div>
-            <div style="flex: 0 0 70px;">
-                <label class="pf-label" style="font-size: 0.8rem;">Quota</label>
-                <input type="number" step="0.5" id="new-member-leave-allowance" class="pf-input" value="0" style="width: 100%;">
-            </div>
-            <div style="flex: 0 0 100px;">
-                <label class="pf-label" style="font-size: 0.8rem;">Renouvellement</label>
-                <select id="new-member-leave-reset" class="pf-input" style="width: 100%;">
-                    <option value="1">${tr("month_jan") || "Janvier"}</option>
-                    <option value="2">${tr("month_feb") || "Février"}</option>
-                    <option value="3">${tr("month_mar") || "Mars"}</option>
-                    <option value="4">${tr("month_apr") || "Avril"}</option>
-                    <option value="5">${tr("month_may") || "Mai"}</option>
-                    <option value="6">${tr("month_jun") || "Juin"}</option>
-                    <option value="7">${tr("month_jul") || "Juillet"}</option>
-                    <option value="8">${tr("month_aug") || "Août"}</option>
-                    <option value="9">${tr("month_sep") || "Septembre"}</option>
-                    <option value="10">${tr("month_oct") || "Octobre"}</option>
-                    <option value="11">${tr("month_nov") || "Novembre"}</option>
-                    <option value="12">${tr("month_dec") || "Décembre"}</option>
+            
+            <div>
+                <label class="pf-label" style="font-size: 0.85rem;">Acquisition</label>
+                <select id="new-member-leave-method" class="pf-input">
+                    <option value="FIXED">Fixe (Annuelle)</option>
+                    <option value="ACCUMULATED">Graduelle (Mensuelle)</option>
                 </select>
             </div>
-            <div style="flex: 0 0 90px;">
-                <label class="pf-label" style="font-size: 0.8rem;">Acquisition</label>
-                <select id="new-member-leave-method" class="pf-input" style="width: 100%;">
-                    <option value="FIXED">Fixe</option>
-                    <option value="ACCUMULATED">Graduel</option>
+
+            <div title="${tr("fc_allowance_help") || "Fixe: Quota annuel. Graduel: Ajout par mois."}">
+                <label class="pf-label" style="font-size: 0.85rem;">Quota</label>
+                <input type="number" step="0.01" id="new-member-leave-allowance" class="pf-input" value="0">
+            </div>
+
+            <div>
+                <label class="pf-label" style="font-size: 0.85rem;">Renouvellement</label>
+                <select id="new-member-leave-reset" class="pf-input">
+                    <option value="1">${tr("month_01") || "Janvier"}</option>
+                    <option value="2">${tr("month_02") || "Février"}</option>
+                    <option value="3">${tr("month_03") || "Mars"}</option>
+                    <option value="4">${tr("month_04") || "Avril"}</option>
+                    <option value="5">${tr("month_05") || "Mai"}</option>
+                    <option value="6">${tr("month_06") || "Juin"}</option>
+                    <option value="7">${tr("month_07") || "Juillet"}</option>
+                    <option value="8">${tr("month_08") || "Août"}</option>
+                    <option value="9">${tr("month_09") || "Septembre"}</option>
+                    <option value="10">${tr("month_10") || "Octobre"}</option>
+                    <option value="11">${tr("month_11") || "Novembre"}</option>
+                    <option value="12">${tr("month_12") || "Décembre"}</option>
                 </select>
             </div>
-            <button class="pf-btn pf-btn-primary" onclick="addMemberLeave(${personId})">Ajouter</button>
+        </div>
+        
+        <!-- BLOC AVANCÉ : RÈGLES DE REPORT -->
+        <div style="margin-top: 15px; padding: 12px; background: var(--bg-page); border-left: 3px solid var(--border-strong); border-radius: 4px 8px 8px 4px;">
+            <p style="margin: 0 0 10px 0; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">⚙️ Règles de report (Optionnel)</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;">
+                <div>
+                    <label class="pf-label" style="font-size: 0.8rem;">${tr("fc_carry_max") || "Max Reportable"}</label>
+                    <input type="number" step="0.5" id="new-member-leave-carry-max" class="pf-input" value="0" placeholder="ex: 2">
+                </div>
+                <div>
+                    <label class="pf-label" style="font-size: 0.8rem;">${tr("fc_carry_deadline") || "Mois Expiration"}</label>
+                    <select id="new-member-leave-carry-deadline" class="pf-input">
+                        <option value="1">${tr("month_01") || "Janvier"}</option>
+                        <option value="2">${tr("month_02") || "Février"}</option>
+                        <option value="3">${tr("month_03") || "Mars"}</option>
+                        <option value="4">${tr("month_04") || "Avril"}</option>
+                        <option value="12" selected>${tr("fc_deadline_none") || "Aucune"}</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+            <button class="pf-btn btn-secondary" style="display: none;" id="btn-cancel-member-leave" onclick="resetMemberLeaveForm()">${tr("btn_cancel") || "Annuler"}</button>
+            <button class="pf-btn pf-btn-primary" id="btn-submit-member-leave" onclick="addMemberLeave(${personId})">Ajouter / Enregistrer</button>
         </div>
     `;
 
   zone.innerHTML = html;
 }
 
+// === NOUVELLES FONCTIONS : ÉDITION ET RESET ===
+window.editMemberLeave = function (
+  id,
+  type,
+  allowance,
+  resetMonth,
+  method,
+  carryMax,
+  carryDeadline,
+) {
+  document.getElementById("formMemberLeaveTitle").innerText =
+    "✏️ Modifier le congé";
+  document.getElementById("new-member-leave-id").value = id;
+
+  const typeSelect = document.getElementById("new-member-leave-type");
+  typeSelect.value = type;
+  typeSelect.disabled = true; // On bloque le type car il définit la clé unique
+  typeSelect.style.backgroundColor = "var(--bg-subtle)";
+
+  document.getElementById("new-member-leave-allowance").value = allowance;
+  document.getElementById("new-member-leave-reset").value = resetMonth;
+  document.getElementById("new-member-leave-method").value = method;
+  document.getElementById("new-member-leave-carry-max").value = carryMax || 0;
+  document.getElementById("new-member-leave-carry-deadline").value =
+    carryDeadline || 12;
+
+  document.getElementById("btn-submit-member-leave").innerText =
+    tr("btn_save") || "Enregistrer";
+  document.getElementById("btn-cancel-member-leave").style.display =
+    "inline-flex";
+};
+
+window.resetMemberLeaveForm = function () {
+  document.getElementById("formMemberLeaveTitle").innerText =
+    "+ Attribuer un congé";
+  document.getElementById("new-member-leave-id").value = "";
+
+  const typeSelect = document.getElementById("new-member-leave-type");
+  typeSelect.value = "";
+  typeSelect.disabled = false;
+  typeSelect.style.backgroundColor = "";
+
+  document.getElementById("new-member-leave-allowance").value = "0";
+  document.getElementById("new-member-leave-reset").value = "1";
+  document.getElementById("new-member-leave-method").value = "FIXED";
+  document.getElementById("new-member-leave-carry-max").value = "0";
+  document.getElementById("new-member-leave-carry-deadline").value = "12";
+
+  document.getElementById("btn-submit-member-leave").innerText = "Ajouter";
+  document.getElementById("btn-cancel-member-leave").style.display = "none";
+};
+
 async function addMemberLeave(personId) {
-  const leaveCode = document.getElementById("new-member-leave-type").value;
+  const id = document.getElementById("new-member-leave-id").value;
+  const typeSelect = document.getElementById("new-member-leave-type");
+  const leaveCode = typeSelect.value;
   const allowance = document.getElementById("new-member-leave-allowance").value;
   const resetMonth = document.getElementById("new-member-leave-reset").value;
   const method = document.getElementById("new-member-leave-method").value;
+  const carryMax = document.getElementById("new-member-leave-carry-max").value;
+  const carryDeadline = document.getElementById(
+    "new-member-leave-carry-deadline",
+  ).value;
 
   if (!leaveCode) {
     return window.showToast
@@ -460,11 +578,14 @@ async function addMemberLeave(personId) {
 
   const fd = new FormData();
   fd.append("action", "add_person_leave");
+  fd.append("meta_id", id);
   fd.append("person_id", personId);
   fd.append("leave_type", leaveCode);
   fd.append("allowance", allowance);
   fd.append("reset_month", resetMonth);
   fd.append("method", method);
+  fd.append("carry_over_max_days", carryMax);
+  fd.append("carry_over_deadline_month", carryDeadline);
 
   try {
     const res = await pachaFetch(
@@ -473,11 +594,46 @@ async function addMemberLeave(personId) {
     );
 
     if (!res.success) throw new Error(res.error);
-    if (window.showToast) showToast("Congé attribué avec succès !", "success");
+    if (window.showToast) showToast("Opération réussie !", "success");
     loadMemberConfigView();
   } catch (err) {
+    if (window.showToast) showToast("Erreur : " + err.message, "error");
+    else alert("Erreur: " + err.message);
+  }
+}
+
+async function deleteMemberLeave(id, personId) {
+  if (
+    !confirm(
+      tr("confirm_delete") ||
+        "Voulez-vous vraiment retirer ce congé pour ce membre ?",
+    )
+  )
+    return;
+
+  const fd = new FormData();
+  fd.append("action", "delete_person_leave");
+  fd.append("id", id);
+
+  try {
+    const res = await pachaFetch(
+      "/modules/family-calendar/includes/api/calendar-settings.php",
+      { method: "POST", body: fd },
+    );
+    if (!res.success) throw new Error(res.error);
+
     if (window.showToast)
-      showToast("Erreur lors de l'attribution : " + err.message, "error");
+      showToast(
+        tr("fc_settings_updated") || "Congé retiré avec succès !",
+        "success",
+      );
+    loadMemberConfigView(); // Recharge la vue des attributions du membre
+  } catch (err) {
+    if (window.showToast)
+      showToast(
+        (tr("error_occured") || "Erreur") + " : " + err.message,
+        "error",
+      );
     else alert("Erreur: " + err.message);
   }
 }
@@ -916,6 +1072,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const balances = {};
       this.parents.forEach((p) => (balances[String(p.id)] = {}));
 
+      // 1. Préparation d'une chronologie glissante (60 mois)
       const ymList = [];
       const tempDate = new Date();
       tempDate.setFullYear(tempDate.getFullYear() - 2);
@@ -926,6 +1083,7 @@ document.addEventListener("DOMContentLoaded", () => {
         tempDate.setMonth(tempDate.getMonth() + 1);
       }
 
+      // 2. Indexation des jours consommés par mois
       const usageByMonth = {};
       const allPlacedLeaves = [...(this.leaves || []), ...(this.events || [])];
 
@@ -947,6 +1105,7 @@ document.addEventListener("DOMContentLoaded", () => {
         usageByMonth[pid][type][ym] = (usageByMonth[pid][type][ym] || 0) + dur;
       });
 
+      // 3. Parcours Chronologique
       this.parents.forEach((parent) => {
         const pid = String(parent.id);
         const matrix =
@@ -958,49 +1117,74 @@ document.addEventListener("DOMContentLoaded", () => {
             .toUpperCase();
           if (!balances[pid][type]) balances[pid][type] = {};
 
-          let monthRenouvellement = 1;
-          const dateVal = conf.anniversary_date || conf.date;
-          if (dateVal && dateVal.includes("-")) {
-            monthRenouvellement = parseInt(dateVal.split("-")[1], 10) || 1;
-          }
+          // Paramètres du congé
+          const resetMonth = parseInt(
+            conf.date ? conf.date.split("-")[1] : 1,
+            10,
+          );
+          const maxCarry = parseFloat(conf.carry_over_max_days || 0);
+          const deadlineMonth = parseInt(
+            conf.carry_over_deadline_month || 12,
+            10,
+          );
+          const method = conf.method || "FIXED";
+          const allowance = parseFloat(conf.allowance || 0);
 
-          let initialBalance = parseFloat(conf.allowance);
-          if (isNaN(initialBalance)) initialBalance = 0;
+          let mainBalance = 0;
+          let carryBalance = 0;
+
+          // Filtrer les snapshots de cette personne et de ce congé
+          const snapshots = (this.leaveSnapshots || []).filter(
+            (s) => String(s.person_id) === pid && s.leave_type === type,
+          );
 
           ymList.forEach((ym) => {
-            const [currYearStr, currMonthStr] = ym.split("-");
-            const currYear = parseInt(currYearStr, 10);
-            const currMonth = parseInt(currMonthStr, 10);
+            const currM = parseInt(ym.split("-")[1], 10);
+            const snap = snapshots.find((s) => s.snapshot_date.startsWith(ym));
 
-            const isPastAnniversary = currMonth >= monthRenouvellement;
-            const refYear = isPastAnniversary ? currYear : currYear - 1;
-            const cycleStartStr = `${refYear}-${String(monthRenouvellement).padStart(2, "0")}`;
+            if (snap) {
+              // A. LE MUR DE BÉTON : Le Snapshot écrase tout le passé
+              mainBalance = parseFloat(snap.remaining_balance || 0);
+              carryBalance = parseFloat(snap.carry_over_balance || 0);
+            } else {
+              // B. LA GUILLOTINE : Effacement du report au mois M+1 de la deadline
+              let wipeMonth = (deadlineMonth % 12) + 1;
+              if (currM === wipeMonth && maxCarry > 0) {
+                carryBalance = 0;
+              }
 
-            let acquiredBalance = initialBalance;
-            if (conf.method === "ACCUMULATED") {
-              let monthsPassed =
-                (currYear - refYear) * 12 +
-                (currMonth - monthRenouvellement) +
-                1;
-              acquiredBalance = Math.min(
-                initialBalance,
-                (initialBalance / 12) * monthsPassed,
-              );
+              // C. RENOUVELLEMENT ANNUEL (Bascule vers le Report)
+              if (currM === resetMonth) {
+                carryBalance = Math.min(mainBalance, maxCarry);
+                mainBalance = 0;
+              }
+
+              // D. ACQUISITION
+              if (method === "FIXED" && currM === resetMonth) {
+                mainBalance += allowance;
+              } else if (method === "ACCUMULATED") {
+                // Acquisition graduelle stricte (ex: +0.64/mois)
+                mainBalance += allowance;
+              }
             }
 
-            let usedBeforeCurrentMonth = 0;
-            Object.keys(usageByMonth[pid]?.[type] || {}).forEach((usedYm) => {
-              if (usedYm >= cycleStartStr && usedYm < ym) {
-                usedBeforeCurrentMonth += usageByMonth[pid][type][usedYm];
-              }
-            });
+            // E. CONSOMMATION DU MOIS
+            const totalAvailableAtStart = mainBalance + carryBalance;
+            const carryAtStart = carryBalance;
+            const usedInMonth = usageByMonth[pid]?.[type]?.[ym] || 0;
 
+            // Priorité absolue : On tape d'abord dans les jours périssables !
+            let usedFromCarry = Math.min(usedInMonth, carryBalance);
+            carryBalance -= usedFromCarry;
+
+            let usedFromMain = usedInMonth - usedFromCarry;
+            mainBalance -= usedFromMain;
+
+            // F. SAUVEGARDE DE L'ÉTAT DU MOIS
             balances[pid][type][ym] = {
-              availableAtMonthStart: Math.max(
-                0,
-                acquiredBalance - usedBeforeCurrentMonth,
-              ),
-              usedInMonth: usageByMonth[pid]?.[type]?.[ym] || 0,
+              availableAtMonthStart: totalAvailableAtStart,
+              carryAtStart: carryAtStart,
+              usedInMonth: usedInMonth,
             };
           });
         });
@@ -1454,10 +1638,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const type = String(conf.leave_type || conf.type)
               .trim()
               .toUpperCase();
+
             const startBal =
               this.monthlyLeaveBalances[String(person.id)]?.[type]?.[
                 monthsToDisplay[0]
               ]?.availableAtMonthStart || 0;
+            const carryAtStart =
+              this.monthlyLeaveBalances[String(person.id)]?.[type]?.[
+                monthsToDisplay[0]
+              ]?.carryAtStart || 0;
 
             let totalUsed = 0;
             monthsToDisplay.forEach((ym) => {
@@ -1467,20 +1656,37 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const endBal = Math.max(0, startBal - totalUsed);
+            const remainingCarry = Math.max(0, carryAtStart - totalUsed);
             const fmt = (n) =>
-              n > 0 ? (Number.isInteger(n) ? n : n.toFixed(1)) : "0";
+              n > 0 ? (Number.isInteger(n) ? n : n.toFixed(2)) : "0";
 
             let alertHtml = "";
             const cMonth = parseInt(monthsToDisplay[0].split("-")[1], 10);
-            const dateVal = conf.anniversary_date || conf.date;
 
-            if (endBal > 0 && dateVal && dateVal.includes("-")) {
-              const resetMonth = parseInt(dateVal.split("-")[1], 10) || 1;
-              const alertMonth = resetMonth === 1 ? 12 : resetMonth - 1;
+            const resetMonth = parseInt(
+              conf.date ? conf.date.split("-")[1] : 1,
+              10,
+            );
+            const deadline = parseInt(conf.carry_over_deadline_month || 12, 10);
 
-              if (cMonth === alertMonth || cMonth === resetMonth) {
-                alertHtml = `<div class="fc-burn-alert" title="Alerte : ${fmt(endBal)} jour(s) perdu(s) à la fin du cycle !">🔥</div>`;
-              }
+            const alertMonthEndCycle = resetMonth === 1 ? 12 : resetMonth - 1;
+
+            // ⚠️ Alerte 1 : Le Report expire à la fin de ce mois !
+            if (remainingCarry > 0 && cMonth === deadline) {
+              alertHtml = `<div class="fc-burn-alert" title="${tr("fc_alert_burn_jra") || "Alerte : Jours reportés expirent à la fin de ce mois !"}">🔥</div>`;
+            }
+            // ⚠️ Alerte 2 : Le solde de base expire à la fin du cycle annuel !
+            else if (
+              endBal > 0 &&
+              (cMonth === alertMonthEndCycle || cMonth === resetMonth)
+            ) {
+              const alertMsg =
+                window.I18N && window.I18N["fc_alert_burn_days"]
+                  ? window.I18N["fc_alert_burn_days"]
+                      .replace("%s", fmt(endBal))
+                      .replace("%s", "la fin de cycle")
+                  : `Alerte : ${fmt(endBal)} j perdu(s) à la fin du cycle !`;
+              alertHtml = `<div class="fc-burn-alert" title="${alertMsg}">🔥</div>`;
             }
 
             cards += `<div class="fc-min-chip" title="Solde: ${fmt(startBal)}"><span class="type">${conf.type || type}</span><span class="val">${fmt(endBal)}</span>${totalUsed > 0 ? `<span class="fc-used-badge">-${fmt(totalUsed)}</span>` : ""}${alertHtml}</div>`;
@@ -1689,6 +1895,68 @@ document.addEventListener("DOMContentLoaded", () => {
           this.renderMonthCalendar();
         }),
       );
+
+      // Câblage sécurisé du formulaire d'ajustement de solde
+      const formSnap = document.getElementById("formSnapshot");
+      if (formSnap) {
+        formSnap.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn =
+            document.getElementById("btnSubmitSnapshot") ||
+            e.target.querySelector('button[type="submit"]');
+          const originalText = btn ? btn.innerHTML : "";
+          if (btn) {
+            btn.innerHTML = "⏳...";
+            btn.disabled = true;
+          }
+
+          try {
+            const payload = {
+              person_id: document.getElementById("snapPerson").value,
+              leave_type: document.getElementById("snapType").value,
+              snapshot_date: document.getElementById("snapDate").value,
+              remaining_balance: parseFloat(
+                document.getElementById("snapBalance").value,
+              ),
+              carry_over_balance: parseFloat(
+                document.getElementById("snapCarryOver").value || 0,
+              ),
+            };
+
+            const res = await this.postApi(
+              "/modules/family-calendar/includes/api/save-leave-snapshot.php",
+              payload,
+            );
+            if (!res.status || res.status !== "success")
+              throw new Error(res.message || "Erreur");
+
+            if (window.showToast)
+              showToast(
+                tr("fc_settings_updated") || "Solde corrigé !",
+                "success",
+              );
+
+            const modal =
+              document.getElementById("modalSnapshot") ||
+              document.getElementById("snapshotModal");
+            if (modal) {
+              modal.style.display = "none";
+              modal.classList.remove("open");
+            }
+            document.body.classList.remove("no-scroll");
+            formSnap.reset();
+
+            await this.refreshAllData(); // Recharge les graphiques en direct
+          } catch (err) {
+            alert(tr("error_occured") + " " + err.message);
+          } finally {
+            if (btn) {
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+            }
+          }
+        });
+      }
     }
 
     handleMouseDown(e) {

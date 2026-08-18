@@ -283,6 +283,21 @@ return [
     
     'btn_save_rights'             => 'Enregistrer',
 
+    'fc_label_carry_over'    => 'Dont jours reportés (Périssables) ⚠️',
+    'fc_carry_over_note'     => 'Partie du solde global qui expirera à la date butoir définie.',
+    'fc_carry_max'           => 'Max Reportable',
+    'fc_carry_deadline'      => 'Mois Expiration',
+    'fc_deadline_none'       => 'Aucune',
+    'fc_allowance_help'      => 'Fixe: Quota annuel. Graduel: Ajout par mois.',
+    'fc_carry_max_short'     => 'Report max',
+    'fc_edit_leave'          => '✏️ Modifier :',
+    'fc_not_modifiable'      => 'Non modifiable',
+    'fc_add_leave'           => '+ Ajouter',
+    'fc_err_code_label'      => 'Le code et le libellé sont obligatoires.',
+    'fc_catalog_updated'     => 'Catalogue mis à jour !',
+    'fc_balance_corrected'   => 'Solde corrigé !',
+    'fc_no_leave_configured' => 'Aucun congé configuré.',
+
     // ==========================================
 // MODALE PARAMÈTRES CALENDRIER
 // ==========================================
