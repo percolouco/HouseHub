@@ -72,6 +72,7 @@ return [
     'error_missing_fields'      => 'Camps obligatoris.',
     'error_invalid_credentials' => 'Identificadors incorrectes.',
     'login_subtitle'      => 'Si us plau, identifiqueu-vos per continuar',
+    'login_remember_me'         => "Recorda'm",
 
     // ==========================================
     // ACCUEIL / INDEX

@@ -51,6 +51,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['family_db']       = $user['db_name'];
                 $_SESSION['app_lang']        = $user['lang'] ?? 'fr';
                 $_SESSION['enabled_modules'] = json_decode($user['enabled_modules'] ?? '["calendar","budget","holidays","gifts","calendar_ios"]', true);
+                
+                // --- NOUVEAU : Logique "Se souvenir de moi" ---
+                if (isset($_POST['remember_me']) && $_POST['remember_me'] === '1') {
+                    $token = bin2hex(random_bytes(32)); // Token aléatoire sécurisé
+                    $hashedToken = hash('sha256', $token); // On stocke le hash en BDD
+                    
+                    $meta_pdo->prepare("UPDATE users SET remember_token = ? WHERE id = ?")->execute([$hashedToken, $user['id']]);
+                    
+                    // Création du cookie sécurisé (Expire dans 30 jours, HTTPOnly)
+                    $cookieValue = $user['id'] . ':' . $token;
+                    setcookie('hh_remember', $cookieValue, time() + (86400 * 30), '/', '', isset($_SERVER['HTTPS']), true);
+                }
+                // ----------------------------------------------
+
                 $redirectTo = $_GET['redirect'] ?? '/index.php';
                 header('Location: ' . $redirectTo);
                 exit;
@@ -93,6 +107,11 @@ require __DIR__ . '/header.php';
                 <label class="pf-label" for="password"><?= tr('label_password') ?></label>
                 <input type="password" id="password" name="password" class="pf-input" 
                        required placeholder="••••••" autocomplete="current-password">
+            </div>
+
+            <div class="pf-form-group" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="remember_me" name="remember_me" value="1" class="pf-checkbox-lg">
+                <label class="pf-label" for="remember_me" style="margin: 0; cursor: pointer;"><?= tr('login_remember_me') ?? 'Se souvenir de moi' ?></label>
             </div>
 
             <button type="submit" class="pf-btn pf-btn-block">

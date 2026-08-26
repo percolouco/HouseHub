@@ -15,6 +15,8 @@ return [
     'tests_report_copied' => 'Rapport copié dans le presse-papier !',
     'tests_live_preview'  => 'Aperçu en direct',
 
+  
+
 
     // ==========================================
     // GLOBAL & NAVIGATION
@@ -75,6 +77,7 @@ return [
     'error_missing_fields'      => 'Champs obligatoires.',
     'error_invalid_credentials' => 'Identifiants incorrects.',
     'login_subtitle'      => 'Veuillez vous identifier pour continuer',
+    'login_remember_me'         => 'Se souvenir de moi',
 
     // ==========================================
     // ACCUEIL / INDEX
