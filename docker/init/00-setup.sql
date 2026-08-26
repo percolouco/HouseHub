@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
   is_admin      TINYINT(1) DEFAULT 0,
   is_active     TINYINT(1) DEFAULT 1,
   lang          VARCHAR(5) DEFAULT 'fr',
+  remember_token VARCHAR(255) DEFAULT NULL, -- 👈 NOUVEAU CHAMP ICI
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (family_id) REFERENCES families(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

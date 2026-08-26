@@ -73,6 +73,7 @@ return [
     'error_missing_fields'      => 'All fields are required.',
     'error_invalid_credentials' => 'Invalid credentials.',
     'login_subtitle'            => 'Please sign in to continue',
+    'login_remember_me'         => 'Remember me',
 
     // ==========================================
     // HOME / INDEX
