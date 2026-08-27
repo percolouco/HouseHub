@@ -316,12 +316,10 @@ function initDetailMap() {
   const mapPadding = window.innerWidth < 768 ? [20, 20] : [50, 50];
 
   // 3. Tracés OSRM et calculs
-  if (latlngs.length === 1) {
-    detailMap.setView(latlngs[0], 12);
-  } else if (latlngs.length > 1) {
-    detailMap.fitBounds(bounds, { padding: mapPadding });
+  const routePromises = []; // On déclare routePromises directement
 
-    const routePromises = [];
+  if (latlngs.length > 1) {
+    // Les appels setView et fitBounds ont été déplacés à l'étape 5 !
 
     for (let i = 0; i < latlngs.length - 1; i++) {
       const startPt = MAP_POINTS[i];
@@ -514,7 +512,13 @@ function initDetailMap() {
     // 5. Fix Leaflet Resize
     setTimeout(() => {
       if (detailMap) {
-        detailMap.invalidateSize();
+        detailMap.invalidateSize(); // Force Leaflet à prendre la vraie taille de la fenêtre
+
+        if (latlngs.length === 1) {
+          detailMap.setView(latlngs[0], 12);
+        } else if (latlngs.length > 1) {
+          detailMap.fitBounds(bounds, { padding: mapPadding });
+        }
       }
     }, 300);
 
@@ -531,7 +535,7 @@ function initDetailMap() {
 
 function panMapTo(lat, lng) {
   if (detailMap) {
-    detailMap.setView([lat, lng], 14, { animate: true });
+    detailMap.setView([lat, lng], 12, { animate: true });
 
     if (window.innerWidth < 768) {
       const mapDiv = document.getElementById("tripMap");
