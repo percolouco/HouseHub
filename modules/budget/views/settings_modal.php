@@ -324,7 +324,7 @@ function renderCategories(categories) {
                 <div class="pf-flex-gap-8">
                     <button type="button" class="btn-icon-action" onclick="moveCatUp(this)" title="Monter">⬆️</button>
                     <button type="button" class="btn-icon-action" onclick="moveCatDown(this)" title="Descendre">⬇️</button>
-                    <button type="button" class="btn-icon-action delete" onclick="deleteCategory(${cat.id})" title="${tr('btn_delete')}">🗑️</button>
+                    <button type="button" class="btn-icon-action delete" onclick="deleteBudgetCategory(${cat.id})" title="${tr('btn_delete')}">🗑️</button>
                 </div>
             </div>`;
     });
@@ -453,9 +453,18 @@ async function deleteAccount(id) { if (!await pachaConfirm(tr('btn_delete'), tr(
 const formAddAccount = document.getElementById('form-add-account');
 if (formAddAccount) formAddAccount.addEventListener('submit', async (e) => { e.preventDefault(); const btn = formAddAccount.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(formAddAccount); fd.append('action', 'add_account'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); formAddAccount.reset(); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } });
 
-async function deleteCategory(id) { if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete_cat'))) return; try { const fd = new FormData(); fd.append('action', 'delete_category'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } }
-const formAddCategory = document.getElementById('form-add-category');
-if (formAddCategory) formAddCategory.addEventListener('submit', async (e) => { e.preventDefault(); const btn = formAddCategory.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(formAddCategory); fd.append('action', 'add_category'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); formAddCategory.reset(); formAddCategory.querySelector('input[type="color"]').value = "#3b82f6"; await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } });
+async function deleteBudgetCategory(id) { 
+    if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete_cat'))) return; 
+    try { 
+        const fd = new FormData(); 
+        fd.append('action', 'delete_category'); 
+        fd.append('id', id); 
+        await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); 
+        await loadBudgetSettingsData(); 
+    } catch (err) { 
+        alert("Erreur : " + err.message); 
+    } 
+}
 
 function populateRuleCategories(categories) { const select = document.getElementById('select-rule-category'); if (!select) return; select.innerHTML = ''; if (!categories) return; categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat.code; opt.textContent = `${cat.icon || ''} ${cat.label}`; select.appendChild(opt); }); }
 async function deleteRule(id) { if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete_rule'))) return; try { const fd = new FormData(); fd.append('action', 'delete_rule'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } }
