@@ -197,6 +197,12 @@ if ($action === 'validate_transfers') {
         $dbPersonName = $stmtP->fetchColumn();
         if (!$dbPersonName) throw new Exception("Parent introuvable.");
 
+        $stmtAcc = $pdo->query("SELECT a.name as acc_name, p.name as owner_name FROM pf_bank_accounts a LEFT JOIN pf_people p ON a.owner_person_id = p.id");
+        $bankAccountsMap = [];
+        while ($row = $stmtAcc->fetch(PDO::FETCH_ASSOC)) {
+            $bankAccountsMap['vers ' . $row['acc_name']] = $row['owner_name'];
+        }
+
         $stmt = $pdo->prepare("
             SELECT v.amount, c.name as cat_name, c.transfer_dest, c.holiday_id
             FROM pf_alloc_values v
@@ -217,7 +223,10 @@ if ($action === 'validate_transfers') {
             $holidayId = $line['holiday_id'];
 
             $targetOwner = null;
-            if ($dest === 'vers L.Perso') { $targetOwner = $dbPersonName; }
+            if (isset($bankAccountsMap[$dest])) {
+                $targetOwner = $bankAccountsMap[$dest];
+                if (!$targetOwner) continue; // Compte commun sans propriétaire
+            } elseif ($dest === 'vers L.Perso') { $targetOwner = $dbPersonName; }
             elseif ($dest === 'vers L.Pol') { $targetOwner = 'Pol'; }
             elseif ($dest === 'vers L.Pep') { $targetOwner = 'Pep'; }
             elseif ($dest === 'vers commune') { continue; }
@@ -261,7 +270,7 @@ if ($action === 'validate_transfers') {
                 $catAmount = $catInfo['amount'];
                 $catHolidayId = $catInfo['holiday_id'];
 
-                if (strpos($catName, 'Eco P') === 0) { continue; }
+                if (preg_match('/^(Eco\s|Eco P\d|Livret)/i', $catName)) { continue; }
 
                 $stmtCheckCat = $pdo->prepare("SELECT id FROM pf_savings WHERE owner = ? AND month_date = ? AND category = ?");
                 $stmtCheckCat->execute([$owner, $monthDate, $catName]);

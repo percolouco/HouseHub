@@ -277,7 +277,7 @@ if (count($parentMapping) >= 2) {
                     </tr>
 
                     <?php foreach ($cats as $cat):
-                        $isIndicative = (strpos($cat['name'], 'Eco P') === 0);
+                        $isIndicative = (preg_match('/^(Eco\s|Eco P\d|Livret)/i', $cat['name']) === 1);
                         $rowClass = $isIndicative ? 'row-indicative' : '';
                         $inputClass = $isIndicative ? 'ignore-calc' : '';
                         
