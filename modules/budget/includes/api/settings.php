@@ -45,6 +45,9 @@ try {
         $currencySetting = $foyerData['currency'] ?? '€';
         $csvMapping = !empty($foyerData['csv_mapping']) ? json_decode($foyerData['csv_mapping'], true) : null;
 
+        // 6. Liste des membres (pour assigner un compte bancaire)
+        $people = $pdo->query("SELECT id, name FROM pf_people WHERE is_active = 1 ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+
         echo json_encode([
             'success' => true,
             'data' => [
@@ -52,6 +55,7 @@ try {
                 'categories'  => $categories,
                 'rules'       => $rules,
                 'salaries'    => $salaries,
+                'people'      => $people,
                 'year'        => $currentYear,
                 'currency'    => $currencySetting,
                 'csv_mapping' => $csvMapping
@@ -64,9 +68,10 @@ try {
     if ($action === 'add_account') {
         $name = trim($_POST['name'] ?? '');
         $type = $_POST['type'] ?? 'checking';
+        $owner_id = !empty($_POST['owner_person_id']) ? (int)$_POST['owner_person_id'] : null;
         if (empty($name)) throw new Exception("Le nom du compte est obligatoire.");
-        $stmt = $pdo->prepare("INSERT INTO pf_bank_accounts (name, account_type, is_default) VALUES (?, ?, 0)");
-        $stmt->execute([$name, $type]);
+        $stmt = $pdo->prepare("INSERT INTO pf_bank_accounts (name, account_type, is_default, owner_person_id) VALUES (?, ?, 0, ?)");
+        $stmt->execute([$name, $type, $owner_id]);
         echo json_encode(['success' => true]);
         exit;
     }

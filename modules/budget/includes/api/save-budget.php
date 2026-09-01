@@ -199,8 +199,22 @@ if ($action === 'validate_transfers') {
 
         $stmtAcc = $pdo->query("SELECT a.name as acc_name, p.name as owner_name FROM pf_bank_accounts a LEFT JOIN pf_people p ON a.owner_person_id = p.id");
         $bankAccountsMap = [];
+        
+        // Fallback intelligent : on récupère tous les prénoms de la famille
+        $familyNames = $pdo->query("SELECT name FROM pf_people")->fetchAll(PDO::FETCH_COLUMN);
+
         while ($row = $stmtAcc->fetch(PDO::FETCH_ASSOC)) {
-            $bankAccountsMap['vers ' . $row['acc_name']] = $row['owner_name'];
+            $owner = $row['owner_name'];
+            if (!$owner) {
+                // Si pas de propriétaire explicite, on cherche un prénom dans le nom du compte (ex: "Livret A Alex")
+                foreach ($familyNames as $pName) {
+                    if (stripos($row['acc_name'], $pName) !== false) {
+                        $owner = $pName;
+                        break;
+                    }
+                }
+            }
+            $bankAccountsMap['vers ' . $row['acc_name']] = $owner;
         }
 
         $stmt = $pdo->prepare("

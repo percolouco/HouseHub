@@ -80,6 +80,9 @@ if (!defined('CURRENCY')) {
                             <option value="checking"><?= tr('bs_type_checking') ?></option>
                             <option value="savings"><?= tr('bs_type_savings') ?></option>
                         </select>
+                        <select name="owner_person_id" id="select-account-owner" class="pf-input bs-input-fixed">
+                            <option value="">Commun</option>
+                        </select>
                         <button type="submit" class="btn btn-secondary"><?= tr('btn_add') ?></button>
                     </form>
                 </div>
@@ -250,11 +253,21 @@ function switchBsTab(tabId, btnEl) {
 }
 
 async function loadBudgetSettingsData() {
-    try {
-        const response = await pachaFetch('/modules/budget/includes/api/settings.php?action=get_all', { method: 'GET' });
-        if (!response.success) throw new Error(response.error || tr('error_occured'));
-        renderAccounts(response.data.accounts);
-        renderCategories(response.data.categories);
+        try {
+            const response = await pachaFetch('/modules/budget/includes/api/settings.php?action=get_all', { method: 'GET' });
+            if (!response.success) throw new Error(response.error || tr('error_occured'));
+            
+            // Alimenter la liste des propriétaires pour les comptes
+            const ownerSelect = document.getElementById('select-account-owner');
+            if (ownerSelect && response.data.people) {
+                ownerSelect.innerHTML = '<option value="">Commun</option>';
+                response.data.people.forEach(p => {
+                    ownerSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                });
+            }
+
+            renderAccounts(response.data.accounts);
+            renderCategories(response.data.categories);
         populateRuleCategories(response.data.categories);
         renderRules(response.data.rules);
         renderSalaries(response.data.salaries, response.data.year);
