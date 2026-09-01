@@ -306,7 +306,7 @@ if (count($parentMapping) >= 2) {
                                     data-transfer-dest="<?= htmlspecialchars($cat['transfer_dest'] ?? '') ?>" 
                                     data-holiday="<?= $cat['holiday_id'] ?? '' ?>" 
                                     onclick="openEditModal(this)">✎</button>
-                            <button type="button" onclick="deleteCategory(<?= $cat['id'] ?>)" class="btn-icon-action delete" title="<?= tr('delete') ?>">🗑️</button>
+                            <button type="button" onclick="deleteAllocCategory(<?= $cat['id'] ?>)" class="btn-icon-action delete" title="<?= tr('delete') ?>">🗑️</button>
                         </div>
                     </td>
                     <?php foreach ($months as $m): ?>
@@ -986,7 +986,7 @@ async function saveGenericNote(noteType, refId, content) {
     }
 }
 
-async function deleteCategory(id) {
+async function deleteAllocCategory(id) {
     if (!confirm(tr('bud_prev_confirm_del_line'))) return;
     const formData = new FormData();
     formData.append('action', 'delete_category');
