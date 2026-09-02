@@ -445,6 +445,81 @@ body.pf-home .pf-mobile-close-btn {
   font-size: 0.95rem;
   color: var(--text-main);
 }
+/* --- PALETTES DE COULEURS CUSTOM --- */
+.pf-color-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.pf-color-trigger {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s;
+}
+.pf-color-trigger:hover {
+  transform: scale(1.1);
+}
+.pf-color-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  width: 180px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-color-menu.is-open {
+  display: flex;
+  animation: pfModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pf-color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.pf-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+/* Palette Radio (Pour le formulaire d'ajout) */
+.pf-radio-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-block;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  border: 2px solid transparent;
+}
+.pf-radio-swatch:hover {
+  transform: scale(1.1);
+}
+.pf-radio-swatch:has(input[type="radio"]:checked) {
+  transform: scale(1.1);
+  box-shadow:
+    0 0 0 2px var(--bg-panel),
+    0 0 0 4px var(--text-main);
+}
+[data-theme="dark"] .pf-radio-swatch:has(input[type="radio"]:checked) {
+  box-shadow:
+    0 0 0 2px var(--bg-panel),
+    0 0 0 4px var(--text-main);
+}
 
 /* Encadré pointillé (code d’invitation, etc.) */
 .pf-dashed-panel {
@@ -1325,4 +1400,411 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   transform: rotate(
     90deg
   ); /* 90deg rend mieux sur une roue crantée qu'un 45deg ! */
+}
+
+/* ==========================================================================
+   UTILITAIRES GLOBAUX (Remplacement des styles en ligne)
+   ========================================================================== */
+.pf-mt-xs {
+  margin-top: 0.35rem;
+}
+.pf-mt-md {
+  margin-top: 1rem;
+}
+.pf-mt-2 {
+  margin-top: 2rem;
+}
+.pf-mb-md {
+  margin-bottom: 1rem;
+}
+.pf-m-0 {
+  margin: 0;
+}
+.pf-py-8-16 {
+  padding: 8px 16px;
+}
+.pf-input-sm {
+  max-width: 120px;
+}
+.pf-flex-0 {
+  flex: 0;
+}
+.pf-flex-1-5 {
+  flex: 1.5;
+}
+.pf-flex-2 {
+  flex: 2;
+}
+.pf-min-w-120 {
+  min-width: 120px;
+}
+.pf-label-sm {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+.pf-flex-gap-12-center {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Composants Spécifiques Paramètres */
+.pf-empty-dashed {
+  padding: 10px;
+  text-align: center;
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+}
+.pf-border-left-dynamic {
+  border-left: 4px solid var(--owner-color, var(--primary));
+}
+.pf-attached-form {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-soft);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-light);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.pf-input-color-sm {
+  width: 28px !important;
+  height: 28px !important;
+}
+/* --- SÉLECTEUR DE COULEUR (PALETTE) --- */
+.pf-color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pf-color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s;
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pf-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.pf-color-swatch.selected {
+  transform: scale(1.15);
+  border-color: var(--bg-panel);
+  box-shadow: 0 0 0 3px var(--text-main); /* Un anneau extérieur pour marquer la sélection */
+}
+
+/* Variante Dark Mode */
+[data-theme="dark"] .pf-color-swatch.selected {
+  border-color: var(--bg-panel);
+  box-shadow: 0 0 0 3px var(--text-main);
+}
+
+/* --- PALETTE DE COULEURS CUSTOM (HouseHub) --- */
+.pf-palette-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-palette-sm {
+  gap: 6px;
+}
+.pf-color-swatch {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-block;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.pf-color-swatch:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+.pf-color-swatch-sm {
+  width: 24px;
+  height: 24px;
+}
+.pf-color-swatch input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pf-color-swatch:has(input[type="radio"]:checked) {
+  box-shadow:
+    0 0 0 2px var(--bg-panel),
+    0 0 0 4px var(--primary);
+  transform: scale(1.1);
+}
+[data-theme="dark"] .pf-color-swatch:has(input[type="radio"]:checked) {
+  box-shadow:
+    0 0 0 2px var(--bg-panel),
+    0 0 0 4px var(--primary);
+}
+
+/* --- PROFILS RATTACHÉS (Settings) --- */
+.pf-attached-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  padding: 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+}
+.pf-attached-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pf-attached-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.pf-attached-color-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-page);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.pf-attached-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-soft);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-light);
+}
+.pf-attached-add-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.pf-attached-add-col {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 150px;
+}
+.pf-attached-btn-add {
+  align-self: flex-end;
+  margin-top: 4px;
+}
+
+/* --- UTILS --- */
+.pf-mt-lg {
+  margin-top: 2rem;
+}
+.pf-mb-lg {
+  margin-bottom: 1.5rem;
+}
+.pf-mb-md {
+  margin-bottom: 1rem;
+}
+.pf-m-0 {
+  margin: 0;
+}
+.pf-label-sm {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+.pf-empty-box {
+  padding: 10px;
+  text-align: center;
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+}
+
+/* Couleurs Prédéfinies */
+.pf-color-red {
+  background-color: #ef4444;
+}
+.pf-color-orange {
+  background-color: #f97316;
+}
+.pf-color-amber {
+  background-color: #f59e0b;
+}
+.pf-color-lime {
+  background-color: #84cc16;
+}
+.pf-color-green {
+  background-color: #22c55e;
+}
+.pf-color-teal {
+  background-color: #14b8a6;
+}
+.pf-color-cyan {
+  background-color: #06b6d4;
+}
+.pf-color-sky {
+  background-color: #0ea5e9;
+}
+.pf-color-blue {
+  background-color: #3b82f6;
+}
+.pf-color-indigo {
+  background-color: #6366f1;
+}
+.pf-color-violet {
+  background-color: #8b5cf6;
+}
+.pf-color-fuchsia {
+  background-color: #d946ef;
+}
+.pf-color-rose {
+  background-color: #f43f5e;
+}
+.pf-color-slate {
+  background-color: #64748b;
+}
+
+/* Popover Palette (Profils rattachés) */
+.pf-palette-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pf-palette-popover {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow-lg);
+  width: 200px;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 100;
+}
+.pf-palette-dropdown.is-open .pf-palette-popover {
+  display: flex;
+  animation: pfModalPop 0.2s ease-out;
+}
+.pf-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.pf-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pf-m-0 {
+  margin: 0;
+}
+.pf-empty-dashed {
+  padding: 10px;
+  text-align: center;
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+  color: var(--text-muted);
+}
+
+/* --- UTILITAIRES & PROFILS RATTACHÉS (SETTINGS) --- */
+.pf-mt-lg {
+  margin-top: 2rem;
+}
+.pf-mb-md {
+  margin-bottom: 1rem;
+}
+.pf-mb-lg {
+  margin-bottom: 1.5rem;
+}
+.pf-mb-0 {
+  margin-bottom: 0;
+}
+.pf-m-0 {
+  margin: 0;
+}
+
+.pf-profile-color-note {
+  display: block;
+  margin-top: 8px;
+}
+
+.pf-attached-card {
+  border-left: 4px solid var(--owner-color, #3b82f6);
+}
+
+.pf-attached-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pf-color-picker-sm {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+}
+
+.pf-btn-delete-sm {
+  font-size: 1.2rem;
+  padding: 4px;
+}
+
+.pf-empty-dashed {
+  padding: 10px;
+  text-align: center;
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+}
+
+.pf-attached-form {
+  display: flex;
+  gap: 8px;
+  background: var(--bg-soft);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-light);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.pf-flex-2 {
+  flex: 2;
+  min-width: 120px;
+}
+.pf-flex-1-5 {
+  flex: 1.5;
+  min-width: 120px;
+}
+.pf-col-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pf-label-sm {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.pf-btn-pad-sm {
+  padding: 8px 16px;
 }

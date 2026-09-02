@@ -33,10 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf($_POST['csrf_token'] ?? null)) {
         if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => 'Session invalide (CSRF). Rechargez la page.']);
+            echo json_encode(['success' => false, 'error' => tr('error_csrf')]);
             exit;
         }
-        $error = "Session invalide (CSRF). Rechargez la page.";
+        $error = tr('error_csrf');
     } else {
         $action = $_POST['action'] ?? '';
 
@@ -44,12 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka'];
             $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
             if (empty($enabled)) {
-                $error = "Vous devez garder au moins un module actif.";
+                $error = tr('set_err_min_module');
             } else {
                 $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
                          ->execute([json_encode($enabled), $family_id]);
                 $_SESSION['enabled_modules'] = $enabled;
-                $success = "Modules mis à jour avec succès.";
+                $success = tr('set_success_modules');
             }
         }
 
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['app_lang'] = $lang;
                 $meta_pdo->prepare("UPDATE users SET lang = ? WHERE id = ?")
                          ->execute([$lang, $user_id]);
-                $success = "Langue mise à jour.";
+                $success = tr('set_success_lang');
             }
         }
 
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $color        = trim($_POST['color'] ?? '#0891b2');
 
             if (!$display_name) {
-                $error = "Le prénom ne peut pas être vide.";
+                $error = tr('set_err_empty_name');
             } else {
                 $meta_pdo->prepare("UPDATE users SET display_name = ? WHERE id = ?")
                          ->execute([$display_name, $user_id]);
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $_SESSION['user']['display_name'] = $display_name;
-                $success = "Profil mis à jour avec succès.";
+                $success = tr('set_success_profile');
             }
         }
 
@@ -94,15 +94,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $row = $row->fetch();
 
             if (!password_verify($current, $row['password_hash'])) {
-                $error = "Mot de passe actuel incorrect.";
+                $error = tr('set_err_wrong_pwd');
             } elseif (strlen($new) < 6) {
-                $error = "Le nouveau mot de passe doit faire au moins 6 caractères.";
+                $error = tr('set_err_pwd_length');
             } elseif ($new !== $confirm) {
-                $error = "Les mots de passe ne correspondent pas.";
+                $error = tr('set_err_pwd_match');
             } else {
                 $meta_pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
                          ->execute([password_hash($new, PASSWORD_BCRYPT), $user_id]);
-                $success = "Mot de passe modifié avec succès.";
+                $success = tr('set_success_pwd');
             }
         }
 
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($name) {
                 $meta_pdo->prepare("UPDATE families SET name = ? WHERE id = ?")
                          ->execute([$name, $family_id]);
-                $success = "Nom de l'espace mis à jour.";
+                $success = tr('set_success_family');
             }
         }
 
@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $new_code = bin2hex(random_bytes(8));
             $meta_pdo->prepare("UPDATE families SET invite_code = ? WHERE id = ?")
                      ->execute([$new_code, $family_id]);
-            $success = "Nouveau code d'invitation généré.";
+            $success = tr('set_success_invite');
         }
 
         if ($action === 'upload_home_bg' && $family_id) {
@@ -129,14 +129,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($file && $file['error'] === 0) {
                 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                 if (!in_array($ext, ['jpg','jpeg','png','webp'])) {
-                    $error = "Format non supporté (jpg, png, webp).";
+                    $error = tr('set_err_bg_format');
                 } else {
                     $dest = $upload_dir . 'home_bg_' . $family_id . '.' . $ext;
                     foreach (glob($upload_dir . 'home_bg_' . $family_id . '.*') as $old) @unlink($old);
                     if (move_uploaded_file($file['tmp_name'], $dest)) {
-                        $success = "Image d'accueil mise à jour.";
+                        $success = tr('set_success_bg');
                     } else {
-                        $error = "Erreur lors de l'upload.";
+                        $error = tr('set_err_upload');
                     }
                 }
             }
@@ -144,13 +144,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'reset_home_bg' && $family_id) {
             foreach (glob('/uploads/home_bg_' . $family_id . '.*') as $old) @unlink($old);
-            $success = "Image d'accueil réinitialisée.";
+            $success = tr('set_success_bg_reset');
         }
 
         if ($action === 'grocery_history_max' && $family_id) {
             require_once __DIR__ . '/includes/db.php';
             if (!isset($pdo)) {
-                $error = "Base famille indisponible.";
+                $error = tr('set_err_db_unavailable');
             } else {
                 $n = (int) ($_POST['history_max'] ?? 20);
                 $n = max(1, min(50, $n));
@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $calendarUrl = trim($_POST['icloud_calendar_url'] ?? '');
 
             if (!$username || !$appPassword || !$calendarUrl) {
-                $error = "Merci de renseigner identifiant iCloud, mot de passe d'app et URL CalDAV.";
+                $error = tr('set_err_ios_missing');
             } else {
                 try {
                     $resolvedUrl = hh_icloud_resolve_calendar_url_if_needed($username, $appPassword, $calendarUrl);
@@ -181,13 +181,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         VALUES (?, 'icloud_caldav', ?, ?, ?, 'connected', NOW())
                         ON DUPLICATE KEY UPDATE username=VALUES(username), secret_encrypted=VALUES(secret_encrypted), calendar_url=VALUES(calendar_url), status='connected', updated_at=NOW()
                     ")->execute([$user_id, $username, $encrypted, $resolvedUrl]);
-                    $msg = "Connexion calendrier iOS enregistrée.";
+                    $msg = tr('set_success_ios');
                     if (rtrim($resolvedUrl, '/') !== rtrim($calendarUrl, '/')) {
-                        $msg .= " URL du calendrier détectée automatiquement.";
+                        $msg .= tr('set_success_ios_auto');
                     }
                     $success = $msg;
                 } catch (\Throwable $e) {
-                    $error = "Impossible d'enregistrer la connexion iOS: " . $e->getMessage();
+                    $error = tr('set_err_ios_save') . $e->getMessage();
                 }
             }
         }
@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $row->execute([$user_id]);
             $integration = $row->fetch();
             if (!$integration) {
-                $error = "Aucune connexion iOS configurée.";
+                $error = tr('set_err_ios_none');
             } else {
                 try {
                     $pwd = hh_normalize_apple_app_password(hh_decrypt_secret($integration['secret_encrypted']));
@@ -209,35 +209,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $meta_pdo->prepare("UPDATE user_calendar_integrations SET calendar_url = ? WHERE id = ?")
                                 ->execute([$resolvedUrl, $integration['id']]);
                         }
-                        $success = "Connexion iCloud CalDAV valide (HTTP $code).";
+                        $success = sprintf(tr('set_success_ios_test'), $code);
                     } else {
-                        $error = "Test connexion échoué (HTTP $code). Vérifiez vos identifiants.";
+                        $error = sprintf(tr('set_err_ios_test'), $code);
                     }
                 } catch (\Throwable $e) {
-                    $error = "Test connexion impossible: " . $e->getMessage();
+                    $error = tr('set_err_ios_test_fail') . $e->getMessage();
                 }
             }
         }
 
         if ($action === 'calendar_ios_disconnect') {
             $meta_pdo->prepare("DELETE FROM user_calendar_integrations WHERE user_id = ? AND provider='icloud_caldav'")->execute([$user_id]);
-            $success = "Connexion iOS supprimée.";
+            $success = tr('set_success_ios_del');
         }
 
         // --- GESTION DES PROFILS RATTACHÉS (Enfants, Nounous, etc.) ---
         if ($action === 'add_attached_profile') {
             $name = trim($_POST['profile_name'] ?? '');
             $role = trim($_POST['profile_role'] ?? 'child');
+            $color = trim($_POST['profile_color'] ?? '#3b82f6');
             
             if ($name) {
                 require_once __DIR__ . '/includes/db.php';
                 if (isset($pdo)) {
-                    $stmt = $pdo->prepare("INSERT INTO pf_people (name, role) VALUES (?, ?)");
-                    $stmt->execute([$name, $role]);
+                    $stmt = $pdo->prepare("INSERT INTO pf_people (name, role, color) VALUES (?, ?, ?)");
+                    $stmt->execute([$name, $role, $color]);
                     $success = "Profil de {$name} ajouté avec succès.";
                 }
             } else {
                 $error = "Le prénom est obligatoire.";
+            }
+        }
+
+        if ($action === 'update_attached_profile_color') {
+            $profile_id = (int)($_POST['profile_id'] ?? 0);
+            $color = trim($_POST['color'] ?? '#3b82f6');
+            if ($profile_id > 0) {
+                require_once __DIR__ . '/includes/db.php';
+                if (isset($pdo)) {
+                    $stmt = $pdo->prepare("UPDATE pf_people SET color = ? WHERE id = ? AND user_id IS NULL");
+                    $stmt->execute([$color, $profile_id]);
+                    $success = "Couleur mise à jour.";
+                }
             }
         }
 
@@ -246,10 +260,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($profile_id > 0) {
                 require_once __DIR__ . '/includes/db.php';
                 if (isset($pdo)) {
-                    // On protège les vrais utilisateurs en s'assurant que user_id est NULL
                     $stmt = $pdo->prepare("DELETE FROM pf_people WHERE id = ? AND user_id IS NULL");
                     $stmt->execute([$profile_id]);
-                    $success = "Profil supprimé.";
+                    $success = tr('set_success_profile_del');
+                }
+            }
+        }
+        if ($action === 'update_profile_color') {
+            $profile_id = (int)($_POST['profile_id'] ?? 0);
+            $color = trim($_POST['color'] ?? '#0891b2');            
+            if ($profile_id > 0) {
+                require_once __DIR__ . '/includes/db.php';
+                if (isset($pdo)) {
+                    $stmt = $pdo->prepare("UPDATE pf_people SET color = ? WHERE id = ? AND user_id IS NULL");
+                     $stmt->execute([$color, $profile_id]);
+                    $success = tr('set_success_color_profile');
+                }
+            }
+        }
+        if ($action === 'update_attached_profile_color') {
+            $profile_id = (int)($_POST['profile_id'] ?? 0);
+            $color = trim($_POST['color'] ?? '');
+            
+            // Vérification stricte format Hexadécimal
+            if ($profile_id > 0 && preg_match('/^#[a-f0-9]{6}$/i', $color)) {
+                require_once __DIR__ . '/includes/db.php';
+                if (isset($pdo)) {
+                    // user_id IS NULL garantit qu'on ne modifie pas un vrai compte Parent par accident
+                    $stmt = $pdo->prepare("UPDATE pf_people SET color = ? WHERE id = ? AND user_id IS NULL");
+                    $stmt->execute([$color, $profile_id]);
+                    
+                    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true]);
+                        exit;
+                    }
+                    $success = tr('set_success_color_update');
                 }
             }
         }
@@ -289,9 +335,8 @@ if ($family_id) {
     $mem->execute([$family_id]);
     $members = $mem->fetchAll();
 
-    // Récupération des profils rattachés (ceux qui n'ont pas de compte de connexion, donc user_id IS NULL)
     if (isset($pdo)) {
-        $stmtAttached = $pdo->query("SELECT id, name, role FROM pf_people WHERE user_id IS NULL ORDER BY role ASC, name ASC");
+        $stmtAttached = $pdo->query("SELECT id, name, role, color FROM pf_people WHERE user_id IS NULL ORDER BY role ASC, name ASC");
         $attached_profiles = $stmtAttached->fetchAll(PDO::FETCH_ASSOC);
     }
 }
@@ -310,17 +355,17 @@ if ($family_id && isset($pdo)) {
     } catch (\Throwable $e) {}
 }
 
-$pageTitle = "Paramètres — HouseHub";
+$pageTitle = tr('set_title_page');
 $activePage = "settings";
 require __DIR__ . '/header.php';
 ?>
 
 <div class="pf-container pf-settings-page">
 
-  <h1 class="pf-settings-title">⚙️ Paramètres</h1>
+  <h1 class="pf-settings-title"><?= tr('set_title_page') ?></h1>
 
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2">🌐 Langue / Language</h2>
+    <h2 class="pf-card-h2"><?= tr('set_title_lang') ?></h2>
     <form method="post" class="pf-lang-form">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="set_lang">
@@ -347,8 +392,8 @@ require __DIR__ . '/header.php';
 
   <?php if ($family_id): ?>
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2 pf-card-h2--tight">🧩 Modules actifs</h2>
-    <p class="pf-muted-note">Choisissez les modules visibles dans la navigation (partagé avec tous les membres de l'espace).</p>
+    <h2 class="pf-card-h2 pf-card-h2--tight"><?= tr('set_title_modules') ?></h2>
+    <p class="pf-muted-note"><?= tr('set_desc_modules') ?></p>
     <?php
       $enabledMods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','calendar_ios'];
       $allModules = [
@@ -389,13 +434,13 @@ require __DIR__ . '/header.php';
   <section class="pf-panel-card">
     <h2 class="pf-card-h2 pf-card-h2--tight">📝 <?= htmlspecialchars(tr('liste_settings_title')) ?></h2>
     <p class="pf-muted-note"><?= htmlspecialchars(tr('liste_settings_intro')) ?></p>
-    <form method="post" class="pf-stack-md" style="margin-top:1rem">
+    <form method="post" class="pf-stack-md pf-mt-md">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="grocery_history_max">
       <div class="pf-form-group">
         <label class="pf-label" for="history_max"><?= htmlspecialchars(tr('liste_settings_history_max')) ?></label>
-        <input type="number" name="history_max" id="history_max" class="pf-input" style="max-width:120px" min="1" max="50" step="1" value="<?= (int) $groceryHistoryMaxSetting ?>" required>
-        <p class="pf-muted-note" style="margin-top:0.35rem"><?= htmlspecialchars(tr('liste_settings_history_hint')) ?></p>
+        <input type="number" name="history_max" id="history_max" class="pf-input pf-input-sm" min="1" max="50" step="1" value="<?= (int) $groceryHistoryMaxSetting ?>" required>
+        <p class="pf-muted-note pf-mt-xs"><?= htmlspecialchars(tr('liste_settings_history_hint')) ?></p>
       </div>
       <button type="submit" class="pf-btn"><?= htmlspecialchars(tr('btn_save')) ?></button>
     </form>
@@ -403,21 +448,21 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2 pf-card-h2--tight">📱 Intégration Calendrier iOS (CalDAV)</h2>
-    <p class="pf-muted-note">Configurez ici votre calendrier iCloud pour synchroniser les événements créés dans HouseHub.</p>
+    <h2 class="pf-card-h2 pf-card-h2--tight"><?= tr('set_title_ios') ?></h2>
+    <p class="pf-muted-note"><?= tr('set_desc_ios') ?></p>
     <form method="post" class="pf-stack-md">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="calendar_ios_save">
       <div class="pf-form-group">
-        <label class="pf-label">Identifiant Apple (email iCloud)</label>
-        <input type="text" name="icloud_username" class="pf-input" value="<?= htmlspecialchars($calendarIntegration['username'] ?? '') ?>" placeholder="nom@icloud.com" required>
+        <label class="pf-label"><?= tr('set_label_apple_id') ?></label>
+        <input type="text" name="icloud_username" class="pf-input" value="<?= htmlspecialchars($calendarIntegration['username'] ?? '') ?>" placeholder="<?= tr('placeholder_apple_id') ?>" required>
       </div>
       <div class="pf-form-group">
-        <label class="pf-label">Mot de passe d'app Apple</label>
-        <input type="password" name="icloud_app_password" class="pf-input" placeholder="xxxx-xxxx-xxxx-xxxx" required>
+        <label class="pf-label"><?= tr('set_label_apple_pwd') ?></label>
+        <input type="password" name="icloud_app_password" class="pf-input" placeholder="<?= tr('placeholder_apple_pwd') ?>" required>
       </div>
       <div class="pf-form-group">
-        <label class="pf-label">URL du calendrier CalDAV</label>
+        <label class="pf-label"><?= tr('set_label_apple_url') ?></label>
         <input type="url" name="icloud_calendar_url" class="pf-input" value="<?= htmlspecialchars($calendarIntegration['calendar_url'] ?? '') ?>" placeholder="https://caldav.icloud.com/..." required>
       </div>
       <div class="pf-flex-gap-8">
@@ -429,12 +474,12 @@ require __DIR__ . '/header.php';
       <form method="post">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="action" value="calendar_ios_test">
-        <button type="submit" class="pf-btn btn-secondary">Tester la connexion</button>
+        <button type="submit" class="pf-btn btn-secondary"><?= tr('set_btn_test_ios') ?></button>
       </form>
       <form method="post">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="action" value="calendar_ios_disconnect">
-        <button type="submit" class="pf-btn btn-secondary">Déconnecter</button>
+        <button type="submit" class="pf-btn btn-secondary"><?= tr('set_btn_disconnect_ios') ?></button>
       </form>
     </div>
   </section>
@@ -445,13 +490,13 @@ require __DIR__ . '/header.php';
     $has_custom_bg = $bg_file !== null;
   ?>
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2 pf-card-h2--tight">🖼️ Image d'accueil</h2>
-    <p class="pf-muted-note">Photo de fond affichée sur la page d'accueil (partagée avec tous les membres).</p>
+    <h2 class="pf-card-h2 pf-card-h2--tight"><?= tr('set_title_bg') ?></h2>
+    <p class="pf-muted-note"><?= tr('set_desc_bg') ?></p>
 
     <?php if ($has_custom_bg): ?>
     <div class="pf-home-bg-preview">
       <img src="/home-bg.php" alt="Fond actuel">
-      <span class="pf-badge-overlay">Image personnalisée</span>
+      <span class="pf-badge-overlay"><?= tr('set_badge_custom_bg') ?></span>
     </div>
     <?php endif; ?>
 
@@ -459,10 +504,10 @@ require __DIR__ . '/header.php';
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="upload_home_bg">
       <div class="pf-form-group">
-        <label class="pf-label">Nouvelle image (jpg, png, webp — max 10 Mo)</label>
+        <label class="pf-label"><?= tr('set_label_new_bg') ?></label>
         <input type="file" name="home_bg" class="pf-input" accept="image/jpeg,image/png,image/webp" required>
       </div>
-      <button type="submit" class="pf-btn pf-shrink-0">Enregistrer</button>
+      <button type="submit" class="pf-btn pf-shrink-0"><?= tr('btn_save') ?></button>
     </form>
 
     <?php if ($has_custom_bg): ?>
@@ -470,32 +515,49 @@ require __DIR__ . '/header.php';
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="reset_home_bg">
       <button type="submit" class="pf-btn btn-secondary pf-btn-sm-text"
-        onclick="return confirm('Revenir à l\'image par défaut ?')">🔄 Remettre l'image par défaut</button>
+        onclick="return confirm('<?= addslashes(tr('set_confirm_reset_bg')) ?>')"><?= tr('set_btn_reset_bg') ?></button>
     </form>
     <?php endif; ?>
   </section>
   <?php endif; ?>
 
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2">👤 Mon profil</h2>
+    <h2 class="pf-card-h2"><?= tr('set_title_profile') ?></h2>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="update_profile">
       <div class="pf-form-group">
-        <label class="pf-label">Nom d'utilisateur</label>
+        <label class="pf-label"><?= tr('set_label_username') ?></label>
         <input type="text" class="pf-input pf-input--disabled-muted" value="<?= htmlspecialchars($user['username']) ?>" disabled>
       </div>
       <div class="pf-form-group">
-        <label class="pf-label">Prénom / Pseudo affiché</label>
+        <label class="pf-label"><?= tr('set_label_display_name') ?></label>
         <input type="text" name="display_name" class="pf-input" value="<?= htmlspecialchars($user['display_name']) ?>" required>
       </div>
       
       <div class="pf-form-group">
         <label class="pf-label" for="profile_color">Couleur thématique de mon profil</label>
-        <div class="pf-color-picker-group">
-          <input type="color" name="color" id="profile_color" class="pf-input-color" value="<?= htmlspecialchars($user_color) ?>">
-          <span class="pf-muted-note">Cette couleur sera utilisée pour vos grilles de budget, calendriers et indicateurs personnels.</span>
+        
+        <!-- Le champ caché qui va stocker la valeur -->
+        <input type="hidden" name="color" id="profile_color" value="<?= htmlspecialchars($user_color) ?>">
+        
+        <!-- Le panel de couleurs prédéfinies -->
+        <div class="pf-color-palette" id="color-palette">
+            <?php
+            $palette = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#64748b'];
+            foreach ($palette as $c): 
+                $isSelected = (strtolower($user_color) === $c) ? 'selected' : '';
+            ?>
+                <button type="button" 
+                        class="pf-color-swatch <?= $isSelected ?>" 
+                        style="background-color: <?= $c ?>;" 
+                        data-color="<?= $c ?>"
+                        onclick="selectProfileColor(this, '<?= $c ?>')">
+                </button>
+            <?php endforeach; ?>
         </div>
+
+        <span class="pf-muted-note pf-profile-color-note"><?= tr('set_desc_profile_color') ?></span>
       </div>
       
       <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
@@ -503,65 +565,65 @@ require __DIR__ . '/header.php';
   </section>
 
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2">🔒 Changer le mot de passe</h2>
+    <h2 class="pf-card-h2"><?= tr('set_title_pwd') ?></h2>
     <form method="post">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="change_password">
       <div class="pf-form-group">
-        <label class="pf-label">Mot de passe actuel</label>
+        <label class="pf-label"><?= tr('set_label_cur_pwd') ?></label>
         <input type="password" name="current_password" class="pf-input" required placeholder="••••••">
       </div>
       <div class="pf-form-group">
-        <label class="pf-label">Nouveau mot de passe</label>
+        <label class="pf-label"><?= tr('set_label_new_pwd') ?></label>
         <input type="password" name="new_password" class="pf-input" required placeholder="••••••" autocomplete="new-password">
       </div>
       <div class="pf-form-group">
-        <label class="pf-label">Confirmer</label>
+        <label class="pf-label"><?= tr('set_label_confirm_pwd') ?></label>
         <input type="password" name="confirm_password" class="pf-input" required placeholder="••••••" autocomplete="new-password">
       </div>
-      <button type="submit" class="pf-btn">Modifier</button>
+      <button type="submit" class="pf-btn"><?= tr('set_btn_edit') ?></button>
     </form>
   </section>
 
   <?php if ($family): ?>
   <section class="pf-panel-card">
-    <h2 class="pf-card-h2">🏠 Mon espace familial</h2>
+    <h2 class="pf-card-h2"><?= tr('set_title_family') ?></h2>
 
     <form method="post" class="pf-mb-section">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="update_family_name">
       <div class="pf-form-group">
-        <label class="pf-label">Nom de l'espace</label>
+        <label class="pf-label"><?= tr('set_label_family_name') ?></label>
         <div class="pf-flex-gap-8">
           <input type="text" name="family_name" class="pf-input" value="<?= htmlspecialchars($family['name']) ?>" required>
-          <button type="submit" class="pf-btn pf-shrink-0">Enregistrer</button>
+          <button type="submit" class="pf-btn pf-shrink-0"><?= tr('btn_save') ?></button>
         </div>
       </div>
     </form>
 
     <div class="pf-dashed-panel">
-      <p class="pf-muted-note pf-muted-note--tight">Code d'invitation — partagez-le pour inviter quelqu'un</p>
+      <p class="pf-muted-note pf-muted-note--tight"><?= tr('set_desc_invite') ?></p>
       <div class="pf-invite-row">
         <code id="invite-code" class="pf-invite-code"
-          onclick="copyCode()" title="Cliquer pour copier">
+          onclick="copyCode()" title="<?= tr('set_title_copy') ?>">
           <?= htmlspecialchars($family['invite_code']) ?>
         </code>
-        <span id="copy-msg" class="pf-copy-msg">✓ Copié !</span>
+        <span id="copy-msg" class="pf-copy-msg"><?= tr('set_msg_copied') ?></span>
         <form method="post" class="pf-ml-auto">
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
           <input type="hidden" name="action" value="regen_invite">
           <button type="submit" class="pf-btn btn-secondary pf-btn-sm-text"
-            onclick="return confirm('Regénérer le code ? L\'ancien sera invalidé.')">
-            🔄 Nouveau code
+            onclick="return confirm('<?= addslashes(tr('set_confirm_new_code')) ?>')">
+            <?= tr('set_btn_new_code') ?>
           </button>
         </form>
       </div>
       <p class="pf-invite-footnote">
-        Lien d'inscription : <strong><?= $_SERVER['HTTP_HOST'] ?>/register.php</strong>
+        <?= tr('set_desc_register_link') ?> <strong><?= $_SERVER['HTTP_HOST'] ?>/register.php</strong>
       </p>
     </div>
 
-    <h3 class="pf-members-heading">Membres (<?= count($members) ?>)</h3>
+    <h3 class="pf-members-heading"><?= tr('set_title_members') ?> (<?= count($members) ?>)</h3>
     <div class="pf-stack-sm">
       <?php foreach ($members as $m): ?>
       <div class="pf-member-card">
@@ -569,7 +631,7 @@ require __DIR__ . '/header.php';
           <strong><?= htmlspecialchars($m['display_name']) ?></strong>
           <span class="pf-muted-inline">@<?= htmlspecialchars($m['username']) ?></span>
           <?php if ($m['is_admin']): ?>
-            <span class="pf-admin-badge">Admin</span>
+            <span class="pf-admin-badge"><?= tr('set_badge_admin') ?></span>
           <?php endif; ?>
         </div>
         <span class="pf-muted-tiny"><?= date('d/m/Y', strtotime($m['created_at'])) ?></span>
@@ -577,54 +639,79 @@ require __DIR__ . '/header.php';
       <?php endforeach; ?>
     </div>
 
-    <h3 class="pf-members-heading" style="margin-top: 2rem;">🧸 Profils rattachés</h3>
-    <p class="pf-muted-note pf-muted-note--tight" style="margin-bottom: 1rem;">Membres gérés par le foyer (Enfants, Nounous, Proches) n'ayant pas d'accès direct.</p>
+    <h3 class="pf-members-heading pf-mt-lg">🧸 <?= tr('settings_attached_profiles_title') ?></h3>
+    <p class="pf-muted-note pf-muted-note--tight pf-mb-md"><?= tr('settings_attached_profiles_desc') ?></p>
     
-    <div class="pf-stack-sm" style="margin-bottom: 1.5rem;">
+  <div class="pf-stack-sm" style="margin-bottom: 1.5rem;">
       <?php foreach ($attached_profiles as $p): 
-         $roleBadge = 'Inconnu';
-         if (in_array($p['role'], ['child', 'enfant'])) $roleBadge = '👶 Enfant';
-         elseif ($p['role'] === 'helper') $roleBadge = '💼 Intervenant';
-         elseif ($p['role'] === 'relative') $roleBadge = '👵 Proche';
+         $roleBadge = tr('role_unknown');
+         if (in_array($p['role'], ['child', 'enfant'])) $roleBadge = tr('role_child_icon');
+         elseif ($p['role'] === 'helper') $roleBadge = tr('role_helper_icon');
+         elseif ($p['role'] === 'relative') $roleBadge = tr('role_relative_icon');
+         
+         $pColor = htmlspecialchars($p['color'] ?? '#3b82f6');
       ?>
-      <div class="pf-member-card" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="pf-member-card" style="display: flex; justify-content: space-between; align-items: center; border-left: 4px solid <?= $pColor ?>;">
         <div>
           <strong><?= htmlspecialchars($p['name']) ?></strong>
           <span class="pf-muted-inline"><?= $roleBadge ?></span>
         </div>
-        <form method="post" style="margin:0;">
-          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-          <input type="hidden" name="action" value="delete_attached_profile">
-          <input type="hidden" name="profile_id" value="<?= $p['id'] ?>">
-          <button type="submit" class="btn-icon-action delete" title="Supprimer" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 4px;" onclick="return confirm('Supprimer définitivement ce profil ?')">🗑️</button>
-        </form>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            
+            <div class="pf-color-dropdown">
+                <button type="button" class="pf-color-trigger" style="background-color: <?= $pColor ?>;" title="<?= tr('change_color') ?>" onclick="toggleColorMenu(this)"></button>
+                <div class="pf-color-menu">
+                    <?php foreach(['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#64748b'] as $c): ?>
+                        <button type="button" class="pf-color-swatch" style="background-color: <?= $c ?>;" onclick="updateAttachedProfileColor(<?= $p['id'] ?>, '<?= $c ?>', this)"></button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <form method="post" style="margin:0;">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+              <input type="hidden" name="action" value="delete_attached_profile">
+              <input type="hidden" name="profile_id" value="<?= $p['id'] ?>">
+              <button type="submit" class="btn-icon-action delete" title="<?= tr('btn_delete') ?>" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 4px;" onclick="return confirm('<?= addslashes(tr('confirm_delete_profile')) ?>')">🗑️</button>
+            </form>
+        </div>
       </div>
       <?php endforeach; ?>
       
       <?php if (empty($attached_profiles)): ?>
-        <div class="pf-muted-note" style="padding: 10px; text-align: center; border: 1px dashed var(--border-light); border-radius: 8px;">Aucun profil rattaché.</div>
+        <div class="pf-muted-note" style="padding: 10px; text-align: center; border: 1px dashed var(--border-light); border-radius: 8px;"><?= tr('settings_no_attached_profiles') ?></div>
       <?php endif; ?>
     </div>
 
-    <form method="post" style="display: flex; gap: 8px; background: var(--bg-soft); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-light); align-items: flex-end;">
+    <form method="post" style="display: flex; gap: 8px; background: var(--bg-soft); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-light); align-items: flex-end; flex-wrap: wrap;">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" value="add_attached_profile">
       
-      <div class="pf-form-group" style="margin-bottom: 0; flex: 2;">
-        <label class="pf-label" style="font-size: 0.8rem; margin-bottom: 4px;">Prénom</label>
-        <input type="text" name="profile_name" class="pf-input" placeholder="Ex: Pol, Carole..." required>
+      <div class="pf-form-group" style="margin-bottom: 0; flex: 2; min-width: 120px;">
+        <label class="pf-label" style="font-size: 0.8rem; margin-bottom: 4px;"><?= tr('label_firstname') ?></label>
+        <input type="text" name="profile_name" class="pf-input" placeholder="<?= tr('placeholder_firstname_ex') ?>" required>
       </div>
       
-      <div class="pf-form-group" style="margin-bottom: 0; flex: 1.5;">
-        <label class="pf-label" style="font-size: 0.8rem; margin-bottom: 4px;">Rôle</label>
+      <div class="pf-form-group" style="margin-bottom: 0; flex: 1.5; min-width: 120px;">
+        <label class="pf-label" style="font-size: 0.8rem; margin-bottom: 4px;"><?= tr('label_role') ?></label>
         <select name="profile_role" class="pf-input" required>
-            <option value="child">👶 Enfant</option>
-            <option value="helper">💼 Intervenant</option>
-            <option value="relative">👵 Proche</option>
+            <option value="child"><?= tr('role_child_icon') ?></option>
+            <option value="helper"><?= tr('role_helper_icon') ?></option>
+            <option value="relative"><?= tr('role_relative_icon') ?></option>
         </select>
       </div>
+
+      <div class="pf-form-group" style="margin-bottom: 0; display: flex; flex-direction: column; align-items: flex-start;">
+        <label class="pf-label" style="font-size: 0.8rem; margin-bottom: 4px;"><?= tr('label_color') ?></label>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; padding-bottom: 4px;">
+          <?php foreach(['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'] as $i => $c): ?>
+          <label class="pf-radio-swatch" style="background-color: <?= $c ?>;" title="<?= $c ?>">
+              <input type="radio" name="profile_color" value="<?= $c ?>" <?= $i === 0 ? 'checked' : '' ?> style="display:none;">
+          </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
       
-      <button type="submit" class="pf-btn pf-shrink-0" style="padding: 8px 16px;">Ajouter</button>
+      <button type="submit" class="pf-btn pf-shrink-0" style="padding: 8px 16px; margin-bottom: 2px;"><?= tr('btn_add') ?></button>
     </form>
 
   </section>
@@ -632,7 +719,7 @@ require __DIR__ . '/header.php';
 
   <?php if (!empty($_SESSION['user']['is_admin'])): ?>
   <div class="pf-settings-admin-link">
-    <a href="/admin/">→ Panneau d'administration</a>
+    <a href="/admin/"><?= tr('set_link_admin') ?></a>
   </div>
   <?php endif; ?>
 
@@ -660,7 +747,7 @@ function copyCode() {
   });
 }
 
-// --- GESTION DES NOTIFICATIONS TOAST (Remplaçant l'ancien bandeau vert) ---
+// --- GESTION DES NOTIFICATIONS TOAST ---
 document.addEventListener('DOMContentLoaded', () => {
     <?php if ($success): ?>
         if (typeof showToast === 'function') {
@@ -678,6 +765,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     <?php endif; ?>
 });
+
+
+
+function selectProfileColor(btn, hexColor) {
+    // 1. Mettre à jour l'input caché
+    document.getElementById('profile_color').value = hexColor;
+    
+    // 2. Mettre à jour l'UI (enlever la classe selected partout, l'ajouter sur le bouton cliqué)
+    const swatches = document.querySelectorAll('#color-palette .pf-color-swatch');
+    swatches.forEach(el => el.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
+function toggleColorMenu(btn) {
+    // Fermer tous les autres popovers
+    document.querySelectorAll('.pf-color-menu').forEach(menu => {
+        if (menu !== btn.nextElementSibling) menu.classList.remove('is-open');
+    });
+    // Ouvrir/Fermer celui cliqué
+    btn.nextElementSibling.classList.toggle('is-open');
+}
+
+// Fermer le menu si on clique en dehors
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.pf-color-dropdown')) {
+        document.querySelectorAll('.pf-color-menu').forEach(menu => menu.classList.remove('is-open'));
+    }
+});
+
+// --- MISE À JOUR DYNAMIQUE COULEUR PROFIL RATTACHÉ ---
+async function updateAttachedProfileColor(profileId, newColor, btnElement) {
+    const fd = new FormData();
+    fd.append('action', 'update_attached_profile_color');
+    fd.append('profile_id', profileId);
+    fd.append('color', newColor);
+    fd.append('csrf_token', window.CSRF_TOKEN); // Sécurité absolue
+
+    try {
+        const res = await pachaFetch('/settings.php', { method: 'POST', body: fd });
+        if (res && res.success) {
+            if (typeof showToast === 'function') {
+                showToast(window.I18N['color_updated'] || 'Couleur mise à jour !', 'success');
+            }
+            
+            const dropdown = btnElement.closest('.pf-color-dropdown');
+            if (dropdown) {
+                // Màj visuelle de la pastille déclencheur
+                dropdown.querySelector('.pf-color-trigger').style.backgroundColor = newColor;
+                dropdown.querySelector('.pf-color-menu').classList.remove('is-open');
+            }
+            
+            // Màj de la bordure gauche de la carte
+            const card = btnElement.closest('.pf-member-card');
+            if (card) {
+                card.style.borderLeftColor = newColor;
+            }
+        } else {
+            if (typeof showToast === 'function') showToast(window.I18N['error_occured'] || 'Erreur', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        if (typeof showToast === 'function') showToast(window.I18N['error_occured'] || 'Erreur', 'error');
+    }
+}
 </script>
 
 <?php require __DIR__ . '/footer.php'; ?>

@@ -1,127 +1,210 @@
 /* ════════════════════════════════════════════════════════════════════
-   dark-mode.css — Dark mode overrides (all modules)
+   dark-mode.css — Dark mode overrides (Cleaned & Optimized)
    Chargé en dernier dans le head pour garantir la cascade.
    ════════════════════════════════════════════════════════════════════ */
 
-/* ─── HOME PAGE ─────────────────────────────────────────────────────────────── */
+/* ─── FONDS & CONTENEURS PRINCIPAUX ────────────────────────────────── */
+[data-theme="dark"] .pf-card,
+[data-theme="dark"] .pf-modal-content,
+[data-theme="dark"] .budget-tabs-container,
+[data-theme="dark"] .fc-header-row,
+[data-theme="dark"] .fc-month-nav-row,
+[data-theme="dark"] .fc-month-calendar-wrapper,
+[data-theme="dark"] .fc-month-balances,
+[data-theme="dark"] .hol-idea-card,
+[data-theme="dark"] .pf-holidays__titlebar,
+[data-theme="dark"] .hol-filters-row,
+[data-theme="dark"] .cl-titlebar,
+[data-theme="dark"] .pf-child-section,
+[data-theme="dark"] .pf-child-totals-bar,
+[data-theme="dark"] .pf-gift-card-compact,
+[data-theme="dark"] .epargne-grid-table,
+[data-theme="dark"] .sticky-col {
+  background: var(--bg-panel) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .owner-tabs,
+[data-theme="dark"] .fc-view-controls,
+[data-theme="dark"] .fc-day--other-month,
+[data-theme="dark"] .fc-minimal-balance-card,
+[data-theme="dark"] .pf-summary-pill,
+[data-theme="dark"] .pf-filter-bar {
+  background: var(--bg-page) !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-muted) !important;
+}
+
+/* ─── TYPOGRAPHIE GLOBALE ──────────────────────────────────────────── */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] .pf-modal-title,
+[data-theme="dark"] .pf-card-title,
+[data-theme="dark"] .hol-main-title,
+[data-theme="dark"] .pf-gift-title,
+[data-theme="dark"] .budget-view h2,
+[data-theme="dark"] .view-header h2,
+[data-theme="dark"] .month-header-container {
+  color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .pf-card-desc,
+[data-theme="dark"] .tab-item {
+  color: var(--text-muted);
+}
+
+/* ─── INPUTS & SÉLECTEURS ──────────────────────────────────────────── */
+[data-theme="dark"] .pf-input,
+[data-theme="dark"] .pf-filter-select,
+[data-theme="dark"] .hol-year-select,
+[data-theme="dark"] .budget-view input,
+[data-theme="dark"] .budget-view select,
+[data-theme="dark"] .budget-view textarea,
+[data-theme="dark"] .hol-idea-card input,
+[data-theme="dark"] .hol-idea-card textarea,
+[data-theme="dark"] .hol-idea-card select {
+  background: #1c2128 !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .pf-input::placeholder {
+  color: #484f58 !important;
+}
+
+/* ─── BOUTONS & ÉTATS ACTIFS ───────────────────────────────────────── */
+[data-theme="dark"] .pf-btn.btn-secondary,
+[data-theme="dark"] .fc-nav-button,
+[data-theme="dark"] .fc-view-button,
+[data-theme="dark"] .hol-map-toggle,
+[data-theme="dark"] .cl-view-btn,
+[data-theme="dark"] .pf-btn-icon-text,
+[data-theme="dark"] .owner-tab {
+  background: var(--bg-panel) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border-light) !important;
+}
+
+[data-theme="dark"] .pf-btn.btn-secondary:hover,
+[data-theme="dark"] .fc-nav-button:hover,
+[data-theme="dark"] .hol-map-toggle:hover,
+[data-theme="dark"] .pf-btn-icon-text:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .tab-item.active,
+[data-theme="dark"] .fc-view-button--active,
+[data-theme="dark"] .cl-view-btn.is-active {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: var(--primary) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+[data-theme="dark"] .owner-tab.active {
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+/* ─── TABLES ───────────────────────────────────────────────────────── */
+[data-theme="dark"] .pf-table,
+[data-theme="dark"] .fc-month-table,
+[data-theme="dark"] #planningTable-wrapper {
+  background: var(--bg-panel) !important;
+  color: var(--text-main);
+  border-color: var(--border-light) !important;
+}
+
+[data-theme="dark"] .pf-table thead th,
+[data-theme="dark"] .fc-month-table th,
+[data-theme="dark"] #planningTable thead th,
+[data-theme="dark"] th.sticky-col,
+[data-theme="dark"] .pf-child-header {
+  background: #1c2128 !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border-light) !important;
+}
+
+[data-theme="dark"] .pf-table tbody td,
+[data-theme="dark"] .fc-month-table td,
+[data-theme="dark"] #planningTable tbody td {
+  border-color: rgba(48, 54, 61, 0.5) !important;
+}
+
+[data-theme="dark"] .pf-table tbody tr:hover td,
+[data-theme="dark"] .fc-month-table td:hover:not(.fc-day--other-month) {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+[data-theme="dark"] .pf-table tfoot td {
+  background: #1c2128 !important;
+  border-color: rgba(48, 54, 61, 0.5) !important;
+}
+
+/* ─── MODULES SPÉCIFIQUES ──────────────────────────────────────────── */
+
+/* Accueil */
 [data-theme="dark"] body[data-page="home"] .pf-module-card {
-  background: rgba(22,27,34,.92) !important;
-  border: 1px solid var(--border-light) !important;
-  box-shadow: 0 4px 15px rgba(0,0,0,.4) !important;
+  background: rgba(22, 27, 34, 0.92) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
 }
 [data-theme="dark"] body[data-page="home"] .pf-module-card:hover {
   border-color: var(--primary) !important;
 }
-[data-theme="dark"] body[data-page="home"] .pf-card-title { color: var(--text-main); }
-[data-theme="dark"] body[data-page="home"] .pf-card-desc  { color: var(--text-muted); }
-[data-theme="dark"] body[data-page="home"] .pf-card-cta   { color: var(--primary); }
 
-/* ─── SHARED / GLOBAL PATTERNS ──────────────────────────────────────────────── */
-[data-theme="dark"] .pf-card { background: var(--bg-panel) !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .pf-table { background: var(--bg-panel); color: var(--text-main); }
-[data-theme="dark"] .pf-table thead th { background: #1c2128 !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-table tbody td { background: var(--bg-panel); color: var(--text-main); border-color: rgba(48,54,61,.5); }
-[data-theme="dark"] .pf-table tbody tr:hover td { background: rgba(255,255,255,.03); }
-[data-theme="dark"] .pf-table tfoot,
-[data-theme="dark"] .pf-table tfoot td { background: #1c2128; color: var(--text-main); border-color: rgba(48,54,61,.5); }
-[data-theme="dark"] .pf-modal-content { background: var(--bg-panel) !important; border: 1px solid var(--border-light) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .pf-modal-title { color: var(--text-main) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-input,
-[data-theme="dark"] .pf-filter-select,
-[data-theme="dark"] .hol-year-select { background: #1c2128 !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .pf-input::placeholder { color: #484f58 !important; }
-[data-theme="dark"] .pf-btn.btn-secondary { background: var(--bg-panel) !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-btn.btn-secondary:hover { background: rgba(255,255,255,.06) !important; color: var(--text-main) !important; }
+/* Épargne & Grilles */
+[data-theme="dark"] .eg-header-row {
+  background: #111827 !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
+}
+[data-theme="dark"] .eg-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+[data-theme="dark"] .eg-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
 
-/* ─── BUDGET MODULE ─────────────────────────────────────────────────────────── */
-[data-theme="dark"] .budget-view { color: var(--text-main); }
-[data-theme="dark"] .budget-view h2,
-[data-theme="dark"] .view-header h2 { color: var(--text-main) !important; }
-[data-theme="dark"] .budget-tabs-container { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .tab-item { background: var(--bg-panel); color: var(--text-muted); border-color: var(--border-light); }
-[data-theme="dark"] .tab-item:hover { background: rgba(255,255,255,.06); color: var(--text-main); }
-[data-theme="dark"] .tab-item.active { background: rgba(59,130,246,.15) !important; color: var(--primary) !important; border-color: rgba(59,130,246,.3) !important; }
-[data-theme="dark"] .owner-tabs { background: var(--bg-page); border-color: var(--border-light); }
-[data-theme="dark"] .owner-tab { background: var(--bg-panel) !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .owner-tab.active { background: var(--primary) !important; color: #fff !important; }
-[data-theme="dark"] .month-header-container { color: var(--text-main); }
-/* sticky col: uses var(--bg-panel) already but th.sticky-col uses hardcoded #f8fafc */
-[data-theme="dark"] th.sticky-col { background: #1c2128 !important; color: var(--text-muted) !important; }
-[data-theme="dark"] .sticky-col { background: var(--bg-panel) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .month-actions .btn-icon-small { background: #1c2128 !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .month-actions .btn-icon-small:hover { background: rgba(255,255,255,.06) !important; }
-[data-theme="dark"] .savings-table .row-extres td { background: rgba(245,158,11,.08) !important; }
-[data-theme="dark"] .nens-title.theme-pol { background: rgba(30,58,138,.2) !important; color: #93c5fd !important; border-color: #3b82f6 !important; }
-[data-theme="dark"] .nens-title.theme-pep { background: rgba(20,83,45,.2) !important; color: #86efac !important; border-color: #22c55e !important; }
-[data-theme="dark"] .nens-table.theme-pol thead th { background: rgba(30,58,138,.15) !important; color: #93c5fd !important; }
-[data-theme="dark"] .nens-table.theme-pep thead th { background: rgba(20,83,45,.15) !important; color: #86efac !important; }
-/* Specific input/selects in budget */
-[data-theme="dark"] .budget-view input,
-[data-theme="dark"] .budget-view select,
-[data-theme="dark"] .budget-view textarea { background: #1c2128 !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-/* sum selected highlight */
-[data-theme="dark"] .sum-selected { background: rgba(59,130,246,.1) !important; }
+/* Éléments colorés spécifiques */
+[data-theme="dark"] .savings-table .row-extres td,
+[data-theme="dark"] .eg-extres-row {
+  background: rgba(245, 158, 11, 0.08) !important;
+}
 
-/* ─── FAMILY CALENDAR MODULE ────────────────────────────────────────────────── */
-[data-theme="dark"] .pf-family-calendar { color: var(--text-main); }
-[data-theme="dark"] .fc-header-row { background: var(--bg-panel); border-color: var(--border-light); }
-[data-theme="dark"] .fc-view-controls { background: var(--bg-page) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .fc-view-button { background: var(--bg-panel) !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .fc-view-button--active { background: rgba(59,130,246,.15) !important; color: var(--primary) !important; border-color: rgba(59,130,246,.3) !important; }
-[data-theme="dark"] .fc-month-nav-row { background: var(--bg-panel); border-color: var(--border-light); }
-[data-theme="dark"] .fc-month-nav-row h3 { color: var(--text-main) !important; }
-[data-theme="dark"] .fc-nav-button { background: var(--bg-panel) !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .fc-nav-button:hover { background: rgba(255,255,255,.06) !important; }
-/* Calendar table — lots of !important in source */
-[data-theme="dark"] .fc-month-table { border-color: var(--border-light) !important; }
-[data-theme="dark"] .fc-month-table th { background: #1c2128 !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .fc-month-table td { background: var(--bg-panel) !important; border-color: rgba(48,54,61,.5) !important; }
-[data-theme="dark"] .fc-month-table td:hover:not(.fc-day--other-month) { background: rgba(255,255,255,.04) !important; }
-[data-theme="dark"] .fc-day--other-month { background: var(--bg-page) !important; color: var(--text-muted) !important; }
-[data-theme="dark"] .fc-month-calendar-wrapper,
-[data-theme="dark"] .fc-month-balances { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .fc-minimal-balance-card { background: var(--bg-page) !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .fc-min-chip { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .fc-burn-alert { background: rgba(239,68,68,.1) !important; color: #f87171 !important; }
-/* Planning table (vue planning) */
-[data-theme="dark"] #planningTable-wrapper { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] #planningTable thead th { background: #1c2128 !important; color: var(--text-muted) !important; }
-[data-theme="dark"] #planningTable tbody td { border-color: rgba(48,54,61,.5) !important; }
-[data-theme="dark"] #planningTable tbody td.col-sticky-mois,
-[data-theme="dark"] #planningTable tbody td.col-sticky-sem { background: var(--bg-panel) !important; }
-[data-theme="dark"] .col-month { background: var(--bg-panel) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .fc-week-nav-controls { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-btn-icon-text { background: var(--bg-panel) !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-btn-icon-text:hover { background: rgba(255,255,255,.06) !important; }
+[data-theme="dark"] .nens-title.theme-pol {
+  background: rgba(30, 58, 138, 0.2) !important;
+  color: #93c5fd !important;
+  border-color: #3b82f6 !important;
+}
+[data-theme="dark"] .nens-table.theme-pol thead th {
+  background: rgba(30, 58, 138, 0.15) !important;
+  color: #93c5fd !important;
+}
 
-/* ─── HOLIDAYS MODULE ───────────────────────────────────────────────────────── */
-[data-theme="dark"] .pf-holidays { color: var(--text-main); }
-[data-theme="dark"] .pf-holidays__titlebar { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .hol-main-title { color: var(--text-main) !important; }
-[data-theme="dark"] .hol-idea-card { background: var(--bg-panel) !important; border-color: var(--border-light) !important; color: var(--text-main) !important; box-shadow: var(--shadow) !important; }
-[data-theme="dark"] .hol-idea-card:hover { border-color: var(--primary) !important; }
-[data-theme="dark"] .hol-idea-card input,
-[data-theme="dark"] .hol-idea-card textarea,
-[data-theme="dark"] .hol-idea-card select { background: #1c2128 !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .hol-filters-row { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .hol-map-toggle { background: var(--bg-panel) !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .hol-map-toggle:hover { background: rgba(255,255,255,.06) !important; }
-[data-theme="dark"] .hol-add-btn { background: var(--primary) !important; color: #fff !important; }
+[data-theme="dark"] .nens-title.theme-pep {
+  background: rgba(20, 83, 45, 0.2) !important;
+  color: #86efac !important;
+  border-color: #22c55e !important;
+}
+[data-theme="dark"] .nens-table.theme-pep thead th {
+  background: rgba(20, 83, 45, 0.15) !important;
+  color: #86efac !important;
+}
 
-/* ─── GIFT-LIST MODULE ──────────────────────────────────────────────────────── */
-[data-theme="dark"] .pf-gift-list { color: var(--text-main); }
-[data-theme="dark"] .pf-gift-list h1 { color: var(--text-main) !important; }
-[data-theme="dark"] .cl-titlebar { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .cl-view-btn { background: var(--bg-panel) !important; color: var(--text-muted) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .cl-view-btn.is-active { background: rgba(59,130,246,.15) !important; color: var(--primary) !important; border-color: rgba(59,130,246,.3) !important; }
-[data-theme="dark"] .pf-filter-bar { background: var(--bg-page) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-filter-select { background: #1c2128 !important; color: var(--text-main) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-child-section { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-child-header { background: #1c2128 !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-child-header h3 { color: var(--text-main) !important; }
-[data-theme="dark"] .pf-child-totals-bar { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-summary-pill { background: var(--bg-page) !important; border-color: var(--border-light) !important; color: var(--text-main) !important; }
-[data-theme="dark"] .pf-gift-card-compact { background: var(--bg-panel) !important; border-color: var(--border-light) !important; }
-[data-theme="dark"] .pf-gift-card-compact:hover { border-color: var(--primary) !important; }
-[data-theme="dark"] .pf-gift-title { color: var(--text-main) !important; }
-[data-theme="dark"] .pf-gift-footer { border-color: var(--border-light) !important; }
+[data-theme="dark"] .sum-selected {
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+[data-theme="dark"] .fc-burn-alert {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #f87171 !important;
+}
+[data-theme="dark"] .month-actions .btn-icon-small {
+  background: #1c2128 !important;
+  border-color: var(--border-light) !important;
+  color: var(--text-main) !important;
+}
+[data-theme="dark"] .month-actions .btn-icon-small:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}

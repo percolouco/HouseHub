@@ -2,12 +2,6 @@
 
 /* --- 1. VARIABLES & BASE --- */
 .budget-view {
-  font-family:
-    "Segoe UI",
-    system-ui,
-    -apple-system,
-    sans-serif;
-  color: var(--text-main);
   animation: fadeIn 0.4s ease-out;
 }
 @keyframes fadeIn {
@@ -37,34 +31,20 @@
   letter-spacing: -0.025em;
 }
 
-/* Thèmes des tableaux */
-.nens-title.theme-pol {
-  color: #1e3a8a !important;
-  background: #eaf2ff !important;
-  border-left: 4px solid #1e3a8a !important;
+/* Titre dynamique (Épargne enfants) */
+.nens-title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--owner-color, var(--primary));
+  background: color-mix(
+    in srgb,
+    var(--owner-color, var(--primary)) 12%,
+    transparent
+  );
+  border-left: 4px solid var(--owner-color, var(--primary));
   border-radius: 0 8px 8px 0;
   padding: 8px 12px;
-}
-.nens-table.theme-pol thead th {
-  background: #f5f9ff !important;
-  color: #1e3a8a !important;
-}
-.nens-table.theme-pol {
-  border-top: 2px solid #bcd3ff !important;
-}
-.nens-title.theme-pep {
-  color: #14532d !important;
-  background: #eaf7ea !important;
-  border-left: 4px solid #14532d !important;
-  border-radius: 0 8px 8px 0;
-  padding: 8px 12px;
-}
-.nens-table.theme-pep thead th {
-  background: #f6fdf6 !important;
-  color: #14532d !important;
-}
-.nens-table.theme-pep {
-  border-top: 2px solid #b9e3b9 !important;
+  display: inline-block;
 }
 
 /* --- 2. NAVIGATION TABS (Pills) --- */
@@ -127,17 +107,10 @@
 }
 
 /* --- 3. BOUTONS SPÉCIFIQUES & ACTIONS --- */
-.pf-btn {
-  border-radius: 50px;
-}
+
 .btn-icon {
   background: transparent;
   border: none;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: var(--radius);
-  transition: background 0.2s;
-  font-size: 1.1rem;
 }
 .btn-icon:hover {
   background: #e2e8f0;
@@ -201,12 +174,14 @@
   left: 0 !important;
   background: var(--bg-panel) !important;
   z-index: 20 !important;
-  border-right: 1px solid var(--bg-page);
+  border-right: 1px solid var(--border-light);
   min-width: 150px;
+  background-clip: padding-box;
 }
 th.sticky-col {
   z-index: 30 !important;
   background: #f8fafc !important;
+  background-clip: padding-box;
 }
 
 .cell-amount {
@@ -1546,30 +1521,6 @@ body.sum-mode-active .sum-target {
   }
 }
 
-/* Le bouton engrenage devient un simple conteneur fixe */
-.btn-header-settings {
-  position: relative;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px;
-  text-decoration: none;
-  color: inherit;
-}
-
-/* C'est uniquement l'icône à l'intérieur qui tourne ! */
-.gear-icon-anim {
-  display: inline-block;
-  transition: transform 0.4s ease-in-out;
-}
-.btn-header-settings:hover .gear-icon-anim {
-  transform: rotate(90deg);
-}
-
 .alert-dot {
   display: flex;
   align-items: center;
@@ -1716,10 +1667,6 @@ body.sum-mode-active .sum-target {
     margin: 0 !important;
     font-size: 0.85rem !important;
   }
-  .prev-salary-table,
-  .prev-alloc-table,
-  .pf-table,
-  .savings-table,
   .recap-wrapper {
     display: block !important;
     width: 100% !important;
@@ -1915,4 +1862,908 @@ body.sum-mode-active .sum-target {
     grid-template-columns: 1fr;
     gap: 12px;
   }
+}
+
+/* ==========================================================================
+   GRILLE ÉPARGNE (Style Zébré + Inputs originaux + No Spinners)
+   ========================================================================== */
+.epargne-grid-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: max-content;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+}
+
+/* En-tête Sombre & Contrasté */
+.eg-header-row {
+  display: grid;
+  grid-template-columns: 180px repeat(var(--cols), minmax(115px, 1fr));
+  background: #1e293b;
+  border-bottom: 2px solid #334155;
+  color: #ffffff;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+.eg-header-row .eg-sticky {
+  background: #1e293b;
+  border-right: 2px solid #334155;
+}
+
+/* Lignes classiques & Zébrées */
+.eg-row {
+  display: grid;
+  grid-template-columns: 180px repeat(var(--cols), minmax(115px, 1fr));
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.2s;
+}
+.eg-row:last-child {
+  border-bottom: none;
+}
+.eg-row:nth-child(even) {
+  background: #f8fafc;
+}
+.eg-row:nth-child(even) .eg-sticky {
+  background: #f8fafc;
+}
+.eg-row:hover,
+.eg-row:nth-child(even):hover {
+  background: #f1f5f9;
+}
+.eg-row:hover .eg-sticky,
+.eg-row:nth-child(even):hover .eg-sticky {
+  background: #f1f5f9;
+}
+
+/* Cellules */
+.eg-cell {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px dashed #e2e8f0;
+  font-size: 0.95rem;
+}
+.eg-cell:last-child {
+  border-right: none;
+}
+.eg-header-row .eg-cell {
+  border-right: 1px solid #334155;
+}
+
+/* Colonne figée */
+.eg-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  justify-content: flex-start;
+  border-right: 2px solid var(--border-light);
+  background-clip: padding-box;
+  background: var(--bg-panel);
+  font-weight: 600;
+}
+
+/* Lignes spéciales (Total & Extras) */
+.eg-total-row {
+  background: #f0f9ff !important;
+  border-bottom: 2px solid #bae6fd;
+  color: #0369a1;
+}
+.eg-total-row .eg-sticky {
+  background: #f0f9ff !important;
+  border-right: 2px solid #bae6fd;
+}
+.eg-extres-row {
+  background: #fffbeb !important;
+  border-top: 2px solid #fde68a;
+  border-bottom: none;
+  color: #b45309;
+}
+.eg-extres-row .eg-sticky {
+  background: #fffbeb !important;
+  border-right: 2px solid #fde68a;
+}
+
+/* 🎨 Tes Inputs originaux SANS les flèches (spinners) */
+.eg-input {
+  width: 75px;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: center;
+  padding: 4px;
+  font-size: 0.95rem;
+  color: inherit;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.eg-input:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: #cbd5e1;
+}
+
+/* ==========================================================================
+   UTILITAIRES & COMPOSANTS EPARGNE (Remplacement des styles en ligne)
+   ========================================================================== */
+.epargne-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.pf-mt-40 {
+  margin-top: 40px;
+}
+.pf-card-epargne {
+  background: var(--bg-panel);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+.pf-empty-dashed {
+  padding: 30px;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+  margin: 20px;
+}
+
+.month-header-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.month-header-title {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+.text-inherit {
+  color: inherit;
+}
+.month-cycle-start {
+  font-size: 0.75rem;
+  font-weight: normal;
+  opacity: 0.8;
+}
+.month-actions {
+  justify-content: center;
+  width: 100%;
+  display: flex;
+  gap: 4px;
+}
+
+.btn-danger-soft {
+  color: var(--danger);
+  border-color: var(--alert-error-border);
+  background: var(--alert-error-bg);
+}
+.btn-danger-soft:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.eg-cell-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.eg-input-total {
+  font-weight: bold;
+  color: var(--owner-color, var(--primary));
+  width: 70px;
+}
+.eg-currency-symbol {
+  color: var(--owner-color, var(--primary));
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Modale Épargne */
+.modal-epargne {
+  max-width: 600px;
+  width: 95%;
+}
+.pf-form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.pf-input-total {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.ventilation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.ventilation-cols {
+  display: flex;
+  gap: 10px;
+  padding: 0 5px 5px 5px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.ventilation-list {
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Lignes de ventilation dynamiques */
+.ventilation-line {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg-page);
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+}
+.vl-col-name {
+  flex: 2;
+}
+.vl-col-base {
+  width: 100px;
+}
+.vl-col-adj {
+  width: 90px;
+}
+.vl-col-final {
+  width: 100px;
+}
+.vl-col-btn {
+  width: 28px;
+}
+
+.pf-input-sm {
+  padding: 6px;
+  font-size: 0.9rem;
+}
+.bg-white {
+  background: var(--bg-panel);
+}
+.vl-input-adj {
+  color: var(--warning);
+  font-weight: bold;
+}
+.vl-input-final {
+  font-weight: bold;
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+.btn-remove-line {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--alert-error-bg);
+  color: var(--danger);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: 0.2s;
+}
+.btn-remove-line:hover {
+  background: var(--alert-error-border);
+}
+
+/* ==========================================================================
+   GRILLE ÉPARGNE (Dynamique Multi-Tenant & Zébrée)
+   ========================================================================== */
+.epargne-grid-table {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: max-content;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+}
+
+/* En-tête Moderne & Lumineux (Basé sur la couleur du propriétaire) */
+.eg-header-row {
+  display: grid;
+  grid-template-columns: 180px repeat(var(--cols), minmax(115px, 1fr));
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-strong);
+  border-top: 4px solid var(--owner-color, var(--primary)); /* Ligne d'accent dynamique */
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+.eg-header-row .eg-sticky {
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border-strong);
+}
+
+/* Lignes classiques & Zébrées */
+.eg-row {
+  display: grid;
+  grid-template-columns: 180px repeat(var(--cols), minmax(115px, 1fr));
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.2s;
+}
+.eg-row:last-child {
+  border-bottom: none;
+}
+.eg-row:nth-child(even) {
+  background: #f8fafc;
+}
+.eg-row:nth-child(even) .eg-sticky {
+  background: #f8fafc;
+}
+.eg-row:hover,
+.eg-row:nth-child(even):hover {
+  background: #f1f5f9;
+}
+.eg-row:hover .eg-sticky,
+.eg-row:nth-child(even):hover .eg-sticky {
+  background: #f1f5f9;
+}
+
+/* Cellules */
+.eg-cell {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px dashed #e2e8f0;
+  font-size: 0.95rem;
+}
+.eg-cell:last-child {
+  border-right: none;
+}
+.eg-header-row .eg-cell {
+  border-right: 1px solid var(--border-strong);
+}
+
+/* Colonne figée */
+.eg-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  justify-content: flex-start;
+  border-right: 2px solid var(--border-light);
+  background-clip: padding-box;
+  background: var(--bg-panel);
+  font-weight: 600;
+}
+
+/* Lignes spéciales 100% Dynamiques ! */
+.eg-total-row {
+  background: color-mix(
+    in srgb,
+    var(--owner-color, var(--primary)) 8%,
+    transparent
+  ) !important;
+  border-bottom: 2px solid
+    color-mix(in srgb, var(--owner-color, var(--primary)) 30%, transparent);
+  color: color-mix(in srgb, var(--owner-color, var(--primary)) 90%, black);
+}
+.eg-total-row .eg-sticky {
+  background: color-mix(
+    in srgb,
+    var(--owner-color, var(--primary)) 8%,
+    transparent
+  ) !important;
+  border-right: 2px solid
+    color-mix(in srgb, var(--owner-color, var(--primary)) 30%, transparent);
+}
+.eg-extres-row {
+  background: #fffbeb !important;
+  border-top: 2px solid #fde68a;
+  border-bottom: none;
+  color: #b45309;
+}
+.eg-extres-row .eg-sticky {
+  background: #fffbeb !important;
+  border-right: 2px solid #fde68a;
+}
+
+/* 🎨 Inputs originaux SANS les flèches (spinners) */
+.eg-input {
+  width: 75px;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: center;
+  padding: 4px;
+  font-size: 0.95rem;
+  color: inherit;
+  border-radius: 6px;
+  transition: all 0.2s;
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
+.eg-input::-webkit-outer-spin-button,
+.eg-input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+.eg-input:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: #cbd5e1;
+}
+.eg-input:focus {
+  background: var(--bg-panel);
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ==========================================================================
+   UTILITAIRES & COMPOSANTS EPARGNE
+   ========================================================================== */
+.epargne-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.pf-mt-40 {
+  margin-top: 40px;
+}
+.pf-card-epargne {
+  background: var(--bg-panel);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+.pf-empty-dashed {
+  padding: 30px;
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+  margin: 20px;
+}
+.pf-btn-sm {
+  padding: 6px 12px !important;
+  font-size: 0.85rem !important;
+  height: auto !important;
+  width: auto !important;
+}
+
+.month-header-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.month-header-title {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+.text-inherit {
+  color: inherit;
+}
+.month-cycle-start {
+  font-size: 0.75rem;
+  font-weight: normal;
+  opacity: 0.8;
+}
+.month-actions {
+  justify-content: center;
+  width: 100%;
+  display: flex;
+  gap: 4px;
+}
+
+.btn-danger-soft {
+  color: var(--danger);
+  border-color: var(--alert-error-border);
+  background: var(--alert-error-bg);
+}
+.btn-danger-soft:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.eg-cell-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.eg-input-total {
+  font-weight: bold;
+  color: var(--owner-color, var(--primary));
+  width: 70px;
+}
+.eg-currency-symbol {
+  color: var(--owner-color, var(--primary));
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+/* Modale Épargne & Ventilation */
+.modal-epargne {
+  max-width: 600px;
+  width: 95%;
+}
+.pf-form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.pf-input-total {
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.ventilation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.ventilation-cols {
+  display: flex;
+  gap: 10px;
+  padding: 0 5px 5px 5px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.ventilation-list {
+  max-height: 350px;
+  overflow-y: auto;
+  padding-right: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ventilation-line {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg-page);
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+}
+.vl-col-name {
+  flex: 2;
+}
+.vl-col-base {
+  width: 100px;
+}
+.vl-col-adj {
+  width: 90px;
+}
+.vl-col-final {
+  width: 100px;
+}
+.vl-col-btn {
+  width: 28px;
+}
+
+.pf-input-sm {
+  padding: 6px;
+  font-size: 0.9rem;
+}
+.bg-white {
+  background: var(--bg-panel);
+}
+.vl-input-adj {
+  color: var(--warning);
+  font-weight: bold;
+}
+.vl-input-final {
+  font-weight: bold;
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+.btn-remove-line {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--alert-error-bg);
+  color: var(--danger);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: 0.2s;
+}
+.btn-remove-line:hover {
+  background: var(--alert-error-border);
+}
+
+/* --- 15. SUIVI MENSUEL (REFACTORING STRICT) --- */
+.bud-summary-card {
+  background: var(--bg-panel);
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+  border: 1px solid var(--border-light);
+  position: relative;
+}
+.bud-closed-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-subtle);
+  padding: 5px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--text-muted);
+  border-radius: 16px 16px 0 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.bud-header-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.bud-header-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.bud-header-title {
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--text-main);
+  text-transform: capitalize;
+}
+.bud-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.bud-btn-lock {
+  background: linear-gradient(135deg, #10b981, #059669);
+  padding: 6px 12px;
+  height: auto;
+  width: auto;
+  font-size: 0.85rem;
+  border: none;
+  color: white;
+}
+.bud-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+.bud-kpi-card {
+  padding: 15px;
+  background: var(--bg-page);
+  border-radius: 12px;
+  position: relative;
+  border: 1px solid var(--border-light);
+}
+.bud-kpi-card--danger {
+  background: var(--bg-danger-soft);
+  border-color: var(--border-danger-soft);
+}
+.bud-kpi-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.bud-kpi-label--danger {
+  color: var(--danger);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.bud-kpi-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.bud-kpi-value--danger {
+  color: var(--danger);
+}
+.bud-kpi-edit-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: background 0.2s;
+}
+.bud-kpi-edit-btn:hover {
+  background: var(--bg-subtle);
+}
+.bud-pending-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  filter: grayscale(1);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.bud-pending-toggle:hover {
+  opacity: 1;
+}
+.bud-pending-list {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-danger-soft);
+  font-size: 0.8rem;
+  color: var(--danger);
+}
+.bud-pending-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.bud-scale-wrapper {
+  margin-top: 65px;
+  margin-bottom: 75px;
+  position: relative;
+  font-family: inherit;
+}
+.bud-scale-track {
+  position: relative;
+  height: 24px;
+  background: var(--border-light);
+  border-radius: 12px;
+  width: 100%;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.bud-scale-zero {
+  position: absolute;
+  left: 0;
+  height: 100%;
+  background: var(--bg-danger-soft);
+  border-radius: 12px 0 0 12px;
+}
+.bud-scale-bar {
+  position: absolute;
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--warning),
+    var(--warning) 10px,
+    #f59e0b 10px,
+    #f59e0b 20px
+  );
+  transition: width 0.5s ease-out;
+}
+.bud-scale-bar--danger {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--danger),
+    var(--danger) 10px,
+    #dc2626 10px,
+    #dc2626 20px
+  );
+  border-radius: 12px 0 0 12px;
+  opacity: 0.95;
+}
+.bud-scale-marker {
+  position: absolute;
+  width: 2px;
+  z-index: 10;
+}
+.bud-scale-marker--zero {
+  background: var(--text-muted);
+  top: -5px;
+  height: 35px;
+}
+.bud-scale-marker--actual {
+  background: var(--text-main);
+  top: -15px;
+  height: 40px;
+  width: 3px;
+  z-index: 15;
+}
+.bud-scale-marker--theo {
+  top: 24px;
+  height: 30px;
+  width: 3px;
+  z-index: 12;
+}
+.bud-scale-marker--max {
+  background: var(--border-strong);
+}
+
+.bud-scale-label {
+  position: absolute;
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.bud-scale-label--zero {
+  color: var(--text-muted);
+  top: 32px;
+  transform: translateX(-50%);
+}
+.bud-scale-label--actual {
+  color: var(--text-main);
+  top: -35px;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+}
+.bud-scale-label--theo {
+  top: 54px;
+  transform: translateX(-50%);
+}
+.bud-scale-label--max {
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.bud-categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+.bud-expense-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.bud-expense-row {
+  border-bottom: 1px solid var(--bg-page);
+}
+.bud-expense-date {
+  padding: 10px 15px;
+  color: var(--text-muted);
+}
+.bud-expense-label {
+  padding: 10px 5px;
+  font-weight: 500;
+}
+.bud-expense-amount {
+  padding: 10px 15px;
+  text-align: right;
+  font-weight: 600;
+}
+.bud-expense-actions {
+  width: 70px;
+  padding-right: 10px;
+  text-align: right;
+  white-space: nowrap;
 }
