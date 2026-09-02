@@ -20,14 +20,14 @@ if ($action === 'update_single_entry') {
     $cat = $_POST['category'] ?? '';
     $owner = $_POST['owner'] ?? '';
     $amount = (float)($_POST['amount'] ?? 0);
+    $forceInsert = !empty($_POST['force_insert']);
 
     try {
-        if ($amount == 0 && $cat !== 'TOTAL_BANQUE') {
-            // Si on met à 0 une ligne (autre que le total), on supprime l'entrée pour garder la base propre
+        // On supprime la ligne si elle est à 0, SAUF si on demande explicitement son initialisation (force_insert)
+        if ($amount == 0 && $cat !== 'TOTAL_BANQUE' && !$forceInsert) {
             $stmt = $pdo->prepare("DELETE FROM pf_savings WHERE month_date=? AND owner=? AND category=?");
             $stmt->execute([$month, $owner, $cat]);
         } else {
-            // Sinon on insère ou on met à jour
             $stmt = $pdo->prepare("INSERT INTO pf_savings (month_date, owner, category, amount) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE amount = VALUES(amount)");
             $stmt->execute([$month, $owner, $cat, $amount]);
         }

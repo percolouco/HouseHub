@@ -425,90 +425,90 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 
 <div class="budget-view">
 
-    <div style="background:white; padding:20px; border-radius:16px; box-shadow:var(--shadow-sm); margin-bottom:24px; border:1px solid #e2e8f0; position:relative;">
+    <div class="bud-summary-card">
         
         <?php if ($isClosed): ?>
-            <div style="position:absolute; top:0; left:0; right:0; background:#f1f5f9; padding:5px; text-align:center; font-size:0.8rem; font-weight:bold; color:#64748b; border-radius:16px 16px 0 0; border-bottom:1px solid #e2e8f0;">
+            <div class="bud-closed-banner">
                 🔒 <?= tr('bud_closed_archived') ?>
             </div>
             <div style="height:20px;"></div>
         <?php endif; ?>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom: 20px;">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <h2 style="margin:0; font-size:1.3rem; color:#0f172a; text-transform:capitalize;"><?= tr('bud_budget_of') ?> <?= $monthName ?></h2>
+        <div class="bud-header-group">
+            <div class="bud-header-title-wrapper">
+                <h2 class="bud-header-title"><?= tr('bud_budget_of') ?> <?= $monthName ?></h2>
             </div>
             
-        <div class="action-toolbar" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                    <?php if (!$isClosed): ?>
-                    <button type="button" class="pf-btn btn-secondary" onclick="openSuiviModal('importCsvModal')" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">
-                        📂 <?= tr('bud_import_csv') ?? 'Importer CSV' ?>
-                    </button>
-
-                    <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_close') ?>');">
-                        <input type="hidden" name="action" value="close_month">
-                        <input type="hidden" name="close_month_date" value="<?= $viewMonthDate ?>">
-                        <input type="hidden" name="freeze_solde_actuel" value="<?= $solde_actuel ?>">
-                        <input type="hidden" name="freeze_capacite_max" value="<?= $capacite_max ?>">
-                        <input type="hidden" name="freeze_solde_theorique" value="<?= $solde_theorique ?>">
-                        <input type="hidden" name="freeze_reste_a_venir" value="<?= $reste_a_venir ?>">
-                        <button type="submit" class="pf-btn" style="background:linear-gradient(135deg, #10b981, #059669); padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">🔒 <?= tr('bud_close_btn') ?></button>
-                    </form>
-                <?php else: ?>
-                    <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_reopen') ?>');">
-                        <input type="hidden" name="action" value="reopen_month">
-                        <button type="submit" class="pf-btn btn-secondary" style="padding:6px 12px; height:auto; width:auto; font-size:0.85rem;">🔓 <?= tr('bud_reopen_btn') ?></button>
-                    </form>
-                <?php endif; ?>
-                
-                <div class="suivi-nav-group">
-                    <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
-                    <a href="<?= $defaultLink ?>" class="suivi-btn-nav"><?= tr('bud_active_month_btn') ?></a>
-                    <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
-                </div>
-            </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:25px;">
-            <div style="padding:15px; background:#f8fafc; border-radius:12px; position:relative; border:1px solid #e2e8f0;">
-                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;"><?= tr('bud_bank_balance') ?> <?= $isClosed ? "(".tr('bud_frozen').")" : "(".tr('bud_current').")" ?></div>
-                <div style="font-size:1.4rem; font-weight:700; color:#0f172a;">
-                    <?= number_format($solde_actuel, 2, ',', ' ') ?> €
-                </div>
+            <div class="action-toolbar bud-toolbar">
                 <?php if (!$isClosed): ?>
-                    <button onclick="openSuiviModal('snapshotModal')" style="position:absolute; top:12px; right:12px; background:white; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:0.8rem; color:#475569; transition:0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">✏️ <?= tr('bud_update_btn') ?></button>
-                <?php endif; ?>
-            </div>
+                <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="openSuiviModal('importCsvModal')">
+                    📂 <?= tr('bud_import_csv') ?? 'Importer CSV' ?>
+                </button>
 
-            <div style="padding:15px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
-                <div style="font-size:0.85rem; color:#64748b; margin-bottom:4px;"><?= tr('bud_theoretical_balance') ?></div>
-                <div style="font-size:1.4rem; font-weight:700; color:<?= $solde_theorique < 0 ? '#ef4444' : '#334155' ?>;">
-                    <?= number_format($solde_theorique, 2, ',', ' ') ?> €
-                </div>
-            </div>
-
-            <div style="padding:15px; background:#fef2f2; border-radius:12px; border:1px solid #fecaca; position: relative;">
-                <div style="font-size:0.85rem; color:#991b1b; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                    <span><?= tr('bud_upcoming_charges') ?></span>
-                    <button onclick="toggleDiv('pendingDetailsList')" style="background:none; border:none; cursor:pointer; font-size:1rem; padding:0; filter: grayscale(1); opacity: 0.7; transition: 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">👁️</button>
-                </div>
-                <div style="font-size:1.4rem; font-weight:700; color:#b91c1c;">
-                    - <?= number_format($reste_a_venir, 2, ',', ' ') ?> €
-                </div>
-                <div id="pendingDetailsList" style="display:none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #fca5a5; font-size: 0.8rem; color: #7f1d1d;">
-                    <?php if (empty($pending_charges)): ?>
-                        <div style="text-align:center; font-style:italic; opacity:0.8;"><?= tr('bud_all_paid') ?></div>
-                    <?php else: ?>
-                        <?php foreach($pending_charges as $pc): ?>
-                            <div style="display:flex; justify-content:space-between; margin-bottom:6px;" <?= !empty($pc['tooltip']) ? 'title="'.htmlspecialchars($pc['tooltip']).'" style="cursor:help;"' : '' ?>>
-                                <span><?= htmlspecialchars($pc['name']) ?></span>
-                                <strong><?= number_format($pc['amount'], 0, ',', ' ') ?> €</strong>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
+                <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_close') ?>');">
+                    <input type="hidden" name="action" value="close_month">
+                    <input type="hidden" name="close_month_date" value="<?= $viewMonthDate ?>">
+                    <input type="hidden" name="freeze_solde_actuel" value="<?= $solde_actuel ?>">
+                    <input type="hidden" name="freeze_capacite_max" value="<?= $capacite_max ?>">
+                    <input type="hidden" name="freeze_solde_theorique" value="<?= $solde_theorique ?>">
+                    <input type="hidden" name="freeze_reste_a_venir" value="<?= $reste_a_venir ?>">
+                    <button type="submit" class="pf-btn bud-btn-lock">🔒 <?= tr('bud_close_btn') ?></button>
+                </form>
+            <?php else: ?>
+                <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_reopen') ?>');">
+                    <input type="hidden" name="action" value="reopen_month">
+                    <button type="submit" class="pf-btn btn-secondary pf-btn-small">🔓 <?= tr('bud_reopen_btn') ?></button>
+                </form>
+            <?php endif; ?>
+            
+            <div class="suivi-nav-group">
+                <a href="<?= $prevLink ?>" class="suivi-btn-nav">◀</a>
+                <a href="<?= $defaultLink ?>" class="suivi-btn-nav"><?= tr('bud_active_month_btn') ?></a>
+                <a href="<?= $nextLink ?>" class="suivi-btn-nav">▶</a>
             </div>
         </div>
+    </div>
+
+    <div class="bud-kpi-grid">
+        <div class="bud-kpi-card">
+            <div class="bud-kpi-label"><?= tr('bud_bank_balance') ?> <?= $isClosed ? "(".tr('bud_frozen').")" : "(".tr('bud_current').")" ?></div>
+            <div class="bud-kpi-value">
+                <?= number_format($solde_actuel, 2, ',', ' ') ?> €
+            </div>
+            <?php if (!$isClosed): ?>
+                <button onclick="openSuiviModal('snapshotModal')" class="bud-kpi-edit-btn">✏️ <?= tr('bud_update_btn') ?></button>
+            <?php endif; ?>
+        </div>
+
+        <div class="bud-kpi-card">
+            <div class="bud-kpi-label"><?= tr('bud_theoretical_balance') ?></div>
+            <div class="bud-kpi-value <?= $solde_theorique < 0 ? 'bud-kpi-value--danger' : '' ?>">
+                <?= number_format($solde_theorique, 2, ',', ' ') ?> €
+            </div>
+        </div>
+
+        <div class="bud-kpi-card bud-kpi-card--danger">
+            <div class="bud-kpi-label bud-kpi-label--danger">
+                <span><?= tr('bud_upcoming_charges') ?></span>
+                <button onclick="toggleDiv('pendingDetailsList')" class="bud-pending-toggle">👁️</button>
+            </div>
+            <div class="bud-kpi-value bud-kpi-value--danger">
+                - <?= number_format($reste_a_venir, 2, ',', ' ') ?> €
+            </div>
+            <div id="pendingDetailsList" class="bud-pending-list" style="display:none;">
+                <?php if (empty($pending_charges)): ?>
+                    <div style="text-align:center; font-style:italic; opacity:0.8;"><?= tr('bud_all_paid') ?></div>
+                <?php else: ?>
+                    <?php foreach($pending_charges as $pc): ?>
+                        <div class="bud-pending-item" <?= !empty($pc['tooltip']) ? 'title="'.htmlspecialchars($pc['tooltip']).'" style="cursor:help;"' : '' ?>>
+                            <span><?= htmlspecialchars($pc['name']) ?></span>
+                            <strong><?= number_format($pc['amount'], 0, ',', ' ') ?> €</strong>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
 
         <?php
         // --- 1. CALCULS DE L'ÉCHELLE DYNAMIQUE ---
@@ -534,92 +534,91 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
         }
         ?>
 
-        <div style="margin-top: 65px; margin-bottom: 75px; position: relative; font-family: inherit;">
+        <div class="bud-scale-wrapper">
+        <div class="bud-scale-track">
+            <?php if ($posZero > 0): ?>
+                <div class="bud-scale-zero" style="width: <?= $posZero ?>%;"></div>
+            <?php endif; ?>
             
-            <div style="position: relative; height: 24px; background: #e2e8f0; border-radius: 12px; width: 100%; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
-                <?php if ($posZero > 0): ?>
-                    <div style="position: absolute; left: 0; width: <?= $posZero ?>%; height: 100%; background: #fef2f2; border-radius: 12px 0 0 12px;"></div>
-                <?php endif; ?>
-                
-                <div style="position: absolute; left: <?= $leftActuel ?>%; width: <?= $widthActuel ?>%; height: 100%; background: repeating-linear-gradient(45deg, #fbbf24, #fbbf24 10px, #f59e0b 10px, #f59e0b 20px); border-radius: <?= $solde_actuel >= 0 ? '0 12px 12px 0' : '12px' ?>; transition: width 0.5s ease-out;"></div>
-                
-                <?php if ($solde_theorique < 0): ?>
-                    <div style="position: absolute; left: <?= $leftDanger ?>%; width: <?= $widthDanger ?>%; height: 100%; background: repeating-linear-gradient(45deg, #ef4444, #ef4444 10px, #dc2626 10px, #dc2626 20px); border-radius: 12px 0 0 12px; opacity: 0.95;"></div>
-                <?php endif; ?>
-            </div>
-
-            <div style="position: absolute; left: <?= $posZero ?>%; top: -5px; height: 35px; width: 2px; background: #94a3b8; z-index: 10;"></div>
-            <div style="position: absolute; left: <?= $posZero ?>%; top: 32px; transform: translateX(-50%); font-size: 0.85rem; font-weight: 800; color: #64748b;">0 €</div>
-
-            <div style="position: absolute; left: <?= $posActuel ?>%; top: -15px; height: 40px; width: 3px; background: #1e293b; z-index: 15;"></div>
-            <div style="position: absolute; left: <?= $posActuel ?>%; top: -35px; transform: translateX(-50%); font-size: 0.8rem; font-weight: bold; color: #1e293b;"><?= tr('bud_bar_actual') ?? 'Actuel' ?></div>
-
-            <div style="position: absolute; left: <?= $posTheorique ?>%; top: 24px; height: 30px; width: 3px; background: <?= $solde_theorique >= 0 ? '#8b5cf6' : '#ef4444' ?>; z-index: 12;"></div>
-            <div style="position: absolute; left: <?= $posTheorique ?>%; top: 54px; transform: translateX(-50%); font-size: 0.85rem; font-weight: bold; color: <?= $solde_theorique >= 0 ? '#8b5cf6' : '#ef4444' ?>; white-space: nowrap;"><?= tr('bud_bar_theoretical') ?? 'Théorique' ?></div>
-
-            <?php 
-            $overlapMax = abs($posMax - $posActuel) < 35; 
-            $topMaxText = $overlapMax ? '-60px' : '-35px';
-            $heightMaxLine = $overlapMax ? '65px' : '40px';
-            $topMaxLine = $overlapMax ? '-40px' : '-15px';
-            ?>
-            <div style="position: absolute; left: <?= $posMax ?>%; top: <?= $topMaxLine ?>; height: <?= $heightMaxLine ?>; width: 2px; background: #cbd5e1; z-index: 10;"></div>
+            <div class="bud-scale-bar" style="left: <?= $leftActuel ?>%; width: <?= $widthActuel ?>%; border-radius: <?= $solde_actuel >= 0 ? '0 12px 12px 0' : '12px' ?>;"></div>
             
-            <div style="position: absolute; left: <?= $posMax ?>%; top: <?= $topMaxText ?>; transform: translateX(calc(-100% + 10px)); font-size: 0.8rem; font-weight: bold; color: #64748b; white-space: nowrap; cursor: help;" title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">
-                <?= tr('bud_bar_max_cap') ?? 'Capacité Max' ?> : <?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
-            </div>
-            
+            <?php if ($solde_theorique < 0): ?>
+                <div class="bud-scale-bar--danger" style="left: <?= $leftDanger ?>%; width: <?= $widthDanger ?>%;"></div>
+            <?php endif; ?>
+        </div>
+
+        <div class="bud-scale-marker bud-scale-marker--zero" style="left: <?= $posZero ?>%;"></div>
+        <div class="bud-scale-label bud-scale-label--zero" style="left: <?= $posZero ?>%;">0 €</div>
+
+        <div class="bud-scale-marker bud-scale-marker--actual" style="left: <?= $posActuel ?>%;"></div>
+        <div class="bud-scale-label bud-scale-label--actual" style="left: <?= $posActuel ?>%;"><?= tr('bud_bar_actual') ?? 'Actuel' ?></div>
+
+        <?php $colorTheo = $solde_theorique >= 0 ? 'var(--primary)' : 'var(--danger)'; ?>
+        <div class="bud-scale-marker bud-scale-marker--theo" style="left: <?= $posTheorique ?>%; background: <?= $colorTheo ?>;"></div>
+        <div class="bud-scale-label bud-scale-label--theo" style="left: <?= $posTheorique ?>%; color: <?= $colorTheo ?>;"><?= tr('bud_bar_theoretical') ?? 'Théorique' ?></div>
+
+        <?php 
+        $overlapMax = abs($posMax - $posActuel) < 35; 
+        $topMaxText = $overlapMax ? '-60px' : '-35px';
+        $heightMaxLine = $overlapMax ? '65px' : '40px';
+        $topMaxLine = $overlapMax ? '-40px' : '-15px';
+        ?>
+        <div class="bud-scale-marker bud-scale-marker--max" style="left: <?= $posMax ?>%; top: <?= $topMaxLine ?>; height: <?= $heightMaxLine ?>;"></div>
+        
+        <div class="bud-scale-label bud-scale-label--max" style="left: <?= $posMax ?>%; top: <?= $topMaxText ?>; transform: translateX(calc(-100% + 10px));" title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">
+            <?= tr('bud_bar_max_cap') ?? 'Capacité Max' ?> : <?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
         </div>
     </div>
+</div>
 
 
-    <div class="categories-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:24px;">
-        <?php foreach ($categoriesConfig as $key => $conf): ?>
-        <div class="cat-card" <?= $isClosed ? 'style="opacity:0.8;"' : '' ?>>
-            <div class="cat-card-header" style="background:<?= $conf['color'] ?>15; border-bottom:1px solid <?= $conf['color'] ?>30;">
-                <div class="cat-card-title-group">
-                    <h3 style="margin:0; font-size:1rem; color:<?= $conf['color'] ?>;"><?= $conf['label'] ?></h3>
-                    <div class="cat-card-subtitle">
-                        <?php $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']); echo $logic['text']; ?>
-                    </div>
+    <div class="bud-categories-grid">
+    <?php foreach ($categoriesConfig as $key => $conf): ?>
+    <div class="cat-card" <?= $isClosed ? 'style="opacity:0.8;"' : '' ?>>
+        <div class="cat-card-header" style="background:<?= $conf['color'] ?>15; border-bottom:1px solid <?= $conf['color'] ?>30;">
+            <div class="cat-card-title-group">
+                <h3 style="margin:0; font-size:1rem; color:<?= $conf['color'] ?>;"><?= $conf['label'] ?></h3>
+                <div class="cat-card-subtitle">
+                    <?php $logic = getDisplayLogic($totals[$key], $conf['budget'], $conf['type']); echo $logic['text']; ?>
                 </div>
-                <?php if (!$isClosed): ?>
-                    <button class="btn-add-item" style="color:<?= $conf['color'] ?>;" onclick="openAddModal('<?= $key ?>', '<?= addslashes(strip_tags($conf['label'])) ?>')">＋</button>
-                <?php endif; ?>
             </div>
-
-            <?php $barCol = ($conf['db_type'] === 'Income') ? '#10b981' : ($logic['isOver'] ? '#ef4444' : $conf['color']); ?>
-            <div style="background:#f1f5f9; height:4px; width:100%;">
-                <div style="width:<?= $logic['pct'] ?>%; background:<?= $barCol ?>; height:100%;"></div>
-            </div>
-
-            <div style="flex:1; max-height:300px; overflow-y:auto; padding:0;">
-                <?php if (empty($expensesByCategory[$key])): ?>
-                    <div style="padding:20px; text-align:center; color:#cbd5e1; font-style:italic; font-size:0.85rem;"><?= tr('bud_no_lines') ?></div>
-                <?php else: ?>
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                        <?php foreach ($expensesByCategory[$key] as $exp): ?>
-                        <tr style="border-bottom:1px solid #f8fafc;">
-                            <td style="padding:10px 15px; color:#94a3b8;"><?= date('d/m', strtotime($exp['date_exp'])) ?></td>
-                            <td style="padding:10px 5px; font-weight:500;">
-                                <?= htmlspecialchars($exp['label']) ?>
-                            </td>
-                            <td style="padding:10px 15px; text-align:right; font-weight:600; color:<?= $exp['amount'] > 0 ? '#10b981' : '#1e293b' ?>;">
-                                <?= $exp['amount'] > 0 ? '+' : '-' ?><?= number_format(abs($exp['amount']), 2) ?>
-                            </td>
-                            <?php if (!$isClosed): ?>
-                                <td style="width:70px; padding-right:10px; text-align:right; white-space:nowrap;">
-                                    <button class="btn-icon-action edit" onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' title="<?= tr('edit') ?>">✏️</button>
-                                    <button class="btn-icon-action delete btn-safe-click" onclick="deleteExpense(<?= $exp['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
-                                </td>
-                            <?php endif; ?>
-                        </tr>
-                        <?php endforeach; ?>
-                    </table>
-                <?php endif; ?>
-            </div>
+            <?php if (!$isClosed): ?>
+                <button class="btn-add-item" style="color:<?= $conf['color'] ?>;" onclick="openAddModal('<?= $key ?>', '<?= addslashes(strip_tags($conf['label'])) ?>')">＋</button>
+            <?php endif; ?>
         </div>
-        <?php endforeach; ?>
+
+        <?php $barCol = ($conf['db_type'] === 'Income') ? 'var(--success)' : ($logic['isOver'] ? 'var(--danger)' : $conf['color']); ?>
+        <div style="background:var(--bg-page); height:4px; width:100%;">
+            <div style="width:<?= $logic['pct'] ?>%; background:<?= $barCol ?>; height:100%;"></div>
+        </div>
+
+        <div style="flex:1; max-height:300px; overflow-y:auto; padding:0;">
+            <?php if (empty($expensesByCategory[$key])): ?>
+                <div style="padding:20px; text-align:center; color:var(--text-muted); font-style:italic; font-size:0.85rem;"><?= tr('bud_no_lines') ?></div>
+            <?php else: ?>
+                <table class="bud-expense-table">
+                    <?php foreach ($expensesByCategory[$key] as $exp): ?>
+                    <tr class="bud-expense-row">
+                        <td class="bud-expense-date"><?= date('d/m', strtotime($exp['date_exp'])) ?></td>
+                        <td class="bud-expense-label">
+                            <?= htmlspecialchars($exp['label']) ?>
+                        </td>
+                        <td class="bud-expense-amount" style="color:<?= $exp['amount'] > 0 ? 'var(--success)' : 'var(--text-main)' ?>;">
+                            <?= $exp['amount'] > 0 ? '+' : '-' ?><?= number_format(abs($exp['amount']), 2) ?>
+                        </td>
+                        <?php if (!$isClosed): ?>
+                            <td class="bud-expense-actions">
+                                <button class="btn-icon-action edit" onclick='openEditModal(<?= json_encode($exp, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' title="<?= tr('edit') ?>">✏️</button>
+                                <button class="btn-icon-action delete btn-safe-click" onclick="deleteExpense(<?= $exp['id'] ?>)" title="<?= tr('delete') ?>">🗑️</button>
+                            </td>
+                        <?php endif; ?>
+                    </tr>
+                    <?php endforeach; ?>
+                </table>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endforeach; ?>
     </div>
 </div>
 

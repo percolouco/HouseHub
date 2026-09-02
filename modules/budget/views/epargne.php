@@ -2,24 +2,24 @@
 // modules/budget/views/epargne.php
 
 // --- 🧠 CONFIGURATION AGNOSTIQUE DES MEMBRES (MULTI-TENANT) ---
-$stmtPeople = $pdo->query("SELECT name, role FROM pf_people ORDER BY id ASC");
+$stmtPeople = $pdo->query("SELECT name, role, color FROM pf_people ORDER BY id ASC");
 $familyParents = [];
 $familyKids = [];
+$personColors = [];
 
 while ($row = $stmtPeople->fetch(PDO::FETCH_ASSOC)) {
     $role = strtolower(trim($row['role'] ?? ''));
+    $personColors[$row['name']] = $row['color'] ?? '#3b82f6';
     
     if ($role === 'parent') {
         $familyParents[] = $row['name'];
     } elseif ($role === 'nounou' || $role === 'helper') {
-        // On ignore la nounou dans l'épargne
         continue;
     } else {
         $familyKids[] = $row['name'];
     }
 }
 
-// Sécurité anti-page blanche si la BDD est mal configurée
 if (empty($familyParents)) $familyParents = ['Parent 1', 'Parent 2'];
 
 $requestedOwner = $_GET['owner'] ?? (!empty($familyKids) ? 'KIDS' : ($familyParents[0] ?? 'KIDS')); 
@@ -46,10 +46,9 @@ function getMonthName($dateString) {
 <div class="budget-view">
     <div class="view-header">
         <div class="owner-tabs">
-            
             <?php if (!empty($familyKids)): ?>
             <a href="?tab=epargne&owner=KIDS" class="owner-tab <?= $requestedOwner === 'KIDS' ? 'active' : '' ?>">
-                <?= tr('budget_tab_kids') ?? 'Enfants 👶' ?>
+                <?= tr('budget_tab_kids') ?>
             </a>
             <?php endif; ?>
 
@@ -81,181 +80,174 @@ function getMonthName($dateString) {
         $months = array_slice($months, 0, 7); 
         sort($allCategories);
 
-        $ownerTextClass = 'txt-global';
-        // 🔄 CORRECTION ICI : Création d'un nom "safe" sans espace pour les classes CSS
         $safeOwnerCls = htmlspecialchars(str_replace(' ', '_', $currentOwner), ENT_QUOTES);
+        $ownerColor = $personColors[$currentOwner] ?? '#1e293b';
     ?>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; margin-top: <?= ($requestedOwner === 'KIDS' && $index > 0) ? '40px' : '0' ?>;">        
-        <div style="flex-grow: 1;">
-            <?php if ($requestedOwner === 'KIDS'): 
-                $themeClass = 'theme-' . strtolower($safeOwnerCls);
-            ?>
-                <h3 class="nens-title <?= $themeClass ?>" style="margin:0; font-size:1.2rem;">
+    <div class="epargne-header-bar <?= ($requestedOwner === 'KIDS' && $index > 0) ? 'pf-mt-40' : '' ?>">        
+        <div class="pf-flex-1">
+            <?php if ($requestedOwner === 'KIDS'): ?>
+                <h3 class="nens-title" style="--owner-color: <?= htmlspecialchars($ownerColor) ?>;">
                     <?= htmlspecialchars($currentOwner) ?>
                 </h3>
             <?php endif; ?>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="pf-flex-gap-12-center">
             <?php if (!empty($months)): ?>
                 <button onclick="duplicateLastMonth('<?= $months[0] ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')" class="pf-btn btn-secondary">
                     🔁 <?= tr('bud_sav_add_one_month') ?>
                 </button>
+                <button onclick="promptNewSavingsLine('<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>', '<?= $months[0] ?>')" class="pf-btn">
+                    ＋ <?= tr('bud_sav_new_line') ?>
+                </button>
+            <?php else: ?>
+                <button onclick="openCustomSavingsModal('<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')" class="pf-btn">
+                    ＋ <?= tr('bud_sav_add_month') ?>
+                </button>
             <?php endif; ?>
-            <button onclick="openCustomSavingsModal('<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')" class="pf-btn">
-                ＋ <?= tr('bud_sav_add_month') ?>
-            </button>
         </div>
     </div>
 
-    <div class="table-responsive" style="background:white; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid #e2e8f0;">
+    <div class="table-responsive pf-card-epargne">
         <?php if (empty($months)): ?>
-            <div style="padding: 30px; text-align: center; color: #64748b;">
+            <div class="pf-empty-dashed">
                 <p><?= sprintf(tr('bud_sav_no_data'), htmlspecialchars($currentOwner)) ?></p>
             </div>
         <?php else: ?>
-            <table class="pf-table savings-table nens-table theme-<?= strtolower($safeOwnerCls) ?>" style="margin-top:0; box-shadow:none; border-radius:16px;">            
-                <thead>
-                    <tr>
-                        <th class="sticky-col" style="background:#f8fafc;"><?= tr('bud_sav_post_month') ?></th>
-                        <?php foreach ($months as $month): ?>
-                            <th>
-                                <div class="month-header-container" style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
-                                    <div style="display:flex; flex-direction:column; text-align:center;">
-                                        <span class="month-name" style="text-transform:capitalize;"><?= getMonthName($month) ?></span>
-                                        <?php 
-                                        if (isset($cycleConfigs[$month]) && !empty($cycleConfigs[$month]['start_date'])) {
-                                            $cStart = date('d/m', strtotime($cycleConfigs[$month]['start_date']));
-                                            echo "<span style='font-size:0.75rem; font-weight:normal; color:#64748b;'>" . sprintf(tr('bud_sav_from_date'), $cStart) . "</span>";
-                                        }
-                                        ?>
-                                    </div>
-                                    <div class="month-actions" style="justify-content: center; width: 100%;">
-                                        <button class="btn-icon-small btn-safe-click" title="<?= tr('bud_sav_edit_modal') ?>"
-                                                data-json="<?= htmlspecialchars(json_encode($data[$month] ?? []), ENT_QUOTES, 'UTF-8') ?>"
-                                                onclick='editCustomSavingsMonth("<?= $month ?>", "<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>", JSON.parse(this.getAttribute("data-json")))'>
-                                            ✏️
-                                        </button>
-                                        <button class="btn-icon-small btn-safe-click" title="<?= tr('bud_sav_delete_month') ?>"
-                                                onclick="deleteEntireMonth('<?= $month ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')"
-                                                style="color: #ef4444; border-color: #fca5a5; background: #fef2f2;">
-                                            🗑️
-                                        </button>
-                                    </div>
+            <div class="epargne-grid-table" style="--cols: <?= count($months) ?>; --owner-color: <?= htmlspecialchars($ownerColor) ?>;">
+                
+                <div class="eg-header-row">
+                    <div class="eg-cell eg-sticky"><?= tr('bud_sav_post_month') ?></div>
+                    <?php foreach ($months as $month): ?>
+                        <div class="eg-cell">
+                            <div class="month-header-container">
+                                <div class="month-header-title">
+                                    <span class="month-name text-inherit"><?= getMonthName($month) ?></span>
+                                    <?php 
+                                    if (isset($cycleConfigs[$month]) && !empty($cycleConfigs[$month]['start_date'])) {
+                                        $cStart = date('d/m', strtotime($cycleConfigs[$month]['start_date']));
+                                        echo "<span class='month-cycle-start'>" . sprintf(tr('bud_sav_from_date'), $cStart) . "</span>";
+                                    }
+                                    ?>
                                 </div>
-                            </th>
-                        <?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="row-total">
-                        <td class="sticky-col"><strong><?= tr('bud_sav_total_bank') ?></strong></td>
-                        <?php foreach ($months as $month): 
-                            $val = $data[$month]['TOTAL_BANQUE'] ?? 0;
-                        ?>
-                            <td class="text-center" style="padding:4px;">
-                                <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
-                                    <input type="number" step="0.01" 
-                                           class="prev-input total-input-<?= $safeOwnerCls ?>-<?= $month ?>" 
-                                           style="width: 70px; font-weight:bold; color:#2563eb;"
-                                           value="<?= $val != 0 ? round($val) : '' ?>" 
-                                           placeholder="0"
-                                           onchange="updateEpargneCell('<?= $month ?>', 'TOTAL_BANQUE', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>', this)">
-                                    <span style="color:#2563eb; font-weight:bold; font-size:0.9rem;">€</span>
+                                <div class="month-actions">
+                                    <button class="btn-icon-small btn-safe-click" title="<?= tr('bud_sav_edit_modal') ?>"
+                                            data-json="<?= htmlspecialchars(json_encode($data[$month] ?? []), ENT_QUOTES, 'UTF-8') ?>"
+                                            onclick='editCustomSavingsMonth("<?= $month ?>", "<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>", JSON.parse(this.getAttribute("data-json")))'>
+                                        ✏️
+                                    </button>
+                                    <button class="btn-icon-small btn-safe-click btn-danger-soft" title="<?= tr('bud_sav_delete_month') ?>"
+                                            onclick="deleteEntireMonth('<?= $month ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>')">
+                                        🗑️
+                                    </button>
                                 </div>
-                            </td>
-                        <?php endforeach; ?>
-                    </tr>
-
-                    <?php foreach ($allCategories as $cat): ?>
-                    <tr>
-                        <td class="sticky-col"><?= htmlspecialchars($cat) ?></td>
-                        <?php foreach ($months as $month): 
-                            $amount = $data[$month][$cat] ?? 0; 
-                        ?>
-                            <td class="text-center" style="padding:4px;">
-                                <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
-                                    <input type="number" step="0.01" 
-                                           class="prev-input <?= $ownerTextClass ?> cat-input-<?= $safeOwnerCls ?>-<?= $month ?>" 
-                                           style="width: 70px;"
-                                           value="<?= $amount != 0 ? round($amount) : '' ?>" 
-                                           placeholder="-"
-                                           onchange="updateEpargneCell('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>', this)">
-                                </div>
-                            </td>
-                        <?php endforeach; ?>
-                    </tr>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
+                </div>
 
-                    <tr class="row-extres">
-                        <td class="sticky-col"><strong><?= tr('bud_sav_extra') ?></strong></td>
-                        <?php foreach ($months as $month): 
-                            $total = $data[$month]['TOTAL_BANQUE'] ?? 0;
-                            $sum = 0;
-                            foreach ($allCategories as $cat) $sum += ($data[$month][$cat] ?? 0);
-                            $extra = $total - $sum;
-                        ?>
-                            <td class="text-center font-bold sum-target" id="extra_<?= $safeOwnerCls ?>_<?= $month ?>" style="color: <?= $extra >= 0 ? '#10b981' : '#ef4444' ?>; padding:12px;">
-                                <?= number_format($extra, 0, ',', ' ') ?> €
-                            </td>
-                        <?php endforeach; ?>
-                    </tr>
-                </tbody>
-            </table>
+                <div class="eg-row eg-total-row">
+                    <div class="eg-cell eg-sticky"><strong><?= tr('bud_sav_total_bank') ?></strong></div>
+                    <?php foreach ($months as $month): 
+                        $val = $data[$month]['TOTAL_BANQUE'] ?? 0;
+                    ?>
+                        <div class="eg-cell">
+                            <div class="eg-cell-content">
+                                <input type="number" step="0.01" 
+                                       class="prev-input eg-input eg-input-total total-input-<?= $safeOwnerCls ?>-<?= $month ?>" 
+                                       value="<?= $val != 0 ? round($val) : '' ?>" 
+                                       placeholder="0"
+                                       onchange="updateEpargneCell('<?= $month ?>', 'TOTAL_BANQUE', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>', this)">
+                                <span class="eg-currency-symbol">€</span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <?php foreach ($allCategories as $cat): ?>
+                <div class="eg-row">
+                    <div class="eg-cell eg-sticky"><?= htmlspecialchars($cat) ?></div>
+                    <?php foreach ($months as $month): 
+                        $amount = $data[$month][$cat] ?? 0; 
+                    ?>
+                        <div class="eg-cell">
+                            <input type="number" step="0.01" 
+                                   class="prev-input eg-input cat-input-<?= $safeOwnerCls ?>-<?= $month ?>" 
+                                   value="<?= $amount != 0 ? round($amount) : '' ?>" 
+                                   placeholder="-"
+                                   onchange="updateEpargneCell('<?= $month ?>', '<?= htmlspecialchars($cat, ENT_QUOTES) ?>', '<?= htmlspecialchars($currentOwner, ENT_QUOTES) ?>', this)">
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endforeach; ?>
+
+                <div class="eg-row eg-extres-row">
+                    <div class="eg-cell eg-sticky"><strong><?= tr('bud_sav_extra') ?></strong></div>
+                    <?php foreach ($months as $month): 
+                        $total = $data[$month]['TOTAL_BANQUE'] ?? 0;
+                        $sum = 0;
+                        foreach ($allCategories as $cat) $sum += ($data[$month][$cat] ?? 0);
+                        $extra = $total - $sum;
+                    ?>
+                        <div class="eg-cell font-bold sum-target <?= $extra >= 0 ? 'text-success' : 'text-danger' ?>" id="extra_<?= $safeOwnerCls ?>_<?= $month ?>">
+                            <?= number_format($extra, 0, ',', ' ') ?> €
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
         <?php endif; ?>
     </div>
     <?php endforeach; ?> 
 </div>
 
 <div id="savingsModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 600px; width: 95%;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="savingsModalTitle" class="pf-modal-title" style="margin:0;"><?= tr('bud_sav_modal_title_add') ?></h3>
-            <button type="button" onclick="document.getElementById('savingsModal').style.display='none'; document.body.classList.remove('no-scroll');" style="border:none; background:none; font-size:1.8rem; cursor:pointer; color:#64748b; line-height:1;">&times;</button>
+    <div class="pf-modal-content modal-epargne">
+        <div class="pf-modal-header">
+            <h3 id="savingsModalTitle" class="pf-modal-title"><?= tr('bud_sav_modal_title_add') ?></h3>
+            <button type="button" onclick="document.getElementById('savingsModal').classList.remove('open'); document.body.classList.remove('no-scroll');" class="pf-modal-close">&times;</button>
         </div>
         
-        <form action="modules/budget/includes/api/save-savings.php" method="POST" id="savingsForm">
+        <form action="/modules/budget/includes/api/save-savings.php" method="POST" id="savingsForm">
             <input type="hidden" name="owner" id="sav_owner">
             <input type="hidden" name="redirect_tab" id="redirect_tab" value="<?= htmlspecialchars($requestedOwner) ?>"> 
             <input type="hidden" name="month_date" id="sav_date_hidden">
 
-            <div style="display:flex; gap:15px; margin-bottom:20px;">
-                <div class="form-group" style="flex:1; margin:0;">
+            <div class="pf-form-row">
+                <div class="pf-form-group pf-flex-1 pf-m-0">
                     <label class="pf-label"><?= tr('bud_sav_month_concerned') ?></label>
                     <input type="month" id="sav_month" required class="pf-input">
                 </div>
 
-                <div class="form-group" style="flex:1; margin:0;">
+                <div class="pf-form-group pf-flex-1 pf-m-0">
                     <label class="pf-label"><?= tr('bud_sav_total_bank_eur') ?></label>
-                    <input type="number" step="0.01" name="values[TOTAL_BANQUE]" id="sav_total" required class="pf-input no-spinners" style="font-weight:bold; color:#2563eb;">
+                    <input type="number" step="0.01" name="values[TOTAL_BANQUE]" id="sav_total" required class="pf-input no-spinners pf-input-total">
                 </div>
             </div>
 
-            <div class="separator" style="margin: 20px 0; border-bottom: 1px solid #e2e8f0;"></div>
+            <hr class="pf-divider">
             
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div class="ventilation-header">
                 <div>
-                    <h4 style="margin:0; font-size:1rem; color:#1e293b;"><?= tr('bud_sav_ventilation') ?></h4>
-                    <span style="font-size:0.8rem; color:#64748b;"><?= tr('bud_sav_adj_help') ?></span>
+                    <h4 class="pf-m-0 text-main"><?= tr('bud_sav_ventilation') ?></h4>
+                    <span class="pf-muted-note"><?= tr('bud_sav_adj_help') ?></span>
                 </div>
-                <button type="button" class="pf-btn btn-secondary" onclick="addCustomEpargneLine()" style="padding:4px 10px; height:auto; width:auto; font-size:0.9rem;">＋ <?= tr('bud_sav_add_line') ?></button>
+                <button type="button" class="pf-btn btn-secondary pf-btn-sm" onclick="addCustomEpargneLine()">＋ <?= tr('bud_sav_add_line') ?></button>
             </div>
 
-            <div style="display:flex; gap:10px; padding:0 5px 5px 5px; font-size:0.8rem; color:#64748b; font-weight:600;">
-                <div style="flex:2;"><?= tr('bud_category') ?></div>
-                <div style="width:100px;"><?= tr('bud_sav_current') ?></div>
-                <div style="width:90px;"><?= tr('bud_sav_adjust') ?></div>
-                <div style="width:100px;"><?= tr('bud_sav_new') ?></div>
-                <div style="width:28px;"></div>
+            <div class="ventilation-cols">
+                <div class="vl-col-name"><?= tr('bud_category') ?></div>
+                <div class="vl-col-base"><?= tr('bud_sav_current') ?></div>
+                <div class="vl-col-adj"><?= tr('bud_sav_adjust') ?></div>
+                <div class="vl-col-final"><?= tr('bud_sav_new') ?></div>
+                <div class="vl-col-btn"></div>
             </div>
 
-            <div id="linesContainer" style="max-height: 350px; overflow-y: auto; padding-right:5px; display:flex; flex-direction:column; gap:10px;">
-                </div>
+            <div id="linesContainer" class="ventilation-list"></div>
 
-            <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" onclick="document.getElementById('savingsModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary" style="width:auto; margin:0;"><?= tr('btn_cancel') ?></button>
-                <button type="submit" class="pf-btn" style="width:auto; margin:0;"><?= tr('btn_save') ?></button>
+            <div class="modal-footer">
+                <button type="button" onclick="document.getElementById('savingsModal').classList.remove('open'); document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
     </div>
@@ -272,7 +264,6 @@ function getMonthName($dateString) {
 </div>
 
 <script>
-// --- 1. SÉCURISATION TRADUCTIONS ET LANGUE ---
 window.appLang = document.documentElement.lang === "ca" ? "ca-ES" : "fr-FR";
 window.I18N = {
     ...(window.I18N || {}),
@@ -281,18 +272,46 @@ window.I18N = {
     'bud_sav_ph_name': <?= json_encode(tr('bud_sav_ph_name')) ?>,
     'bud_sav_confirm_delete_month': <?= json_encode(tr('bud_sav_confirm_delete_month')) ?>,
     'bud_sav_prompt_duplicate': <?= json_encode(tr('bud_sav_prompt_duplicate')) ?>,
+    'bud_sav_prompt_new_line': <?= json_encode(tr('bud_sav_prompt_new_line')) ?>,
     'bud_err_tech': <?= json_encode(tr('bud_err_tech')) ?>,
     'bud_err_server': <?= json_encode(tr('bud_err_server')) ?>,
     'bud_err_network_dup': <?= json_encode(tr('bud_err_network_dup')) ?>,
     'bud_sav_saving': <?= json_encode(tr('bud_sav_saving')) ?>,
-    'bud_err_delete': <?= json_encode(tr('bud_err_delete')) ?>
+    'bud_err_delete': <?= json_encode(tr('bud_err_delete')) ?>,
+    'btn_delete': <?= json_encode(tr('btn_delete')) ?>
 };
 
-// Sécurisation de la devise pour la calculatrice
 const systemCurrency = (typeof window.CONFIG !== 'undefined' && window.CONFIG.CURRENCY) ? window.CONFIG.CURRENCY : '€';
-
-// --- 2. GESTION DE L'ÉDITION INVISIBLE EN DIRECT (CORRIGÉE 🚀) ---
 const cycleConfigs = <?= json_encode($cycleConfigs ?? []) ?>;
+
+async function promptNewSavingsLine(owner, latestMonth) {
+    const catName = prompt(window.I18N['bud_sav_prompt_new_line']);
+    if (!catName || catName.trim() === "") return;
+
+    const formData = new FormData();
+    formData.append('action', 'update_single_entry');
+    formData.append('month_date', latestMonth);
+    formData.append('category', catName.trim());
+    formData.append('owner', owner);
+    formData.append('amount', 0);
+    formData.append('force_insert', '1'); // 🛡️ Empêche la suppression auto par l'API
+    formData.append('ajax', '1');
+
+    try {
+        const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert(window.I18N['bud_err_tech'] + " : " + (result.error || "Erreur"));
+        }
+    } catch (err) {
+        alert(window.I18N['bud_err_tech']);
+    }
+}
 
 async function updateEpargneCell(month, category, owner, inputEl) {
     const val = parseFloat(inputEl.value) || 0;
@@ -302,27 +321,19 @@ async function updateEpargneCell(month, category, owner, inputEl) {
     formData.append('category', category);
     formData.append('owner', owner);
     formData.append('amount', val);
-    formData.append('ajax', '1'); // 🚀 CRITIQUE : Informe l'API
+    formData.append('ajax', '1');
 
     try {
-        // 🚀 CRITIQUE : pachaFetch + Chemin absolu
-        const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', {
-            method: 'POST',
-            body: formData
-        });
-
+        const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { method: 'POST', body: formData });
         if (!result.success) {
-            console.error("Erreur de sauvegarde :", result.error);
             alert(window.I18N['bud_err_tech'] + " : " + (result.error || "Erreur serveur"));
-            return; // On stoppe la mise à jour visuelle si la BDD a refusé
+            return;
         }
     } catch (err) {
-        console.error("Erreur réseau :", err);
-        alert(window.I18N['bud_err_tech'] || 'Erreur technique');
+        alert(window.I18N['bud_err_tech']);
         return;
     }
 
-    // Si on arrive ici, la BDD est bien à jour ! On met à jour le visuel.
     const safeOwnerClass = owner.replace(/\s+/g, '_');
     const totalInput = document.querySelector(`.total-input-${CSS.escape(safeOwnerClass)}-${month}`);
     const totalVal = parseFloat(totalInput ? totalInput.value : 0) || 0;
@@ -337,7 +348,13 @@ async function updateEpargneCell(month, category, owner, inputEl) {
 
     if (extraCell) {
         extraCell.innerText = Math.round(extra).toLocaleString(window.appLang) + ' €';
-        extraCell.style.color = extra >= 0 ? '#10b981' : '#ef4444';
+        if (extra >= 0) {
+            extraCell.classList.remove('text-danger');
+            extraCell.classList.add('text-success');
+        } else {
+            extraCell.classList.remove('text-success');
+            extraCell.classList.add('text-danger');
+        }
     }
     
     if(isSumModeActive) updateSumResult();
@@ -349,20 +366,20 @@ function addCustomEpargneLine(catName = '', amount = '') {
     const inputName = catName ? `values[${catName}]` : '';
 
     const html = `
-        <div class="ventilation-line" style="display:flex; gap:10px; align-items:center; background:#f8fafc; padding:8px; border-radius:8px; border:1px solid #e2e8f0;">
-            <div style="flex:2;">
-                <input type="text" class="pf-input cat-name-input" value="${catName}" placeholder="${window.I18N['bud_sav_ph_name'] || 'Catégorie'}" oninput="updateCustomFieldName(this)" style="padding:6px; font-size:0.9rem;" required>
+        <div class="ventilation-line">
+            <div class="vl-col-name">
+                <input type="text" class="pf-input cat-name-input pf-input-sm" value="${catName}" placeholder="${window.I18N['bud_sav_ph_name'] || 'Catégorie'}" oninput="updateCustomFieldName(this)" required>
             </div>
-            <div style="width:100px;">
-                <input type="number" step="0.01" class="pf-input base-amount no-spinners" value="${baseAmount}" oninput="recalculateCustomLine(this)" style="padding:6px; font-size:0.9rem; background:#fff;">
+            <div class="vl-col-base">
+                <input type="number" step="0.01" class="pf-input base-amount no-spinners pf-input-sm bg-white" value="${baseAmount}" oninput="recalculateCustomLine(this)">
             </div>
-            <div style="width:90px;">
-                <input type="number" step="0.01" class="pf-input adjustment-amount no-spinners" placeholder="+ / -" oninput="recalculateCustomLine(this)" style="padding:6px; font-size:0.9rem; color:#f59e0b; font-weight:bold;">
+            <div class="vl-col-adj">
+                <input type="number" step="0.01" class="pf-input adjustment-amount no-spinners pf-input-sm vl-input-adj" placeholder="+ / -" oninput="recalculateCustomLine(this)">
             </div>
-            <div style="width:100px;">
-                <input type="number" step="0.01" name="${inputName}" class="pf-input final-amount no-spinners" value="${baseAmount}" style="padding:6px; font-size:0.9rem; font-weight:bold; background:#e0f2fe; border-color:#bae6fd; color:#0369a1;" readonly>
+            <div class="vl-col-final">
+                <input type="number" step="0.01" name="${inputName}" class="pf-input final-amount no-spinners pf-input-sm vl-input-final" value="${baseAmount}" readonly>
             </div>
-            <button type="button" onclick="this.parentElement.remove()" style="width:28px; height:28px; border:none; background:#fee2e2; color:#ef4444; border-radius:4px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold;">&times;</button>
+            <button type="button" class="btn-remove-line" onclick="this.parentElement.remove()" title="${window.I18N['btn_delete']}">&times;</button>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', html);
@@ -408,7 +425,7 @@ function editCustomSavingsMonth(monthDate, owner, rowData) {
     
     if (container.children.length === 0) addCustomEpargneLine();
 
-    document.getElementById('savingsModal').style.display = 'flex';
+    document.getElementById('savingsModal').classList.add('open');
     document.body.classList.add('no-scroll');
 }
 
@@ -423,16 +440,8 @@ function openCustomSavingsModal(owner) {
     container.innerHTML = '';
     addCustomEpargneLine(); 
     
-    document.getElementById('savingsModal').style.display = 'flex';
+    document.getElementById('savingsModal').classList.add('open');
     document.body.classList.add('no-scroll');
-}
-
-window.onclick = function(event) {
-    const modal = document.getElementById('savingsModal');
-    if (event.target == modal) {
-        modal.style.display = 'none';
-        document.body.classList.remove('no-scroll');
-    }
 }
 
 const savingsForm = document.getElementById('savingsForm');
@@ -451,25 +460,19 @@ if (savingsForm) {
         submitBtn.disabled = true;
 
         const formData = new FormData(this);
-        formData.append('ajax', '1'); // 🚀 CRITIQUE
+        formData.append('ajax', '1');
 
         try {
-            // 🚀 CRITIQUE : pachaFetch + Chemin absolu forcé
-            const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { 
-                method: 'POST', 
-                body: formData 
-            });
-            
+            const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { method: 'POST', body: formData });
             if (result.success) {
-                window.location.reload(); // Ne recharge QUE si le serveur a dit OK
+                window.location.reload(); 
             } else {
                 alert((window.I18N['bud_err_server'] || 'Erreur serveur : ') + (result.error || "Inconnue"));
                 submitBtn.innerText = originalText;
                 submitBtn.disabled = false;
             }
         } catch (error) {
-            console.error("Erreur catch:", error);
-            alert(window.I18N['bud_err_tech'] || 'Erreur Technique');
+            alert(window.I18N['bud_err_tech']);
             submitBtn.innerText = originalText;
             submitBtn.disabled = false;
         }
@@ -477,7 +480,7 @@ if (savingsForm) {
 }
 
 async function deleteEntireMonth(monthDate, owner) {
-    const rawMsg = window.I18N['bud_sav_confirm_delete_month'] || "Supprimer %m pour %o ?";
+    const rawMsg = window.I18N['bud_sav_confirm_delete_month'];
     const msg = rawMsg.replace('%m', monthDate).replace('%o', owner);
     if (!confirm(msg)) return;
     
@@ -485,14 +488,14 @@ async function deleteEntireMonth(monthDate, owner) {
     formData.append("action", "delete_month_global"); 
     formData.append("month_date", monthDate);
     formData.append("owner", owner);
-    formData.append("ajax", "1"); // 🚀 CRITIQUE
+    formData.append("ajax", "1");
     
     try {
         const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { method: "POST", body: formData });
         if (result.success) window.location.reload();
         else alert(result.error || window.I18N['bud_err_delete']);
     } catch(err) {
-        alert(window.I18N['bud_err_delete'] || 'Erreur lors de la suppression');
+        alert(window.I18N['bud_err_delete']);
     }
 }
 
@@ -513,7 +516,7 @@ async function duplicateLastMonth(lastMonthDate, owner) {
         defaultTotal = cycleConfigs[nextMonthStr].start_balance;
     }
 
-    const rawMsg = window.I18N['bud_sav_prompt_duplicate'] || "Dupliquer vers le mois suivant ?";
+    const rawMsg = window.I18N['bud_sav_prompt_duplicate'];
     const message = rawMsg.replace('%s', formatMonth(lastMonthDate)).replace(/%t[12]/g, formatMonth(nextMonthStr));
 
     let newTotal = prompt(message, defaultTotal);
@@ -525,7 +528,7 @@ async function duplicateLastMonth(lastMonthDate, owner) {
         formData.append("target_date", nextMonthStr);
         formData.append("new_total", newTotal);
         formData.append("owner", owner);
-        formData.append("ajax", "1"); // 🚀 CRITIQUE
+        formData.append("ajax", "1");
 
         try {
             const result = await pachaFetch('/modules/budget/includes/api/save-savings.php', { method: "POST", body: formData });
@@ -535,8 +538,7 @@ async function duplicateLastMonth(lastMonthDate, owner) {
                 alert((window.I18N['bud_err_server'] || 'Erreur serveur : ') + (result.error || "Inconnue"));
             }
         } catch(err) {
-            console.error(err);
-            alert(window.I18N['bud_err_network_dup'] || 'Erreur réseau.');
+            alert(window.I18N['bud_err_network_dup']);
         }
     }
 }
