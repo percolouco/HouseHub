@@ -481,7 +481,7 @@ td.col-laia-sub {
   width: 40px;
   min-width: 40px;
   text-align: center;
-  padding: 4px; /* Réduit les marges internes */
+  padding-bottom: 10px; /* Réduit les marges internes */
 }
 
 /* 3. On s'assure que le tableau utilise tout l'espace disponible intelligemment */
@@ -536,7 +536,7 @@ td.col-laia-sub {
 #planningTable tbody td.col-sticky-sem {
   writing-mode: horizontal-tb;
   transform: none;
-  padding: 6px !important;
+  padding-bottom: 10px !important;
   text-align: center;
 }
 
@@ -660,27 +660,32 @@ td.col-laia-sub {
 #selectionMenu,
 #fc-month-selectionMenu,
 .fc-selection-menu {
-  position: absolute;
-  z-index: 9000;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 9999;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
   border-radius: 12px;
-  padding: 8px 12px;
-  min-width: 210px;
+  padding: 16px;
+  width: 90%;
+  max-width: 320px;
+  max-height: 85vh;
+  overflow-y: auto;
   display: none;
-  animation: menuPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transform-origin: top center;
+  animation: menuPopCenter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
-@keyframes menuPopIn {
+@keyframes menuPopCenter {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(10px);
+    transform: translate(-50%, -45%) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -917,30 +922,6 @@ td.col-laia-sub {
     padding: 10px;
   }
 
-  #selectionMenu,
-  #fc-month-selectionMenu,
-  .fc-selection-menu {
-    position: fixed !important;
-    top: auto !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    border-radius: 24px 24px 0 0;
-    padding: 24px 20px;
-    transform: translateY(100%);
-    animation: slideUpSheet 0.3s forwards;
-    z-index: 10000 !important;
-  }
-  #selectionMenu::before,
-  #fc-month-selectionMenu::before {
-    content: "";
-    display: block;
-    width: 40px;
-    height: 5px;
-    background: #cbd5e1;
-    border-radius: 10px;
-    margin: 0 auto 15px auto;
-  }
   .fc-two-months-container,
   .fc-three-months-container {
     display: flex !important;
@@ -977,7 +958,6 @@ td.col-laia-sub {
   font-size: 0.85rem !important;
 }
 
-/* 3. CORRECTION CRITIQUE : Le décalage "Sticky" de la colonne Semaine */
 /* Puisque la colonne Mois fait 35px, la colonne Semaine doit démarrer à 35px (et non plus 54px) */
 #planningTable tbody td.col-sticky-sem,
 #planningTable thead tr th.col-sticky-sem {
@@ -1036,4 +1016,113 @@ td.col-laia-sub {
 }
 #planningTable thead tr:nth-child(3) th {
   top: 64px !important;
+}
+
+#planningTable th.rotated-text {
+  height: 120px; /* Augmente la hauteur pour laisser respirer le texte */
+  vertical-align: bottom;
+  padding-bottom: 10px !important;
+}
+.rotated-text span {
+  white-space: nowrap; /* Force le texte sur une seule ligne */
+  display: inline-block;
+}
+
+/* --- RÉCAPITULATIF INTERVENANT (DASHBOARD) --- */
+.fc-recap-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.fc-recap-custom-dates {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--pf-bg-lighter);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--pf-border);
+}
+.fc-recap-kpi-container {
+  background: var(--pf-bg-lighter);
+  border-radius: 12px;
+  border: 1px solid var(--pf-border);
+  padding: 20px;
+  margin-top: 16px;
+}
+.fc-recap-kpi-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--pf-border);
+}
+.fc-recap-kpi-main-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fc-recap-kpi-main-val {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--pf-primary);
+  line-height: 1;
+}
+.fc-recap-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+}
+.fc-recap-kpi-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--pf-border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--pf-shadow-sm);
+  transition: border-color 0.2s;
+}
+.fc-recap-kpi-card:hover {
+  border-color: var(--warning);
+}
+.fc-recap-kpi-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.fc-recap-kpi-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--warning);
+  line-height: 1;
+}
+.fc-recap-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 20px;
+  grid-column: 1 / -1;
+}
+.fc-recap-error {
+  text-align: center;
+  color: var(--danger);
+  font-weight: bold;
+  padding: 20px;
+}
+
+[data-theme="dark"] .fc-recap-custom-dates,
+[data-theme="dark"] .fc-recap-kpi-container {
+  background: var(--bg-panel);
+  border-color: var(--border-light);
+}
+[data-theme="dark"] .fc-recap-kpi-card {
+  background: var(--bg-page);
 }

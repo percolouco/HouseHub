@@ -782,6 +782,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const selectMonth = document.getElementById("fc-select-month");
       const selectYear = document.getElementById("fc-select-year");
       if (!selectMonth || !selectYear) return;
+
       const lang = window.appLang || "fr-FR";
       for (let i = 0; i < 12; i++) {
         selectMonth.add(
@@ -793,9 +794,11 @@ document.addEventListener("DOMContentLoaded", () => {
           ),
         );
       }
+
       const currentY = new Date().getFullYear();
-      for (let y = currentY - 2; y <= currentY + 5; y++)
+      for (let y = currentY - 2; y <= currentY + 5; y++) {
         selectYear.add(new Option(y, y));
+      }
 
       const handleChange = () => {
         this.currentMonth = new Date(
@@ -805,11 +808,248 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         this.renderMonthCalendar();
       };
+
       selectMonth.addEventListener("change", handleChange);
       selectYear.addEventListener("change", handleChange);
+
+      // --- Selecteurs Recap Intervenant (Logique masquée, pilotée par le nouveau DOM généré) ---
+      const recapMonth = document.getElementById("recapHelperMonth");
+      const recapYear = document.getElementById("recapHelperYear");
+
+      if (recapMonth && recapYear) {
+        recapMonth.add(new Option("Année complète", "all"));
+        recapMonth.add(new Option("Période Spécifique...", "custom"));
+        for (let i = 0; i < 12; i++) {
+          recapMonth.add(
+            new Option(
+              new Intl.DateTimeFormat(lang, { month: "long" }).format(
+                new Date(2000, i, 1),
+              ),
+              i + 1,
+            ),
+          );
+        }
+        for (let y = currentY - 2; y <= currentY + 5; y++) {
+          recapYear.add(new Option(y, y));
+        }
+        recapMonth.value = new Date().getMonth() + 1;
+        recapYear.value = currentY;
+
+        // L'écouteur est conservé si appelé manuellement, mais l'interaction se fera via les selecteurs injectés
+      }
     }
 
-    // 🔥 LE FIX (refreshAllData avec schoolHols injecté et fusionné)
+    renderHelperRecap() {
+      const content = document.getElementById("recapHelperContent");
+      const hiddenMonthSel = document.getElementById("recapHelperMonth");
+      const hiddenYearSel = document.getElementById("recapHelperYear");
+      const hiddenStartInp = document.getElementById("recapHelperStart");
+      const hiddenEndInp = document.getElementById("recapHelperEnd");
+
+      if (
+        !content ||
+        !hiddenMonthSel ||
+        !hiddenYearSel ||
+        this.helpers.length === 0
+      )
+        return;
+
+      const mStr = hiddenMonthSel.value;
+      const y = parseInt(hiddenYearSel.value);
+      let startDateStr, endDateStr;
+      let isCustom = mStr === "custom";
+
+      if (isCustom) {
+        startDateStr = hiddenStartInp.value;
+        endDateStr = hiddenEndInp.value;
+      } else if (mStr === "all") {
+        startDateStr = `${y}-01-01`;
+        endDateStr = `${y}-12-31`;
+      } else {
+        const m = parseInt(mStr);
+        startDateStr = `${y}-${String(m).padStart(2, "0")}-01`;
+        const lastDay = new Date(y, m, 0).getDate();
+        endDateStr = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      }
+
+      let theoreticalWorkingDays = 0;
+      let hasValidDates = true;
+
+      if (
+        isCustom &&
+        (!startDateStr || !endDateStr || startDateStr > endDateStr)
+      ) {
+        hasValidDates = false;
+      } else {
+        let dObj = new Date(startDateStr + "T00:00:00");
+        const endObj = new Date(endDateStr + "T00:00:00");
+
+        while (dObj <= endObj) {
+          const dayOfWeek = dObj.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            const iso = this.getLocalIsoDate(dObj);
+            if (!this.publicHolidayDates.has(iso)) theoreticalWorkingDays++;
+          }
+          dObj.setDate(dObj.getDate() + 1);
+        }
+      }
+
+      let html = "";
+      this.helpers.forEach((h) => {
+        const hLeaves =
+          this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
+
+        const helperEvents = [...this.leaves, ...this.events]
+          .filter((e) => {
+            const eDate = e.leave_date || e.date;
+            const eType = e.leave_type || e.type;
+            const isOldOff =
+              eType === "HELPER_OFF" ||
+              eType === "HELPER_EXTRA" ||
+              eType.includes("OFF");
+
+            if (e.person_id != h.id) return false;
+            if (!e.leave_date && !isOldOff) return false;
+
+            if (isCustom && !hasValidDates) return false;
+            return eDate >= startDateStr && eDate <= endDateStr;
+          })
+          .map((e) => ({
+            type: e.leave_type || e.type,
+            duration: parseFloat(e.duration) || 1,
+          }));
+
+        const totals = {};
+        hLeaves.forEach(
+          (lt) => (totals[typeof lt === "object" ? lt.type : lt] = 0),
+        );
+        totals["OFF"] = 0;
+        totals["EXTRA"] = 0;
+
+        let totalLeavesTaken = 0;
+
+        helperEvents.forEach((e) => {
+          let mappedType =
+            e.type === "HELPER_OFF"
+              ? "OFF"
+              : e.type === "HELPER_EXTRA"
+                ? "EXTRA"
+                : e.type;
+          if (totals[mappedType] === undefined) totals[mappedType] = 0;
+          totals[mappedType] += e.duration;
+          totalLeavesTaken += e.duration;
+        });
+
+        const workedDays = hasValidDates
+          ? Math.max(0, theoreticalWorkingDays - totalLeavesTaken)
+          : 0;
+
+        // Construction des options du sélecteur
+        const lang = window.appLang || "fr-FR";
+        const trLang = window.I18N || {};
+        let optionsHtml = `<option value="all" ${mStr === "all" ? "selected" : ""}>${trLang.fc_full_year || "Année complète"}</option>`;
+        optionsHtml += `<option value="custom" ${mStr === "custom" ? "selected" : ""}>${trLang.fc_custom_period || "Période Spécifique..."}</option>`;
+        for (let i = 0; i < 12; i++) {
+          const monthName = new Intl.DateTimeFormat(lang, {
+            month: "long",
+          }).format(new Date(2000, i, 1));
+          const capitalizedMonth =
+            monthName.charAt(0).toUpperCase() + monthName.slice(1);
+          optionsHtml += `<option value="${i + 1}" ${mStr == i + 1 ? "selected" : ""}>${capitalizedMonth}</option>`;
+        }
+
+        let yearOptionsHtml = "";
+        const currentY = new Date().getFullYear();
+        for (let yr = currentY - 2; yr <= currentY + 5; yr++) {
+          yearOptionsHtml += `<option value="${yr}" ${y == yr ? "selected" : ""}>${yr}</option>`;
+        }
+
+        const isCustomDisplay = isCustom ? "flex" : "none";
+        const isYearDisplay = isCustom ? "none" : "block";
+
+        // --- GÉNÉRATION DU HTML (Design Ultra-Compact + Micro Pilules) ---
+        let cardHtml = `
+            <div style="background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; box-shadow: var(--pf-shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; width: 100%;">
+                
+                <!-- Zone Gauche : Identité + KPI + Pilules -->
+                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    
+                    <!-- Identité -->
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px;">📅 ${h.name}</span>
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Récapitulatif</span>
+                    </div>
+                    
+                    <!-- Jours Travaillés -->
+                    <div style="display: flex; align-items: baseline; gap: 6px; padding-right: 20px; border-right: 1px solid var(--border-light);">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Travaillés (Est.)</span>
+                        <span style="font-size: 1.4rem; font-weight: 800; color: var(--primary); line-height: 1;">${hasValidDates ? workedDays : "-"} <span style="font-size: 0.85rem;">j</span></span>
+                    </div>
+
+                    <!-- Les Micro-Pilules de Congés -->
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">`;
+
+        if (!hasValidDates && isCustom) {
+          cardHtml += `<div style="font-size: 0.85rem; color: var(--danger); font-weight: bold;">Sélectionnez des dates valides.</div>`;
+        } else {
+          let hasLeaves = false;
+          for (const [t, val] of Object.entries(totals)) {
+            if (
+              val > 0 ||
+              hLeaves.some(
+                (lt) => (typeof lt === "object" ? lt.type : lt) === t,
+              )
+            ) {
+              hasLeaves = true;
+              let label =
+                t === "HELPER_OFF" ? "Off" : t === "HELPER_EXTRA" ? "Extra" : t;
+              cardHtml += `
+                        <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-page); border: 1px solid var(--border-light); border-left: 3px solid var(--warning); border-radius: 6px; padding: 4px 10px;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">${label}</span>
+                            <span style="font-size: 1rem; font-weight: 800; color: var(--text-main); line-height: 1;">${val}<span style="font-size: 0.8rem; margin-left: 2px;">j</span></span>
+                        </div>`;
+            }
+          }
+          if (!hasLeaves)
+            cardHtml += `<div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun congé posé.</div>`;
+        }
+
+        cardHtml += `
+                    </div>
+                </div>
+
+                <!-- Zone Droite : Sélecteurs de Période Dynamiques -->
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <select class="pf-input" style="padding: 4px 8px; width: auto; height: 32px; font-size: 0.85rem; border-color: var(--border-strong); background: var(--bg-page);" onchange="updateHiddenRecap(this, 'month')">
+                        ${optionsHtml}
+                    </select>
+                    <select class="pf-input" style="padding: 4px 8px; width: auto; height: 32px; font-size: 0.85rem; border-color: var(--border-strong); background: var(--bg-page); display: ${isYearDisplay};" onchange="updateHiddenRecap(this, 'year')">
+                        ${yearOptionsHtml}
+                    </select>
+
+                    <div style="display: ${isCustomDisplay}; align-items: center; gap: 6px; background: var(--bg-page); border: 1px solid var(--border-strong); border-radius: 6px; padding: 2px 6px;">
+                        <input type="date" style="border: none; background: transparent; padding: 2px; height: 26px; font-size: 0.8rem; width: 115px; color: var(--text-main); font-family: inherit;" value="${hiddenStartInp.value}" onchange="updateHiddenRecap(this, 'start')">
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">➔</span>
+                        <input type="date" style="border: none; background: transparent; padding: 2px; height: 26px; font-size: 0.8rem; width: 115px; color: var(--text-main); font-family: inherit;" value="${hiddenEndInp.value}" onchange="updateHiddenRecap(this, 'end')">
+                    </div>
+                </div>
+
+            </div>`;
+        html += cardHtml;
+      });
+
+      content.innerHTML = html;
+
+      // Attachement de la fonction globale pour les selecteurs injectés
+      window.updateHiddenRecap = (el, type) => {
+        if (type === "month") hiddenMonthSel.value = el.value;
+        if (type === "year") hiddenYearSel.value = el.value;
+        if (type === "start") hiddenStartInp.value = el.value;
+        if (type === "end") hiddenEndInp.value = el.value;
+        this.renderHelperRecap();
+      };
+    }
+
     async refreshAllData() {
       try {
         const zone = window.calGlobalData?.foyer?.zone_scolaire || "C";
@@ -984,6 +1224,8 @@ document.addEventListener("DOMContentLoaded", () => {
       this.calculateMonthlyBalances();
       this.renderTable();
       this.renderMonthCalendar();
+      if (typeof this.renderHelperRecap === "function")
+        this.renderHelperRecap();
     }
 
     reprocessEvents() {
@@ -994,8 +1236,12 @@ document.addEventListener("DOMContentLoaded", () => {
         this.careModes.forEach((m) => (w.totals["mode_" + m] = 0));
         this.kids.forEach((k) => (w.totals["sick_" + k.id] = 0));
         this.helpers.forEach((h) => {
-          w.totals["off_" + h.id] = 0;
-          w.totals["extra_" + h.id] = 0;
+          const hLeaves =
+            this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
+          hLeaves.forEach((lt) => {
+            const typeName = typeof lt === "object" ? lt.type : lt;
+            w.totals[`leave_${h.id}_${typeName}`] = 0;
+          });
         });
         this.parents.forEach((p) => {
           const types = this.leaveMatrix[p.id] || [];
@@ -1051,12 +1297,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         let helperAbsences = 0;
-        this.helpers.forEach(
-          (h) =>
-            (helperAbsences +=
-              (w.totals["off_" + h.id] || 0) +
-              (w.totals["extra_" + h.id] || 0)),
-        );
+        this.helpers.forEach((h) => {
+          const hLeaves =
+            this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
+          hLeaves.forEach((lt) => {
+            const typeName = typeof lt === "object" ? lt.type : lt;
+            helperAbsences += w.totals[`leave_${h.id}_${typeName}`] || 0;
+          });
+        });
 
         if (this.kids.length > 0) {
           w.totals.presenceKid = Math.max(
@@ -1261,10 +1509,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 td.classList.add("fc-day--public-holiday");
               if (evt.type === "VACANCES_SCOLAIRES")
                 td.classList.add("fc-day--school-holiday");
-              if (evt.type === "HELPER_OFF")
-                td.classList.add("fc-day--off-carole");
-              if (evt.type === "HELPER_EXTRA")
-                td.classList.add("fc-day--extra-off-carole");
               if (upperCareModes.includes(evt.type))
                 td.classList.add("fc-day--has-guard");
             });
@@ -1320,13 +1564,30 @@ document.addEventListener("DOMContentLoaded", () => {
             tr.appendChild(td);
           });
 
+          // 1. Congés intervenant (Dynamiques)
+          (this.helpers || []).forEach((h) => {
+            const hLeaves =
+              this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
+            hLeaves.forEach((lt) => {
+              const typeName = typeof lt === "object" ? lt.type : lt;
+              const td = document.createElement("td");
+              td.className = "col-total";
+              td.textContent = fmt(w.totals[`leave_${h.id}_${typeName}`] || 0);
+              tr.appendChild(td);
+            });
+          });
+
+          // 2. Modes de garde (On ignore Nounou si Helper présent)
           (this.careModes || []).forEach((mode) => {
+            if (mode.toLowerCase() === "nounou" && this.helpers.length > 0)
+              return;
             const td = document.createElement("td");
             td.className = "col-total";
             td.textContent = fmt(w.totals["mode_" + mode] || 0);
             tr.appendChild(td);
           });
 
+          // 3. Maladie enfants
           (this.kids || []).forEach((kid) => {
             const td = document.createElement("td");
             td.className = "col-total";
@@ -1371,7 +1632,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       } catch (e) {
         console.error("🔥 Erreur fatale dans renderTable :", e);
-        this.planningBody.innerHTML = `<tr><td colspan="15" style="color:red; font-weight:bold; padding:20px; text-align:center;">Erreur d'affichage : ${e.message} <br> <small>Regarde la console pour plus de détails.</small></td></tr>`;
+        this.planningBody.innerHTML = `<tr><td colspan="15" style="color:red; font-weight:bold; padding:20px; text-align:center;">Erreur d'affichage : ${e.message}</td></tr>`;
       }
     }
 
@@ -2053,7 +2314,9 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const activeLeaves = {};
-      this.parents.forEach((p) => (activeLeaves[p.id] = new Set()));
+      [...this.parents, ...this.helpers].forEach(
+        (p) => (activeLeaves[p.id] = new Set()),
+      );
       this.leaves.forEach((l) => {
         if (dates.includes(l.leave_date) && activeLeaves[l.person_id])
           activeLeaves[l.person_id].add(l.leave_type);
@@ -2079,40 +2342,54 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
       const trashSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
-      const buildHeader = (title, action, cat) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin: 8px 0 4px 0;">
-            <span>${title}</span>
-            ${action ? `<button style="background:none; border:none; cursor:pointer; color:var(--danger); padding:0; display:flex; opacity:0.6;" data-action="${action}" data-cat="${cat}">${trashSvg}</button>` : ""}
-        </div>`;
+
+      // Ajout de la classe "btn-icon-action delete" pour activer le hover natif (rouge clair)
+      const buildHeader = (title, action, cat, pid) =>
+        `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.65rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin: 8px 0 4px 0;"><span>${title}</span>${action ? `<button type="button" class="btn-icon-action delete" style="width:24px; height:24px; padding:4px;" data-action="${action}" data-cat="${cat}" ${pid ? `data-pid="${pid}"` : ""}>${trashSvg}</button>` : ""}</div>`;
 
       let html = `<div class="fc-menu-section" style="padding-bottom: 4px;"><strong style="font-size:0.85rem; color:var(--text-main); text-transform:capitalize;">${dateLabel}</strong></div>`;
 
+      // 1. Congés Intervenants
       if (this.helpers.length > 0) {
         this.helpers.forEach((h) => {
-          html += `<div class="fc-menu-section">${buildHeader(h.name, "clear-type", "HELPER_" + h.id)}<div class="fc-menu-grid">
-            <button class="fc-menu-btn" style="${getActiveStyleE("HELPER_OFF", h.id, "var(--warning)")}" data-action="add" data-type="HELPER_OFF" data-person="${h.id}">Off</button>
-            <button class="fc-menu-btn" style="${getActiveStyleE("HELPER_EXTRA", h.id, "var(--danger)")}" data-action="add" data-type="HELPER_EXTRA" data-person="${h.id}">Extra</button>
-          </div></div>`;
+          const hLeaves =
+            this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
+          if (hLeaves.length > 0) {
+            const hColor = h.color || "var(--warning)";
+            html += `<div class="fc-menu-section">${buildHeader(h.name, "clear-leaves-person", null, h.id)}<div class="fc-menu-grid">`;
+            hLeaves.forEach((lt) => {
+              const lType = typeof lt === "object" ? lt.type : lt;
+              html += `<button class="fc-menu-btn" style="${getActiveStyleL(lType, h.id, hColor)}" data-action="add-leave" data-pid="${h.id}" data-type="${lType}">${lType}</button>`;
+            });
+            html += `</div></div>`;
+          }
         });
       }
 
+      // 2. Modes de Garde
       if (this.careModes.length > 0) {
-        html += `<div class="fc-menu-section">${buildHeader(trLang.fc_care_modes_title || "Modes de garde", "clear-type", "CARE_MODE")}<div class="fc-menu-grid">`;
-        this.careModes.forEach((m) => {
-          let iconHtml =
-            m.toLowerCase() === "avis"
-              ? `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain; margin-right:4px;"> `
-              : m.toLowerCase() === "centre"
-                ? `<span class="fc-icon-centre" style="font-size:1.1rem; line-height:1; margin-right:4px;">🏫</span> `
-                : "";
-          const modeType = m.toUpperCase();
-          html += `<button class="fc-menu-btn" style="display:flex; align-items:center; ${getActiveStyleE(modeType, "0", "var(--primary)")}" data-action="add" data-type="${modeType}" data-person="0">${iconHtml}${m}</button>`;
-        });
-        html += `</div></div>`;
+        const displayModes = this.careModes.filter(
+          (m) => !(m.toLowerCase() === "nounou" && this.helpers.length > 0),
+        );
+        if (displayModes.length > 0) {
+          html += `<div class="fc-menu-section">${buildHeader(trLang.fc_care_modes_title || "Modes de garde", "clear-type", "CARE_MODE", null)}<div class="fc-menu-grid">`;
+          displayModes.forEach((m) => {
+            let iconHtml =
+              m.toLowerCase() === "avis"
+                ? `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain; margin-right:4px;"> `
+                : m.toLowerCase() === "centre"
+                  ? `<span class="fc-icon-centre" style="font-size:1.1rem; line-height:1; margin-right:4px;">🏫</span> `
+                  : "";
+            const modeType = m.toUpperCase();
+            html += `<button class="fc-menu-btn" style="display:flex; align-items:center; ${getActiveStyleE(modeType, "0", "var(--primary)")}" data-action="add" data-type="${modeType}" data-person="0">${iconHtml}${m}</button>`;
+          });
+          html += `</div></div>`;
+        }
       }
 
+      // 3. Maladie Enfants
       if (this.kids.length > 0) {
-        html += `<div class="fc-menu-section">${buildHeader(trLang.leg_pep_sick || "Maladie", "clear-type", "CHILD_SICK")}<div class="fc-menu-grid" style="grid-template-columns: 1fr;">`;
+        html += `<div class="fc-menu-section">${buildHeader(trLang.fc_menu_sick || "Maladie", "clear-type", "CHILD_SICK", null)}<div class="fc-menu-grid" style="grid-template-columns: 1fr;">`;
         this.kids.forEach((k) => {
           const color = k.color || "var(--danger)";
           html += `<button class="fc-menu-btn" style="${getActiveStyleE("CHILD_SICK", k.id, color)}" data-action="add" data-type="CHILD_SICK" data-person="${k.id}">${k.name} 🤒</button>`;
@@ -2120,39 +2397,40 @@ document.addEventListener("DOMContentLoaded", () => {
         html += `</div></div>`;
       }
 
-      html += `<div class="fc-menu-section" style="border-bottom:none;">${buildHeader(trLang.fc_menu_kids_leaves || "Congés Adultes", null, null)}<div style="display:grid; grid-template-columns: auto 1fr; gap:6px; align-items:center; font-size:0.8rem;">`;
+      // 4. Congés Parents (Répartition en 2 colonnes !)
+      html += `<div class="fc-menu-section" style="border-bottom:none;">${buildHeader(trLang.fc_menu_adult_leaves || "Congés Parents", null, null, null)}`;
+      html += `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:start; font-size:0.8rem;">`;
 
       const allParentLeaveTypes = new Set();
       this.parents.forEach((p) => {
         (this.leaveMatrix[p.id] || []).forEach((l) =>
-          allParentLeaveTypes.add(l.type),
+          allParentLeaveTypes.add(typeof l === "object" ? l.type : l),
         );
       });
 
       this.parents.forEach((p) => {
         const pColor = p.color || "var(--primary)";
-        html += `<div style="font-weight:600; color:${pColor}; display:flex; align-items:center; justify-content:space-between; padding-right:8px; border-right:1px solid var(--border-light);">
-                      ${p.name} <button style="background:none; border:none; cursor:pointer; color:var(--danger); padding:0; display:flex; opacity:0.4; margin-left:6px;" data-action="clear-leaves-person" data-pid="${p.id}">${trashSvg}</button>
+        html += `<div style="display:flex; flex-direction:column; gap:6px; background:var(--bg-subtle); padding:6px; border-radius:8px; border:1px solid var(--border-light);">`;
+        html += `<div style="font-weight:600; color:${pColor}; display:flex; align-items:center; justify-content:space-between;">
+                      ${p.name} <button type="button" class="btn-icon-action delete" style="width:24px; height:24px; padding:4px;" data-action="clear-leaves-person" data-pid="${p.id}">${trashSvg}</button>
                    </div>`;
         html += `<div style="display:flex; gap:4px; flex-wrap:wrap;">`;
         Array.from(allParentLeaveTypes).forEach((t) => {
-          const hasThisLeave = (this.leaveMatrix[p.id] || []).some(
-            (l) => l.type === t,
-          );
-          if (hasThisLeave) {
-            html += `<button class="fc-menu-btn" style="padding: 2px 6px; font-size:0.75rem; ${getActiveStyleL(t, p.id, pColor)}" data-action="add-leave" data-pid="${p.id}" data-type="${t}">${t}</button>`;
+          if (
+            (this.leaveMatrix[p.id] || []).some(
+              (l) => (typeof l === "object" ? l.type : l) === t,
+            )
+          ) {
+            html += `<button class="fc-menu-btn" style="padding: 4px 6px; font-size:0.75rem; width:auto; flex-grow:1; text-align:center; ${getActiveStyleL(t, p.id, pColor)}" data-action="add-leave" data-pid="${p.id}" data-type="${t}">${t}</button>`;
           }
         });
-        html += `</div>`;
+        html += `</div></div>`;
       });
       html += `</div></div>`;
 
       menu.innerHTML = html;
-      let left = x + 10;
-      if (left + 240 > window.innerWidth) left = x - 250;
-      menu.style.left = `${left}px`;
-      menu.style.top = `${y + 10}px`;
       menu.style.display = "block";
+
       this.menuJustOpened = true;
       setTimeout(() => (this.menuJustOpened = false), 100);
     }
