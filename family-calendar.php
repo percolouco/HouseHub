@@ -85,7 +85,7 @@ $pageCss    = "/modules/family-calendar/family-calendar.css";
 require __DIR__ . '/header.php';
 ?>
 
-<div class="pf-container" style="max-width:100%; padding:0;">
+<div class="pf-container" style="--p1-main: <?= $parents[0]['color'] ?? '#0891b2' ?>; --p2-main: <?= $parents[1]['color'] ?? '#f59e0b' ?>; max-width:100%; padding:0;">
     <div class="fc-header-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
 
         <!-- Bloc Titre + Roue crantée -->
@@ -422,7 +422,7 @@ require __DIR__ . '/header.php';
                         <?php endforeach; ?>
 
                         <?php foreach ($parents as $index => $parent):
-                            $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia'; // Couleurs alternées
+                            $parentClass = ($index % 2 === 0) ? 'col-p1' : 'col-p2';
                             $pLeaves = $leaveMatrix[$parent['id']] ?? [];
                             $colspan = count($pLeaves) * 2;
                         ?>
@@ -433,7 +433,7 @@ require __DIR__ . '/header.php';
                     </tr>
                     <tr>
                         <?php foreach ($parents as $index => $parent):
-                            $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
+                            $parentClass = ($index % 2 === 0) ? 'col-p1' : 'col-p2';
                             $pLeaves = $leaveMatrix[$parent['id']] ?? [];
                         ?>
                             <?php foreach ($pLeaves as $type): ?>
@@ -443,7 +443,7 @@ require __DIR__ . '/header.php';
                     </tr>
                     <tr>
                         <?php foreach ($parents as $index => $parent):
-                            $parentClass = ($index % 2 === 0) ? 'col-alex' : 'col-laia';
+                            $parentClass = ($index % 2 === 0) ? 'col-p1' : 'col-p2';
                             $pLeaves = $leaveMatrix[$parent['id']] ?? [];
                         ?>
                             <?php foreach ($pLeaves as $type): ?>
@@ -482,16 +482,17 @@ require __DIR__ . '/header.php';
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
 
                         <!-- Intervenants (Dynamique selon les congés paramétrés) -->
-                        <?php foreach ($helpers as $helper): 
+                        <?php 
+                        $helperColorIndex = 0;
+                        foreach ($helpers as $helper): 
                             $hLeaves = $leaveMatrix[$helper['id']] ?? [];
-                            $colors = ['var(--warning)', 'var(--danger)', 'var(--primary)'];
-                            foreach ($hLeaves as $index => $type):
+                            foreach ($hLeaves as $type):
                         ?>
                             <div class="pf-legend-item">
-                                <div class="pf-legend-color" style="background: <?= $colors[$index % count($colors)] ?>;"></div>
+                                <div class="pf-legend-color fc-bg-palette-<?= $helperColorIndex % 8 ?>"></div>
                                 <span><?= htmlspecialchars($type) ?> <?= htmlspecialchars($helper['name']) ?></span>
                             </div>
-                        <?php endforeach; endforeach; ?>
+                        <?php $helperColorIndex++; endforeach; endforeach; ?>
 
                         <!-- Modes de garde (On masque "Nounou" si l'intervenant gère lui-même ses présences) -->
                         <?php foreach ($activeCareModes as $index => $mode):

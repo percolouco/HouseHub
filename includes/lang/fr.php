@@ -356,6 +356,13 @@ return [
     'fc_full_year'        => 'Année complète', 
     'fc_custom_period'    => 'Période spécifique...',
     'fc_worked_days'   => 'Travaillés (Est.)',
+    'fc_presence'      => 'Présence',
+    'fc_working_days'  => 'J. Ouvrés',
+    'fc_absences'      => 'Abs.',
+    'fc_recap_title'   => 'Récapitulatif',
+    'fc_worked_est'    => 'Travaillés (Est.)',
+    'fc_invalid_dates' => 'Sélectionnez des dates valides.',
+    'fc_no_leaves_taken' => 'Aucun congé posé.',
 
     // --- CALENDRIER : PARAMÈTRES (MEMBRES & AFFICHAGE) ---
 'fc_tab_display'              => '🖥️ Affichage',

@@ -351,6 +351,13 @@ return [
     'fc_full_year'        => 'Any sencer', 
     'fc_custom_period'    => 'Període específic...',
     'fc_worked_days'   => 'Treballats (Est.)',
+    'fc_presence'      => 'Presència',
+    'fc_working_days'  => 'Feiners',
+    'fc_absences'      => 'Abs.',
+    'fc_recap_title'   => 'Resum',
+    'fc_worked_est'    => 'Treballats (Est.)',
+    'fc_invalid_dates' => 'Selecciona dates vàlides.',
+    'fc_no_leaves_taken' => 'Cap permís sol·licitat.',
 
     // --- CALENDARI : PARÀMETRES (MEMBRES I VISUALITZACIÓ) ---
     'fc_tab_display'              => '🖥️ Visualització',

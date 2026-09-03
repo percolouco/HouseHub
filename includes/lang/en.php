@@ -352,6 +352,13 @@ return [
     'fc_full_year'        => 'Full year', 
     'fc_custom_period'    => 'Custom period...',
     'fc_worked_days'   => 'Worked (Est.)',
+    'fc_presence'      => 'Presence',
+    'fc_working_days'  => 'Working days',
+    'fc_absences'      => 'Abs.',
+    'fc_recap_title'   => 'Summary',
+    'fc_worked_est'    => 'Worked (Est.)',
+    'fc_invalid_dates' => 'Please select valid dates.',
+    'fc_no_leaves_taken' => 'No leave taken.',
 
     // --- CALENDAR: SETTINGS (MEMBERS & DISPLAY) ---
     'fc_tab_display'              => '🖥️ Display',
