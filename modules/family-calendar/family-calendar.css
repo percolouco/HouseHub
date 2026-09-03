@@ -10,15 +10,26 @@
     #f1f5f9 8px,
     #f1f5f9 16px
   );
-  --c-off-carole: #fef3c7;
-  --c-extra-off: #fee2e2;
-  --c-selected: #dbeafe;
 
-  /* Thèmes Parents (Sync Budget) */
-  --bg-alex: #ecfeff;
-  --text-alex: #0891b2;
-  --bg-laia: #fffbeb;
-  --text-laia: #d97706;
+  /* Palette dynamique pour les congés intervenants */
+  --fc-palette-0: #fef3c7;
+  --fc-palette-text-0: #b45309;
+  --fc-palette-1: #fee2e2;
+  --fc-palette-text-1: #b91c1c;
+  --fc-palette-2: #dbeafe;
+  --fc-palette-text-2: #1d4ed8;
+  --fc-palette-3: #dcfce7;
+  --fc-palette-text-3: #15803d;
+  --fc-palette-4: #f3e8ff;
+  --fc-palette-text-4: #7e22ce;
+  --fc-palette-5: #ffedd5;
+  --fc-palette-text-5: #c2410c;
+  --fc-palette-6: #ccfbf1;
+  --fc-palette-text-6: #0f766e;
+  --fc-palette-7: #fce7f3;
+  --fc-palette-text-7: #be185d;
+
+  --c-selected: #dbeafe;
 
   /* Rappel des variables Global Design System pour cohérence */
   --pf-primary: #3b82f6;
@@ -301,11 +312,30 @@
   background: var(--c-public-holiday) !important;
   font-weight: 700;
 }
-.fc-day--off-carole {
-  background: var(--c-off-carole) !important;
+
+.fc-bg-palette-0 {
+  background: var(--fc-palette-0) !important;
 }
-.fc-day--extra-off-carole {
-  background: var(--c-extra-off) !important;
+.fc-bg-palette-1 {
+  background: var(--fc-palette-1) !important;
+}
+.fc-bg-palette-2 {
+  background: var(--fc-palette-2) !important;
+}
+.fc-bg-palette-3 {
+  background: var(--fc-palette-3) !important;
+}
+.fc-bg-palette-4 {
+  background: var(--fc-palette-4) !important;
+}
+.fc-bg-palette-5 {
+  background: var(--fc-palette-5) !important;
+}
+.fc-bg-palette-6 {
+  background: var(--fc-palette-6) !important;
+}
+.fc-bg-palette-7 {
+  background: var(--fc-palette-7) !important;
 }
 
 .fc-day--selected {
@@ -314,8 +344,14 @@
   z-index: 5;
 }
 
-.fc-day--off-carole.fc-day--school-holiday,
-.fc-day--extra-off-carole.fc-day--school-holiday,
+.fc-bg-palette-0.fc-day--school-holiday,
+.fc-bg-palette-1.fc-day--school-holiday,
+.fc-bg-palette-2.fc-day--school-holiday,
+.fc-bg-palette-3.fc-day--school-holiday,
+.fc-bg-palette-4.fc-day--school-holiday,
+.fc-bg-palette-5.fc-day--school-holiday,
+.fc-bg-palette-6.fc-day--school-holiday,
+.fc-bg-palette-7.fc-day--school-holiday,
 .fc-day--centre.fc-day--school-holiday,
 .fc-day--avis.fc-day--school-holiday {
   box-shadow: inset 0 -8px 0 0 var(--c-school-holiday) !important;
@@ -409,15 +445,23 @@
   z-index: 20;
 }
 
-.col-alex.header-group,
-.col-alex-sub {
-  background: var(--bg-alex) !important;
-  color: var(--text-alex) !important;
+.col-p1.header-group,
+.col-p1-sub {
+  background: color-mix(
+    in srgb,
+    var(--p1-main, #0891b2) 8%,
+    #ffffff
+  ) !important;
+  color: color-mix(in srgb, var(--p1-main, #0891b2) 85%, #000000) !important;
 }
-.col-laia.header-group,
-.col-laia-sub {
-  background: var(--bg-laia) !important;
-  color: var(--text-laia) !important;
+.col-p2.header-group,
+.col-p2-sub {
+  background: color-mix(
+    in srgb,
+    var(--p2-main, #f59e0b) 8%,
+    #ffffff
+  ) !important;
+  color: color-mix(in srgb, var(--p2-main, #f59e0b) 85%, #000000) !important;
 }
 
 #planningTable tbody td {
@@ -448,10 +492,10 @@ td.col-day {
 }
 th.col-total,
 td.col-total,
-th.col-alex-sub,
-td.col-alex-sub,
-th.col-laia-sub,
-td.col-laia-sub {
+th.col-p1-sub,
+td.col-p1-sub,
+th.col-p2-sub,
+td.col-p2-sub {
   width: 32px !important;
   min-width: 32px !important;
   max-width: 32px !important;
@@ -594,12 +638,7 @@ td.col-laia-sub {
 .fc-legend-public-holiday {
   background: var(--c-public-holiday);
 }
-.fc-legend-off-carole {
-  background: var(--c-off-carole);
-}
-.fc-legend-extra-off-carole {
-  background: var(--c-extra-off);
-}
+
 .fc-legend-centre::after {
   content: "🏫";
 }

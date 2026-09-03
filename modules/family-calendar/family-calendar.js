@@ -682,6 +682,8 @@ document.addEventListener("DOMContentLoaded", () => {
       this.leaves = [];
       this.weeks = [];
 
+      this.helperColorMap = {};
+
       this.parents = [];
       this.kids = [];
       this.helpers = [];
@@ -728,6 +730,17 @@ document.addEventListener("DOMContentLoaded", () => {
           );
           this.careModes = res.data.foyer.care_modes || [];
           this.leaveMatrix = res.data.leaves || {};
+
+          let colorCounter = 0;
+          this.helpers.forEach((h) => {
+            const hLeaves =
+              this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
+            hLeaves.forEach((lt) => {
+              const typeName = typeof lt === "object" ? lt.type : lt;
+              this.helperColorMap[`${h.id}_${typeName}`] = colorCounter % 8;
+              colorCounter++;
+            });
+          });
 
           const settings = res.data.calendar_settings || {};
           if (settings.calendar_default_view) {
@@ -902,14 +915,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const helperEvents = [...this.leaves, ...this.events]
           .filter((e) => {
             const eDate = e.leave_date || e.date;
-            const eType = e.leave_type || e.type;
-            const isOldOff =
-              eType === "HELPER_OFF" ||
-              eType === "HELPER_EXTRA" ||
-              eType.includes("OFF");
+            const eType = String(e.leave_type || e.type).toUpperCase();
+            const isOldEvent = eType.includes("OFF") || eType.includes("EXTRA");
 
-            if (e.person_id != h.id) return false;
-            if (!e.leave_date && !isOldOff) return false;
+            if (parseInt(e.person_id) !== parseInt(h.id)) return false;
+            if (!e.leave_date && !isOldEvent) return false; // Ignore les événements standards sauf l'historique
 
             if (isCustom && !hasValidDates) return false;
             return eDate >= startDateStr && eDate <= endDateStr;
@@ -929,12 +939,11 @@ document.addEventListener("DOMContentLoaded", () => {
         let totalLeavesTaken = 0;
 
         helperEvents.forEach((e) => {
-          let mappedType =
-            e.type === "HELPER_OFF"
-              ? "OFF"
-              : e.type === "HELPER_EXTRA"
-                ? "EXTRA"
-                : e.type;
+          const rawType = String(e.type).toUpperCase();
+          let mappedType = e.type;
+          if (rawType.includes("EXTRA")) mappedType = "EXTRA";
+          else if (rawType.includes("OFF")) mappedType = "OFF";
+
           if (totals[mappedType] === undefined) totals[mappedType] = 0;
           totals[mappedType] += e.duration;
           totalLeavesTaken += e.duration;
@@ -967,22 +976,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const isCustomDisplay = isCustom ? "flex" : "none";
         const isYearDisplay = isCustom ? "none" : "block";
 
-        // --- GÉNÉRATION DU HTML (Design Ultra-Compact + Micro Pilules) ---
+        // --- GÉNÉRATION DU HTML (Design Ultra-Compact + Micro Pilules + Flexbox Corrigé) ---
         let cardHtml = `
             <div style="background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; box-shadow: var(--pf-shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; width: 100%;">
                 
                 <!-- Zone Gauche : Identité + KPI + Pilules -->
-                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; flex: 1;">
                     
                     <!-- Identité -->
                     <div style="display: flex; flex-direction: column; gap: 2px;">
                         <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px;">📅 ${h.name}</span>
-                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Récapitulatif</span>
+                        <span style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">${window.I18N?.fc_recap_title || "Récapitulatif"}</span>
                     </div>
                     
                     <!-- Jours Travaillés -->
                     <div style="display: flex; align-items: baseline; gap: 6px; padding-right: 20px; border-right: 1px solid var(--border-light);">
-                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Travaillés (Est.)</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">${window.I18N?.fc_worked_est || "Travaillés (Est.)"}</span>
                         <span style="font-size: 1.4rem; font-weight: 800; color: var(--primary); line-height: 1;">${hasValidDates ? workedDays : "-"} <span style="font-size: 0.85rem;">j</span></span>
                     </div>
 
@@ -990,7 +999,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">`;
 
         if (!hasValidDates && isCustom) {
-          cardHtml += `<div style="font-size: 0.85rem; color: var(--danger); font-weight: bold;">Sélectionnez des dates valides.</div>`;
+          cardHtml += `<div style="font-size: 0.85rem; color: var(--danger); font-weight: bold;">${window.I18N?.fc_invalid_dates || "Sélectionnez des dates valides."}</div>`;
         } else {
           let hasLeaves = false;
           for (const [t, val] of Object.entries(totals)) {
@@ -1001,22 +1010,31 @@ document.addEventListener("DOMContentLoaded", () => {
               )
             ) {
               hasLeaves = true;
-              let label =
-                t === "HELPER_OFF" ? "Off" : t === "HELPER_EXTRA" ? "Extra" : t;
+              const rawT = String(t).toUpperCase();
+              let label = t;
+              if (rawT.includes("EXTRA"))
+                label = window.I18N?.btn_extra || "Extra";
+              else if (rawT.includes("OFF"))
+                label = window.I18N?.btn_off || "Off";
+
+              // 🎨 INJECTION DYNAMIQUE DE LA COULEUR CSS (La même que le calendrier !)
+              const colorIndex = this.helperColorMap[`${h.id}_${t}`] ?? 0;
+              const borderColor = `var(--fc-palette-text-${colorIndex})`;
+
               cardHtml += `
-                        <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-page); border: 1px solid var(--border-light); border-left: 3px solid var(--warning); border-radius: 6px; padding: 4px 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-page); border: 1px solid var(--border-light); border-left: 3px solid ${borderColor}; border-radius: 6px; padding: 4px 10px;">
                             <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">${label}</span>
                             <span style="font-size: 1rem; font-weight: 800; color: var(--text-main); line-height: 1;">${val}<span style="font-size: 0.8rem; margin-left: 2px;">j</span></span>
                         </div>`;
             }
           }
           if (!hasLeaves)
-            cardHtml += `<div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun congé posé.</div>`;
+            cardHtml += `<div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">${window.I18N?.fc_no_leaves_taken || "Aucun congé posé."}</div>`;
         }
 
         cardHtml += `
                     </div>
-                </div>
+                </div> <!-- /Zone Gauche -->
 
                 <!-- Zone Droite : Sélecteurs de Période Dynamiques -->
                 <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -1260,15 +1278,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const dur = parseFloat(e.duration) || 1;
 
-            if (e.type === "CHILD_SICK")
+            if (e.type === "CHILD_SICK") {
               w.totals["sick_" + e.person_id] =
                 (w.totals["sick_" + e.person_id] || 0) + dur;
-            if (e.type === "HELPER_OFF")
-              w.totals["off_" + e.person_id] =
-                (w.totals["off_" + e.person_id] || 0) + dur;
-            if (e.type === "HELPER_EXTRA")
-              w.totals["extra_" + e.person_id] =
-                (w.totals["extra_" + e.person_id] || 0) + dur;
+            } else {
+              const rawType = String(e.type).toUpperCase();
+              const isOldHelperEvent =
+                rawType.includes("OFF") || rawType.includes("EXTRA");
+
+              if (isOldHelperEvent) {
+                const pId = this.helpers.some(
+                  (h) => parseInt(h.id) === parseInt(e.person_id),
+                )
+                  ? e.person_id
+                  : this.helpers[0]?.id || 0;
+                let mappedType = e.type;
+                if (rawType.includes("EXTRA")) mappedType = "EXTRA";
+                else if (rawType.includes("OFF")) mappedType = "OFF";
+
+                w.totals[`leave_${pId}_${mappedType}`] =
+                  (w.totals[`leave_${pId}_${mappedType}`] || 0) + dur;
+              }
+            }
 
             // Modes de garde dynamiques
             if (upperCareModes.includes(e.type)) {
@@ -1448,8 +1479,7 @@ document.addEventListener("DOMContentLoaded", () => {
         this.planningBody.innerHTML = "";
 
         if (!this.weeks || this.weeks.length === 0) {
-          this.planningBody.innerHTML =
-            "<tr><td colspan='15' style='text-align:center; padding: 20px; color: var(--text-muted);'>Aucune donnée pour cette année scolaire.</td></tr>";
+          this.planningBody.innerHTML = `<tr><td colspan='15' style='text-align:center; padding: 20px; color: var(--text-muted);'>${window.I18N?.["fc_no_data"] || "Aucune donnée pour cette année scolaire."}</td></tr>`;
           return;
         }
 
@@ -1466,33 +1496,39 @@ document.addEventListener("DOMContentLoaded", () => {
         const upperCareModes = (this.careModes || []).map((m) =>
           String(m).toUpperCase(),
         );
+        const helperIds = (this.helpers || []).map((h) => parseInt(h.id));
 
         this.weeks.forEach((w, idx) => {
           const tr = document.createElement("tr");
           tr.setAttribute("data-month", w.monthKey);
 
-          if (idx === 0 || this.weeks[idx - 1].monthKey !== w.monthKey)
+          if (idx === 0 || this.weeks[idx - 1].monthKey !== w.monthKey) {
             tr.classList.add("fc-month-first-week-row");
+          }
           if (
             idx === this.weeks.length - 1 ||
             this.weeks[idx + 1].monthKey !== w.monthKey
-          )
+          ) {
             tr.classList.add("fc-month-last-week-row");
-
-          if (!processedMonths[w.monthKey]) {
-            processedMonths[w.monthKey] = true;
-            const td = document.createElement("td");
-            td.className = "col-month col-sticky-mois";
-            td.innerHTML = `<span class="fc-sticky-mois-label">${w.monthName || ""}</span>`;
-            td.rowSpan = monthSpans[w.monthKey];
-            tr.appendChild(td);
           }
 
+          // 1. Colonne Sticky MOIS
+          if (!processedMonths[w.monthKey]) {
+            processedMonths[w.monthKey] = true;
+            const tdMonth = document.createElement("td");
+            tdMonth.className = "col-month col-sticky-mois rotated-text";
+            tdMonth.innerHTML = `<span>${w.monthName || ""}</span>`;
+            tdMonth.rowSpan = monthSpans[w.monthKey];
+            tr.appendChild(tdMonth);
+          }
+
+          // 2. Colonne Sticky SEMAINE
           const tdW = document.createElement("td");
-          tdW.className = "col-month col-sticky-sem";
-          tdW.textContent = w.weekLabel || "";
+          tdW.className = "col-month col-sticky-sem rotated-text";
+          tdW.innerHTML = `<span>${w.weekLabel || ""}</span>`;
           tr.appendChild(tdW);
 
+          // 3. Jours de la semaine (Lundi à Vendredi)
           ["mon", "tue", "wed", "thu", "fri"].forEach((d) => {
             const td = document.createElement("td");
             const dateObj = w.dayDates[d];
@@ -1503,7 +1539,11 @@ document.addEventListener("DOMContentLoaded", () => {
             td.className = "col-day";
 
             const events = w.dayFlags?.[d]?.events || [];
+            const dayLeaves = (this.leaves || []).filter(
+              (l) => (l.leave_date || l.date) === iso,
+            );
 
+            // A. Application des classes de coloration de fond CSS
             events.forEach((evt) => {
               if (evt.type === "PUBLIC_HOLIDAY")
                 td.classList.add("fc-day--public-holiday");
@@ -1513,23 +1553,67 @@ document.addEventListener("DOMContentLoaded", () => {
                 td.classList.add("fc-day--has-guard");
             });
 
+            // Détection dynamique et globale des congés de l'intervenant
+            let appliedColorIndex = -1;
+
+            const helperLeaf = dayLeaves.find((l) =>
+              helperIds.includes(parseInt(l.person_id)),
+            );
+            if (helperLeaf) {
+              appliedColorIndex =
+                this.helperColorMap[
+                  `${helperLeaf.person_id}_${helperLeaf.leave_type}`
+                ];
+            } else {
+              const helperEvent = events.find(
+                (e) =>
+                  helperIds.includes(parseInt(e.person_id)) ||
+                  String(e.type).toUpperCase().includes("OFF") ||
+                  String(e.type).toUpperCase().includes("EXTRA"),
+              );
+
+              if (helperEvent) {
+                const pId = helperIds.includes(parseInt(helperEvent.person_id))
+                  ? helperEvent.person_id
+                  : helperIds[0];
+                const rawType = String(helperEvent.type).toUpperCase();
+
+                let mappedType = helperEvent.type;
+                if (rawType.includes("EXTRA")) mappedType = "EXTRA";
+                else if (rawType.includes("OFF")) mappedType = "OFF";
+
+                appliedColorIndex =
+                  this.helperColorMap[`${pId}_${mappedType}`] ??
+                  this.helperColorMap[`${pId}_${helperEvent.type}`] ??
+                  0;
+              }
+            }
+
+            if (appliedColorIndex !== -1 && appliedColorIndex !== undefined) {
+              td.classList.add(`fc-bg-palette-${appliedColorIndex}`);
+            }
+
+            // B. Contenu HTML de la cellule (Numéro du jour, Icônes de garde, Maladie Enfants, Initiales Parents)
             let content = `<div style="position:relative; height:100%; width:100%; min-height:40px;">
                 <span style="display:block; padding:2px;">${String(dateObj.getDate()).padStart(2, "0")}</span>`;
 
+            // Icônes des modes de garde
             let iconsHtml = `<div style="position:absolute; top:2px; right:2px; display:flex; gap:2px;">`;
             events.forEach((evt) => {
               if (upperCareModes.includes(evt.type)) {
                 const modeName = String(evt.type).toLowerCase();
-                if (modeName === "avis")
+                if (modeName === "avis") {
                   iconsHtml += `<img src="/modules/family-calendar/assets/img/avis.svg" class="fc-icon-avis" title="Avis" style="width:14px; height:14px; object-fit:contain;">`;
-                else if (modeName === "centre")
+                } else if (modeName === "centre") {
                   iconsHtml += `<span class="fc-icon-centre" title="Centre" style="font-size:1.1rem; line-height:1;">🏫</span>`;
-                else
+                } else {
                   iconsHtml += `<span style="background:var(--primary); color:#fff; border-radius:3px; padding:0 3px; font-size:9px;">${modeName.substring(0, 3)}</span>`;
+                }
               }
             });
             content += iconsHtml + `</div>`;
 
+            // Icônes Enfant Malade
             let sickHtml = `<div style="position:absolute; bottom:2px; right:2px; display:flex; flex-direction:column; align-items:flex-end; gap:1px; font-size:11px; font-weight:bold; line-height:1;">`;
             events.forEach((evt) => {
               if (evt.type === "CHILD_SICK") {
@@ -1543,11 +1627,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             content += sickHtml + `</div>`;
 
-            const dayLeaves = (this.leaves || []).filter(
-              (l) => l.leave_date === iso || l.date === iso,
-            );
+            // Initiales des Parents en congé
             if (dayLeaves.length) {
-              let html = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
+              let parentLeavesHtml = `<div style="position:absolute; bottom:0; left:0; width:100%; font-size:9px; display:flex; justify-content:center; gap:2px; pointer-events:none;">`;
               (this.parents || []).forEach((person) => {
                 if (
                   dayLeaves.some(
@@ -1555,16 +1637,17 @@ document.addEventListener("DOMContentLoaded", () => {
                       parseInt(l.person_id || l.person) === parseInt(person.id),
                   )
                 ) {
-                  html += `<span style="color:${person.color || "#000"}; font-weight:800; margin: 0 1px;">${String(person.name).charAt(0).toUpperCase()}</span>`;
+                  parentLeavesHtml += `<span style="color:${person.color || "#000"}; font-weight:800; margin: 0 1px;">${String(person.name).charAt(0).toUpperCase()}</span>`;
                 }
               });
-              content += html + `</div>`;
+              content += parentLeavesHtml + `</div>`;
             }
+
             td.innerHTML = content + `</div>`;
             tr.appendChild(td);
           });
 
-          // 1. Congés intervenant (Dynamiques)
+          // 4. Totaux : Congés de l'intervenant / Helper (Nombres bruts)
           (this.helpers || []).forEach((h) => {
             const hLeaves =
               this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
@@ -1572,33 +1655,42 @@ document.addEventListener("DOMContentLoaded", () => {
               const typeName = typeof lt === "object" ? lt.type : lt;
               const td = document.createElement("td");
               td.className = "col-total";
-              td.textContent = fmt(w.totals[`leave_${h.id}_${typeName}`] || 0);
+
+              const val = w.totals[`leave_${h.id}_${typeName}`] || 0;
+              if (val > 0) {
+                td.textContent = fmt(val);
+              } else {
+                td.textContent = "";
+              }
               tr.appendChild(td);
             });
           });
 
-          // 2. Modes de garde (On ignore Nounou si Helper présent)
+          // 5. Totaux : Modes de garde (On masque "Nounou" si un intervenant existe)
           (this.careModes || []).forEach((mode) => {
             if (mode.toLowerCase() === "nounou" && this.helpers.length > 0)
               return;
             const td = document.createElement("td");
             td.className = "col-total";
-            td.textContent = fmt(w.totals["mode_" + mode] || 0);
+            const val = w.totals["mode_" + mode] || 0;
+            td.textContent = fmt(val);
             tr.appendChild(td);
           });
 
-          // 3. Maladie enfants
+          // 6. Totaux : Maladie par enfant
           (this.kids || []).forEach((kid) => {
             const td = document.createElement("td");
             td.className = "col-total";
-            td.textContent = fmt(w.totals["sick_" + kid.id] || 0);
+            const val = w.totals["sick_" + kid.id] || 0;
+            td.textContent = fmt(val);
             tr.appendChild(td);
           });
 
+          // 7. Colonnes de suivi des soldes mensuels (Parents : Av. / Use)
           if (!processedLeavesCols[w.monthKey]) {
             processedLeavesCols[w.monthKey] = true;
             (this.parents || []).forEach((parent, index) => {
-              const cssPrefix = index % 2 === 0 ? "col-alex" : "col-laia";
+              const cssPrefix = index % 2 === 0 ? "col-p1" : "col-p2";
               const matrix =
                 this.leaveMatrix[String(parent.id)] ||
                 this.leaveMatrix[Number(parent.id)] ||
@@ -1672,12 +1764,48 @@ document.addEventListener("DOMContentLoaded", () => {
           cls += " fc-day--school-holiday";
         if (dayEvts.some((e) => e.type === "PUBLIC_HOLIDAY"))
           cls += " fc-day--public-holiday";
-        if (dayEvts.some((e) => e.type === "HELPER_OFF"))
-          cls += " fc-day--off-carole";
-        if (dayEvts.some((e) => e.type === "HELPER_EXTRA"))
-          cls += " fc-day--extra-off-carole";
         if (dayEvts.some((e) => upperCareModes.includes(e.type)))
           cls += " fc-day--has-guard";
+
+        const helperIds = (this.helpers || []).map((h) => parseInt(h.id));
+        const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
+
+        let appliedColorIndex = -1;
+        const helperLeaf = dayLeaves.find((l) =>
+          helperIds.includes(parseInt(l.person_id)),
+        );
+
+        if (helperLeaf) {
+          appliedColorIndex =
+            this.helperColorMap[
+              `${helperLeaf.person_id}_${helperLeaf.leave_type}`
+            ];
+        } else {
+          const helperEvent = dayEvts.find(
+            (e) =>
+              helperIds.includes(parseInt(e.person_id)) ||
+              e.type === "HELPER_OFF" ||
+              e.type === "HELPER_EXTRA",
+          );
+          if (helperEvent) {
+            const mappedType =
+              helperEvent.type === "HELPER_OFF"
+                ? "OFF"
+                : helperEvent.type === "HELPER_EXTRA"
+                  ? "EXTRA"
+                  : helperEvent.type;
+            appliedColorIndex =
+              this.helperColorMap[`${helperEvent.person_id}_${mappedType}`] ??
+              this.helperColorMap[
+                `${helperEvent.person_id}_${helperEvent.type}`
+              ] ??
+              0;
+          }
+        }
+
+        if (appliedColorIndex !== -1 && appliedColorIndex !== undefined) {
+          cls += ` fc-bg-palette-${appliedColorIndex}`;
+        }
 
         let content = `<div style="position:relative; height:100%; min-height:55px;"><span class="fc-day-number">${d}</span>`;
 
@@ -1708,7 +1836,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         content += sickHtml + `</div>`;
 
-        const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
         if (dayLeaves.length) {
           content += `<div style="position:absolute; bottom:2px; left:2px; font-size:10px; font-weight:bold;">`;
           this.parents.forEach((parent) => {
@@ -1748,9 +1875,10 @@ document.addEventListener("DOMContentLoaded", () => {
       // 2. Boucler sur chaque enfant concerné pour un calcul individuel
       nounouKids.forEach((kid) => {
         let workingDays = 0;
-        let off = 0;
-        let extra = 0;
+        let absencesNounou = 0;
         let sick = 0;
+
+        const helperIds = this.helpers.map((h) => parseInt(h.id));
 
         for (let d = 1; d <= daysInMonth; d++) {
           const dateObj = new Date(year, month, d);
@@ -1768,12 +1896,20 @@ document.addEventListener("DOMContentLoaded", () => {
           workingDays += 1;
 
           const dayEvents = this.events.filter((e) => e.date === iso);
+          const dayLeaves = this.leaves.filter((l) => l.leave_date === iso);
 
           dayEvents.forEach((e) => {
             const dur = parseFloat(e.duration) || 1;
+            const rawType = String(e.type).toUpperCase();
 
-            if (e.type === "HELPER_OFF") off += dur;
-            if (e.type === "HELPER_EXTRA") extra += dur;
+            // Si c'est un vieil événement historisé OFF/EXTRA
+            if (
+              rawType.includes("OFF") ||
+              rawType.includes("EXTRA") ||
+              helperIds.includes(parseInt(e.person_id))
+            ) {
+              absencesNounou += dur;
+            }
 
             // On vérifie que la maladie concerne BIEN cet enfant précis !
             if (
@@ -1783,23 +1919,43 @@ document.addEventListener("DOMContentLoaded", () => {
               sick += dur;
             }
           });
+
+          // Prise en compte des nouveaux congés propres aux intervenants
+          dayLeaves.forEach((l) => {
+            const dur = parseFloat(l.duration) || 1;
+            if (helperIds.includes(parseInt(l.person_id))) {
+              absencesNounou += dur;
+            }
+          });
         }
 
-        // Calcul final strict : Jours ouvrés - Maladie (de l'enfant) - Extra - Off
-        const presence = Math.max(0, workingDays - sick - extra - off);
+        // Récupération dynamique du nom de l'intervenant avec i18n
+        const fallbackHelper = window.I18N?.fc_role_helper || "Intervenant";
+        const helperName =
+          this.helpers && this.helpers.length > 0
+            ? this.helpers.map((h) => h.name).join(" & ")
+            : fallbackHelper;
+
+        // Calcul final strict : Jours ouvrés - Maladie (de l'enfant) - Absences Nounou
+        const presence = Math.max(0, workingDays - sick - absencesNounou);
+
+        // Textes traduits
+        const trPresence = window.I18N?.fc_presence || "Présence";
+        const trWorking = window.I18N?.fc_working_days || "Ouvrés";
+        const trAbs = window.I18N?.fc_absences || "Abs.";
+        const trSick = window.I18N?.fc_menu_sick || "Maladie";
 
         // Rendu HTML individuel
         html += `
           <div style="margin-top: 10px;">
               <div style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">
-                 👧👦 Présence ${kid.name} (Nounou)
+                 👧👦 ${trPresence} ${kid.name} (${helperName})
               </div>
               <div class="fc-month-summary-inline" style="display:flex; justify-content:space-around; gap:10px; font-size:0.75rem; background: var(--bg-panel); padding: 8px; border-radius: 8px; border: 1px solid var(--border-light);">
-                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Ouvrés</span> <strong style="color:var(--text-main); font-size:0.95rem;">${workingDays} j</strong></div>
-                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Off</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(off.toFixed(1))} j</strong></div>
-                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Extra</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(extra.toFixed(1))} j</strong></div>
-                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Maladie</span> <strong style="color:var(--danger); font-size:0.95rem;">${parseFloat(sick.toFixed(1))} j</strong></div>
-                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>Présence</span> <strong style="color:var(--primary); font-size:0.95rem;">${parseFloat(presence.toFixed(1))} j</strong></div>
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>${trWorking}</span> <strong style="color:var(--text-main); font-size:0.95rem;">${workingDays} j</strong></div>
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>${trAbs} ${helperName}</span> <strong style="color:var(--text-main); font-size:0.95rem;">${parseFloat(absencesNounou.toFixed(1))} j</strong></div>
+                  <div class="fc-summ-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>${trSick}</span> <strong style="color:var(--danger); font-size:0.95rem;">${parseFloat(sick.toFixed(1))} j</strong></div>
+                  <div class="fc-summ-pill pf-presence-pill" style="display:flex; flex-direction:column; align-items:center; flex:1;"><span>${trPresence}</span> <strong style="color:var(--primary); font-size:0.95rem;">${parseFloat(presence.toFixed(1))} j</strong></div>
               </div>
           </div>
         `;
@@ -2355,10 +2511,11 @@ document.addEventListener("DOMContentLoaded", () => {
           const hLeaves =
             this.leaveMatrix[h.id] || this.leaveMatrix[Number(h.id)] || [];
           if (hLeaves.length > 0) {
-            const hColor = h.color || "var(--warning)";
             html += `<div class="fc-menu-section">${buildHeader(h.name, "clear-leaves-person", null, h.id)}<div class="fc-menu-grid">`;
             hLeaves.forEach((lt) => {
               const lType = typeof lt === "object" ? lt.type : lt;
+              const pIdx = this.helperColorMap[`${h.id}_${lType}`] ?? 0;
+              const hColor = `var(--fc-palette-text-${pIdx})`;
               html += `<button class="fc-menu-btn" style="${getActiveStyleL(lType, h.id, hColor)}" data-action="add-leave" data-pid="${h.id}" data-type="${lType}">${lType}</button>`;
             });
             html += `</div></div>`;
