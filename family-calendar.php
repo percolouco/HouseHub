@@ -207,7 +207,7 @@ require __DIR__ . '/header.php';
 
                     <!-- FOOTER INTÉGRÉ DANS LE FORMULAIRE POUR ÉVITER LE BUG DE CIBLAGE -->
                     <div class="pf-modal-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--pf-border); display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
+                        <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').style.display = 'none'; document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
                         <button type="submit" id="btnSubmitSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
                     </div>
                 </form>
@@ -393,20 +393,32 @@ require __DIR__ . '/header.php';
             <table id="planningTable">
                 <thead>
                     <tr>
-                        <th rowspan="3" class="col-month col-sticky-mois"><?= tr('fc_col_month') ?></th>
-                        <th rowspan="3" class="col-month col-sticky-mois"><?= tr('fc_col_week_short') ?></th>
+                        <th rowspan="3" class="col-month col-sticky-mois rotated-text"><span><?= tr('fc_col_month') ?></span></th>
+                        <th rowspan="3" class="col-month col-sticky-sem rotated-text"><span><?= tr('fc_col_week') ?></span></th>
                         <th rowspan="3" class="col-day"><?= tr('day_mon') ?></th>
                         <th rowspan="3" class="col-day"><?= tr('day_tue') ?></th>
                         <th rowspan="3" class="col-day"><?= tr('day_wed') ?></th>
                         <th rowspan="3" class="col-day"><?= tr('day_thu') ?></th>
                         <th rowspan="3" class="col-day"><?= tr('day_fri') ?></th>
 
-                        <?php foreach ($activeCareModes as $mode): ?>
+                        <!-- 1. Congés de l'intervenant -->
+                        <?php foreach ($helpers as $helper): 
+                            $hLeaves = $leaveMatrix[$helper['id']] ?? [];
+                            foreach ($hLeaves as $type):
+                        ?>
+                            <th rowspan="3" class="col-total rotated-text"><span><?= htmlspecialchars($type) ?> <?= htmlspecialchars($helper['name']) ?></span></th>
+                        <?php endforeach; endforeach; ?>
+
+                        <!-- 2. Méthodes de garde (sans Nounou si l'intervenant est configuré) -->
+                        <?php foreach ($activeCareModes as $mode): 
+                            if (strtolower($mode) === 'nounou' && !empty($helpers)) continue; 
+                        ?>
                             <th rowspan="3" class="col-total rotated-text"><span><?= htmlspecialchars($mode) ?></span></th>
                         <?php endforeach; ?>
 
+                        <!-- 3. Maladie par enfant -->
                         <?php foreach ($kids as $kid): ?>
-                            <th rowspan="3" class="col-total rotated-text"><span>Maladie <?= htmlspecialchars($kid['name']) ?></span></th>
+                            <th rowspan="3" class="col-total rotated-text"><span><?= tr('fc_menu_sick') ?> <?= htmlspecialchars($kid['name']) ?></span></th>
                         <?php endforeach; ?>
 
                         <?php foreach ($parents as $index => $parent):
@@ -447,6 +459,19 @@ require __DIR__ . '/header.php';
         </div>
     </section>
 
+    <?php if (!empty($helpers)): ?>
+    <section class="pf-section pf-mt-15">
+        <div id="recapHelperContent"></div>
+        <div style="display: none;">
+            <!-- Champs masqués pour maintenir la compatibilité avec la logique JS actuelle -->
+            <select id="recapHelperMonth" class="pf-input"></select>
+            <select id="recapHelperYear" class="pf-input"></select>
+            <input type="date" id="recapHelperStart" class="pf-input">
+            <input type="date" id="recapHelperEnd" class="pf-input">
+        </div>
+    </section>
+    <?php endif; ?>
+
     <section class="pf-section pf-section--bottom-panels" style="margin-top: 1.5rem;">
         <div class="pf-card">
                 <h2 class="pf-card-title"><?= tr('fc_legend_title') ?></h2>
@@ -456,15 +481,22 @@ require __DIR__ . '/header.php';
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-school-holiday"></div><span><?= tr('leg_school_holidays') ?></span></div>
                         <div class="pf-legend-item"><div class="pf-legend-color fc-legend-public-holiday"></div><span><?= tr('leg_public_holiday') ?></span></div>
 
-                        <!-- Intervenants (Dynamique) -->
-                        <?php foreach ($helpers as $helper): ?>
-                            <div class="pf-legend-item"><div class="pf-legend-color" style="background: var(--warning);"></div><span>Off <?= htmlspecialchars($helper['name']) ?></span></div>
-                            <div class="pf-legend-item"><div class="pf-legend-color" style="background: var(--danger);"></div><span>Extra <?= htmlspecialchars($helper['name']) ?></span></div>
-                        <?php endforeach; ?>
+                        <!-- Intervenants (Dynamique selon les congés paramétrés) -->
+                        <?php foreach ($helpers as $helper): 
+                            $hLeaves = $leaveMatrix[$helper['id']] ?? [];
+                            $colors = ['var(--warning)', 'var(--danger)', 'var(--primary)'];
+                            foreach ($hLeaves as $index => $type):
+                        ?>
+                            <div class="pf-legend-item">
+                                <div class="pf-legend-color" style="background: <?= $colors[$index % count($colors)] ?>;"></div>
+                                <span><?= htmlspecialchars($type) ?> <?= htmlspecialchars($helper['name']) ?></span>
+                            </div>
+                        <?php endforeach; endforeach; ?>
 
-                        <!-- Modes de garde (Dynamique avec icônes) -->
+                        <!-- Modes de garde (On masque "Nounou" si l'intervenant gère lui-même ses présences) -->
                         <?php foreach ($activeCareModes as $index => $mode):
                             $modeLower = strtolower($mode);
+                            if ($modeLower === 'nounou' && !empty($helpers)) continue;
                             if ($modeLower === 'avis'): ?>
                                 <div class="pf-legend-item">
                                     <img src="/modules/family-calendar/assets/img/avis.svg" style="width:16px;height:16px;object-fit:contain;margin-right:6px;" alt="Avis">
@@ -483,9 +515,8 @@ require __DIR__ . '/header.php';
                             <?php endif;
                         endforeach; ?>
 
-                        <!-- Enfants Malades (Dynamique avec couleur BDD) -->
+                        <!-- Enfants Malades (Une puce par enfant) -->
                         <?php foreach ($kids as $kid): 
-                            // Fallback aligné exactement sur celui du JS (#e11d48)
                             $color = !empty($kid['color']) ? $kid['color'] : '#e11d48';
                         ?>
                             <div class="pf-legend-item">
