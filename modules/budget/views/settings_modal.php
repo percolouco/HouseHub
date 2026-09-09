@@ -462,9 +462,10 @@ function renderSalaries(salaries, year) {
 }
 
 // --- CRUD ACTIONS ---
-async function deleteAccount(id) { if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete'))) return; try { const fd = new FormData(); fd.append('action', 'delete_account'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } }
+async function deleteAccount(id) { if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete'))) return; try { const fd = new FormData(); fd.append('action', 'delete_account'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); } catch (err) { if (typeof showToast === 'function') showToast(err.message, 'error'); else alert("Erreur : " + err.message); } }
+
 const formAddAccount = document.getElementById('form-add-account');
-if (formAddAccount) formAddAccount.addEventListener('submit', async (e) => { e.preventDefault(); const btn = formAddAccount.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(formAddAccount); fd.append('action', 'add_account'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); formAddAccount.reset(); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } });
+if (formAddAccount) formAddAccount.addEventListener('submit', async (e) => { e.preventDefault(); const btn = formAddAccount.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(formAddAccount); fd.append('action', 'add_account'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); formAddAccount.reset(); await loadBudgetSettingsData(); if (typeof showToast === 'function') showToast("Compte ajouté", 'success'); } catch (err) { if (typeof showToast === 'function') showToast(err.message, 'error'); else alert("Erreur : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } });
 
 async function deleteBudgetCategory(id) { 
     if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete_cat'))) return; 
@@ -472,17 +473,51 @@ async function deleteBudgetCategory(id) {
         const fd = new FormData(); 
         fd.append('action', 'delete_category'); 
         fd.append('id', id); 
-        await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); 
+        const res = await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); 
+        
+        if (!res.success) throw new Error(res.error || tr('error_occured'));
+        
         await loadBudgetSettingsData(); 
     } catch (err) { 
-        alert("Erreur : " + err.message); 
+        if (typeof showToast === 'function') {
+            showToast(err.message, 'error');
+        } else {
+            alert("Erreur : " + err.message); 
+        }
     } 
 }
 
+const formAddCategory = document.getElementById('form-add-category');
+if (formAddCategory) {
+    formAddCategory.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = formAddCategory.querySelector('button');
+        const oldText = btn.innerText;
+        btn.innerText = '⏳';
+        btn.disabled = true;
+        try {
+            const fd = new FormData(formAddCategory);
+            fd.append('action', 'add_category');
+            const res = await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd });
+            if (!res.success) throw new Error(res.error || "Erreur lors de l'ajout");
+            formAddCategory.reset();
+            await loadBudgetSettingsData();
+            if (typeof showToast === 'function') showToast("Catégorie ajoutée", "success");
+        } catch (err) {
+            if (typeof showToast === 'function') showToast(err.message, 'error'); else alert("Erreur : " + err.message);
+        } finally {
+            btn.innerText = oldText;
+            btn.disabled = false;
+        }
+    });
+}
+
 function populateRuleCategories(categories) { const select = document.getElementById('select-rule-category'); if (!select) return; select.innerHTML = ''; if (!categories) return; categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat.code; opt.textContent = `${cat.icon || ''} ${cat.label}`; select.appendChild(opt); }); }
-async function deleteRule(id) { if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete_rule'))) return; try { const fd = new FormData(); fd.append('action', 'delete_rule'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } }
+
+async function deleteRule(id) { if (!await pachaConfirm(tr('btn_delete'), tr('bs_confirm_delete_rule'))) return; try { const fd = new FormData(); fd.append('action', 'delete_rule'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); } catch (err) { if (typeof showToast === 'function') showToast(err.message, 'error'); else alert("Erreur : " + err.message); } }
+
 const formAddRule = document.getElementById('form-add-rule');
-if (formAddRule) formAddRule.addEventListener('submit', async (e) => { e.preventDefault(); const btn = formAddRule.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(formAddRule); fd.append('action', 'add_rule'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); formAddRule.reset(); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } });
+if (formAddRule) formAddRule.addEventListener('submit', async (e) => { e.preventDefault(); const btn = formAddRule.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(formAddRule); fd.append('action', 'add_rule'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); formAddRule.reset(); await loadBudgetSettingsData(); if (typeof showToast === 'function') showToast("Règle ajoutée", 'success'); } catch (err) { if (typeof showToast === 'function') showToast(err.message, 'error'); else alert("Erreur : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } });
 
 function inlineEditSalary(btnEl) {
     const id = btnEl.dataset.id; const person = btnEl.dataset.person; const salary = btnEl.dataset.salary; const mensualite = btnEl.dataset.mensualite; const currency = '<?= CURRENCY ?>';
@@ -495,14 +530,16 @@ function inlineEditSalary(btnEl) {
             <button type="button" class="btn btn-ghost" onclick="loadBudgetSettingsData()">❌</button>
         </form>`;
 }
-async function submitInlineSalary(event, id) { event.preventDefault(); const form = event.target; const btn = form.querySelector('button'); btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(form); fd.append('action', 'save_salary'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); btn.innerText = '💾'; btn.disabled = false; } }
 
-async function updateBudgetCurrency(selectEl) { try { const fd = new FormData(); fd.append('action', 'save_currency'); fd.append('currency', selectEl.value); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); if (typeof showToast === 'function') { showToast(`${tr('bs_currency_updated')} ✅`); } await loadBudgetSettingsData(); } catch (err) { alert("Erreur : " + err.message); } }   
+async function submitInlineSalary(event, id) { event.preventDefault(); const form = event.target; const btn = form.querySelector('button'); btn.innerText = '⏳'; btn.disabled = true; try { const fd = new FormData(form); fd.append('action', 'save_salary'); fd.append('id', id); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); await loadBudgetSettingsData(); if (typeof showToast === 'function') showToast("Salaire mis à jour", 'success'); } catch (err) { if (typeof showToast === 'function') showToast(err.message, 'error'); else alert("Erreur : " + err.message); btn.innerText = '💾'; btn.disabled = false; } }
+
+async function updateBudgetCurrency(selectEl) { try { const fd = new FormData(); fd.append('action', 'save_currency'); fd.append('currency', selectEl.value); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); if (typeof showToast === 'function') { showToast(`${tr('bs_currency_updated')} ✅`, 'success'); } await loadBudgetSettingsData(); } catch (err) { if (typeof showToast === 'function') showToast(err.message, 'error'); else alert("Erreur : " + err.message); } }   
 
 // CSV
 function toggleCsvAmountCols(type) { if (type === 'split') { document.getElementById('wrapper_col_credit').style.display = 'block'; document.getElementById('lbl_col_debit').innerText = tr('bs_csv_col_debit'); } else { document.getElementById('wrapper_col_credit').style.display = 'none'; document.getElementById('lbl_col_debit').innerText = tr('bs_csv_col_amount'); } }
 function renderCsvMapping(mapping) { if (!mapping) return; document.getElementById('csv_delimiter').value = mapping.delimiter || ';'; document.getElementById('csv_date_format').value = mapping.date_format || 'd/m/Y'; document.getElementById('csv_col_date').value = mapping.col_date ?? 0; document.getElementById('csv_col_label').value = mapping.col_label ?? 1; document.getElementById('csv_col_ref').value = mapping.col_ref ?? 3; const amountType = mapping.amount_type || 'split'; document.getElementById('csv_amount_type').value = amountType; document.getElementById('csv_col_debit').value = mapping.col_debit ?? 8; document.getElementById('csv_col_credit').value = mapping.col_credit ?? 9; toggleCsvAmountCols(amountType); }
-async function saveCsvMapping(e) { e.preventDefault(); const form = e.target; const btn = form.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳...'; btn.disabled = true; try { const fd = new FormData(form); fd.append('action', 'save_csv_mapping'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); if (typeof showToast === 'function') showToast(tr('bs_csv_saved')); else alert(tr('bs_csv_saved')); } catch (err) { alert(tr('error_occured') + " : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } }
+
+async function saveCsvMapping(e) { e.preventDefault(); const form = e.target; const btn = form.querySelector('button'); const oldText = btn.innerText; btn.innerText = '⏳...'; btn.disabled = true; try { const fd = new FormData(form); fd.append('action', 'save_csv_mapping'); await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd }); if (typeof showToast === 'function') showToast(tr('bs_csv_saved'), 'success'); else alert(tr('bs_csv_saved')); } catch (err) { if (typeof showToast === 'function') showToast(tr('error_occured') + " : " + err.message, 'error'); else alert(tr('error_occured') + " : " + err.message); } finally { btn.innerText = oldText; btn.disabled = false; } }
 
 const dropZone = document.getElementById('csv-drop-zone'); const fileInput = document.getElementById('csv_file_input');
 if (dropZone && fileInput) {
@@ -512,9 +549,13 @@ if (dropZone && fileInput) {
     dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.backgroundColor = ''; dropZone.style.borderColor = 'var(--border-light, #ccc)'; if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleCsvUpload(e.dataTransfer.files[0]); } });
     fileInput.addEventListener('change', function() { if (this.files.length) { handleCsvUpload(this.files[0]); } });
 }
+
 function handleCsvUpload(file) {
-    if (!file.name.endsWith('.csv')) { alert(tr('bs_csv_err_type')); return; }
-    if (typeof showToast === 'function') { showToast(`${tr('bs_csv_file_ok')} : ${file.name}`); }
+    if (!file.name.endsWith('.csv')) { 
+        if (typeof showToast === 'function') showToast(tr('bs_csv_err_type'), 'error'); else alert(tr('bs_csv_err_type')); 
+        return; 
+    }
+    if (typeof showToast === 'function') { showToast(`${tr('bs_csv_file_ok')} : ${file.name}`, 'success'); }
     const reader = new FileReader();
     reader.onload = function(e) {
         const text = e.target.result; const delimiter = document.getElementById('csv_delimiter').value || ';';
@@ -527,19 +568,5 @@ function handleCsvUpload(file) {
         }
     };
     reader.readAsText(file, 'ISO-8859-1');
-}
-function renderCsvTablePreview(headers, sampleRows) {
-    const container = document.getElementById('csv-preview-container');
-    let html = `<h5 class="bs-section-subtitle">👁️ ${tr('bs_csv_preview_title')}</h5>`;
-    html += `<div class="bs-csv-table-wrapper"><table class="bs-csv-table"><thead class="bs-csv-thead"><tr>`;
-    headers.forEach((header, index) => {
-        const cleanHeader = header || `(${tr('bs_csv_empty_col')})`;
-        html += `<th class="bs-csv-th"><div class="bs-csv-th-index">N° ${index}</div><div>${cleanHeader}</div></th>`;
-    });
-    html += `</tr></thead><tbody>`;
-    if (sampleRows.length === 0) { html += `<tr><td colspan="${headers.length}" class="bs-csv-td-empty">${tr('bs_csv_no_data')}</td></tr>`; } 
-    else { sampleRows.forEach(row => { html += `<tr class="bs-csv-tr">`; for (let i = 0; i < headers.length; i++) { const cellData = row[i] !== undefined ? row[i] : ''; const displayData = cellData.length > 40 ? cellData.substring(0, 40) + '...' : cellData; html += `<td class="bs-csv-td">${displayData}</td>`; } html += `</tr>`; }); }
-    html += `</tbody></table></div>`;
-    container.innerHTML = html; container.style.display = 'block';
 }
 </script>

@@ -795,6 +795,7 @@ return [
     'bs_rule_search_ph'  => '🔍 Cercar una paraula clau (ex: AUCHAN)...',
     'error_loading_settings' => 'Error en carregar la configuració',
     'settings'           => 'Configuració',
+    'bud_err_delete_system_cat' => 'Cannot delete a core system category.',
     
     // --- MODULE BUDGET : IMPORT CSV ---
     'bud_import_csv' => "Importar CSV",
