@@ -809,6 +809,7 @@ return [
     'bs_rule_search_ph'  => '🔍 Rechercher un mot-clé (ex: AUCHAN)...',
     'error_loading_settings' => 'Erreur lors du chargement des paramètres',
     'settings'           => 'Paramètres',
+    'bud_err_delete_system_cat' => 'Impossible de supprimer une catégorie système essentielle.',
 
     // --- BUDGET : RECAP ---
     'bud_recap_monthly_title'   => 'Récapitulatif Mensuel',

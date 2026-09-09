@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../../../../includes/auth.php';
 require __DIR__ . '/../../../../includes/db.php';
+require_once __DIR__ . '/../../../../includes/i18n.php';
 require_login();
 
 header('Content-Type: application/json');
@@ -105,6 +106,15 @@ try {
 
     if ($action === 'delete_category') {
         $id = (int)($_POST['id'] ?? 0);
+
+        $stmtCheck = $pdo->prepare("SELECT code FROM pf_budget_categories WHERE id = ?");
+        $stmtCheck->execute([$id]);
+        $catCode = $stmtCheck->fetchColumn();
+
+        if ($catCode && in_array(strtoupper($catCode), ['FIXED', 'INCOME'])) {
+            throw new Exception(tr('bud_err_delete_system_cat'));
+        }
+
         $stmt = $pdo->prepare("DELETE FROM pf_budget_categories WHERE id = ?");
         $stmt->execute([$id]);
         echo json_encode(['success' => true]);
@@ -188,7 +198,7 @@ try {
 
     throw new Exception("Action API inconnue.");
 
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }

@@ -899,6 +899,7 @@ return [
     'bud_err_network_dup'          => 'Network error during duplication.',
     'bud_sav_saving'               => 'Saving...',
     'bud_err_delete'               => 'Error during deletion.',
+    'bud_err_delete_system_cat' => 'Cannot delete a core system category.',
 
     // --- BUDGET: FORECAST ---
     'bud_prev_incomes'           => 'Income',
