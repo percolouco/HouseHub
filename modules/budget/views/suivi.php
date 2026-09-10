@@ -1020,11 +1020,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     formExpense.reset();
                     window.location.reload(); 
                 } else {
-                    alert((window.I18N['error_occured'] || 'Erreur') + ' : ' + (result.error || 'Inconnue'));
+                    showToast((window.I18N['error_occured'] || 'Erreur') + ' : ' + (result.error || 'Inconnue'), 'error');
                 }
             } catch (error) {
                 console.error("Erreur réseau :", error);
-                alert(window.I18N['bud_err_tech'] || "Erreur critique réseau.");
+                showToast(window.I18N['bud_err_tech'] || "Erreur critique réseau.", 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = originalBtnText;

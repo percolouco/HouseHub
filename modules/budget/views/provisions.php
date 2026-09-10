@@ -184,7 +184,7 @@ if (formAdd) {
                 submitBtn.disabled = false;
             }
         } catch (error) {
-            alert(window.I18N['bud_err_tech']);
+            showToast(window.I18N['bud_err_tech'], 'error');
             submitBtn.innerText = originalText;
             submitBtn.disabled = false;
         }
@@ -205,7 +205,7 @@ async function deleteProvision(id) {
             alert(result.message);
         }
     } catch(err) {
-        alert(window.I18N['bud_err_tech']);
+        showToast(window.I18N['bud_err_tech'], 'error');
     }
 }
 

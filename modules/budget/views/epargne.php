@@ -306,10 +306,10 @@ async function promptNewSavingsLine(owner, latestMonth) {
         if (result.success) {
             window.location.reload();
         } else {
-            alert(window.I18N['bud_err_tech'] + " : " + (result.error || "Erreur"));
+            showToast(window.I18N['bud_err_tech'] + " : " + (result.error || "Erreur"), 'error');
         }
     } catch (err) {
-        alert(window.I18N['bud_err_tech']);
+        showToast(window.I18N['bud_err_tech'], 'error');
     }
 }
 
@@ -330,7 +330,7 @@ async function updateEpargneCell(month, category, owner, inputEl) {
             return;
         }
     } catch (err) {
-        alert(window.I18N['bud_err_tech']);
+        showToast(window.I18N['bud_err_tech'], 'error');
         return;
     }
 
@@ -472,7 +472,7 @@ if (savingsForm) {
                 submitBtn.disabled = false;
             }
         } catch (error) {
-            alert(window.I18N['bud_err_tech']);
+            showToast(window.I18N['bud_err_tech'], 'error');
             submitBtn.innerText = originalText;
             submitBtn.disabled = false;
         }
@@ -495,7 +495,7 @@ async function deleteEntireMonth(monthDate, owner) {
         if (result.success) window.location.reload();
         else alert(result.error || window.I18N['bud_err_delete']);
     } catch(err) {
-        alert(window.I18N['bud_err_delete']);
+        showToast(window.I18N['bud_err_tech'], 'error');
     }
 }
 
