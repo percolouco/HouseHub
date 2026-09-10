@@ -794,7 +794,7 @@ function duplicateMonth() {
     const parentMap = window.CONFIG.parentMapping;
 
     if (!sourceDateStr) {
-        alert(tr('bud_prev_err_no_history'));
+        showToast(tr('bud_prev_err_no_history'), 'error');
         return;
     }
 
@@ -955,10 +955,10 @@ async function validateTransfers(personCss, month) {
         if(result.success) {
             window.location.reload();
         } else {
-            alert(tr('bud_err_tech') + " : " + result.error);
+            showToast(tr('bud_err_tech') + " : " + (result.error || "Inconnue"), 'error');
         }
     } catch(e) {
-        alert(tr('bud_err_tech'));
+        showToast(tr('bud_err_tech'), 'error');
     }
 }
 
@@ -1035,13 +1035,13 @@ async function handleAdvanceSubmit(event, form) {
         if (result.success) {
             window.location.reload();
         } else {
-            alert((tr('bud_err_tech') || "Erreur") + " : " + (result.error || "Opération échouée"));
+            showToast((tr('bud_err_tech') || "Erreur") + " : " + (result.error || "Opération échouée"), 'error');
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = oldText;
         }
     } catch (err) {
         console.error("AJAX Error:", err);
-        alert(tr('bud_err_tech') || "Une erreur technique est survenue.");
+        showToast(tr('bud_err_tech') || "Une erreur technique est survenue.", 'error');
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = oldText;
     }
@@ -1155,7 +1155,7 @@ document.querySelectorAll('#addCatModal form, #editCatModal form').forEach(form 
                 alert((tr('bud_err_tech') || 'Erreur') + " : " + (result.error || "Inconnue"));
             }
         } catch (error) {
-            alert(tr('bud_err_tech') || "Une erreur technique est survenue.");
+            showToast(tr('bud_err_tech') || "Une erreur technique est survenue.", 'error');
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerText = originalText;

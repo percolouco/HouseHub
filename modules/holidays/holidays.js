@@ -1190,9 +1190,7 @@ function openGlobalPlanningModal() {
   const holidayData = JSON.parse(holidayDataJsonEl.textContent).main;
 
   if (!holidayData.start_date || !holidayData.end_date) {
-    alert(
-      "Veuillez d'abord définir les dates globales du voyage dans 'Modifier les bases' ⚙️",
-    );
+    showToast(tr("hdl_js_missing_global_dates"), "error");
     return;
   }
 
@@ -1957,7 +1955,8 @@ async function addQuickTransitExpense(
       "/modules/holidays/includes/api/save_checkpoint.php",
       { method: "POST", body: fd },
     );
-    if (!data.success) alert("Erreur : " + data.error);
+    if (!data.success)
+      showToast((tr("error_occured") || "Erreur : ") + data.error, "error");
   } catch (err) {
     console.error(err);
   }
@@ -1977,7 +1976,7 @@ function updateFuelPrice() {
       localStorage.setItem("holidays_fuel_price", newPrice);
       window.location.reload();
     } else {
-      alert("Prix invalide.");
+      showToast(tr("hdl_invalid_price"), "error");
     }
   }
 }
@@ -2177,11 +2176,11 @@ async function deleteAttachment(fileId, btnElement) {
           '<p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Aucun document pour cette étape.</p>';
       }
     } else {
-      alert("Erreur : " + data.error);
+      showToast("Erreur : " + data.error, "error");
       row.style.opacity = "1";
     }
   } catch (err) {
-    alert("Erreur réseau lors de la suppression.");
+    showToast(tr("hdl_js_network_error"), "error");
     row.style.opacity = "1";
   }
 }
@@ -2194,7 +2193,7 @@ window.generateTravelBook = function () {
   const btn = document.querySelector('button[onclick="generateTravelBook()"]');
 
   if (!element) {
-    alert("Erreur : Le modèle de carnet de voyage est introuvable.");
+    showToast(tr("hdl_err_travel_book_missing"), "error");
     return;
   }
 

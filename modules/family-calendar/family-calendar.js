@@ -54,7 +54,7 @@ async function openCalendarSettings() {
       document.body.classList.add("no-scroll");
     }
   } catch (err) {
-    alert((tr("fc_error") || "Erreur : ") + err.message);
+    showToast((tr("fc_error") || "Erreur : ") + err.message, "error");
   }
 }
 
@@ -137,11 +137,10 @@ async function submitCalFoyer(e) {
         tr("fc_settings_updated") || "Configuration enregistrée !",
         "success",
       );
-    else alert(tr("fc_settings_updated") || "Configuration enregistrée !");
 
     setTimeout(() => window.location.reload(), 800);
   } catch (err) {
-    alert("Erreur : " + err.message);
+    showToast((tr("fc_error") || "Erreur : ") + err.message, "error");
   }
 }
 
@@ -162,7 +161,6 @@ window.submitChildCareModes = async function () {
     if (!res.success) throw new Error(res.error);
     if (window.showToast)
       showToast(tr("fc_child_saved") || "Sauvegardé !", "success");
-    else alert(tr("fc_child_saved") || "Sauvegardé !");
 
     const currentPerson = calGlobalData.people.find(
       (k) => parseInt(k.id) === window.currentSelectedMemberId,
@@ -171,7 +169,7 @@ window.submitChildCareModes = async function () {
       currentPerson.care_modes = JSON.stringify(selectedModes);
     }
   } catch (err) {
-    alert("Erreur: " + err.message);
+    showToast((tr("fc_error") || "Erreur : ") + err.message, "error");
   }
 };
 
@@ -254,12 +252,11 @@ function resetLeaveTypeForm() {
 }
 
 async function deleteLeaveType(code, label) {
-  if (
-    !confirm(
-      `Supprimer définitivement le congé "${label}" du catalogue ? Cela le retirera également des membres qui l'utilisent.`,
-    )
-  )
-    return;
+  const msg = (
+    tr("fc_confirm_del_catalog") ||
+    "Supprimer définitivement le congé %s du catalogue ?"
+  ).replace("%s", `"${label}"`);
+  if (!(await pachaConfirm(tr("btn_delete") || "Supprimer", msg))) return;
 
   const fd = new FormData();
   fd.append("action", "delete_leave_type");
@@ -280,7 +277,7 @@ async function deleteLeaveType(code, label) {
       loadMemberConfigView();
     }
   } catch (err) {
-    alert("Erreur de suppression : " + err.message);
+    showToast((tr("fc_error") || "Erreur : ") + err.message, "error");
   }
 }
 
@@ -290,10 +287,10 @@ async function saveLeaveType() {
   const carryMax = document.getElementById("lt-carry-max").value;
   const carryDeadline = document.getElementById("lt-carry-deadline").value;
 
-  if (!code || !label)
-    return window.showToast
-      ? showToast(tr("fc_err_code_label"), "error")
-      : alert(tr("fc_err_code_label"));
+  if (!code || !label) {
+    showToast(tr("fc_err_code_label"), "error");
+    return;
+  }
 
   const fd = new FormData();
   fd.append("action", "save_leave_type");
@@ -314,7 +311,7 @@ async function saveLeaveType() {
     resetLeaveTypeForm();
     loadLeaveCatalog();
   } catch (err) {
-    alert(tr("error_occured") + " " + err.message);
+    showToast((tr("fc_error") || "Erreur : ") + err.message, "error");
   }
 }
 
@@ -571,9 +568,11 @@ async function addMemberLeave(personId) {
   ).value;
 
   if (!leaveCode) {
-    return window.showToast
-      ? showToast("Veuillez sélectionner un type de congé", "error")
-      : alert("Veuillez sélectionner un type de congé");
+    showToast(
+      tr("fc_err_select_leave") || "Veuillez sélectionner un type de congé",
+      "error",
+    );
+    return;
   }
 
   const fd = new FormData();
@@ -597,17 +596,17 @@ async function addMemberLeave(personId) {
     if (window.showToast) showToast("Opération réussie !", "success");
     loadMemberConfigView();
   } catch (err) {
-    if (window.showToast) showToast("Erreur : " + err.message, "error");
-    else alert("Erreur: " + err.message);
+    showToast((tr("error_occured") || "Erreur : ") + err.message, "error");
   }
 }
 
 async function deleteMemberLeave(id, personId) {
   if (
-    !confirm(
-      tr("confirm_delete") ||
+    !(await pachaConfirm(
+      tr("btn_delete") || "Supprimer",
+      tr("fc_confirm_del_member_leave") ||
         "Voulez-vous vraiment retirer ce congé pour ce membre ?",
-    )
+    ))
   )
     return;
 
@@ -629,12 +628,7 @@ async function deleteMemberLeave(id, personId) {
       );
     loadMemberConfigView(); // Recharge la vue des attributions du membre
   } catch (err) {
-    if (window.showToast)
-      showToast(
-        (tr("error_occured") || "Erreur") + " : " + err.message,
-        "error",
-      );
-    else alert("Erreur: " + err.message);
+    showToast((tr("error_occured") || "Erreur : ") + err.message, "error");
   }
 }
 
@@ -2365,7 +2359,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             await this.refreshAllData(); // Recharge les graphiques en direct
           } catch (err) {
-            alert(tr("error_occured") + " " + err.message);
+            showToast((tr("fc_error") || "Erreur : ") + err.message, "error");
           } finally {
             if (btn) {
               btn.innerHTML = originalText;
@@ -2682,7 +2676,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         await this.refreshAllData();
       } catch (e) {
-        alert("Erreur: " + e.message);
+        showToast((tr("error_occured") || "Erreur : ") + e.message, "error");
       }
     }
   }
