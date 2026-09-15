@@ -287,13 +287,30 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
         // 2. C'est une estimation (Variable)
         if ((int)$item['is_estimate'] === 1) {
+            $calcDetails = "";
+
+            // --- 🚀 INTERCEPTION DYNAMIQUE ---
+            if (isset($item['is_dynamic']) && $item['is_dynamic'] == 1 && !empty($item['dynamic_code'])) {
+                require_once __DIR__ . '/../includes/DynamicBudgetCalculator.php';
+                // Facturation à terme échu : on recule d'un mois
+                $prevDate = date('Y-m-d', strtotime('-1 month', strtotime("$viewY-$viewM-01")));
+                $calcYear = date('Y', strtotime($prevDate));
+                $calcMonth = date('m', strtotime($prevDate));
+
+                $calc = new DynamicBudgetCalculator($pdo, $calcYear, $calcMonth);
+                $estimateData = $calc->getEstimate($item['dynamic_code']);
+                $amt = $estimateData['amount'];
+                $calcDetails = $estimateData['details'];
+            }
+            // --------------------------------
+
             $estimatesList[] = [
                 'name' => $name,
                 'amount' => $amt,
-                'categories' => !empty($catCode) ? array_map('trim', explode(',', $catCode)) : []
+                'categories' => !empty($catCode) ? array_map('trim', explode(',', $catCode)) : [],
+                'details' => $calcDetails 
             ];
         }
-
         // 3. Attribution du budget aux jauges visuelles de la page
         // Pour ne pas tout casser, on donne tout le plafond visuel à la 1ère catégorie de la liste
         if (!empty($catCode)) {
@@ -352,11 +369,9 @@ foreach ($estimatesList as $est) {
     $spentForEstimate = 0;
     $detailsHover = [];
     
-    // On additionne les dépenses de toutes les catégories liées à cette estimation
     foreach ($est['categories'] as $cCode) {
         if (!empty($cCode) && isset($totals[$cCode])) {
             $spentForEstimate += $totals[$cCode];
-            // On prépare le détail pour la petite bulle d'info (hover)
             if ($totals[$cCode] > 0 && isset($categoriesConfig[$cCode])) {
                 $detailsHover[] = strip_tags($categoriesConfig[$cCode]['label']) . " : " . number_format($totals[$cCode], 0) . "€";
             }
@@ -367,6 +382,12 @@ foreach ($estimatesList as $est) {
     if ($rem > 0) {
         $reste_a_venir_calc += $rem;
         $tooltip = !empty($detailsHover) ? implode(' | ', $detailsHover) : 'Aucune dépense pour le moment';
+        
+        // --- INJECTION DU DÉTAIL DYNAMIQUE ---
+        if (!empty($est['details'])) {
+            $tooltip .= "\n\n📊 Détail du calcul :\n" . $est['details'];
+        }
+
         $pending_charges[] = [
             'name' => 'Reste ' . $est['name'], 
             'amount' => $rem,

@@ -46,20 +46,25 @@ try {
         $currencySetting = $foyerData['currency'] ?? '€';
         $csvMapping = !empty($foyerData['csv_mapping']) ? json_decode($foyerData['csv_mapping'], true) : null;
 
+        // --- NOUVEAU : Récupération des paramètres dynamiques ---
+        $stmtSettings = $pdo->query("SELECT setting_key, setting_value FROM pf_settings WHERE module = 'budget'");
+        $budgetSettings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
+
         // 6. Liste des membres (pour assigner un compte bancaire)
         $people = $pdo->query("SELECT id, name FROM pf_people WHERE is_active = 1 ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode([
             'success' => true,
             'data' => [
-                'accounts'    => $accounts,
-                'categories'  => $categories,
-                'rules'       => $rules,
-                'salaries'    => $salaries,
-                'people'      => $people,
-                'year'        => $currentYear,
-                'currency'    => $currencySetting,
-                'csv_mapping' => $csvMapping
+                'accounts'        => $accounts,
+                'categories'      => $categories,
+                'rules'           => $rules,
+                'salaries'        => $salaries,
+                'people'          => $people,
+                'year'            => $currentYear,
+                'currency'        => $currencySetting,
+                'csv_mapping'     => $csvMapping,
+                'budget_settings' => $budgetSettings 
             ]
         ]);
         exit;
@@ -192,6 +197,27 @@ try {
                 $stmt->execute([$index, (int)$id]);
             }
         }
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    // --- GESTION DES ESTIMATIONS DYNAMIQUES ---
+    if ($action === 'save_dynamic_estimates') {
+        $keys = [
+            'budget_nanny_fixed', 'budget_nanny_daily', 'budget_nanny_aid', 'budget_nanny_cesu_avg',
+            'budget_school_meal', 'budget_school_aftercare', 'budget_school_fullday'
+        ];
+        
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare("INSERT INTO pf_settings (setting_key, setting_value, module) VALUES (?, ?, 'budget') ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+        
+        foreach ($keys as $k) {
+            if (isset($_POST[$k])) {
+                $stmt->execute([$k, $_POST[$k]]);
+            }
+        }
+        $pdo->commit();
+        
         echo json_encode(['success' => true]);
         exit;
     }
