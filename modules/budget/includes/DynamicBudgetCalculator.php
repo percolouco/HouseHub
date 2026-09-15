@@ -85,7 +85,12 @@ class DynamicBudgetCalculator {
 
         $zone = $this->foyerSettings['zone_scolaire'] ?? 'C';
         try {
-            $url = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='{$this->year}-" . ($this->year + 1) . "' AND zones LIKE '%Zone {$zone}%'&limit=100";
+            // 🔥 FIX : On récupère les DEUX années scolaires qui chevauchent l'année calendaire (ex: 2025-2026 ET 2026-2027)
+            $prevYear = $this->year - 1;
+            $nextYear = $this->year + 1;
+            $where = "(annee_scolaire='{$prevYear}-{$this->year}' OR annee_scolaire='{$this->year}-{$nextYear}') AND zones LIKE '%Zone {$zone}%'";
+            $url = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=" . urlencode($where) . "&limit=100";
+            
             $jsonVacances = @file_get_contents($url);
             if ($jsonVacances) {
                 $data = json_decode($jsonVacances, true);
@@ -93,7 +98,9 @@ class DynamicBudgetCalculator {
                     foreach ($data['results'] as $r) {
                         $start = new DateTime(substr($r['start_date'], 0, 10));
                         $end = new DateTime(substr($r['end_date'], 0, 10));
+                        // Sécurité : si la vacance commence le vendredi soir, on la compte à partir du samedi
                         if ($start->format('N') == 5) $start->modify('+1 day'); 
+                        
                         while ($start < $end) {
                             $offDays['vacances'][] = $start->format('Y-m-d');
                             $start->modify('+1 day');
