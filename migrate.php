@@ -1,5 +1,5 @@
 <?php
-// migrate_meals.php
+// migrate.php
 require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/meta_db.php';
 require_login();
@@ -52,6 +52,29 @@ try {
         echo "✅ Table pf_meals_plan créée pour $dbName.<br>";
     }
     echo "<br>🎉 Migration terminée avec succès.";
+
+    // À ajouter dans migrate.php
+echo "Migration : Ajout des colonnes dynamiques au Budget...\n";
+$stmtFam = $meta_pdo->query("SELECT id, db_name FROM families");
+$families = $stmtFam->fetchAll(PDO::FETCH_ASSOC);
+
+foreach ($families as $fam) {
+    $dbName = $fam['db_name'];
+    try {
+        $famPdo = new PDO("mysql:host=$meta_host;dbname=$dbName;charset=utf8mb4", $meta_user, $meta_pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        
+        // Vérification si la colonne n'existe pas déjà
+        $checkCol = $famPdo->query("SHOW COLUMNS FROM pf_budget_items LIKE 'is_dynamic'");
+        if ($checkCol->rowCount() == 0) {
+            $famPdo->exec("ALTER TABLE pf_budget_items 
+                           ADD COLUMN is_dynamic TINYINT(1) DEFAULT 0 AFTER is_estimate,
+                           ADD COLUMN dynamic_code VARCHAR(50) DEFAULT NULL AFTER is_dynamic");
+            echo "Famille {$fam['id']} ($dbName) : Colonnes is_dynamic et dynamic_code ajoutées.\n";
+        }
+    } catch (\PDOException $e) {
+        echo "Erreur sur la famille {$fam['id']} ($dbName) : " . $e->getMessage() . "\n";
+    }
+}
 
 } catch (Exception $e) {
     die("❌ Erreur lors de la migration : " . $e->getMessage());

@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS pf_budget_items (
   type VARCHAR(50),
   payment_day INT DEFAULT NULL,
   is_estimate TINYINT(1) DEFAULT 0,
+  is_dynamic TINYINT(1) DEFAULT 0,      
+  dynamic_code VARCHAR(50) DEFAULT NULL, 
   reg_month VARCHAR(7) DEFAULT NULL,
   mapping_keywords TEXT DEFAULT NULL,
   holiday_id INT DEFAULT NULL,

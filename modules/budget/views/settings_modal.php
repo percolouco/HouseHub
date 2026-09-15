@@ -1,4 +1,12 @@
 <?php
+/**
+ * @var bool $hasAccounts
+ * @var bool $hasCategories
+ * @var bool $hasSalaries
+ * @var bool $hasBudgetItems
+ * @var bool $isBudgetSetupOk
+ */
+
 // Sécurité : Ce fichier ne doit pas être appelé directement
 if (!defined('CURRENCY')) {
     define('CURRENCY', '€');
@@ -26,6 +34,7 @@ if (!defined('CURRENCY')) {
                     <?php if (!$hasSalaries): ?><span class="alert-dot alert-dot-inline">!</span><?php endif; ?>
                 </button>
                 <button class="bs-tab-btn" onclick="switchBsTab('csv', this)"><?= tr('bs_tab_csv') ?></button>
+                <button class="bs-tab-btn" onclick="switchBsTab('children', this)">👶 <?= tr('bud_settings_dyn_title') ?></button>
             </div>
             
             <div class="bs-content">
@@ -212,10 +221,59 @@ if (!defined('CURRENCY')) {
                     </form>
                 </div>
 
-            </div>
-        </div>
-    </div>
-</div>
+                <!-- NOUVEAU PANE ENFANTS -->
+                <div id="pane-children" class="bs-pane">
+                    <h4 class="bs-section-title">👶 <?= tr('bud_settings_dyn_title') ?></h4>
+                    <p class="pf-muted-tiny bs-desc">Configurez ici les tarifs pour le calcul dynamique des frais de garde et de cantine.</p>
+                    
+                    <form id="form-dynamic-estimates" onsubmit="saveDynamicEstimates(event)">
+                        <h5 class="bs-section-subtitle bordered">Assistante Maternelle</h5>
+                        <div class="bs-grid-2">
+                            <div>
+                                <label class="pf-label"><?= tr('bud_dyn_nanny_fixed') ?></label>
+                                <input type="number" step="0.01" name="budget_nanny_fixed" id="budget_nanny_fixed" class="pf-input" value="700">
+                            </div>
+                            <div>
+                                <label class="pf-label"><?= tr('bud_dyn_nanny_daily') ?></label>
+                                <input type="number" step="0.01" name="budget_nanny_daily" id="budget_nanny_daily" class="pf-input" value="4">
+                            </div>
+                            <div>
+                                <label class="pf-label"><?= tr('bud_dyn_nanny_aid') ?></label>
+                                <input type="number" step="0.01" name="budget_nanny_aid" id="budget_nanny_aid" class="pf-input" value="120">
+                            </div>
+                            <div>
+                                <label class="pf-label"><?= tr('bud_dyn_nanny_cesu_avg') ?></label>
+                                <input type="number" step="0.01" name="budget_nanny_cesu_avg" id="budget_nanny_cesu_avg" class="pf-input" value="170">
+                            </div>
+                        </div>
+
+                        <h5 class="bs-section-subtitle bordered" style="margin-top: 20px;">École & Centre de loisirs</h5>
+                        <div class="bs-grid-2">
+                            <div>
+                                <label class="pf-label"><?= tr('bud_dyn_school_meal') ?></label>
+                                <input type="number" step="0.01" name="budget_school_meal" id="budget_school_meal" class="pf-input" value="5.62">
+                            </div>
+                            <div>
+                                <label class="pf-label"><?= tr('bud_dyn_school_aftercare') ?></label>
+                                <input type="number" step="0.01" name="budget_school_aftercare" id="budget_school_aftercare" class="pf-input" value="1.97">
+                            </div>
+                            <div>
+                                <label class="pf-label"><?= tr('bud_dyn_school_fullday') ?></label>
+                                <input type="number" step="0.01" name="budget_school_fullday" id="budget_school_fullday" class="pf-input" value="21.89">
+                            </div>
+                        </div>
+
+                        <div class="bs-text-right" style="margin-top: 20px;">
+                            <button type="submit" class="btn btn-secondary">💾 <?= tr('btn_save') ?></button>
+                        </div>
+                    </form>
+                </div>
+
+            </div> 
+        </div> 
+    </div> 
+</div> 
+
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -273,6 +331,16 @@ async function loadBudgetSettingsData() {
         renderSalaries(response.data.salaries, response.data.year);
         const currencySelect = document.getElementById('bs-currency-select');
         if (currencySelect && response.data.currency) currencySelect.value = response.data.currency;
+        
+        const bs = response.data.budget_settings || {};
+        if (document.getElementById('budget_nanny_fixed')) document.getElementById('budget_nanny_fixed').value = bs.budget_nanny_fixed || 700;
+        if (document.getElementById('budget_nanny_daily')) document.getElementById('budget_nanny_daily').value = bs.budget_nanny_daily || 4;
+        if (document.getElementById('budget_nanny_aid')) document.getElementById('budget_nanny_aid').value = bs.budget_nanny_aid || 120;
+        if (document.getElementById('budget_nanny_cesu_avg')) document.getElementById('budget_nanny_cesu_avg').value = bs.budget_nanny_cesu_avg || 170;
+        if (document.getElementById('budget_school_meal')) document.getElementById('budget_school_meal').value = bs.budget_school_meal || 5.62;
+        if (document.getElementById('budget_school_aftercare')) document.getElementById('budget_school_aftercare').value = bs.budget_school_aftercare || 1.97;
+        if (document.getElementById('budget_school_fullday')) document.getElementById('budget_school_fullday').value = bs.budget_school_fullday || 21.89;
+
     } catch (err) {
         console.error("Erreur chargement paramètres :", err);
         const errorMsg = `<div class="pf-alert pf-alert--error bs-input-mb">❌ ${tr('error_loading_settings')} : ${err.message}</div>`;
@@ -568,5 +636,25 @@ function handleCsvUpload(file) {
         }
     };
     reader.readAsText(file, 'ISO-8859-1');
+}
+
+async function saveDynamicEstimates(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button');
+    const oldText = btn.innerText;
+    btn.innerText = '⏳...';
+    btn.disabled = true;
+    try {
+        const fd = new FormData(form);
+        fd.append('action', 'save_dynamic_estimates');
+        await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd });
+        if (typeof showToast === 'function') showToast(window.I18N['fc_settings_updated'] || 'Paramètres enregistrés', 'success');
+    } catch (err) {
+        if (typeof showToast === 'function') showToast((window.I18N['error_occured'] || 'Erreur') + " : " + err.message, 'error');
+    } finally {
+        btn.innerText = oldText;
+        btn.disabled = false;
+    }
 }
 </script>

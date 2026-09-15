@@ -128,6 +128,23 @@ $totalRevenus = 0;
 foreach ($items as $item): 
     // 1. Calculs de base
     $targetAbs = abs((float)$item['amount']); 
+
+    // --- 🚀 INTERCEPTION DYNAMIQUE ---
+    $calcDetails = "";
+    if (isset($item['is_dynamic']) && $item['is_dynamic'] == 1 && !empty($item['dynamic_code'])) {
+        require_once __DIR__ . '/../includes/DynamicBudgetCalculator.php';
+        // Facturation à terme échu : on recule d'un mois pour le calcul
+        $prevDate = date('Y-m-d', strtotime('-1 month', strtotime("$currentYear-$currentMonth-01")));
+        $calcYear = date('Y', strtotime($prevDate));
+        $calcMonth = date('m', strtotime($prevDate));
+
+        $calc = new DynamicBudgetCalculator($pdo, $calcYear, $calcMonth);
+        $estimateData = $calc->getEstimate($item['dynamic_code']);
+        $targetAbs = $estimateData['amount'];
+        $calcDetails = $estimateData['details'];
+    }
+    // --------------------------------
+
     $amountToAdd = ($item['type'] === 'Annuel') ? $targetAbs / 12 : $targetAbs;
     $totalDepenses += $amountToAdd;
     
@@ -184,6 +201,10 @@ foreach ($items as $item):
                     
                     <td class="cell-amount" style="font-weight:600; padding:15px; color:#1e293b;">
                         - <?= number_format($targetAbs, 2, ',', ' ') ?> €
+                        
+                        <?php if (!empty($calcDetails)): ?>
+                            <span title="<?= htmlspecialchars($calcDetails) ?>" style="cursor:help; margin-left:4px; font-size:0.85rem;">ℹ️</span>
+                        <?php endif; ?>
                         
                         <?php if ($hasMatchingExpense): ?>
                             <?php $gap = $realAbs - $targetAbs; 
