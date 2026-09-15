@@ -1078,7 +1078,7 @@ document.addEventListener("DOMContentLoaded", () => {
           ),
           this.fetchApi("/modules/family-calendar/includes/api/get-events.php"),
           this.fetchPublicHolidays(),
-          this.fetchSchoolHolidays(zone), // 🏖️ NOUVEAU : On appelle l'API
+          this.fetchSchoolHolidays(zone),
           this.fetchApi("/modules/family-calendar/includes/api/get-leaves.php"),
           this.fetchApi(
             "/modules/family-calendar/includes/api/get-leave-snapshots.php",
@@ -1132,8 +1132,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!zone || zone === "Autre") return [];
       try {
         const yearStr = `${this.currentSchoolYearStart}-${this.currentSchoolYearStart + 1}`;
-        // Ton URL qui utilise le LIKE, beaucoup plus robuste !
-        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%'&limit=100`;
+
+        const whereClause = `annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%' AND population='Élèves'`;
+        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=${encodeURIComponent(whereClause)}&limit=100`;
 
         const res = await fetch(url);
         const data = await res.json();
@@ -1196,7 +1197,9 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const year = this.modalSelectedYear || this.currentSchoolYearStart;
         const yearStr = `${year}-${year + 1}`;
-        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%'&limit=100&order_by=start_date`;
+
+        const whereClause = `annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%' AND population='Élèves'`;
+        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=${encodeURIComponent(whereClause)}&limit=100&order_by=start_date`;
 
         const res = await fetch(url);
         const data = await res.json();

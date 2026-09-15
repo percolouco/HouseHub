@@ -205,7 +205,8 @@ try {
     if ($action === 'save_dynamic_estimates') {
         $keys = [
             'budget_nanny_fixed', 'budget_nanny_daily', 'budget_nanny_aid', 'budget_nanny_cesu_avg',
-            'budget_school_meal', 'budget_school_aftercare', 'budget_school_fullday'
+            'budget_school_meal', 'budget_school_aftercare', 'budget_school_fullday',
+            'budget_cesu_overrides' 
         ];
         
         $pdo->beginTransaction();

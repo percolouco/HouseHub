@@ -2701,3 +2701,36 @@ body.sum-mode-active .sum-target {
   text-align: right;
   white-space: nowrap;
 }
+
+/* --- 16. AJUSTEMENTS CESU (JSON OVERRIDES) --- */
+.bs-cesu-wrapper {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--bg-page);
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+}
+.bs-cesu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.bs-cesu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bs-cesu-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.bs-cesu-row input[type="month"] {
+  width: 140px;
+  flex-shrink: 0;
+}
+.bs-cesu-row input[type="number"] {
+  width: 100px;
+  flex-shrink: 0;
+}

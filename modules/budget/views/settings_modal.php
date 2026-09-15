@@ -224,10 +224,11 @@ if (!defined('CURRENCY')) {
                 <!-- NOUVEAU PANE ENFANTS -->
                 <div id="pane-children" class="bs-pane">
                     <h4 class="bs-section-title">👶 <?= tr('bud_settings_dyn_title') ?></h4>
-                    <p class="pf-muted-tiny bs-desc">Configurez ici les tarifs pour le calcul dynamique des frais de garde et de cantine.</p>
+                    <p class="pf-muted-tiny bs-desc"><?= tr('bud_settings_dyn_desc') ?></p>
                     
                     <form id="form-dynamic-estimates" onsubmit="saveDynamicEstimates(event)">
-                        <h5 class="bs-section-subtitle bordered">Assistante Maternelle</h5>
+                        
+                        <h5 class="bs-section-subtitle bordered"><?= tr('bud_dyn_sub_nanny') ?></h5>
                         <div class="bs-grid-2">
                             <div>
                                 <label class="pf-label"><?= tr('bud_dyn_nanny_fixed') ?></label>
@@ -247,7 +248,17 @@ if (!defined('CURRENCY')) {
                             </div>
                         </div>
 
-                        <h5 class="bs-section-subtitle bordered" style="margin-top: 20px;">École & Centre de loisirs</h5>
+                        <!-- Ajustements ponctuels du CESU -->
+                        <div style="margin-top: 20px;">
+                            <div class="bs-cesu-header" style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                                <label class="pf-label pf-m-0"><?= tr('bud_dyn_cesu_overrides') ?></label>
+                                <button type="button" class="pf-btn btn-secondary pf-btn-sm" onclick="addCesuOverride()">+ <?= tr('bud_dyn_cesu_add') ?></button>
+                            </div>
+                            <div id="cesu-overrides-list" class="bs-cesu-list"></div>
+                            <input type="hidden" name="budget_cesu_overrides" id="budget_cesu_overrides_input" value="{}">
+                        </div>
+
+                        <h5 class="bs-section-subtitle bordered pf-mt-md"><?= tr('bud_dyn_sub_school') ?></h5>
                         <div class="bs-grid-2">
                             <div>
                                 <label class="pf-label"><?= tr('bud_dyn_school_meal') ?></label>
@@ -263,8 +274,8 @@ if (!defined('CURRENCY')) {
                             </div>
                         </div>
 
-                        <div class="bs-text-right" style="margin-top: 20px;">
-                            <button type="submit" class="btn btn-secondary">💾 <?= tr('btn_save') ?></button>
+                        <div class="bs-text-right pf-mt-md">
+                            <button type="submit" class="pf-btn btn-secondary">💾 <?= tr('btn_save') ?></button>
                         </div>
                     </form>
                 </div>
@@ -340,6 +351,10 @@ async function loadBudgetSettingsData() {
         if (document.getElementById('budget_school_meal')) document.getElementById('budget_school_meal').value = bs.budget_school_meal || 5.62;
         if (document.getElementById('budget_school_aftercare')) document.getElementById('budget_school_aftercare').value = bs.budget_school_aftercare || 1.97;
         if (document.getElementById('budget_school_fullday')) document.getElementById('budget_school_fullday').value = bs.budget_school_fullday || 21.89;
+
+        try { cesuOverrides = JSON.parse(bs.budget_cesu_overrides || '{}'); } 
+        catch (e) { cesuOverrides = {}; }
+        renderCesuOverrides();
 
     } catch (err) {
         console.error("Erreur chargement paramètres :", err);
@@ -656,5 +671,80 @@ async function saveDynamicEstimates(e) {
         btn.innerText = oldText;
         btn.disabled = false;
     }
+}
+
+// --- LOGIQUE DES AJUSTEMENTS CESU ---
+let cesuOverrides = {};
+
+function renderCesuOverrides() {
+    const list = document.getElementById('cesu-overrides-list');
+    const input = document.getElementById('budget_cesu_overrides_input');
+    if (!list || !input) return;
+    
+    list.innerHTML = '';
+    // Tri décroissant pour afficher le mois le plus lointain en haut
+    const keys = Object.keys(cesuOverrides).sort().reverse();
+    
+    if (keys.length === 0) {
+        list.innerHTML = `<div class="pf-empty-dashed" style="margin:0; padding:12px;"><em class="pf-muted-tiny">${window.I18N['bud_dyn_cesu_empty'] || 'Aucun ajustement enregistré.'}</em></div>`;
+    } else {
+        keys.forEach(k => {
+            const btnDelText = window.I18N['btn_delete'] || 'Supprimer';
+            // UI : Design aéré type "Carte HouseHub" avec des inputs sans bordures agressives
+            list.innerHTML += `
+                <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-panel); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-light); box-shadow: var(--shadow-sm);">
+                    <input type="month" class="pf-input" style="width: 150px; margin: 0; padding: 6px 10px;" value="${k}" onchange="updateCesuOverrideKey('${k}', this.value)">
+                    <input type="number" step="0.01" class="pf-input" style="flex: 1; margin: 0; padding: 6px 10px; text-align: right;" value="${cesuOverrides[k]}" onchange="updateCesuOverrideValue('${k}', this.value)">
+                    <span style="color: var(--text-muted); font-weight: 600; margin-right: 5px;">€</span>
+                    <button type="button" class="btn-icon-action delete" style="margin: 0; background: var(--bg-danger-soft); width: 32px; height: 32px;" onclick="removeCesuOverride('${k}')" title="${btnDelText}">🗑️</button>
+                </div>
+            `;
+        });
+    }
+    input.value = JSON.stringify(cesuOverrides);
+}
+
+function addCesuOverride() {
+    const keys = Object.keys(cesuOverrides).sort();
+    let nextDate = new Date();
+    nextDate.setMonth(nextDate.getMonth() + 1); // Base : le mois prochain
+
+    // S'il y a déjà des mois dans la liste, on prend le plus lointain et on ajoute 1 mois
+    if (keys.length > 0) {
+        const lastKey = keys[keys.length - 1]; // ex: "2026-10"
+        const parts = lastKey.split('-');
+        // L'astuce : Le mois en JS commence à 0. Donc en lui passant "10", on pointe déjà sur le mois d'après (Novembre) !
+        nextDate = new Date(parts[0], parseInt(parts[1], 10), 1); 
+    }
+
+    // Sécurité anti-boucle infinie
+    let m = nextDate.getFullYear() + '-' + String(nextDate.getMonth() + 1).padStart(2, '0');
+    let safety = 0;
+    while (cesuOverrides[m] !== undefined && safety < 24) {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        m = nextDate.getFullYear() + '-' + String(nextDate.getMonth() + 1).padStart(2, '0');
+        safety++;
+    }
+
+    cesuOverrides[m] = 0;
+    renderCesuOverrides();
+}
+
+function updateCesuOverrideKey(oldK, newK) {
+    if (oldK !== newK && newK) {
+        cesuOverrides[newK] = cesuOverrides[oldK];
+        delete cesuOverrides[oldK];
+        renderCesuOverrides();
+    }
+}
+
+function updateCesuOverrideValue(k, val) {
+    cesuOverrides[k] = parseFloat(val) || 0;
+    renderCesuOverrides();
+}
+
+function removeCesuOverride(k) {
+    delete cesuOverrides[k];
+    renderCesuOverrides();
 }
 </script>

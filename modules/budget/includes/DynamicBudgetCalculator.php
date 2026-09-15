@@ -32,6 +32,10 @@ class DynamicBudgetCalculator {
         return isset($this->settings[$key]) ? (float)$this->settings[$key] : (float)$default;
     }
 
+    private function getSettingString(string $key, string $default = ''): string {
+        return isset($this->settings[$key]) ? (string)$this->settings[$key] : $default;
+    }
+
     private function loadPeople(): void {
         // 1. Chargement des enfants sans doublons
         $stmt = $this->pdo->query("SELECT id, name, care_modes FROM pf_people WHERE role IN ('enfant', 'child') AND is_active = 1");
@@ -85,10 +89,11 @@ class DynamicBudgetCalculator {
 
         $zone = $this->foyerSettings['zone_scolaire'] ?? 'C';
         try {
-            // 🔥 FIX : On récupère les DEUX années scolaires qui chevauchent l'année calendaire (ex: 2025-2026 ET 2026-2027)
+            // 🔥 FIX STATE OF THE ART : On cible uniquement la population "Élèves"
             $prevYear = $this->year - 1;
             $nextYear = $this->year + 1;
-            $where = "(annee_scolaire='{$prevYear}-{$this->year}' OR annee_scolaire='{$this->year}-{$nextYear}') AND zones LIKE '%Zone {$zone}%'";
+            $where = "(annee_scolaire='{$prevYear}-{$this->year}' OR annee_scolaire='{$this->year}-{$nextYear}') AND zones LIKE '%Zone {$zone}%' AND population = 'Élèves'";
+            
             $url = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=" . urlencode($where) . "&limit=100";
             
             $jsonVacances = @file_get_contents($url);
@@ -127,7 +132,16 @@ class DynamicBudgetCalculator {
         $nannyFixed = $this->getSetting('budget_nanny_fixed', 700);
         $nannyDaily = $this->getSetting('budget_nanny_daily', 4);
         $nannyAid   = $this->getSetting('budget_nanny_aid', 120);
-        $cesuAvg    = $this->getSetting('budget_nanny_cesu_avg', 170);
+        
+        $cesuAvg = $this->getSetting('budget_nanny_cesu_avg', 170);
+        $overridesJson = $this->getSettingString('budget_cesu_overrides', '{}');
+        $cesuOverrides = json_decode($overridesJson, true) ?: [];
+        
+        $monthKey = sprintf("%04d-%02d", $this->year, $this->month);
+        $isCesuOverride = isset($cesuOverrides[$monthKey]);
+        $cesuApplied = $isCesuOverride ? (float)$cesuOverrides[$monthKey] : $cesuAvg;
+        $cesuLabelText = $isCesuOverride ? tr('bud_audit_cesu_adj') : tr('bud_audit_cesu_avg');
+        // ------------------------------------
 
         $schoolMeal      = $this->getSetting('budget_school_meal', 5.62);
         $schoolAftercare = $this->getSetting('budget_school_aftercare', 1.97);
@@ -168,6 +182,8 @@ class DynamicBudgetCalculator {
             if (in_array($dateStr, $offDays['feries'])) continue;
 
             $isVacances = in_array($dateStr, $offDays['vacances']);
+            
+
             $events = $this->calendarEvents[$dateStr] ?? [];
 
             $nannyOffToday = false;
@@ -216,13 +232,15 @@ class DynamicBudgetCalculator {
         }
         
         $totalNannyFees = $totalNannyDays * $nannyDaily;
-        $nannyGlobalCost = $nannyFixed + $totalNannyFees - $nannyAid - $cesuAvg;
+        // On soustrait $cesuApplied au lieu de $cesuAvg
+        $nannyGlobalCost = $nannyFixed + $totalNannyFees - $nannyAid - $cesuApplied;
 
         // 3. Rédaction du Bilan
         if ($hasNanny) {
             $totalCost += max(0, $nannyGlobalCost);
+            // On passe $cesuLabelText au sprintf
             $details .= sprintf(tr('bud_audit_nanny_full') . "\n", 
-                        $this->helperName, $nannyFixed, $totalNannyDays, $nannyDaily, $totalNannyFees, $nannyAid, $cesuAvg, max(0, $nannyGlobalCost));
+                        $this->helperName, $nannyFixed, $totalNannyDays, $nannyDaily, $totalNannyFees, $nannyAid, $cesuLabelText, $cesuApplied, max(0, $nannyGlobalCost));
             
             if ($nannyOffDays > 0) {
                 $details .= sprintf(tr('bud_audit_nanny_abs') . "\n", $this->helperName, $nannyOffDays);
