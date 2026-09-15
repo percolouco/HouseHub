@@ -1,5 +1,53 @@
-/* Liste module JS */
-const API = '/modules/liste/api.php';
+<?php
+// modules/food/views/liste.php
+if (!isset($pdo)) { exit; } 
+?>
+
+<div class="liste-main">
+  <!-- Tabs des listes -->
+  <div class="liste-tabs-bar">
+    <div class="liste-tabs" id="liste-tabs"></div>
+    <button class="liste-tab-add" id="btn-add-list" title="<?= htmlspecialchars(tr('liste_new_list')) ?>">+</button>
+  </div>
+
+  <!-- Corps de la liste active -->
+  <div class="liste-body" id="liste-body">
+    <div class="liste-add-card">
+      <input type="text" id="liste-input" maxlength="500" placeholder="<?= htmlspecialchars(tr('liste_placeholder_add')) ?>" autocomplete="off">
+      <button id="btn-liste-add"><?= htmlspecialchars(tr('liste_btn_add')) ?></button>
+    </div>
+
+    <div class="liste-toolbar" id="liste-toolbar">
+      <button class="btn-tool" id="btn-uncheck-all"><?= htmlspecialchars(tr('liste_btn_uncheck_all')) ?></button>
+      <button class="btn-tool btn-tool-danger" id="btn-delete-picked"><?= htmlspecialchars(tr('liste_btn_delete_picked')) ?></button>
+      <button class="btn-tool btn-tool-danger" id="btn-clear-all"><?= htmlspecialchars(tr('liste_btn_clear_all')) ?></button>
+    </div>
+
+    <div id="liste-items-root"></div>
+    <div id="liste-history-root"></div>
+  </div>
+</div>
+
+<script>
+const LISTE_TRANSLATIONS = {
+  already_in:           <?= json_encode(tr('liste_already_in')) ?>,
+  confirm_clear:        <?= json_encode(tr('liste_confirm_clear')) ?>,
+  confirm_delete_list:  <?= json_encode(tr('liste_confirm_delete_list')) ?>,
+  rename_list:          <?= json_encode(tr('liste_rename_list')) ?>,
+  new_name:             <?= json_encode(tr('liste_new_name')) ?>,
+  list_deleted:         <?= json_encode(tr('liste_list_deleted')) ?>,
+  list_created:         <?= json_encode(tr('liste_list_created')) ?>,
+  list_renamed:         <?= json_encode(tr('liste_list_renamed')) ?>,
+  edit_placeholder:     <?= json_encode(tr('liste_edit_placeholder')) ?>,
+  history_title:        <?= json_encode(tr('liste_history_title')) ?>,
+  added:                <?= json_encode(tr('liste_added')) ?>,
+  updated:              <?= json_encode(tr('liste_updated')) ?>,
+  deleted:              <?= json_encode(tr('liste_deleted')) ?>,
+  cancel:               <?= json_encode(tr('cancel')) ?>,
+};
+
+// ⚠️ NOUVEAU CHEMIN D'API
+const API = '/modules/food/includes/api/api-liste.php';
 const T   = window.LISTE_TRANSLATIONS || {};
 
 const state = {
@@ -515,3 +563,5 @@ async function init() {
 }
 
 init();
+
+</script>

@@ -1808,3 +1808,80 @@ details[open].pf-accordion > .pf-accordion-summary::after {
 .pf-btn-pad-sm {
   padding: 8px 16px;
 }
+
+/* === COMPOSANT : NAVIGATION TABS (Pills) === */
+.budget-tabs-container {
+  display: inline-flex;
+  background: var(--bg-panel);
+  padding: 6px;
+  border-radius: 50px;
+  box-shadow: var(--shadow);
+  gap: 8px;
+  position: relative;
+  z-index: 10;
+}
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 40px;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+.tab-item:hover {
+  background-color: var(--bg-page);
+  color: var(--text-main);
+}
+.tab-item.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  transform: scale(1.02);
+}
+.tab-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .budget-tabs-container {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 5px;
+    scrollbar-width: none;
+  }
+  .budget-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-item {
+    flex: 0 0 auto !important;
+    padding: 8px 16px !important;
+  }
+}
+
+/* === COMPOSANT : EN-TÊTE DE MODULE CENTRÉ === */
+.budget-hero {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.budget-title-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.budget-title-group h1 {
+  margin: 0;
+}

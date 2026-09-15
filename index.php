@@ -43,7 +43,7 @@ if ($_has_custom_bg): ?>
   <section class="pf-section">
     <h2 style="color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6);"><?= tr('home_modules_title') ?></h2>
 
-    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','garage','calendar_ios']; ?>
+    <?php $mods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','food','garage','calendar_ios']; ?>
     <div class="pf-modules-grid">
 
       <?php if (in_array('calendar', $mods)): ?>
@@ -91,6 +91,15 @@ if ($_has_custom_bg): ?>
       </a>
       <?php endif; ?>
 
+      <?php if (in_array('food', $mods)): ?>
+      <a href="/food.php" class="pf-module-card">
+        <div class="pf-card-icon">🍳</div>
+        <h3 class="pf-card-title"><?= tr('mod_food_name') ?></h3>
+        <div class="pf-card-desc"><?= tr('mod_food_desc') ?></div>
+        <span class="pf-card-cta"><?= tr('cta_food') ?></span>
+      </a>
+      <?php endif; ?>
+
       <?php if (in_array('memo', $mods)): ?>
       <a href="/memo.php" class="pf-module-card">
         <div class="pf-card-icon">📝</div>
@@ -109,14 +118,6 @@ if ($_has_custom_bg): ?>
       </a>
       <?php endif; ?>
 
-      <?php if (in_array('liste', $mods)): ?>
-      <a href="/liste.php" class="pf-module-card">
-        <div class="pf-card-icon">🛒</div>
-        <h3 class="pf-card-title"><?= tr('mod_liste_name') ?></h3>
-        <div class="pf-card-desc"><?= tr('mod_liste_desc') ?></div>
-        <span class="pf-card-cta"><?= tr('cta_cart') ?></span>
-      </a>
-      <?php endif; ?>
 
       <?php if (in_array('calendar_ios', $mods)): ?>
       <a href="/calendar-ios.php" class="pf-module-card">
