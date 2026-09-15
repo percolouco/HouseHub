@@ -150,7 +150,7 @@ class DynamicBudgetCalculator {
             ];
         }
 
-        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, (int)$this->month, $this->year);
+        $daysInMonth = (int)date('t', strtotime(sprintf("%04d-%02d-01", $this->year, $this->month)));
 
         // 2. Itération SANS pointeurs de référence
         for ($d = 1; $d <= $daysInMonth; $d++) {
