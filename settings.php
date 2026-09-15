@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
 
         if ($action === 'set_modules' && $family_id) {
-            $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka'];
+            $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'food', 'calendar_ios', 'printvault', 'planka'];
             $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
             if (empty($enabled)) {
                 $error = tr('set_err_min_module');
@@ -404,7 +404,7 @@ require __DIR__ . '/header.php';
           'garage'   => ['icon' => '🚗', 'label' => tr('menu_garage')],
           'memo'     => ['icon' => '📝', 'label' => tr('menu_memo')],
           'todo'     => ['icon' => '✅', 'label' => tr('menu_todo')],
-          'liste'     => ['icon' => '📝', 'label' => tr('menu_liste')],
+          'food'     => ['icon' => '🍳', 'label' => tr('menu_food')],
           'calendar_ios' => ['icon' => '📱', 'label' => tr('menu_calendar_ios')],
           'printvault'  => ['icon' => '🖨️', 'label' => tr('menu_printvault')],
           'planka'      => ['icon' => '📋', 'label' => tr('menu_planka')],
@@ -428,8 +428,8 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
   <?php
-    $enabledModsForListe = $_SESSION['enabled_modules'] ?? [];
-    if ($family_id && in_array('liste', $enabledModsForListe, true)):
+    $enabledModsForFood = $_SESSION['enabled_modules'] ?? [];
+    if ($family_id && in_array('food', $enabledModsForFood, true)):
   ?>
   <section class="pf-panel-card">
     <h2 class="pf-card-h2 pf-card-h2--tight">📝 <?= htmlspecialchars(tr('liste_settings_title')) ?></h2>

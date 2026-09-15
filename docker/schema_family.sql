@@ -661,3 +661,14 @@ CREATE TABLE IF NOT EXISTS pf_planka_config (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ─── Planificateur de Repas ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_meals_plan (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  plan_date DATE NOT NULL,
+  service ENUM('lunch', 'dinner') NOT NULL,
+  person_id INT NOT NULL,
+  meal_name VARCHAR(500) DEFAULT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_meal_plan (plan_date, service, person_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

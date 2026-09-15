@@ -1,6 +1,7 @@
 <?php
+// modules/food/includes/api/api-liste.php
 ob_start();
-require_once dirname(__DIR__, 2) . '/includes/auth.php';
+require_once dirname(__DIR__, 4) . '/includes/auth.php';
 require_login();
 
 header('Content-Type: application/json');
@@ -10,7 +11,7 @@ set_exception_handler(function (\Throwable $e) {
     echo json_encode(['ok' => false, 'error' => $e->getMessage()]); exit;
 });
 
-require_once dirname(__DIR__, 2) . '/includes/db.php';
+require_once dirname(__DIR__, 4) . '/includes/db.php';
 
 // ── Auto-create tables ────────────────────────────────────────────────────────
 $pdo->exec("CREATE TABLE IF NOT EXISTS pf_lists (
@@ -96,11 +97,9 @@ function liste_ensure_default(PDO $pdo): int {
     return (int)$pdo->query("SELECT id FROM pf_lists ORDER BY position, id LIMIT 1")->fetchColumn();
 }
 
-// Built-in keyword → category position mapping (position maps to seeded order above)
 function liste_builtin_detect(string $normalized): ?int {
     static $map = null;
     if ($map === null) $map = [
-        // 1 = Fruits & Légumes
         'pomme'=>1,'poire'=>1,'banane'=>1,'orange'=>1,'citron'=>1,'raisin'=>1,
         'fraise'=>1,'framboise'=>1,'myrtille'=>1,'cerise'=>1,'peche'=>1,'abricot'=>1,
         'mangue'=>1,'kiwi'=>1,'ananas'=>1,'melon'=>1,'pasteque'=>1,'prune'=>1,
@@ -113,120 +112,96 @@ function liste_builtin_detect(string $normalized): ?int {
         'gingembre'=>1,'avocat'=>1,'endive'=>1,'ciboulette'=>1,'persil'=>1,
         'basilic'=>1,'menthe'=>1,'thym'=>1,'romarin'=>1,'coriandre'=>1,
         'girofle'=>1,'citron vert'=>1,'lime'=>1,'pamplemousse'=>1,'litchi'=>1,
-        // 2 = Viande
         'boeuf'=>2,'veau'=>2,'poulet'=>2,'porc'=>2,'agneau'=>2,'dinde'=>2,
         'lapin'=>2,'jambon'=>2,'lardon'=>2,'saucisse'=>2,'saucisson'=>2,
         'merguez'=>2,'chipolata'=>2,'steak'=>2,'escalope'=>2,'roti'=>2,
         'gigot'=>2,'filet'=>2,'cuisses'=>2,'viande hachee'=>2,'andouille'=>2,
         'magret'=>2,'canard'=>2,'foie'=>2,'boudin'=>2,'paupiette'=>2,
         'entrecote'=>2,'cote de boeuf'=>2,'onglet'=>2,'bavette'=>2,
-        // 3 = Poissonnerie
         'saumon'=>3,'thon'=>3,'dorade'=>3,'bar'=>3,'cabillaud'=>3,'sole'=>3,
         'truite'=>3,'lieu'=>3,'maquereau'=>3,'sardine'=>3,'anchois'=>3,
         'crevette'=>3,'moule'=>3,'huitre'=>3,'coquille'=>3,'poulpe'=>3,
         'seiche'=>3,'langoustine'=>3,'lotte'=>3,'merlu'=>3,'colin'=>3,
         'tilapia'=>3,'daurade'=>3,'aiglefin'=>3,'homard'=>3,'crabe'=>3,
-        // 4 = Boulangerie
         'pain'=>4,'baguette'=>4,'brioche'=>4,'croissant'=>4,'pain de mie'=>4,
         'ficelle'=>4,'fougasse'=>4,'ciabatta'=>4,'biscotte'=>4,'naan'=>4,
         'pita'=>4,'toast'=>4,'bagel'=>4,'pain burger'=>4,'wrap'=>4,
-        // 5 = Frais
         'lait'=>5,'creme'=>5,'yaourt'=>5,'yourt'=>5,'beurre'=>5,
         'fromage'=>5,'camembert'=>5,'brie'=>5,'comte'=>5,'gruyere'=>5,
         'emmental'=>5,'mozzarella'=>5,'ricotta'=>5,'mascarpone'=>5,
         'feta'=>5,'chevre'=>5,'oeuf'=>5,'oeufs'=>5,'creme fraiche'=>5,
         'fromage blanc'=>5,'petit suisse'=>5,'kefir'=>5,
-        // 6 = Surgelés
         'surgele'=>6,'pizza surgelee'=>6,'frite surgelee'=>6,'poisson pane'=>6,
         'legume surgele'=>6,'glace'=>6,'sorbet'=>6,'plat surgele'=>6,
         'nugget'=>6,'edamame'=>6,'petits pois'=>6,'epinards'=>6,
-        // 7 = Boissons
         'eau'=>7,'coca'=>7,'cola'=>7,'limonade'=>7,'sirop'=>7,
         'biere'=>7,'vin'=>7,'champagne'=>7,'cafe'=>7,'the'=>7,
         'tisane'=>7,'soda'=>7,'jus'=>7,'kombucha'=>7,'cidre'=>7,
         'whisky'=>7,'rhum'=>7,'vodka'=>7,'prosecco'=>7,'rose'=>7,
-        // 8 = Pâtes, Riz, Féculents
         'pate'=>8,'spaghetti'=>8,'tagliatelle'=>8,'penne'=>8,'fusilli'=>8,
         'macaroni'=>8,'riz'=>8,'couscous'=>8,'quinoa'=>8,'lentille'=>8,
         'pois chiche'=>8,'farine'=>8,'semoule'=>8,'polenta'=>8,'boulgour'=>8,
         'orge'=>8,'feculent'=>8,'vermicelle'=>8,'nouille'=>8,'gnocchi'=>8,
-        // 9 = Épicerie salée
         'chips'=>9,'crackers'=>9,'olives'=>9,'cornichon'=>9,'capres'=>9,
         'tapenade'=>9,'houmous'=>9,'tzatziki'=>9,'sel'=>9,'poivre'=>9,
         'epice'=>9,'cube bouillon'=>9,'bouillon'=>9,'noix de cajou'=>9,
         'amande'=>9,'pistache'=>9,'noix'=>9,'cacahuete'=>9,
-        // 10 = Conserves
         'conserve'=>10,'boite de tomate'=>10,'concentre de tomate'=>10,
         'mais'=>10,'ratatouille'=>10,'cassoulet'=>10,'pate de foie'=>10,
         'sardine boite'=>10,'thon boite'=>10,'maquereau boite'=>10,
         'soupe boite'=>10,'haricot boite'=>10,
-        // 11 = Plats cuisinés
         'quiche'=>11,'lasagne'=>11,'gratin'=>11,'pizza'=>11,'tartiflette'=>11,
         'croque'=>11,'hachis parmentier'=>11,'paella'=>11,'moussaka'=>11,
         'tarte'=>11,'flamiche'=>11,'pissaladiere'=>11,
-        // 12 = Sauces & Condiments
         'ketchup'=>12,'mayonnaise'=>12,'moutarde'=>12,'vinaigrette'=>12,
         'sauce soja'=>12,'tabasco'=>12,'huile'=>12,'vinaigre'=>12,
         'sauce tomate'=>12,'pesto'=>12,'sriracha'=>12,'worcester'=>12,
         'nuoc mam'=>12,'sauce'=>12,'condiment'=>12,'worcestershire'=>12,
-        // 13 = Petit déjeuner
         'cereale'=>13,'muesli'=>13,'granola'=>13,'corn flakes'=>13,
         'miel'=>13,'confiture'=>13,'nutella'=>13,'beurre de cacahuete'=>13,
         'sirop d erable'=>13,'sirop erable'=>13,'chocolat en poudre'=>13,
-        // 14 = Biscuits & Gâteaux
         'biscuit'=>14,'gateau'=>14,'cookie'=>14,'madeleine'=>14,
         'financier'=>14,'quatre quarts'=>14,'brownie'=>14,'sable'=>14,
         'speculoos'=>14,'oreo'=>14,'lu'=>14,'petit beurre'=>14,'galette'=>14,
         'palmier'=>14,'macaron'=>14,'eclair'=>14,
-        // 15 = Confiserie
         'chocolat'=>15,'bonbon'=>15,'reglisse'=>15,'caramel'=>15,
         'nougat'=>15,'marshmallow'=>15,'guimauve'=>15,'sucette'=>15,
         'chewing gum'=>15,'pastille'=>15,'calisson'=>15,
-        // 16 = Dessert
         'yaourt dessert'=>16,'creme dessert'=>16,'mousse au chocolat'=>16,
         'tiramisu'=>16,'creme brulee'=>16,'flan'=>16,'crepe'=>16,
-        'madeleine'=>16,'profiterole'=>16,'eclair'=>16,
-        // 17 = Beauté & Hygiène
+        'profiterole'=>16,
         'shampoing'=>17,'gel douche'=>17,'savon'=>17,'dentifrice'=>17,
         'deodorant'=>17,'crème visage'=>17,'crème corps'=>17,'rasoir'=>17,
         'mousse a raser'=>17,'coton'=>17,'lingette'=>17,'maquillage'=>17,
         'parfum'=>17,'brosse a dents'=>17,'fil dentaire'=>17,'serum'=>17,
         'hydratant'=>17,'demaquillant'=>17,
-        // 18 = Bébé
         'couche'=>18,'biberon'=>18,'lait infantile'=>18,'compote bebe'=>18,
         'pot bebe'=>18,'puree bebe'=>18,'lingette bebe'=>18,'savon bebe'=>18,
         'creme bebe'=>18,'sucette bebe'=>18,
-        // 19 = Entretien
         'lessive'=>19,'liquide vaisselle'=>19,'nettoyant'=>19,'degraissant'=>19,
         'deboucheur'=>19,'anticalcaire'=>19,'eponge'=>19,'serpillere'=>19,
         'sac poubelle'=>19,'papier toilette'=>19,'sopalin'=>19,'essuie tout'=>19,
         'aluminium'=>19,'film plastique'=>19,'sac congelation'=>19,
         'nettoyant wc'=>19,'desinfectant'=>19,'vitre'=>19,'javel'=>19,
-        // 20 = Animaux
         'croquette'=>20,'patee'=>20,'litiere'=>20,'os'=>20,
         'friandise animale'=>20,'nourriture chat'=>20,'nourriture chien'=>20,
-        // 21 = Maison & Jardin
         'ampoule'=>21,'pile'=>21,'bougie'=>21,'allumette'=>21,
         'ruban adhesif'=>21,'colle'=>21,'vis'=>21,'terreau'=>21,
         'engrais'=>21,'pot de fleur'=>21,'arrosoir'=>21,'graine'=>21,
         'tournevis'=>21,'marteau'=>21,'clou'=>21,'cle'=>21,
-        // 22 = Pharmacie
         'doliprane'=>22,'ibuprofene'=>22,'paracetamol'=>22,'aspirine'=>22,
         'bandage'=>22,'pansement'=>22,'thermometre'=>22,'serum physiologique'=>22,
         'vitamine'=>22,'complement'=>22,'masque'=>22,'gant medical'=>22,
-        'sirop'=>22,'antihistaminique'=>22,'antidouleur'=>22,
+        'antihistaminique'=>22,'antidouleur'=>22,
     ];
 
-    // Check full phrase
     if (isset($map[$normalized])) return $map[$normalized];
 
-    // Check individual words
     $words = explode(' ', $normalized);
     foreach ($words as $w) {
         if (strlen($w) >= 3 && isset($map[$w])) return $map[$w];
     }
 
-    // Partial match (contains)
     foreach ($map as $kw => $catPos) {
         if (str_contains($normalized, $kw)) return $catPos;
     }
@@ -237,12 +212,10 @@ function liste_builtin_detect(string $normalized): ?int {
 function liste_detect_category(PDO $pdo, string $label): ?int {
     $norm = liste_normalize_detect($label);
 
-    // 1. Learned rules (exact normalized label)
     $r = $pdo->prepare("SELECT category_id FROM pf_item_category_rules WHERE keyword=? LIMIT 1");
     $r->execute([$norm]);
     if ($row = $r->fetch()) return (int)$row['category_id'];
 
-    // 2. Learned rules (individual words)
     foreach (explode(' ', $norm) as $w) {
         if (strlen($w) < 3) continue;
         $r = $pdo->prepare("SELECT category_id FROM pf_item_category_rules WHERE keyword=? LIMIT 1");
@@ -250,11 +223,9 @@ function liste_detect_category(PDO $pdo, string $label): ?int {
         if ($row = $r->fetch()) return (int)$row['category_id'];
     }
 
-    // 3. Built-in dictionary → map position to real category id
     $pos = liste_builtin_detect($norm);
     if ($pos === null) return null;
 
-    // Get category id by position order
     $r = $pdo->query("SELECT id FROM pf_list_categories ORDER BY position, id");
     $ids = $r->fetchAll(PDO::FETCH_COLUMN);
     return $ids[$pos - 1] ?? null;
@@ -266,7 +237,6 @@ function liste_learn(PDO $pdo, string $label, int $category_id): void {
     $pdo->prepare("INSERT INTO pf_item_category_rules (keyword, category_id) VALUES (?,?)
                    ON DUPLICATE KEY UPDATE category_id=VALUES(category_id)")
         ->execute([$norm, $category_id]);
-    // Also learn individual meaningful words
     foreach (explode(' ', $norm) as $w) {
         if (strlen($w) >= 4) {
             $pdo->prepare("INSERT IGNORE INTO pf_item_category_rules (keyword, category_id) VALUES (?,?)")
@@ -301,7 +271,6 @@ if ($action === 'set_category' && $method === 'POST') {
 
     $pdo->prepare("UPDATE pf_grocery_items SET category_id=? WHERE id=?")->execute([$category_id, $item_id]);
 
-    // Learn from manual assignment
     if ($category_id !== null) {
         $row = $pdo->prepare("SELECT label FROM pf_grocery_items WHERE id=?");
         $row->execute([$item_id]);
@@ -431,7 +400,7 @@ if ($action === 'clear_all' && $method === 'POST') {
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 if ($action === 'history' && $method === 'GET') {
     $max = 20;
-    $n = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type='setting' AND reference_id='liste_history_max'"); $n->execute();
+    $n = $pdo->prepare("SELECT content FROM pf_notes WHERE note_type='grocery_settings' AND reference_id='history_max'"); $n->execute();
     if ($r = $n->fetch()) $max = max(1, min(50, (int)$r['content']));
     $s = $pdo->query("SELECT label_display FROM pf_grocery_history ORDER BY last_used_at DESC LIMIT $max");
     echo json_encode(['history' => $s->fetchAll(PDO::FETCH_COLUMN)]); exit;
