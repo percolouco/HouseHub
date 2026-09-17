@@ -208,3 +208,15 @@
 [data-theme="dark"] .month-actions .btn-icon-small:hover {
   background: rgba(255, 255, 255, 0.06) !important;
 }
+
+[data-theme="dark"] .pf-module-card-wrapper:has(input.js-mod-checkbox:checked) {
+  background: rgba(59, 130, 246, 0.1);
+}
+[data-theme="dark"] .pf-sub-module-pill {
+  background: var(--bg-page);
+  border-color: var(--border-strong);
+}
+[data-theme="dark"] .pf-sub-module-pill:has(input:checked) {
+  background: var(--bg-panel);
+  border-color: var(--primary);
+}

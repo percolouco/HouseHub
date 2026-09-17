@@ -41,14 +41,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
 
         if ($action === 'set_modules' && $family_id) {
-            $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'food', 'calendar_ios', 'printvault', 'planka'];
+            $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka', 'food'];
+            $allViews = ['food_meals', 'food_liste', 'budget_prev', 'budget_epargne', 'budget_provisions'];
+
             $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
+            $enabledViews = array_values(array_filter($allViews, fn($v) => isset($_POST['view_' . $v])));
+
             if (empty($enabled)) {
                 $error = tr('set_err_min_module');
             } else {
-                $meta_pdo->prepare("UPDATE families SET enabled_modules = ? WHERE id = ?")
-                         ->execute([json_encode($enabled), $family_id]);
+                $meta_pdo->prepare("UPDATE families SET enabled_modules = ?, enabled_views = ? WHERE id = ?")
+                         ->execute([json_encode($enabled), json_encode($enabledViews), $family_id]);
                 $_SESSION['enabled_modules'] = $enabled;
+                $_SESSION['enabled_views']   = $enabledViews;
                 $success = tr('set_success_modules');
             }
         }
@@ -396,15 +401,34 @@ require __DIR__ . '/header.php';
     <p class="pf-muted-note"><?= tr('set_desc_modules') ?></p>
     <?php
       $enabledMods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','calendar_ios'];
+      $enabledViews = $_SESSION['enabled_views'] ?? ['food_meals', 'food_liste', 'budget_prev', 'budget_epargne', 'budget_provisions'];
+      
       $allModules = [
           'calendar' => ['icon' => '📅', 'label' => tr('menu_calendar')],
-          'budget'   => ['icon' => '💰', 'label' => tr('menu_budget')],
+          'budget'   => [
+              'icon' => '💰', 
+              'label' => tr('menu_budget'),
+              'mandatory_note' => tr('budget_mandatory_note'),
+              'views' => [
+                  'budget_prev' => tr('budget_tab_prev'),
+                  'budget_epargne' => tr('budget_tab_savings'),
+                  'budget_provisions' => tr('budget_tab_provisions')
+              ]
+          ],
           'holidays' => ['icon' => '🏖️', 'label' => tr('menu_holidays')],
           'gifts'    => ['icon' => '🎁', 'label' => tr('menu_gifts')],
           'garage'   => ['icon' => '🚗', 'label' => tr('menu_garage')],
           'memo'     => ['icon' => '📝', 'label' => tr('menu_memo')],
           'todo'     => ['icon' => '✅', 'label' => tr('menu_todo')],
-          'food'     => ['icon' => '🍳', 'label' => tr('menu_food')],
+          'liste'    => ['icon' => '🛒', 'label' => tr('menu_liste')],
+          'food'     => [
+              'icon' => '🍳', 
+              'label' => tr('mod_food_name'),
+              'views' => [
+                  'food_meals' => tr('food_tab_meals'),
+                  'food_liste' => tr('food_tab_list')
+              ]
+          ],
           'calendar_ios' => ['icon' => '📱', 'label' => tr('menu_calendar_ios')],
           'printvault'  => ['icon' => '🖨️', 'label' => tr('menu_printvault')],
           'planka'      => ['icon' => '📋', 'label' => tr('menu_planka')],
@@ -415,34 +439,37 @@ require __DIR__ . '/header.php';
       <input type="hidden" name="action" value="set_modules">
       <div class="pf-stack-md">
         <?php foreach ($allModules as $key => $mod): $active = in_array($key, $enabledMods); ?>
-        <label class="pf-module-tile">
-          <input type="checkbox" name="mod_<?= $key ?>" <?= $active ? 'checked' : '' ?> class="pf-checkbox-lg">
-          <span class="pf-tile-icon"><?= $mod['icon'] ?></span>
-          <span class="pf-tile-label"><?= $mod['label'] ?></span>
-        </label>
+        <div class="pf-module-card-wrapper">
+            
+            <div class="pf-module-top-row">
+                <label class="pf-module-tile-compact">
+                  <input type="checkbox" name="mod_<?= $key ?>" <?= $active ? 'checked' : '' ?> class="pf-checkbox-lg js-mod-checkbox">
+                  <span class="pf-tile-icon"><?= $mod['icon'] ?></span>
+                  <span class="pf-tile-label"><?= $mod['label'] ?></span>
+                </label>
+                
+                <?php if (!empty($mod['views'])): ?>
+                <div class="pf-module-inline-pills">
+                    <?php foreach ($mod['views'] as $vKey => $vLabel): ?>
+                        <label class="pf-sub-module-pill">
+                            <input type="checkbox" name="view_<?= $vKey ?>" <?= in_array($vKey, $enabledViews) ? 'checked' : '' ?>>
+                            <span class="pf-pill-text"><?= htmlspecialchars($vLabel) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <?php if (!empty($mod['mandatory_note'])): ?>
+                <div class="pf-module-info-footer">
+                    ℹ️ <?= $mod['mandatory_note'] ?>
+                </div>
+            <?php endif; ?>
+
+        </div>
         <?php endforeach; ?>
       </div>
       <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
-    </form>
-  </section>
-  <?php endif; ?>
-
-  <?php
-    $enabledModsForFood = $_SESSION['enabled_modules'] ?? [];
-    if ($family_id && in_array('food', $enabledModsForFood, true)):
-  ?>
-  <section class="pf-panel-card">
-    <h2 class="pf-card-h2 pf-card-h2--tight">📝 <?= htmlspecialchars(tr('liste_settings_title')) ?></h2>
-    <p class="pf-muted-note"><?= htmlspecialchars(tr('liste_settings_intro')) ?></p>
-    <form method="post" class="pf-stack-md pf-mt-md">
-      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-      <input type="hidden" name="action" value="grocery_history_max">
-      <div class="pf-form-group">
-        <label class="pf-label" for="history_max"><?= htmlspecialchars(tr('liste_settings_history_max')) ?></label>
-        <input type="number" name="history_max" id="history_max" class="pf-input pf-input-sm" min="1" max="50" step="1" value="<?= (int) $groceryHistoryMaxSetting ?>" required>
-        <p class="pf-muted-note pf-mt-xs"><?= htmlspecialchars(tr('liste_settings_history_hint')) ?></p>
-      </div>
-      <button type="submit" class="pf-btn"><?= htmlspecialchars(tr('btn_save')) ?></button>
     </form>
   </section>
   <?php endif; ?>

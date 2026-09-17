@@ -410,23 +410,122 @@ body.pf-home .pf-mobile-close-btn {
   line-height: 1.4;
 }
 
-/* Tuile module (checkbox) — état coché via :has(), compatible thème */
-.pf-module-tile {
+/* --- MODULES & SOUS-VUES UNIFIÉS (Settings) --- */
+.pf-module-card-wrapper {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 12px 12px;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border: 2px solid var(--border-light);
-  border-radius: 10px;
-  cursor: pointer;
-  background: var(--bg-page);
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
 }
-.pf-module-tile:has(input:checked) {
+
+/* Le fond bleu léger s'applique à TOUTE la carte si le module est actif */
+.pf-module-card-wrapper:has(input.js-mod-checkbox:checked) {
   border-color: var(--primary);
   background: var(--bg-soft);
+}
+
+/* Ligne supérieure : Titre + Pills (Alignement horizontal + Wrap auto) */
+.pf-module-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.pf-module-tile-compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.pf-tile-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.pf-tile-label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+/* --- Sous-Vues (Pills) --- */
+.pf-module-inline-pills {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.pf-module-card-wrapper:has(input.js-mod-checkbox:checked)
+  .pf-module-inline-pills {
+  display: flex;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.pf-sub-module-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 50px;
+  background: var(--bg-page);
+  border: 1px solid var(--border-strong);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pf-sub-module-pill input[type="checkbox"] {
+  display: none;
+}
+
+.pf-sub-module-pill .pf-pill-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.pf-sub-module-pill:hover {
+  border-color: var(--text-main);
+}
+
+/* État actif de la Pill */
+.pf-sub-module-pill:has(input:checked) {
+  background: var(--bg-panel);
+  border-color: var(--primary);
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.15);
+}
+
+.pf-sub-module-pill:has(input:checked) .pf-pill-text {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* Note informative en bas de carte */
+.pf-module-info-footer {
+  display: none;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.pf-module-card-wrapper:has(input.js-mod-checkbox:checked)
+  .pf-module-info-footer {
+  display: block;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .pf-checkbox-lg {

@@ -16,8 +16,23 @@ $hasBudgetItems = ((int)$pdo->query("SELECT COUNT(*) FROM pf_budget_items")->fet
 // Le minimum vital pour que ça tourne
 $isBudgetSetupOk = ($hasCategories && $hasSalaries && $hasAccounts);
 
-// Gestion de l'onglet actif (par défaut 'suivi')
+// ============================================================================
+// GESTION DES VUES (MANDATORY VS OPTIONAL)
+// ============================================================================
+$enabledViews = $_SESSION['enabled_views'] ?? ['budget_prev', 'budget_epargne', 'budget_provisions'];
+
+// Vues obligatoires pour le cœur du budget
+$allowedTabs = ['suivi', 'recap']; 
+
+if (in_array('budget_prev', $enabledViews)) $allowedTabs[] = 'budget_prev';
+if (in_array('budget_epargne', $enabledViews)) $allowedTabs[] = 'epargne';
+if (in_array('budget_provisions', $enabledViews)) $allowedTabs[] = 'provisions';
+
+// Gestion de l'onglet actif avec fallback de sécurité
 $tab = $_GET['tab'] ?? 'suivi';
+if (!in_array($tab, $allowedTabs)) {
+    $tab = 'suivi'; 
+}
 
 $pageTitle  = tr('budget_page_title');
 $activePage = "budget";
@@ -30,7 +45,6 @@ require __DIR__ . '/header.php';
     <div class="pf-hero budget-hero">
         <div class="budget-title-group">
             <h1><?= tr('budget_main_header') ?></h1>
-            <!-- Bouton avec séparation claire entre l'engrenage animable et l'alerte fixe -->
             <button class="btn-header-settings" onclick="openBudgetSettings()" title="<?= tr('settings') ?>">
                 <span class="gear-icon-anim">⚙️</span>
                 <?php if (!$isBudgetSetupOk || !$hasBudgetItems): ?>
@@ -45,26 +59,31 @@ require __DIR__ . '/header.php';
                 <span><?= tr('budget_tab_tracking') ?></span>
             </a>  
                       
+            <?php if (in_array('budget_prev', $allowedTabs)): ?>
             <a href="?tab=budget_prev" class="tab-item <?= $tab == 'budget_prev' ? 'active' : '' ?>">
                 <span class="tab-icon">🎯</span> 
                 <span><?= tr('budget_tab_prev') ?></span>
             </a>  
+            <?php endif; ?>
 
+            <?php if (in_array('epargne', $allowedTabs)): ?>
             <a href="?tab=epargne" class="tab-item <?= $tab == 'epargne' ? 'active' : '' ?>">
                 <span class="tab-icon">🐷</span> 
                 <span><?= tr('budget_tab_savings') ?></span>
             </a>
+            <?php endif; ?>
 
             <a href="?tab=recap" class="tab-item <?= $tab == 'recap' ? 'active' : '' ?>">
                 <span class="tab-icon">📊</span> 
                 <span><?= tr('budget_tab_recap') ?></span>
             </a>
 
+            <?php if (in_array('provisions', $allowedTabs)): ?>
             <a href="?tab=provisions" class="tab-item <?= $tab == 'provisions' ? 'active' : '' ?>">
                 <span class="tab-icon">🧮</span> 
                 <span><?= tr('budget_tab_provisions') ?></span>
             </a>
-
+            <?php endif; ?>
         </nav>
     </div>
 

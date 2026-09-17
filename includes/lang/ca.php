@@ -105,6 +105,7 @@ return [
     'mod_printvault_desc'=> 'Gestioneu els vostres fitxers d\'impressió 3D — STL, 3MF, GCode.',
     'mod_planka_name'    => 'Planka',
     'mod_planka_desc'    => 'Gestioneu els vostres projectes en mode Kanban amb Planka.',
+    'budget_mandatory_note' => 'Les pestanyes de Seguiment i Resum són obligatòries i sempre actives.',
 
     'cta_open'           => 'Obrir',
     'cta_explore'        => 'Explorar',
@@ -1031,4 +1032,6 @@ return [
     'menu_food' => 'Menjar',
     'mod_food_desc' => 'Gestioneu els vostres menús setmanals i les llistes de la compra compartides.',
     'cta_food' => 'Cuinar',
+    'food_err_no_views' => "Cap vista activada per a aquest mòdul. Modifiqueu la vostra configuració d'espai.",
+    'food_err_no_views_desc' => 'Heu desactivat totes les funcions d\'aquest mòdul. Aneu a la configuració per reactivar-les.',
 ];
