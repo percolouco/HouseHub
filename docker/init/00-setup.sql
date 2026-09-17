@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS families (
   invite_code VARCHAR(32) NOT NULL UNIQUE,
   is_active        TINYINT(1) DEFAULT 1,
   enabled_modules  JSON DEFAULT NULL,
+  enabled_views    JSON DEFAULT NULL, 
   created_at       DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

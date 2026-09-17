@@ -35,7 +35,7 @@ function require_login(?string $loginPage = '/login.php'): void
             
             $stmt = $meta_pdo->prepare("
                 SELECT u.id, u.username, u.password_hash, u.display_name, u.family_id, u.is_admin, u.is_active, u.lang, u.remember_token,
-                       f.db_name, f.is_active as family_active, f.enabled_modules
+                       f.db_name, f.is_active as family_active, f.enabled_modules, f.enabled_views
                 FROM users u
                 LEFT JOIN families f ON f.id = u.family_id
                 WHERE u.id = ?
@@ -57,6 +57,7 @@ function require_login(?string $loginPage = '/login.php'): void
                     $_SESSION['family_db']       = $user['db_name'];
                     $_SESSION['app_lang']        = $user['lang'] ?? 'fr';
                     $_SESSION['enabled_modules'] = json_decode($user['enabled_modules'] ?? '["calendar","budget","holidays","gifts","calendar_ios"]', true);
+                    $_SESSION['enabled_views']   = json_decode($user['enabled_views'] ?? '["food_meals","food_liste"]', true);
                 }
             }
         }

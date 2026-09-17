@@ -105,6 +105,7 @@ return [
     'mod_printvault_desc'=> 'Gérez vos fichiers d\'impression 3D — STL, 3MF, GCode avec viewer interactif.',
     'mod_planka_name'    => 'Planka',
     'mod_planka_desc'    => 'Gérez vos projets en mode Kanban avec Planka.',
+    'budget_mandatory_note' => 'Les onglets Suivi et Récapitulatif sont indispensables et toujours actifs.',
 
     'cta_open'           => 'Ouvrir',
     'cta_explore'        => 'Explorer',
@@ -1030,4 +1031,7 @@ return [
     'menu_food' => 'Food',
     'mod_food_desc' => 'Gérez vos menus de la semaine et vos listes de courses partagées.',
     'cta_food' => 'Mijoter',
+    'food_err_no_views' => "Aucune vue n'est activée pour ce module. Modifiez vos paramètres d'espace.",
+    'food_err_no_views_desc' => 'Vous avez désactivé toutes les fonctionnalités de ce module. Rendez-vous dans vos paramètres pour les réactiver.',
+
 ];
