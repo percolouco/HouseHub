@@ -87,25 +87,7 @@ class NativePdfParser {
             }
         }
         
-        // Tri de haut en bas (Y du PDF est décroissant du haut vers le bas)
-        usort($rowHeaders, fn($a, $b) => $b['y'] <=> $a['y']);
-
-        $yPlatTop = null; $yPlatBot = null;
-        $yGarTop = null; $yGarBot = null;
-
-        for ($i = 0; $i < count($rowHeaders); $i++) {
-            if ($rowHeaders[$i]['label'] === 'PLATCHAUD') {
-                $yPlatTop = $rowHeaders[$i]['y'];
-                // La limite basse est le label suivant, ou -50 unités
-                $yPlatBot = $rowHeaders[$i+1]['y'] ?? ($yPlatTop - 50);
-            }
-            if ($rowHeaders[$i]['label'] === 'GARNITURE') {
-                $yGarTop = $rowHeaders[$i]['y'];
-                $yGarBot = $rowHeaders[$i+1]['y'] ?? ($yGarTop - 50);
-            }
-        }
-
-        if (!$yPlatTop || !$yGarTop) {
+        if (!in_array('PLATCHAUD', array_column($rowHeaders, 'label')) || !in_array('GARNITURE', array_column($rowHeaders, 'label'))) {
             throw new Exception("Structure du menu non reconnue (Mots-clés 'PLAT CHAUD' et 'GARNITURE' introuvables).");
         }
 
@@ -120,18 +102,26 @@ class NativePdfParser {
             // Retrait des labels BIO/HVE et mentions superflues
             $textVal = trim(preg_replace('/\b(AB|HVE|MSC|Label Rouge)\b/i', '', $t['text']));
             $textVal = str_replace(['(plat', 'complet)'], '', $textVal);
-            $textVal = trim(preg_replace('/[^a-zA-ZÀ-ÿ0-9\s&\-]/u', '', $textVal));
+            $textVal = trim(preg_replace('/[^a-zA-ZÀ-ÿŒœÆæ0-9\s&\-]/u', '', $textVal));
 
             if (strlen($textVal) < 3) continue;
 
-            // Filtre Vertical : Est-on dans la tranche Plat Chaud ou Garniture ? (Tolérance +/- 5 unités)
+            // Filtre Vertical : de quelle rangée (en-tête) ce texte est-il le plus proche ?
             // Le texte d'une rangée déborde souvent au-dessus de son propre label (lignes
-            // empilées vers le haut), y compris pour le label de la rangée suivante qui
-            // sert de limite basse : on applique donc la même marge des deux côtés.
-            $inPlat = ($t['y'] <= $yPlatTop + 20 && $t['y'] >= $yPlatBot + 20);
-            $inGar  = ($t['y'] <= $yGarTop + 20 && $t['y'] >= $yGarBot + 20);
+            // empilées vers le haut) sur une hauteur variable d'un menu à l'autre : une
+            // fenêtre à tolérance fixe est donc peu fiable. Le plus proche voisin (même
+            // principe que pour les colonnes de jour ci-dessous) s'adapte automatiquement.
+            $bestRow = null;
+            $minRowDiff = PHP_FLOAT_MAX;
+            foreach ($rowHeaders as $rh) {
+                $diff = abs($t['y'] - $rh['y']);
+                if ($diff < $minRowDiff) {
+                    $minRowDiff = $diff;
+                    $bestRow = $rh['label'];
+                }
+            }
 
-            if ($inPlat || $inGar) {
+            if ($bestRow === 'PLATCHAUD' || $bestRow === 'GARNITURE') {
                 // Filtre Horizontal : Quel est le jour le plus proche ?
                 $bestCol = 0;
                 $minDiff = PHP_FLOAT_MAX;
@@ -142,7 +132,7 @@ class NativePdfParser {
                         $bestCol = $idx;
                     }
                 }
-                $days[$bestCol][] = ['text' => $textVal, 'y' => $t['y'], 'type' => $inPlat ? 'plat' : 'gar'];
+                $days[$bestCol][] = ['text' => $textVal, 'y' => $t['y'], 'type' => $bestRow === 'PLATCHAUD' ? 'plat' : 'gar'];
             }
         }
 
