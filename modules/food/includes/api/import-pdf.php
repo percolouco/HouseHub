@@ -2,6 +2,7 @@
 // modules/meals/includes/api/import-pdf.php
 require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
+require dirname(__DIR__, 4) . '/vendor/autoload.php';
 require_login();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -18,55 +19,29 @@ if ($personId <= 0) {
 }
 
 // ---------------------------------------------------------
-// PARSEUR PDF SPATIAL NATIF (100% PHP SANS LIBRAIRIE)
+// PARSEUR PDF SPATIAL (via smalot/pdfparser pour un décodage
+// fiable des polices Type0/CID + tables ToUnicode)
 // ---------------------------------------------------------
 class NativePdfParser {
+    // strtoupper() seul ne gère pas les accents (ex: "Déclinaison" -> "DCLINAISON"
+    // au lieu de "DECLINAISON"), ce qui empêchait ce label d'être reconnu.
+    private static function cleanLabel($text) {
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        return strtoupper(preg_replace('/[^A-Z]/i', '', $ascii ?: $text));
+    }
+
     public static function getMealData($filename) {
-        $content = file_get_contents($filename);
         $texts = [];
-        
-        // 1. Décompression et Tokenization Mathématique
-        if (preg_match_all('/stream(.*?)endstream/is', $content, $matches)) {
-            foreach ($matches[1] as $stream) {
-                $stream = ltrim($stream, "\r\n");
-                $decoded = @gzuncompress($stream);
-                if (!$decoded) $decoded = $stream;
-                
-                // On éclate le flux par opérateurs PDF clés (Position et Texte)
-                $parts = preg_split('/(Tm|Td|Tj|TJ)/', $decoded, -1, PREG_SPLIT_DELIM_CAPTURE);
-                $x = 0; $y = 0;
-                
-                for ($i = 0; $i < count($parts); $i++) {
-                    $token = $parts[$i];
-                    if ($token === 'Tm' || $token === 'Td') {
-                        $prev = $parts[$i-1];
-                        preg_match_all('/[0-9.-]+/', $prev, $nums);
-                        if (count($nums[0]) >= 2) {
-                            $yRaw = array_pop($nums[0]);
-                            $xRaw = array_pop($nums[0]);
-                            if ($token === 'Tm') {
-                                $x = (float)$xRaw; $y = (float)$yRaw;
-                            } else {
-                                $x += (float)$xRaw; $y += (float)$yRaw;
-                            }
-                        }
-                    } elseif ($token === 'Tj') {
-                        $prev = $parts[$i-1];
-                        if (preg_match('/\((.*?)\)$/', trim($prev), $m)) {
-                            self::addText($texts, $m[1], $x, $y);
-                        }
-                    } elseif ($token === 'TJ') {
-                        $prev = $parts[$i-1];
-                        if (preg_match('/\[(.*?)\]$/', trim($prev), $m)) {
-                            preg_match_all('/\((.*?)\)/', $m[1], $tjs);
-                            $tjX = $x;
-                            foreach ($tjs[1] as $tj) {
-                                self::addText($texts, $tj, $tjX, $y);
-                                $tjX += 10; // Décalage estimé pour les mots suivants du tableau
-                            }
-                        }
-                    }
-                }
+
+        $parser = new \Smalot\PdfParser\Parser();
+        $pdf = $parser->parseFile($filename);
+
+        foreach ($pdf->getPages() as $page) {
+            foreach ($page->getDataTm() as $entry) {
+                [$tm, $rawText] = $entry;
+                $textVal = trim((string) $rawText);
+                if ($textVal === '') continue;
+                self::addText($texts, $textVal, (float) $tm[4], (float) $tm[5]);
             }
         }
 
@@ -76,7 +51,7 @@ class NativePdfParser {
         $dayLabels = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI'];
         $colXs = [];
         foreach ($texts as $t) {
-            $clean = strtoupper(preg_replace('/[^A-Z]/', '', $t['text']));
+            $clean = self::cleanLabel($t['text']);
             if (in_array($clean, $dayLabels)) {
                 $colXs[$clean] = $t['x'];
             }
@@ -103,7 +78,7 @@ class NativePdfParser {
         // 3. Définition des Tranches Horizontales (Y) via les Titres de Rangée (Zone Extrême Gauche)
         $rowHeaders = [];
         foreach ($texts as $t) {
-            $clean = strtoupper(preg_replace('/[^A-Z]/', '', $t['text']));
+            $clean = self::cleanLabel($t['text']);
             if (in_array($clean, ['HORSDEUVRE', 'DECLINAISON', 'PLATCHAUD', 'GARNITURE', 'PRODUITLAITIER', 'DESSERT', 'LESGOUTERS'])) {
                 // On s'assure de ne capter que la colonne tout à gauche
                 if ($t['x'] < ($sortedXs[0] - 20)) {
@@ -137,7 +112,7 @@ class NativePdfParser {
         // 4. Affectation Chirurgicale par Intersection Grille (X, Y)
         $days = [[], [], [], [], []];
         foreach ($texts as $t) {
-            $cleanAlpha = strtoupper(preg_replace('/[^A-Z]/', '', $t['text']));
+            $cleanAlpha = self::cleanLabel($t['text']);
             
             // Rejet des labels génériques et de la fameuse ligne "Déclinaison"
             if (in_array($cleanAlpha, ['DECLINAISON', 'MENUVEGETARIEN', 'PLATCHAUD', 'GARNITURE', 'PRODUITLAITIER', 'HORSDEUVRE', 'LESGOUTERS', 'DESSERT'])) continue;
@@ -150,8 +125,11 @@ class NativePdfParser {
             if (strlen($textVal) < 3) continue;
 
             // Filtre Vertical : Est-on dans la tranche Plat Chaud ou Garniture ? (Tolérance +/- 5 unités)
-            $inPlat = ($t['y'] <= $yPlatTop + 5 && $t['y'] >= $yPlatBot + 5);
-            $inGar  = ($t['y'] <= $yGarTop + 5 && $t['y'] >= $yGarBot + 5);
+            // Le texte d'une rangée déborde souvent au-dessus de son propre label (lignes
+            // empilées vers le haut), y compris pour le label de la rangée suivante qui
+            // sert de limite basse : on applique donc la même marge des deux côtés.
+            $inPlat = ($t['y'] <= $yPlatTop + 20 && $t['y'] >= $yPlatBot + 20);
+            $inGar  = ($t['y'] <= $yGarTop + 20 && $t['y'] >= $yGarBot + 20);
 
             if ($inPlat || $inGar) {
                 // Filtre Horizontal : Quel est le jour le plus proche ?
@@ -206,21 +184,11 @@ class NativePdfParser {
     }
 
     private static function addText(&$texts, $rawText, $x, $y) {
-        // Décodage de l'octal \123
-        $m = preg_replace_callback('/\\\\([0-7]{1,3})/', function($cb) { return chr(octdec($cb[1])); }, $rawText);
-        
-        // Détection de l'UTF-16BE (Le BOM \xFE\xFF indique que le texte est double encodé)
-        if (str_starts_with($m, "\xFE\xFF")) {
-            $m = mb_convert_encoding(substr($m, 2), 'UTF-8', 'UTF-16BE');
-        } else {
-            // Fallback Latin-1 si pas de BOM
-            $m = mb_convert_encoding($m, 'UTF-8', 'ISO-8859-1');
-        }
-        
-        // Suppression radicale des octets nuls responsables de l'espacement forcé (E s c a l o p e)
-        $m = str_replace("\0", "", $m);
+        // smalot/pdfparser décode déjà correctement les polices Type0/CID + ToUnicode :
+        // il ne reste plus qu'à nettoyer les caractères parasites résiduels.
+        $m = str_replace("\0", "", $rawText);
         $m = trim(preg_replace('/[^\p{L}\p{N}\p{P}\p{Z}\+&\'’\-]/u', '', $m));
-        
+
         if ($m !== '') {
             $texts[] = ['text' => $m, 'x' => $x, 'y' => $y];
         }
