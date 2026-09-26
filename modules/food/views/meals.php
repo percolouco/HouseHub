@@ -257,8 +257,30 @@ window.updateDropzoneState = function(file) {
     }
 };
 
-// Focus Context Bar
+// ============================================================================
+// Focus Context Bar & Gestion dynamique du clavier (Mobile)
+// ============================================================================
 let copyState = { type: null, sourceDate: null, service: null, personIdx: null, sourceElements: [], fullDayName: '' };
+
+// Fonction de calcul pour maintenir la barre au-dessus du clavier virtuel
+const updateToolbarPosition = () => {
+    const toolbar = document.getElementById('contextToolbar');
+    if (toolbar && toolbar.classList.contains('active') && window.visualViewport) {
+        const layoutHeight = document.documentElement.clientHeight;
+        const visualHeight = window.visualViewport.height;
+        const offsetTop = window.visualViewport.offsetTop;
+        
+        // Calcul exact de l'espace masqué par le clavier
+        const bottomOffset = layoutHeight - (visualHeight + offsetTop);
+        toolbar.style.bottom = Math.max(0, bottomOffset) + 'px';
+    }
+};
+
+// Écouteurs pour s'adapter au redimensionnement (ouverture clavier) et au scroll
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateToolbarPosition);
+    window.visualViewport.addEventListener('scroll', updateToolbarPosition);
+}
 
 document.addEventListener('focusin', (e) => {
     if(e.target.classList.contains('js-meal-input')) {
@@ -271,13 +293,20 @@ document.addEventListener('focusin', (e) => {
             fullDayName: ''
         };
         document.getElementById('contextToolbar').classList.add('active');
+        
+        // On déclenche le repositionnement avec un léger délai pour laisser le clavier monter
+        setTimeout(updateToolbarPosition, 150); 
     }
 });
 
 document.addEventListener('focusout', (e) => {
     setTimeout(() => {
         if(document.activeElement && !document.activeElement.classList.contains('js-meal-input')) {
-            document.getElementById('contextToolbar').classList.remove('active');
+            const toolbar = document.getElementById('contextToolbar');
+            if (toolbar) {
+                toolbar.classList.remove('active');
+                toolbar.style.bottom = ''; // On retire le style JS pour redonner le contrôle au CSS (-80px)
+            }
         }
     }, 150);
 });
