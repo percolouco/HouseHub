@@ -167,10 +167,10 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
 
             <div class="pf-form-group">
                 <label class="pf-label"><?= tr('meal_pdf_file') ?></label>
-                <div class="meal-dropzone" onclick="document.getElementById('canteenPdf').click()">
-                    <span class="meal-dropzone-icon">📥</span>
+                <div class="meal-dropzone" id="mealDropzone" onclick="document.getElementById('canteenPdf').click()">
+                    <span class="meal-dropzone-icon" id="mealDropzoneIcon">📥</span>
                     <span id="pdfFileName"><?= tr('meal_drop_pdf') ?></span>
-                    <input type="file" id="canteenPdf" name="pdf_file" accept=".pdf" style="display: none;" required onchange="document.getElementById('pdfFileName').innerText = this.files[0] ? this.files[0].name : '<?= addslashes(tr('meal_drop_pdf')) ?>';">
+                    <input type="file" id="canteenPdf" name="pdf_file" accept=".pdf" style="display: none;" required>
                 </div>
             </div>
             
@@ -184,7 +184,7 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Sauvegarde automatique AJAX à chaque modification
+    // 1. Sauvegarde automatique AJAX à chaque modification
     document.querySelectorAll('.js-meal-input').forEach(input => {
         input.addEventListener('change', async function() {
             const fd = new FormData();
@@ -202,7 +202,60 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // 2. NOUVEAU : Initialisation du Drag & Drop pour l'import PDF
+    const dropzone = document.getElementById('mealDropzone');
+    const fileInput = document.getElementById('canteenPdf');
+    
+    if (dropzone && fileInput) {
+        // Empêcher l'ouverture automatique du fichier par le navigateur
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        // Feedback visuel au survol
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-over'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-over'), false);
+        });
+
+        // Récupération du fichier au lâcher (Drop)
+        dropzone.addEventListener('drop', e => {
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                updateDropzoneState(fileInput.files[0]);
+            }
+        }, false);
+
+        // Récupération au clic classique via l'input
+        fileInput.addEventListener('change', function() {
+            updateDropzoneState(this.files[0]);
+        });
+    }
 });
+
+// NOUVEAU : Fonction utilitaire pour gérer l'état visuel de la Dropzone
+window.updateDropzoneState = function(file) {
+    const dropzone = document.getElementById('mealDropzone');
+    const fileNameDisplay = document.getElementById('pdfFileName');
+    const dropzoneIcon = document.getElementById('mealDropzoneIcon');
+
+    if (file) {
+        fileNameDisplay.innerText = file.name;
+        if (dropzone) dropzone.classList.add('has-file');
+        if (dropzoneIcon) dropzoneIcon.innerText = '✅';
+    } else {
+        fileNameDisplay.innerText = window.I18N['meal_drop_pdf'] || 'Cliquer pour ajouter le PDF';
+        if (dropzone) dropzone.classList.remove('has-file');
+        if (dropzoneIcon) dropzoneIcon.innerText = '📥';
+    }
+};
 
 // Focus Context Bar
 let copyState = { type: null, sourceDate: null, service: null, personIdx: null, sourceElements: [], fullDayName: '' };
@@ -312,7 +365,7 @@ window.executeCopy = async function(targetDate, targetService) {
         const fd = new FormData();
         fd.append('action', 'save_bulk');
         fd.append('updates', JSON.stringify(updates));
-        await pachaFetch('/modules/meals/includes/api/save-meals.php', { method: 'POST', body: fd });
+        await pachaFetch('/modules/food/includes/api/save-meals.php', { method: 'POST', body: fd });
     }
 };
 
@@ -322,7 +375,7 @@ function flashSuccess(input) {
     setTimeout(() => input.style.background = 'transparent', 400);
 }
 
-// NOUVEAU : Fonction Javascript d'Import PDF
+// Fonction Javascript d'Import PDF mise à jour
 window.importPdfMenu = async function(e) {
     e.preventDefault();
     const form = e.target;
@@ -351,7 +404,7 @@ window.importPdfMenu = async function(e) {
         btn.disabled = false;
         btn.innerText = oldText;
         form.reset();
-        document.getElementById('pdfFileName').innerText = window.I18N['meal_drop_pdf'] || 'Cliquer pour ajouter le PDF';
+        updateDropzoneState(null); 
     }
 };
 </script>

@@ -1127,3 +1127,16 @@
   display: block;
   margin-bottom: 12px;
 }
+
+.meal-dropzone.drag-over {
+  border-color: var(--primary);
+  background: var(--bg-soft);
+  color: var(--primary);
+}
+
+.meal-dropzone.has-file {
+  border-color: var(--success);
+  background: var(--alert-success-bg);
+  color: var(--alert-success-text);
+  border-style: solid;
+}
