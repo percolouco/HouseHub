@@ -1033,6 +1033,7 @@ return [
     'cta_food' => 'Mijoter',
     'food_err_no_views' => "Aucune vue n'est activée pour ce module. Modifiez vos paramètres d'espace.",
     'food_err_no_views_desc' => 'Vous avez désactivé toutes les fonctionnalités de ce module. Rendez-vous dans vos paramètres pour les réactiver.',
+    'meal_err_filename' => 'Format de nom de fichier non reconnu. Exemple attendu : "Menus-du-28-septembre-au-4-octobre-2026.pdf".',
     'meal_paste_success' => 'Grille collée avec succès !',
 
 ];

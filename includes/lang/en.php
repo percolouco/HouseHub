@@ -1038,5 +1038,6 @@ return [
     'food_err_no_views' => "No view is enabled for this module. Please check your space settings.",
     'food_err_no_views_desc' => 'You have disabled all features for this module. Please visit your settings to re-enable them.',
     'meal_paste_success' => 'Grid pasted successfully!',
+    'meal_err_filename' => 'Unrecognized file name format. Expected example: "Menus-du-28-septembre-au-4-octobre-2026.pdf".',
 
 ];

@@ -190,14 +190,26 @@ try {
     
     // 1. Extraction robuste de la date depuis le nom de fichier (Menus-du-14-au-20-septembre-2026.pdf)
     $mondayDate = null;
-    if (preg_match('/(\d{1,2})[\s-]+au[\s-]+\d{1,2}[\s-]+([a-zèéû]+)[\s-]+(\d{4})/i', $filename, $m)) {
+    if (preg_match('/(?:du[\s-]+)?(\d{1,2})[\s-]+(?:([a-zèéû]+)[\s-]+)?au[\s-]+\d{1,2}[\s-]+([a-zèéû]+)[\s-]+(\d{4})/i', $filename, $m)) {
         $monthsMap = ['janvier'=>'01','fevrier'=>'02','février'=>'02','mars'=>'03','avril'=>'04','mai'=>'05','juin'=>'06','juillet'=>'07','aout'=>'08','août'=>'08','septembre'=>'09','octobre'=>'10','novembre'=>'11','decembre'=>'12','décembre'=>'12'];
-        $month = $monthsMap[strtolower($m[2])] ?? '09';
-        $mondayDate = $m[3] . '-' . $month . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+        
+        $startMonthRaw = !empty($m[2]) ? strtolower($m[2]) : strtolower($m[3]);
+        $endMonthRaw   = strtolower($m[3]);
+        
+        $startMonthNum = $monthsMap[$startMonthRaw] ?? '09';
+        $endMonthNum   = $monthsMap[$endMonthRaw] ?? '09';
+        
+        $startYear = (int)$m[4];
+        // Règle métier : Bascule d'année (ex: 28 décembre au 3 janvier 2026 -> 2025-12-28)
+        if ($startMonthNum === '12' && $endMonthNum === '01') {
+            $startYear--;
+        }
+        
+        $mondayDate = $startYear . '-' . $startMonthNum . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
     }
 
     if (!$mondayDate) {
-        echo json_encode(['success' => false, 'error' => 'Veuillez nommer le fichier "Menus-du-14-au-20-septembre-2026.pdf".']);
+        echo json_encode(['success' => false, 'error' => tr('meal_err_filename')]);
         exit;
     }
 
