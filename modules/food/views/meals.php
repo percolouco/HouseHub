@@ -407,4 +407,77 @@ window.importPdfMenu = async function(e) {
         updateDropzoneState(null); 
     }
 };
+
+// NOUVEAU : Interception du collage depuis Excel / Google Sheets
+document.addEventListener('paste', async function(e) {
+    // On ne s'active que si on colle dans un textarea de repas
+    if (!e.target.classList.contains('js-meal-input')) return;
+
+    const clipboardData = e.clipboardData || window.clipboardData;
+    const pastedText = clipboardData.getData('text/plain');
+
+    // Si le texte ne contient ni tabulation ni saut de ligne, c'est un collage simple.
+    // On laisse le navigateur faire son comportement par défaut.
+    if (!pastedText.includes('\t') && !pastedText.includes('\n')) return;
+
+    // C'est une grille ! On bloque le comportement par défaut
+    e.preventDefault();
+
+    const rows = pastedText.split(/\r?\n/);
+    const startTd = e.target.closest('td');
+    const startTr = e.target.closest('tr');
+    const startColIndex = Array.from(startTr.children).indexOf(startTd);
+
+    let currentTr = startTr;
+    let updates = [];
+
+    for (let i = 0; i < rows.length; i++) {
+        if (!currentTr) break; // Fin du tableau visuel atteinte
+        
+        // Ignorer la dernière ligne vide souvent générée par les tableurs lors d'une copie
+        if (rows[i].trim() === '' && i === rows.length - 1) continue;
+
+        const cells = rows[i].split('\t');
+        const trChildren = Array.from(currentTr.children);
+
+        for (let j = 0; j < cells.length; j++) {
+            const targetTd = trChildren[startColIndex + j];
+            if (!targetTd) continue; // Fin de la colonne visuelle atteinte
+
+            const targetTextarea = targetTd.querySelector('.js-meal-input');
+            if (targetTextarea) {
+                const val = cells[j].trim();
+                targetTextarea.value = val;
+                
+                // Animation de succès visuel
+                if (typeof flashSuccess === 'function') flashSuccess(targetTextarea);
+                
+                // Préparation pour le Bulk Save
+                updates.push({
+                    plan_date: targetTextarea.dataset.d,
+                    service: targetTextarea.dataset.s,
+                    person_id: targetTextarea.dataset.p,
+                    meal_name: val
+                });
+            }
+        }
+        // Descendre d'une ligne dans le tableau (ex: passer de Midi à Soir, ou de Soir au Midi du lendemain)
+        currentTr = currentTr.nextElementSibling;
+    }
+
+    // Sauvegarde groupée optimisée
+    if (updates.length > 0) {
+        const fd = new FormData();
+        fd.append('action', 'save_bulk');
+        fd.append('updates', JSON.stringify(updates));
+        
+        try {
+            await pachaFetch('/modules/food/includes/api/save-meals.php', { method: 'POST', body: fd });
+            if (window.showToast) showToast(window.I18N['meal_paste_success'] || 'Grille collée avec succès !', 'success');
+        } catch(err) {
+            console.error("Erreur de sauvegarde lors du collage", err);
+            if (window.showToast) showToast(window.I18N['error_occured'], 'error');
+        }
+    }
+});
 </script>
