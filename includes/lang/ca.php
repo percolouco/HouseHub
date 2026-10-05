@@ -1036,4 +1036,9 @@ return [
     'food_err_no_views_desc' => 'Heu desactivat totes les funcions d\'aquest mòdul. Aneu a la configuració per reactivar-les.',
     'meal_paste_success' => 'Graella enganxada amb èxit!',
     'meal_err_filename' => 'Format del nom del fitxer no reconegut. Exemple esperat: "Menus-du-28-septembre-au-4-octobre-2026.pdf".',
+
+    'offline_title'      => 'Mode fora de línia',
+    'offline_heading'    => 'Estàs fora de línia',
+    'offline_message'    => 'L\'aplicació HouseHub no està disponible sense connexió a internet ara mateix.',
+    'offline_retry_btn'  => 'Tornar-ho a intentar',
 ];

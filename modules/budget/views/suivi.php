@@ -238,11 +238,28 @@ $fixedChargesList = []; $incomeList = []; $pending_charges = [];
 // MAPPING DYNAMIQUE DES BUDGETS PRÉVISIONNELS (NOUVELLE LOGIQUE)
 // ============================================================================
 // On exclut "SAVINGS" pour s'aligner à 100% avec le recap.php
-$stmt = $pdo->query("SELECT id, name, amount, type, category, is_estimate, payment_day, mapping_keywords FROM pf_budget_items WHERE category != 'SAVINGS' ORDER BY name ASC");
+$stmt = $pdo->query("SELECT * FROM pf_budget_items WHERE category != 'SAVINGS' ORDER BY name ASC");
 $estimatesList = []; // On prépare la liste pour retenir nos estimations multi-catégories
 
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     $absAmount = abs((float)$item['amount']); 
+    
+    // --- 🚀 INTERCEPTION DYNAMIQUE ---
+    $calcDetails = "";
+    if (isset($item['is_dynamic']) && $item['is_dynamic'] == 1 && !empty($item['dynamic_code'])) {
+        require_once __DIR__ . '/../includes/DynamicBudgetCalculator.php';
+        // Facturation à terme échu : on recule d'un mois par rapport au mois actif du suivi
+        $prevDate = date('Y-m-d', strtotime('-1 month', strtotime($viewMonthDate)));
+        $calcYear = date('Y', strtotime($prevDate));
+        $calcMonth = date('m', strtotime($prevDate));
+
+        $calc = new DynamicBudgetCalculator($pdo, $calcYear, $calcMonth);
+        $estimateData = $calc->getEstimate($item['dynamic_code']);
+        $absAmount = $estimateData['amount'];
+        $calcDetails = $estimateData['details'];
+    }
+    // --------------------------------
+
     $amt = ($item['type'] === 'Annuel') ? $absAmount / 12 : $absAmount;
     $name = trim($item['name']);
     $catCode = $item['category']; 
@@ -280,39 +297,23 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
             }
             if (!$isPaid) {
                 $reste_a_venir_calc += $absAmount;
-                // Ajouté dans le tableau avec un tooltip vide
-                $pending_charges[] = ['name' => $name, 'amount' => $absAmount, 'tooltip' => 'Charge fixe en attente'];
+                // On inclut les détails de l'interception dans le tooltip natif du suivi
+                $tooltip = !empty($calcDetails) ? $calcDetails : 'Charge fixe en attente';
+                $pending_charges[] = ['name' => $name, 'amount' => $absAmount, 'tooltip' => $tooltip];
             }
         }
 
         // 2. C'est une estimation (Variable)
         if ((int)$item['is_estimate'] === 1) {
-            $calcDetails = "";
-
-            // --- 🚀 INTERCEPTION DYNAMIQUE ---
-            if (isset($item['is_dynamic']) && $item['is_dynamic'] == 1 && !empty($item['dynamic_code'])) {
-                require_once __DIR__ . '/../includes/DynamicBudgetCalculator.php';
-                // Facturation à terme échu : on recule d'un mois
-                $prevDate = date('Y-m-d', strtotime('-1 month', strtotime("$viewY-$viewM-01")));
-                $calcYear = date('Y', strtotime($prevDate));
-                $calcMonth = date('m', strtotime($prevDate));
-
-                $calc = new DynamicBudgetCalculator($pdo, $calcYear, $calcMonth);
-                $estimateData = $calc->getEstimate($item['dynamic_code']);
-                $amt = $estimateData['amount'];
-                $calcDetails = $estimateData['details'];
-            }
-            // --------------------------------
-
             $estimatesList[] = [
                 'name' => $name,
                 'amount' => $amt,
                 'categories' => !empty($catCode) ? array_map('trim', explode(',', $catCode)) : [],
-                'details' => $calcDetails 
+                'calc_details' => $calcDetails // Transmission pour le second bloc
             ];
         }
+
         // 3. Attribution du budget aux jauges visuelles de la page
-        // Pour ne pas tout casser, on donne tout le plafond visuel à la 1ère catégorie de la liste
         if (!empty($catCode)) {
             $catCodesArray = array_map('trim', explode(',', $catCode));
             $firstCat = $catCodesArray[0];
@@ -369,9 +370,11 @@ foreach ($estimatesList as $est) {
     $spentForEstimate = 0;
     $detailsHover = [];
     
+    // On additionne les dépenses de toutes les catégories liées à cette estimation
     foreach ($est['categories'] as $cCode) {
         if (!empty($cCode) && isset($totals[$cCode])) {
             $spentForEstimate += $totals[$cCode];
+            // On prépare le détail pour la petite bulle d'info (hover)
             if ($totals[$cCode] > 0 && isset($categoriesConfig[$cCode])) {
                 $detailsHover[] = strip_tags($categoriesConfig[$cCode]['label']) . " : " . number_format($totals[$cCode], 0) . "€";
             }
@@ -381,13 +384,10 @@ foreach ($estimatesList as $est) {
     $rem = max(0, $est['amount'] - $spentForEstimate);
     if ($rem > 0) {
         $reste_a_venir_calc += $rem;
-        $tooltip = !empty($detailsHover) ? implode(' | ', $detailsHover) : 'Aucune dépense pour le moment';
+        // On fusionne les détails du calcul dynamique (s'il y en a) avec les détails des dépenses réelles
+        $baseTooltip = !empty($detailsHover) ? implode(' | ', $detailsHover) : 'Aucune dépense pour le moment';
+        $tooltip = !empty($est['calc_details']) ? $est['calc_details'] . " | " . $baseTooltip : $baseTooltip;
         
-        // --- INJECTION DU DÉTAIL DYNAMIQUE ---
-        if (!empty($est['details'])) {
-            $tooltip .= "\n\n📊 Détail du calcul :\n" . $est['details'];
-        }
-
         $pending_charges[] = [
             'name' => 'Reste ' . $est['name'], 
             'amount' => $rem,
