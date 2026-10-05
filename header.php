@@ -23,6 +23,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title><?= htmlspecialchars($pageTitle) ?></title>
+  <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/global.css">
@@ -122,19 +123,13 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   <main class="pf-main<?= ($mainClass ?? '') ? ' '.htmlspecialchars($mainClass) : '' ?>">
 
   <script>
-    // CSRF avant I18N : le parseur HTML coupe le script dès la séquence de fin de balise « script » (même dans un commentaire JS).
+    // CSRF avant I18N
     window.CSRF_TOKEN = "<?= htmlspecialchars(function_exists('csrf_token') ? csrf_token() : '', ENT_QUOTES, 'UTF-8') ?>";
 
-    /**
-     * Pont d'Internationalisation et Configuration
-     */
     window.I18N = <?php echo json_encode($current_translations_array ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>;
 
-    // ✅ Injection sécurisée
     window.CONFIG = {
-        // Liste complète des profils de la famille (Membres, Nounou, Enfants)
         PEOPLE: <?= isset($familyPeople) ? json_encode($familyPeople) : '[]' ?>,
-        // ID du user global connecté (pour savoir "qui" clique)
         CURRENT_USER_ID: <?= isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 'null' ?>,
         CURRENCY: '<?php echo defined('CURRENCY') ? CURRENCY : "€"; ?>',
         ZONE_SCOLAIRE: '<?php echo defined('ZONE_SCOLAIRE') ? ZONE_SCOLAIRE : "C"; ?>'
@@ -144,14 +139,20 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         return window.I18N[key] || key;
     }
 
-    // Thème clair/sombre — état visuel géré entièrement par CSS via [data-theme="dark"]
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => {
+                console.error('Service Worker registration failed:', err);
+            });
+        });
+    }
+
     function toggleTheme(){
       const dark=document.documentElement.getAttribute('data-theme')==='dark';
       document.documentElement.setAttribute('data-theme',dark?'light':'dark');
       localStorage.setItem('hh-theme',dark?'light':'dark');
     }
 
-    // Gestion du menu mobile (Off-Canvas Sidebar)
     <?php if (isset($_SESSION['user'])): ?>
     document.addEventListener('DOMContentLoaded', () => {
         const burgerBtn = document.querySelector('.pf-burger-btn');
@@ -174,14 +175,13 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         if(burgerBtn && mobileMenu && overlay && closeBtn) {
             burgerBtn.addEventListener('click', openMenu);
             closeBtn.addEventListener('click', closeMenu);
-            // Fermer le menu si on clique en dehors (sur l'overlay sombre)
             overlay.addEventListener('click', closeMenu);
         }
     });
     <?php endif; ?>
 
     /**
-     * pachaFetch : Utilitaire de requête robuste
+     * pachaFetch : Utilitaire de requête robuste avec gestion Offline Cross-Browser
      */
     async function pachaFetch(url, options = {}) {
         const finalUrl = url.startsWith('/') ? url.substring(1) : url;
@@ -200,53 +200,133 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
             try {
                 return JSON.parse(rawText);
             } catch (jsonErr) {
-                console.error("Réponse corrompue (HTML reçu au lieu de JSON) :", rawText);
+                console.error("Réponse corrompue (HTML) :", rawText);
                 throw new Error("Erreur serveur : format JSON invalide.");
             }
         } catch (err) {
+            // Si hors ligne ET modification (POST/PUT/DELETE)
+            if (!navigator.onLine && options.method && options.method.toUpperCase() !== 'GET') {
+                await enqueueOfflineAction(finalUrl, options);
+                
+                // Chrome/Android : Déclenche le Background Sync
+                if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.sync.register('househub-sync').catch(() => {});
+                    });
+                }
+
+                showToast("Mémorisé hors ligne 📡", "success");
+                return { success: true, offline: true };
+            }
+
             console.error(`Erreur pachaFetch [${finalUrl}] :`, err);
             throw err;
         }
     }
 
     /**
- * UI Utility : Toasts (Notifications)
- */
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `pf-toast pf-toast--${type}`;
-    toast.innerHTML = message;
-    document.body.appendChild(toast);
-    
-    // Animation et suppression
-    setTimeout(() => toast.classList.add('is-visible'), 100);
-    setTimeout(() => {
-        toast.classList.remove('is-visible');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+     * Utilitaire PWA : Ajout à la file d'attente (IndexedDB)
+     */
+    function enqueueOfflineAction(url, options) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('househub-offline-sync', 1);
+            request.onupgradeneeded = event => {
+                event.target.result.createObjectStore('sync-queue', { autoIncrement: true });
+            };
+            request.onsuccess = event => {
+                const db = event.target.result;
+                const tx = db.transaction('sync-queue', 'readwrite');
+                const store = tx.objectStore('sync-queue');
+                
+                let bodyData = options.body;
+                if (bodyData instanceof FormData) {
+                    bodyData = new URLSearchParams(bodyData).toString();
+                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                }
 
-/**
- * UI Utility : Confirmation stylisée (Remplace confirm())
- */
-async function pachaConfirm(title, message) {
-    return new Promise((resolve) => {
-        const modal = document.createElement('div');
-        modal.className = 'pf-modal open';
-        modal.innerHTML = `
-            <div class="pf-modal-content" style="max-width: 400px; align-self: center;">
-                <h3 style="margin-top:0;">${title}</h3>
-                <p style="color:var(--text-muted);">${message}</p>
-                <div class="modal-footer">
-                    <button class="pf-btn btn-secondary" id="confirm-cancel">${tr('btn_cancel')}</button>
-                    <button class="pf-btn" id="confirm-ok" style="background:var(--danger);">${tr('btn_delete')}</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        
-        document.getElementById('confirm-cancel').onclick = () => { modal.remove(); resolve(false); };
-        document.getElementById('confirm-ok').onclick = () => { modal.remove(); resolve(true); };
+                store.add({
+                    url: url,
+                    method: options.method,
+                    headers: options.headers,
+                    body: bodyData,
+                    timestamp: Date.now()
+                });
+                resolve();
+            };
+            request.onerror = event => reject(event.target.error);
+        });
+    }
+
+    /**
+     * Fallback pour Firefox et iOS Safari (Dépilement manuel au retour réseau)
+     */
+    window.addEventListener('online', () => {
+        const request = indexedDB.open('househub-offline-sync', 1);
+        request.onsuccess = event => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('sync-queue')) return;
+            
+            const tx = db.transaction('sync-queue', 'readonly');
+            const store = tx.objectStore('sync-queue');
+            const getAll = store.getAll();
+            
+            getAll.onsuccess = async () => {
+                const actions = getAll.result;
+                if (actions && actions.length > 0) {
+                    showToast("Synchronisation des données... 🔄", "success");
+                    for (const action of actions) {
+                        try {
+                            await fetch(action.url, {
+                                method: action.method,
+                                headers: action.headers,
+                                body: action.body
+                            });
+                            const delTx = db.transaction('sync-queue', 'readwrite');
+                            delTx.objectStore('sync-queue').delete(action.id);
+                        } catch (e) {
+                            console.error("Échec de la synchro", e);
+                            break; 
+                        }
+                    }
+                    showToast("Synchronisation terminée ! ✅", "success");
+                    // Rafraîchissement léger recommandé après synchro de masse
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+            };
+        };
     });
-}
-</script>
+
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `pf-toast pf-toast--${type}`;
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.classList.add('is-visible'), 100);
+        setTimeout(() => {
+            toast.classList.remove('is-visible');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    async function pachaConfirm(title, message) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'pf-modal open';
+            modal.innerHTML = `
+                <div class="pf-modal-content" style="max-width: 400px; align-self: center;">
+                    <h3 style="margin-top:0;">${title}</h3>
+                    <p style="color:var(--text-muted);">${message}</p>
+                    <div class="modal-footer">
+                        <button class="pf-btn btn-secondary" id="confirm-cancel">${tr('btn_cancel')}</button>
+                        <button class="pf-btn" id="confirm-ok" style="background:var(--danger);">${tr('btn_delete')}</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('confirm-cancel').onclick = () => { modal.remove(); resolve(false); };
+            document.getElementById('confirm-ok').onclick = () => { modal.remove(); resolve(true); };
+        });
+    }
+  </script>

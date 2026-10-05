@@ -1036,4 +1036,9 @@ return [
     'meal_err_filename' => 'Format de nom de fichier non reconnu. Exemple attendu : "Menus-du-28-septembre-au-4-octobre-2026.pdf".',
     'meal_paste_success' => 'Grille collée avec succès !',
 
+    'offline_title'      => 'Mode hors ligne',
+    'offline_heading'    => 'Vous êtes hors ligne',
+    'offline_message'    => 'L\'application HouseHub n\'est pas joignable sans connexion internet pour le moment.',
+    'offline_retry_btn'  => 'Réessayer de se connecter',
+
 ];

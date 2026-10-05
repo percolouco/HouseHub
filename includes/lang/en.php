@@ -1040,4 +1040,9 @@ return [
     'meal_paste_success' => 'Grid pasted successfully!',
     'meal_err_filename' => 'Unrecognized file name format. Expected example: "Menus-du-28-septembre-au-4-octobre-2026.pdf".',
 
+    'offline_title'      => 'Offline Mode',
+    'offline_heading'    => 'You are offline',
+    'offline_message'    => 'The HouseHub application cannot be reached without an internet connection at the moment.',
+    'offline_retry_btn'  => 'Retry connection',
+
 ];
