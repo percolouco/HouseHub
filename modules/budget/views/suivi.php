@@ -120,6 +120,10 @@ $importError = null;
 
 if (isset($_FILES['csv_file'])) {
     if ($_FILES['csv_file']['error'] == 0) {
+        
+        // 🔥 LE FIX VITAL POUR LES CSV PROVENANT D'iOS/MAC
+        ini_set('auto_detect_line_endings', TRUE); 
+        
         $file = $_FILES['csv_file']['tmp_name'];
         $handle = fopen($file, "r");
         
@@ -153,6 +157,9 @@ if (isset($_FILES['csv_file'])) {
         fgetcsv($handle, 1000, $delimiter, "\"", "\\"); // Skip header
         
         while (($data = fgetcsv($handle, 1000, $delimiter, "\"", "\\")) !== FALSE) {
+            // Si la ligne est vide on passe
+            if (empty(array_filter($data))) continue;
+
             $amount = 0; 
             $isCredit = 0;
             
@@ -184,7 +191,7 @@ if (isset($_FILES['csv_file'])) {
             $dateSql = date('Y-m-d');
             if ($dateFormat === 'd/m/Y') {
                 $dateParts = explode('/', $rawDate); 
-                if (count($dateParts) == 3) {
+                if (count($dateParts) >= 3) {
                     $dateSql = $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0];
                 }
             } else {
@@ -192,7 +199,8 @@ if (isset($_FILES['csv_file'])) {
                 if ($ts) $dateSql = date('Y-m-d', $ts);
             }
 
-            $label = trim($data[$colLabel] ?? '');
+            // On prend la colonne Label paramétrée, ou la 2ème en secours
+            $label = trim($data[$colLabel] ?? '') ?: trim($data[2] ?? '');
             $refCSV = trim($data[$colRef] ?? '');
             $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
             $isDuplicate = in_array($uniqueKey, $existingRefs);
@@ -212,7 +220,7 @@ if (isset($_FILES['csv_file'])) {
         fclose($handle);
         $showPreview = true;
     } else {
-        $importError = "Erreur lors de l'upload du fichier (Code d'erreur PHP : " . $_FILES['csv_file']['error'] . "). Le fichier est peut-être trop volumineux.";
+        $importError = "Erreur lors de l'upload du fichier (Code d'erreur PHP : " . $_FILES['csv_file']['error'] . "). Vérifiez le format ou la taille du fichier.";
     }
 }
 
@@ -811,7 +819,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
         <?php endif; ?>
 
         <?php if (!$showPreview): ?>
-            <!-- L'action sécurise le fait qu'on poste bien sur le mois et la vue actuels -->
+            <!-- L'action sécurise le fait qu'on poste bien sur le mois et la vue actuels même sur mobile -->
             <form method="POST" enctype="multipart/form-data" action="?tab=suivi&m=<?= htmlspecialchars($viewM) ?>&y=<?= htmlspecialchars($viewY) ?>">
                 <div class="import-dropzone">
                     <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
