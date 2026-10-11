@@ -116,50 +116,104 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_snapshot') {
 // ============================================================================
 $csvData = [];
 $showPreview = false;
+$importError = null;
 
-if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] == 0) {
-    $file = $_FILES['csv_file']['tmp_name'];
-    $handle = fopen($file, "r");
-    
-    $rules = []; 
-    try { 
-        $stmtRules = $pdo->query("SELECT keyword, category, budget_item_id FROM pf_import_rules");
-        while ($r = $stmtRules->fetch(PDO::FETCH_ASSOC)) {
-            $rules[$r['keyword']] = ['cat' => $r['category'], 'budget_item_id' => $r['budget_item_id']];
-        }
-    } catch(Exception $e){}
-    
-    $existingRefs = []; try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
-    fgetcsv($handle, 1000, ";", "\"", "\\"); 
-    
-    while (($data = fgetcsv($handle, 1000, ";", "\"", "\\")) !== FALSE) {
-        $rawDebit = $data[8] ?? ''; $rawCredit = $data[9] ?? ''; 
-        $amount = 0; $isCredit = 0;
-        if (!empty(trim($rawCredit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawCredit))); $isCredit = 1; }
-        elseif (!empty(trim($rawDebit))) { $amount = abs((float)str_replace(',', '.', str_replace(' ', '', $rawDebit))); }
-        else continue; 
+if (isset($_FILES['csv_file'])) {
+    if ($_FILES['csv_file']['error'] == 0) {
+        $file = $_FILES['csv_file']['tmp_name'];
+        $handle = fopen($file, "r");
+        
+        // 1. Récupération dynamique du mapping configuré dans les paramètres
+        $stmtMap = $pdo->query("SELECT csv_mapping FROM pf_foyer_settings LIMIT 1");
+        $csvMapRaw = $stmtMap->fetchColumn();
+        $mapping = $csvMapRaw ? json_decode($csvMapRaw, true) : null;
+        
+        $delimiter  = $mapping['delimiter'] ?? ';';
+        $colDate    = isset($mapping['col_date']) ? (int)$mapping['col_date'] : 0;
+        $colLabel   = isset($mapping['col_label']) ? (int)$mapping['col_label'] : 1;
+        $amountType = $mapping['amount_type'] ?? 'split';
+        $colDebit   = isset($mapping['col_debit']) ? (int)$mapping['col_debit'] : 8;
+        $colCredit  = isset($mapping['col_credit']) ? (int)$mapping['col_credit'] : 9;
+        $colRef     = isset($mapping['col_ref']) ? (int)$mapping['col_ref'] : 3;
+        $dateFormat = $mapping['date_format'] ?? 'd/m/Y';
+        
+        $rules = []; 
+        try { 
+            $stmtRules = $pdo->query("SELECT keyword, category, budget_item_id FROM pf_import_rules");
+            while ($r = $stmtRules->fetch(PDO::FETCH_ASSOC)) {
+                $rules[$r['keyword']] = ['cat' => $r['category'], 'budget_item_id' => $r['budget_item_id']];
+            }
+        } catch(Exception $e){}
+        
+        $existingRefs = []; 
+        try { 
+            $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); 
+        } catch(Exception $e){}
+        
+        fgetcsv($handle, 1000, $delimiter, "\"", "\\"); // Skip header
+        
+        while (($data = fgetcsv($handle, 1000, $delimiter, "\"", "\\")) !== FALSE) {
+            $amount = 0; 
+            $isCredit = 0;
+            
+            // 2. Traitement dynamique du montant (Une seule colonne ou Débit/Crédit séparés)
+            if ($amountType === 'single') {
+                $val = $data[$colDebit] ?? ''; 
+                if (!empty(trim($val))) {
+                    $floatVal = (float)str_replace([' ', ','], ['', '.'], $val);
+                    $amount = abs($floatVal);
+                    $isCredit = $floatVal > 0 ? 1 : 0;
+                } else {
+                    continue;
+                }
+            } else {
+                $rawDebit = $data[$colDebit] ?? ''; 
+                $rawCredit = $data[$colCredit] ?? ''; 
+                if (!empty(trim($rawCredit))) { 
+                    $amount = abs((float)str_replace([' ', ','], ['', '.'], $rawCredit)); 
+                    $isCredit = 1; 
+                } elseif (!empty(trim($rawDebit))) { 
+                    $amount = abs((float)str_replace([' ', ','], ['', '.'], $rawDebit)); 
+                } else {
+                    continue; 
+                }
+            }
 
-        $dateParts = explode('/', $data[0]); 
-        $dateSql = (count($dateParts) == 3) ? $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0] : date('Y-m-d');
-        $label = trim($data[1]) ?: trim($data[2]);
-        $refCSV = trim($data[3]);
-        $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
-        $isDuplicate = in_array($uniqueKey, $existingRefs);
-        
-        $suggestedCat = '';
-        $suggestedItemId = null;
-        foreach ($rules as $kw => $ruleData) { 
-            if (stripos($label, $kw) !== false) { 
-                $suggestedCat = $ruleData['cat']; 
-                $suggestedItemId = $ruleData['budget_item_id'];
-                break; 
-            } 
+            // 3. Traitement dynamique de la date
+            $rawDate = $data[$colDate] ?? '';
+            $dateSql = date('Y-m-d');
+            if ($dateFormat === 'd/m/Y') {
+                $dateParts = explode('/', $rawDate); 
+                if (count($dateParts) == 3) {
+                    $dateSql = $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0];
+                }
+            } else {
+                $ts = strtotime($rawDate);
+                if ($ts) $dateSql = date('Y-m-d', $ts);
+            }
+
+            $label = trim($data[$colLabel] ?? '');
+            $refCSV = trim($data[$colRef] ?? '');
+            $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
+            $isDuplicate = in_array($uniqueKey, $existingRefs);
+            
+            $suggestedCat = '';
+            $suggestedItemId = null;
+            foreach ($rules as $kw => $ruleData) { 
+                if (stripos($label, $kw) !== false) { 
+                    $suggestedCat = $ruleData['cat']; 
+                    $suggestedItemId = $ruleData['budget_item_id'];
+                    break; 
+                } 
+            }
+            
+            $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'suggested_item_id'=>$suggestedItemId, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
         }
-        
-        $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'suggested_item_id'=>$suggestedItemId, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
+        fclose($handle);
+        $showPreview = true;
+    } else {
+        $importError = "Erreur lors de l'upload du fichier (Code d'erreur PHP : " . $_FILES['csv_file']['error'] . "). Le fichier est peut-être trop volumineux.";
     }
-    fclose($handle);
-    $showPreview = true;
 }
 
 // ============================================================================
@@ -750,8 +804,15 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
 
+        <?php if (!empty($importError)): ?>
+            <div class="pf-alert pf-alert--error" style="margin-bottom: 15px;">
+                <?= htmlspecialchars($importError) ?>
+            </div>
+        <?php endif; ?>
+
         <?php if (!$showPreview): ?>
-            <form method="POST" enctype="multipart/form-data">
+            <!-- L'action sécurise le fait qu'on poste bien sur le mois et la vue actuels -->
+            <form method="POST" enctype="multipart/form-data" action="?tab=suivi&m=<?= htmlspecialchars($viewM) ?>&y=<?= htmlspecialchars($viewY) ?>">
                 <div class="import-dropzone">
                     <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
                     <label class="pf-label"><?= tr('bud_csv_file') ?></label>
@@ -763,7 +824,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                 </div>
             </form>
         <?php else: ?>
-            <form method="POST" id="formMapping">
+            <form method="POST" id="formMapping" action="?tab=suivi&m=<?= htmlspecialchars($viewM) ?>&y=<?= htmlspecialchars($viewY) ?>">
                 <input type="hidden" name="action" value="save_import">
                 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
