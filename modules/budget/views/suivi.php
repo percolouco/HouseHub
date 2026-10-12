@@ -121,10 +121,14 @@ $importError = null;
 if (isset($_FILES['csv_file'])) {
     if ($_FILES['csv_file']['error'] == 0) {
         
-        // 🔥 LE FIX VITAL POUR LES CSV PROVENANT D'iOS/MAC
-        ini_set('auto_detect_line_endings', TRUE); 
-        
         $file = $_FILES['csv_file']['tmp_name'];
+        
+        // 🔥 FIX INDESTRUCTIBLE PHP 8.3+ POUR LES FINS DE LIGNE iPHONE / MAC
+        // On normalise brutalement tous les types de sauts de ligne en \n
+        $fileContent = file_get_contents($file);
+        $fileContent = preg_replace("/\r\n|\r|\n/", "\n", $fileContent);
+        file_put_contents($file, $fileContent);
+
         $handle = fopen($file, "r");
         
         // 1. Récupération dynamique du mapping configuré dans les paramètres
@@ -163,7 +167,7 @@ if (isset($_FILES['csv_file'])) {
             $amount = 0; 
             $isCredit = 0;
             
-            // 2. Traitement dynamique du montant (Une seule colonne ou Débit/Crédit séparés)
+            // 2. Traitement dynamique du montant
             if ($amountType === 'single') {
                 $val = $data[$colDebit] ?? ''; 
                 if (!empty(trim($val))) {
@@ -220,7 +224,8 @@ if (isset($_FILES['csv_file'])) {
         fclose($handle);
         $showPreview = true;
     } else {
-        $importError = "Erreur lors de l'upload du fichier (Code d'erreur PHP : " . $_FILES['csv_file']['error'] . "). Vérifiez le format ou la taille du fichier.";
+        $importError = "Échec d'upload iOS/Serveur (Code : " . $_FILES['csv_file']['error'] . "). Si le fichier vient d'iCloud, vérifiez qu'il est bien téléchargé localement sur le téléphone.";
+        $showPreview = true; // 
     }
 }
 
