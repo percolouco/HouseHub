@@ -1,4 +1,4 @@
-const CACHE_NAME = "househub-static-v3";
+const CACHE_NAME = "househub-static-v4";
 const API_CACHE_NAME = "househub-api-v1";
 const ASSETS_TO_CACHE = [
   "/offline.php",
@@ -88,6 +88,11 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  // Les requêtes non-GET (formulaires, uploads de fichiers type import CSV) ne doivent
+  // jamais passer par le service worker : sur iOS (WebKit / Firefox iOS), refaire un fetch()
+  // d'une navigation POST multipart perd le fichier, et la page revient sans rien.
+  if (event.request.method !== "GET") return;
+
   const requestUrl = new URL(event.request.url);
 
   if (
