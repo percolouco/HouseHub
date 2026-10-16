@@ -60,7 +60,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'reopen_month') {
 if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
     $count = 0;
     $stmtExp = $pdo->prepare("INSERT INTO pf_expenses (date_exp, gestion_month, category, label, amount, import_ref, budget_item_id, holiday_id, salary_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmtRule = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category, budget_item_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE category = VALUES(category), budget_item_id = VALUES(budget_item_id)");
 
     if (isset($_POST['lines']) && is_array($_POST['lines'])) {
         foreach ($_POST['lines'] as $line) {
@@ -91,7 +90,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'save_import') {
 
                 try {
                     $stmtExp->execute([$dateToSave, $gestionMonthLine, $cat, $line['label'], $finalAmount, $line['ref'], $budgetItemId, $holidayId, $salaryId]);
-                    $stmtRule->execute([$line['label'], $cat, $budgetItemId]);
                     $count++;
                 } catch (Exception $e) { continue; }
             }
@@ -123,15 +121,13 @@ if (isset($_FILES['csv_file'])) {
         
         $file = $_FILES['csv_file']['tmp_name'];
         
-        // 🔥 FIX INDESTRUCTIBLE PHP 8.3+ POUR LES FINS DE LIGNE iPHONE / MAC
-        // On normalise brutalement tous les types de sauts de ligne en \n
+        // Fix fins de ligne Mac/iOS
         $fileContent = file_get_contents($file);
         $fileContent = preg_replace("/\r\n|\r|\n/", "\n", $fileContent);
         file_put_contents($file, $fileContent);
 
         $handle = fopen($file, "r");
         
-        // 1. Récupération dynamique du mapping configuré dans les paramètres
         $stmtMap = $pdo->query("SELECT csv_mapping FROM pf_foyer_settings LIMIT 1");
         $csvMapRaw = $stmtMap->fetchColumn();
         $mapping = $csvMapRaw ? json_decode($csvMapRaw, true) : null;
@@ -145,74 +141,66 @@ if (isset($_FILES['csv_file'])) {
         $colRef     = isset($mapping['col_ref']) ? (int)$mapping['col_ref'] : 3;
         $dateFormat = $mapping['date_format'] ?? 'd/m/Y';
         
+        // 🔥 CHARGEMENT INTELLIGENT DES RÈGLES (Priorité au montant !)
         $rules = []; 
         try { 
-            $stmtRules = $pdo->query("SELECT keyword, category, budget_item_id FROM pf_import_rules");
+            $stmtRules = $pdo->query("SELECT keyword, category, budget_item_id, amount FROM pf_import_rules ORDER BY amount DESC, keyword ASC");
             while ($r = $stmtRules->fetch(PDO::FETCH_ASSOC)) {
-                $rules[$r['keyword']] = ['cat' => $r['category'], 'budget_item_id' => $r['budget_item_id']];
+                $rules[] = [
+                    'keyword' => $r['keyword'],
+                    'cat' => $r['category'], 
+                    'budget_item_id' => $r['budget_item_id'],
+                    'amount' => $r['amount']
+                ];
             }
         } catch(Exception $e){}
         
         $existingRefs = []; 
-        try { 
-            $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); 
-        } catch(Exception $e){}
+        try { $existingRefs = $pdo->query("SELECT import_ref FROM pf_expenses WHERE import_ref IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN); } catch(Exception $e){}
         
         fgetcsv($handle, 1000, $delimiter, "\"", "\\"); // Skip header
         
         while (($data = fgetcsv($handle, 1000, $delimiter, "\"", "\\")) !== FALSE) {
-            // Si la ligne est vide on passe
             if (empty(array_filter($data))) continue;
 
-            $amount = 0; 
-            $isCredit = 0;
-            
-            // 2. Traitement dynamique du montant
+            $amount = 0; $isCredit = 0;
             if ($amountType === 'single') {
                 $val = $data[$colDebit] ?? ''; 
                 if (!empty(trim($val))) {
                     $floatVal = (float)str_replace([' ', ','], ['', '.'], $val);
                     $amount = abs($floatVal);
                     $isCredit = $floatVal > 0 ? 1 : 0;
-                } else {
-                    continue;
-                }
+                } else { continue; }
             } else {
-                $rawDebit = $data[$colDebit] ?? ''; 
-                $rawCredit = $data[$colCredit] ?? ''; 
-                if (!empty(trim($rawCredit))) { 
-                    $amount = abs((float)str_replace([' ', ','], ['', '.'], $rawCredit)); 
-                    $isCredit = 1; 
-                } elseif (!empty(trim($rawDebit))) { 
-                    $amount = abs((float)str_replace([' ', ','], ['', '.'], $rawDebit)); 
-                } else {
-                    continue; 
-                }
+                $rawDebit = $data[$colDebit] ?? ''; $rawCredit = $data[$colCredit] ?? ''; 
+                if (!empty(trim($rawCredit))) { $amount = abs((float)str_replace([' ', ','], ['', '.'], $rawCredit)); $isCredit = 1; }
+                elseif (!empty(trim($rawDebit))) { $amount = abs((float)str_replace([' ', ','], ['', '.'], $rawDebit)); }
+                else { continue; }
             }
 
-            // 3. Traitement dynamique de la date
             $rawDate = $data[$colDate] ?? '';
             $dateSql = date('Y-m-d');
             if ($dateFormat === 'd/m/Y') {
                 $dateParts = explode('/', $rawDate); 
-                if (count($dateParts) >= 3) {
-                    $dateSql = $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0];
-                }
+                if (count($dateParts) >= 3) $dateSql = $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0];
             } else {
                 $ts = strtotime($rawDate);
                 if ($ts) $dateSql = date('Y-m-d', $ts);
             }
 
-            // On prend la colonne Label paramétrée, ou la 2ème en secours
             $label = trim($data[$colLabel] ?? '') ?: trim($data[2] ?? '');
             $refCSV = trim($data[$colRef] ?? '');
             $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
             $isDuplicate = in_array($uniqueKey, $existingRefs);
             
+            // 🔥 MOTEUR DE MATCHING : Mot-clé + Montant strict
             $suggestedCat = '';
             $suggestedItemId = null;
-            foreach ($rules as $kw => $ruleData) { 
-                if (stripos($label, $kw) !== false) { 
+            foreach ($rules as $ruleData) { 
+                if (stripos($label, $ruleData['keyword']) !== false) { 
+                    if (!empty($ruleData['amount']) && abs($amount) != abs((float)$ruleData['amount'])) {
+                        continue; // Montant exigé par la règle mais non respecté
+                    }
                     $suggestedCat = $ruleData['cat']; 
                     $suggestedItemId = $ruleData['budget_item_id'];
                     break; 
@@ -224,10 +212,11 @@ if (isset($_FILES['csv_file'])) {
         fclose($handle);
         $showPreview = true;
     } else {
-        $importError = "Échec d'upload iOS/Serveur (Code : " . $_FILES['csv_file']['error'] . "). Si le fichier vient d'iCloud, vérifiez qu'il est bien téléchargé localement sur le téléphone.";
-        $showPreview = true; // 
+        $importError = "Échec d'upload (Code : " . $_FILES['csv_file']['error'] . ").";
+        $showPreview = true;
     }
 }
+
 
 // ============================================================================
 // 3. RECUPERATION DES DONNEES ET CALCULS (100% DYNAMIQUE)
@@ -622,41 +611,43 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
         }
         ?>
 
-        <div class="bud-scale-wrapper">
-        <div class="bud-scale-track">
-            <?php if ($posZero > 0): ?>
-                <div class="bud-scale-zero" style="width: <?= $posZero ?>%;"></div>
-            <?php endif; ?>
-            
-            <div class="bud-scale-bar" style="left: <?= $leftActuel ?>%; width: <?= $widthActuel ?>%; border-radius: <?= $solde_actuel >= 0 ? '0 12px 12px 0' : '12px' ?>;"></div>
-            
-            <?php if ($solde_theorique < 0): ?>
-                <div class="bud-scale-bar--danger" style="left: <?= $leftDanger ?>%; width: <?= $widthDanger ?>%;"></div>
-            <?php endif; ?>
-        </div>
-
-        <div class="bud-scale-marker bud-scale-marker--zero" style="left: <?= $posZero ?>%;"></div>
-        <div class="bud-scale-label bud-scale-label--zero" style="left: <?= $posZero ?>%;">0 €</div>
-
-        <div class="bud-scale-marker bud-scale-marker--actual" style="left: <?= $posActuel ?>%;"></div>
-        <div class="bud-scale-label bud-scale-label--actual" style="left: <?= $posActuel ?>%;"><?= tr('bud_bar_actual') ?? 'Actuel' ?></div>
-
-        <?php $colorTheo = $solde_theorique >= 0 ? 'var(--primary)' : 'var(--danger)'; ?>
-        <div class="bud-scale-marker bud-scale-marker--theo" style="left: <?= $posTheorique ?>%; background: <?= $colorTheo ?>;"></div>
-        <div class="bud-scale-label bud-scale-label--theo" style="left: <?= $posTheorique ?>%; color: <?= $colorTheo ?>;"><?= tr('bud_bar_theoretical') ?? 'Théorique' ?></div>
-
         <?php 
-        $overlapMax = abs($posMax - $posActuel) < 35; 
-        $topMaxText = $overlapMax ? '-60px' : '-35px';
-        $heightMaxLine = $overlapMax ? '65px' : '40px';
-        $topMaxLine = $overlapMax ? '-40px' : '-15px';
+        // Jauge "Layered Glow" avec gestion dynamique des couleurs
+        $colorTheo = $solde_theorique >= 0 ? 'var(--primary)' : 'var(--danger)'; 
+        $bgTheoSoft = $solde_theorique >= 0 ? 'var(--bg-soft)' : 'var(--bg-danger-soft)';
         ?>
-        <div class="bud-scale-marker bud-scale-marker--max" style="left: <?= $posMax ?>%; top: <?= $topMaxLine ?>; height: <?= $heightMaxLine ?>;"></div>
-        
-        <div class="bud-scale-label bud-scale-label--max" style="left: <?= $posMax ?>%; top: <?= $topMaxText ?>; transform: translateX(calc(-100% + 10px));" title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">
-            <?= tr('bud_bar_max_cap') ?? 'Capacité Max' ?> : <?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
+        <div class="bud-gauge-wrapper">
+            <div class="bud-gauge-track">
+                <!-- Zone Négative (Découvert) -->
+                <?php if ($posZero > 0): ?>
+                    <div class="bud-gauge-neg" style="width: <?= $posZero ?>%;"></div>
+                <?php endif; ?>
+
+                <!-- Remplissage Actuel -->
+                <div class="bud-gauge-pos" style="left: <?= $leftActuel ?>%; width: <?= $widthActuel ?>%;">
+                    <div class="bud-gauge-fill"></div>
+                </div>
+
+                <!-- Marqueur Zéro -->
+                <div class="bud-gauge-marker-zero" style="left: <?= $posZero ?>%;"></div>
+
+                <!-- Marqueur Théorique (Halo) -->
+                <div class="bud-gauge-marker-theo" style="left: <?= $posTheorique ?>%; background: <?= $colorTheo ?>; box-shadow: 0 0 12px <?= $colorTheo ?>;"></div>
+            </div>
+
+            <div class="bud-gauge-labels">
+                <div class="bud-label-theo" style="left: <?= $posTheorique ?>%; color: <?= $colorTheo ?>; background: <?= $bgTheoSoft ?>;">
+                    <span class="lbl-desktop"><?= tr('bud_bar_theoretical') ?> : </span><?= number_format($solde_theorique, 0, ',', ' ') ?> €
+                </div>
+                <div class="bud-label-zero" style="left: <?= $posZero ?>%;">0 €</div>
+                <div class="bud-label-actual" style="left: <?= $posActuel ?>%;">
+                    <span class="lbl-desktop"><?= tr('bud_bar_actual') ?> : </span><?= number_format($solde_actuel, 0, ',', ' ') ?> €
+                </div>
+                <div class="bud-label-max" title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">
+                    <span class="lbl-desktop"><?= tr('bud_bar_max_cap') ?> : </span><?= number_format($capacite_max, 0, ',', ' ') ?> € ℹ️
+                </div>
+            </div>
         </div>
-    </div>
 </div>
 
 
@@ -811,92 +802,125 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 </div>
 
 <div id="importCsvModal" class="pf-modal <?= $showPreview ? 'open' : '' ?>">
-    <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;"><?= tr('bud_import_csv') ?></h3>
-            <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+    <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>" style="display: flex; flex-direction: column; max-height: 90vh; padding: 24px; overflow: hidden;">
+        
+        <!-- HEADER FIXE -->
+        <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 16px; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--text-main);">📄 <?= tr('bud_import_csv') ?></h3>
+            <button type="button" onclick="closeSuiviModal('importCsvModal')" style="background: transparent; border: none; font-size: 2rem; line-height: 1; cursor: pointer; color: var(--text-muted); padding: 0 5px;">&times;</button>
         </div>
 
         <?php if (!empty($importError)): ?>
-            <div class="pf-alert pf-alert--error" style="margin-bottom: 15px;">
-                <?= htmlspecialchars($importError) ?>
-            </div>
+            <div class="pf-alert pf-alert--error pf-mb-md" style="flex-shrink: 0;"><?= htmlspecialchars($importError) ?></div>
         <?php endif; ?>
 
         <?php if (!$showPreview): ?>
-            <!-- L'action sécurise le fait qu'on poste bien sur le mois et la vue actuels même sur mobile -->
-            <form method="POST" enctype="multipart/form-data" action="?tab=suivi&m=<?= htmlspecialchars($viewM) ?>&y=<?= htmlspecialchars($viewY) ?>">
-                <div class="import-dropzone">
-                    <div style="font-size: 2.5rem; margin-bottom: 10px;">📄</div>
-                    <label class="pf-label"><?= tr('bud_csv_file') ?></label>
-                    <input type="file" name="csv_file" accept=".csv" class="pf-input" style="max-width: 300px; margin: 10px auto; display: block;" required>
+            <!-- FORMULAIRE D'UPLOAD -->
+            <form method="POST" enctype="multipart/form-data" action="?tab=suivi&m=<?= htmlspecialchars($viewM) ?>&y=<?= htmlspecialchars($viewY) ?>" style="display: flex; flex-direction: column; flex: 1;">
+                <div class="import-dropzone" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed var(--border-strong); border-radius: 12px; background: var(--bg-subtle);">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📄</div>
+                    <label class="pf-label" style="font-size: 1.1rem;"><?= tr('bud_csv_file') ?></label>
+                    <input type="file" name="csv_file" accept=".csv" class="pf-input" style="max-width: 300px; margin-top: 10px;" required>
                 </div>
-                <div class="modal-footer">
+                <div style="flex-shrink: 0; margin-top: 20px; border-top: 1px solid var(--border-light); padding-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
                     <button type="button" onclick="closeSuiviModal('importCsvModal')" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
                     <button type="submit" class="pf-btn"><?= tr('bud_preview') ?></button>
                 </div>
             </form>
         <?php else: ?>
-            <form method="POST" id="formMapping" action="?tab=suivi&m=<?= htmlspecialchars($viewM) ?>&y=<?= htmlspecialchars($viewY) ?>">
+            <!-- FORMULAIRE DE MAPPING (SCROLLABLE AU CENTRE) -->
+            <form method="POST" id="formMapping" action="?tab=suivi&m=<?= htmlspecialchars($viewM) ?>&y=<?= htmlspecialchars($viewY) ?>" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
                 <input type="hidden" name="action" value="save_import">
                 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                    <p style="margin:0; color:#64748b; font-size:0.95rem;"><?= tr('bud_validate_import') ?? 'Veuillez vérifier et categoriser les lignes avant validation.' ?></p>
-                    <span id="missingCount" style="color:#ef4444; background:#fee2e2; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:0.85rem; display:none;"></span>
+                <!-- En-tête des actions -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; flex-shrink: 0; margin-bottom: 16px; background: var(--bg-subtle); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-light);">
+                    <p style="margin: 0; font-size: 0.95rem; font-weight: 500; color: var(--text-main);"><?= tr('bud_validate_import') ?></p>
+                    
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <label class="pf-switch-wrap" style="font-size: 0.85rem; margin: 0;">
+                            <?= tr('bud_hide_categorized') ?? 'Masquer classés' ?>
+                            <div class="pf-switch">
+                                <input type="checkbox" id="toggleCategorized" onchange="filterCategorizedRows(this.checked)">
+                                <span class="pf-switch-slider"></span>
+                            </div>
+                        </label>
+                        <span id="missingCount" class="badge-type" style="background: var(--bg-danger-soft); color: var(--danger); display: none; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem;"></span>
+                    </div>
                 </div>
 
-                <div class="import-table-wrapper">
-                    <table class="pf-table" style="margin:0; box-shadow:none; border-radius:0;">
-                        <thead style="position:sticky; top:0; z-index:10; background:#f8fafc; outline: 1px solid #e2e8f0;">
+                <!-- VUE DESKTOP : TABLEAU STRICT -->
+                <div class="desktop-import-table" style="flex: 1; overflow-y: auto; min-height: 0; border: 1px solid var(--border-light); border-radius: 8px;">
+                    <table class="pf-table bs-csv-table" style="table-layout: auto; width: 100%; margin: 0; border: none; box-shadow: none;">
+                        <thead>
                             <tr>
-                                <th style="padding:10px;"><input type="checkbox" onclick="toggleAll(this)" checked></th>
-                                <th style="padding:10px;"><?= tr('bud_assign_month') ?></th>
-                                <th style="padding:10px;"><?= tr('bud_op_date') ?></th>
-                                <th style="padding:10px;"><?= tr('bud_label') ?></th>
-                                <th style="padding:10px;"><?= tr('bud_amount') ?></th>
-                                <th style="padding:10px;"><?= tr('bud_category') ?></th>
+                                <th style="width: 40px; text-align: center; padding: 12px 8px;"><input type="checkbox" onclick="toggleAll(this)" checked style="width: 16px; height: 16px; cursor: pointer;"></th>
+                                <th style="width: 140px; padding: 12px 8px;"><?= tr('bud_assign_month') ?></th>
+                                <th style="width: 80px; padding: 12px 8px;"><?= tr('bud_op_date') ?></th>
+                                <th style="width: 25%; padding: 12px 8px;"><?= tr('bud_label') ?></th>
+                                <th style="width: 100px; text-align: right; padding: 12px 8px;"><?= tr('bud_amount') ?></th>
+                                <th><?= tr('bud_category_and_link') ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($csvData as $idx => $row): 
-                                $dup = $row['is_duplicate']; $isCrd = $row['is_credit']; $dis = $dup?'disabled':''; 
-                                $bgCol = $dup ? 'opacity:0.5' : (empty($row['cat']) && !$isCrd ? 'background:#fff1f2' : '');
+                                $dup = $row['is_duplicate']; $isCrd = $row['is_credit']; $dis = $dup ? 'disabled' : ''; 
+                                $hasCat = !empty($row['cat']);
+                                $bgColClass = $dup ? 'is-duplicate' : (!$hasCat && !$isCrd ? 'bg-danger-soft' : '');
                             ?>
-                            <tr style="<?= $bgCol ?>">
-                                <td style="padding:8px;">
-                                    <input type="checkbox" class="line-checkbox" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
+                            <tr class="import-row bs-csv-tr <?= $bgColClass ?>" data-categorized="<?= $hasCat ? '1' : '0' ?>" style="<?= $dup ? 'opacity:0.5;' : '' ?>">
+                                <td style="text-align: center; padding: 12px 8px;">
+                                    <input type="checkbox" class="line-checkbox" style="width: 16px; height: 16px; cursor: pointer;" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
                                     <input type="hidden" name="lines[<?= $idx ?>][date]" value="<?= $row['date'] ?>">
-                                    <input type="hidden" name="lines[<?= $idx ?>][label]" value="<?= $row['label'] ?>">
+                                    <input type="hidden" name="lines[<?= $idx ?>][label]" value="<?= htmlspecialchars($row['label']) ?>">
                                     <input type="hidden" name="lines[<?= $idx ?>][amount]" value="<?= $row['amount'] ?>">
                                     <input type="hidden" name="lines[<?= $idx ?>][ref]" value="<?= $row['ref'] ?>">
                                     <input type="hidden" class="is-credit-flag" name="lines[<?= $idx ?>][is_credit]" value="<?= $isCrd ?>">
                                 </td>
-                                <td style="padding:8px;">
-                                    <input type="month" name="lines[<?= $idx ?>][gestion_month]" value="<?= substr($viewMonthDate, 0, 7) ?>" class="pf-input" style="padding:4px; font-size:0.85rem;" <?= $dis ?>>
+                                <td>
+                                    <input type="month" name="lines[<?= $idx ?>][gestion_month]" value="<?= substr($viewMonthDate, 0, 7) ?>" class="pf-input" style="height: 36px; padding: 6px;" <?= $dis ?>>
                                 </td>
-                                <td style="padding:8px; white-space:nowrap; font-weight:600;"><?= date('d/m', strtotime($row['date'])) ?></td>
-                                <td style="padding:8px;"><?= htmlspecialchars($row['label']) ?></td>
-                                <td style="padding:8px; font-weight:bold; color:<?= $isCrd ? '#10b981' : '#1e293b' ?>; white-space:nowrap;"><?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'],2) ?> €</td>
-                                <td style="padding:8px;">
-                                    <div style="display:flex; gap:5px; min-width: 250px;">
-                                        <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="padding:4px; font-size:0.85rem; flex:1;">
-                                            <option value="">-- <?= $isCrd ? tr('bud_ignore') : tr('bud_to_define') ?> --</option>
-                                            <?php foreach ($categoriesConfig as $k => $c): ?>
-                                                <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= strip_tags($c['label']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="display:none; padding:4px; font-size:0.85rem; flex:1;" disabled>
-                                            <option value="">-- Lier à une Charge Fixe --</option>
-                                            <?php foreach ($fixedChargesList as $fc): ?>
-                                                <option value="<?= $fc['id'] ?>" <?= ($row['suggested_item_id'] == $fc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($fc['name']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-income" onchange="checkValidation()" style="display:none; padding:4px; font-size:0.85rem; flex:1;" disabled>
-                                            <option value="">-- <?= tr('bud_is_income') ?> --</option>
-                                            <?php foreach ($incomeList as $inc): ?>
-                                                <option value="<?= $inc['id'] ?>" <?= ($row['suggested_item_id'] == $inc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($inc['name']) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
+                                <td class="font-bold text-main">
+                                    <?= date('d/m', strtotime($row['date'])) ?>
+                                </td>
+                                <td>
+                                    <div style="font-size: 0.85rem; line-height: 1.4; color: var(--text-main);" title="<?= htmlspecialchars($row['label']) ?>">
+                                        <?= htmlspecialchars($row['label']) ?>
+                                    </div>
+                                    <?php if ($dup): ?>
+                                        <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-top: 4px;"><?= tr('bud_import_duplicate_hint') ?></div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="font-bold <?= $isCrd ? 'text-success' : 'text-main' ?>" style="text-align: right; white-space: nowrap;">
+                                    <?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'], 2) ?> €
+                                </td>
+                                <td style="padding: 12px 8px;">
+                                    <div class="category-cell-wrapper">
+                                        <div class="category-selects-row">
+                                            <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?>>
+                                                <option value="">-- <?= $isCrd ? tr('bud_ignore') : tr('bud_to_define') ?> --</option>
+                                                <?php foreach ($categoriesConfig as $k => $c): ?>
+                                                    <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= strip_tags($c['label']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            
+                                            <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="display:none;" disabled>
+                                                <option value="">-- <?= tr('bud_link_fixed_charge') ?> --</option>
+                                                <?php foreach ($fixedChargesList as $fc): ?>
+                                                    <option value="<?= $fc['id'] ?>" <?= ($row['suggested_item_id'] == $fc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($fc['name']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            
+                                            <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-income" onchange="checkValidation()" style="display:none;" disabled>
+                                                <option value="">-- <?= tr('bud_is_income') ?> --</option>
+                                                <?php foreach ($incomeList as $inc): ?>
+                                                    <option value="<?= $inc['id'] ?>" <?= ($row['suggested_item_id'] == $inc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($inc['name']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <label class="ignore-checkbox-wrapper">
+                                            <input type="checkbox" onchange="toggleIgnoreRow(this)" <?= $dup?'checked disabled':'' ?>> 
+                                            <?= tr('bud_ignore_this_line') ?>
+                                        </label>
                                     </div>
                                 </td>
                             </tr>
@@ -904,9 +928,86 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                         </tbody>
                     </table>
                 </div>
-                <div class="modal-footer" style="border-top:none; padding-top:20px;">
+
+                <!-- VUE MOBILE : ACCORDÉON -->
+                <div class="prop2-container mobile-import-accordion" style="flex: 1; overflow-y: auto; min-height: 0; margin-top: 10px;">
+                    <?php foreach ($csvData as $idx => $row): 
+                        $dup = $row['is_duplicate']; $isCrd = $row['is_credit']; $dis = $dup ? 'disabled' : ''; 
+                        $hasCat = !empty($row['cat']);
+                        $statusBg = ($hasCat || $dup || ($isCrd && empty($row['cat']))) ? 'var(--success)' : 'var(--danger)';
+                        if ($dup) { $statusBg = 'var(--text-muted)'; }
+                    ?>
+                    <div class="prop2-item import-row <?= $dup ? 'is-duplicate' : '' ?>" data-categorized="<?= $hasCat ? '1' : '0' ?>">
+                        <div class="prop2-summary" onclick="toggleMobileAccordion(this, event)">
+                            <div class="prop2-summary-left">
+                                <div class="prop2-date"><?= date('d/m/Y', strtotime($row['date'])) ?></div>
+                                <div class="prop2-label"><?= htmlspecialchars($row['label']) ?></div>
+                            </div>
+                            <div class="amount-badge <?= $isCrd ? 'amount-income' : 'amount-expense' ?>">
+                                <?= $isCrd ? '+' : '-' ?><?= number_format($row['amount'], 2) ?> €
+                            </div>
+                            <div class="prop2-status" style="background: <?= $statusBg ?>;"></div>
+                        </div>
+                        
+                        <div class="prop2-details">
+                            <input type="checkbox" class="line-checkbox hol-hidden" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
+                            <input type="hidden" name="lines[<?= $idx ?>][date]" value="<?= $row['date'] ?>">
+                            <input type="hidden" name="lines[<?= $idx ?>][label]" value="<?= htmlspecialchars($row['label']) ?>">
+                            <input type="hidden" name="lines[<?= $idx ?>][amount]" value="<?= $row['amount'] ?>">
+                            <input type="hidden" name="lines[<?= $idx ?>][ref]" value="<?= $row['ref'] ?>">
+                            <input type="hidden" class="is-credit-flag" name="lines[<?= $idx ?>][is_credit]" value="<?= $isCrd ?>">
+
+                            <div class="pf-stack-sm">
+                                <div>
+                                    <label class="pf-label pf-label-sm"><?= tr('bud_assign_month') ?></label>
+                                    <input type="month" name="lines[<?= $idx ?>][gestion_month]" value="<?= substr($viewMonthDate, 0, 7) ?>" class="pf-input" style="padding: 8px; font-size: 0.9rem; height: auto;" <?= $dis ?>>
+                                </div>
+
+                                <div>
+                                    <label class="pf-label pf-label-sm"><?= tr('bud_category') ?></label>
+                                    <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?> style="padding: 8px; font-size: 0.9rem; height: auto;">
+                                        <option value="">-- <?= $isCrd ? tr('bud_ignore') : tr('bud_to_define') ?> --</option>
+                                        <?php foreach ($categoriesConfig as $k => $c): ?>
+                                            <option value="<?= $k ?>" <?= ($row['cat']===$k)?'selected':'' ?>><?= strip_tags($c['label']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div style="display:none;" class="mobile-frais-block">
+                                    <label class="pf-label pf-label-sm">Lier à une Charge Fixe</label>
+                                    <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-frais" onchange="checkValidation()" style="padding: 8px; font-size: 0.9rem; height: auto;" disabled>
+                                        <option value="">-- Aucune --</option>
+                                        <?php foreach ($fixedChargesList as $fc): ?>
+                                            <option value="<?= $fc['id'] ?>" <?= ($row['suggested_item_id'] == $fc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($fc['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div style="display:none;" class="mobile-income-block">
+                                    <label class="pf-label pf-label-sm"><?= tr('bud_is_income') ?></label>
+                                    <select name="lines[<?= $idx ?>][budget_item_id]" class="pf-input select-income" onchange="checkValidation()" style="padding: 8px; font-size: 0.9rem; height: auto;" disabled>
+                                        <option value="">-- Aucun --</option>
+                                        <?php foreach ($incomeList as $inc): ?>
+                                            <option value="<?= $inc['id'] ?>" <?= ($row['suggested_item_id'] == $inc['id']) ? 'selected' : '' ?>><?= htmlspecialchars($inc['name']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                
+                                <div style="margin-top: 5px; padding-top: 10px; border-top: 1px dashed var(--border-light);">
+                                    <label class="pf-switch-wrap" style="color: var(--danger);">
+                                        <input type="checkbox" onchange="toggleIgnoreRow(this)" style="width: 18px; height: 18px; accent-color: var(--danger);" <?= $dup?'checked disabled':'' ?>>
+                                        <?= tr('bud_ignore') ?> cette ligne
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div style="flex-shrink: 0; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 12px;">
                     <a href="?tab=suivi" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></a>
-                    <button type="submit" id="btnImport" class="pf-btn" style="background:linear-gradient(135deg, #10b981, #059669);"><?= tr('btn_import') ?? 'Importer les lignes cochées' ?></button>
+                    <button type="submit" id="btnImport" class="pf-btn" style="background: var(--success); color: #fff; border-color: var(--success);"><?= tr('btn_import') ?? 'Importer' ?></button>
                 </div>
             </form>
         <?php endif; ?>
@@ -914,7 +1015,6 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 </div>
 
 <script>
-
 <?php if ($showPreview): ?>
     document.body.classList.add('no-scroll');
 <?php endif; ?>
@@ -938,9 +1038,11 @@ function toggleDiv(id) { const el = document.getElementById(id); el.style.displa
 function openSuiviModal(id) { document.getElementById(id).classList.add('open'); document.body.classList.add('no-scroll'); }
 function closeSuiviModal(id) { document.getElementById(id).classList.remove('open'); document.body.classList.remove('no-scroll');}
 
-// Gestion dynamique du formulaire modal 
+// ============================================================================
+// GESTION DU FORMULAIRE MANUEL (Ajout / Édition)
+// ============================================================================
 function handleModalCatChange(select) {
-    const catKey = select.value.toUpperCase(); // Sécurité sur la casse
+    const catKey = select.value.toUpperCase(); 
     const conf = catConfigs[select.value] || {db_type: 'Expense', suggestions: []};
     
     document.getElementById('blockInputText').style.display = 'block';
@@ -955,16 +1057,15 @@ function handleModalCatChange(select) {
 
     if (conf.db_type === 'Income') { 
         const incSel = document.getElementById('incomeSelect');
-        // 👁️ Ne s'affiche que s'il y a des revenus prévus à lier, sinon reste invisible
         if (incSel.options.length > 1) { 
             document.getElementById('blockInputIncome').style.display = 'block'; 
             incSel.disabled = false; 
         }
     } 
-    else if (catKey === 'FIXED') { // 🔒 Strictement pour les Charges Fixes
+    else if (catKey === 'FIXED') { 
         document.getElementById('blockInputFrais').style.display = 'block'; 
         document.getElementById('fraisSelect').disabled = false; 
-        document.getElementById('fraisSelect').required = true; // 🔥 Devient OBLIGATOIRE
+        document.getElementById('fraisSelect').required = true; 
     }
 
     const list = document.getElementById('modalSuggestions'); list.innerHTML = ''; 
@@ -1004,63 +1105,157 @@ function openEditModal(e) {
     else document.getElementById('fraisSelect').value = e.budget_item_id;
 }
 
-// Gestion dynamique du CSV Import 
+
+// ============================================================================
+// NOUVEAU : GESTION DYNAMIQUE DU CSV (RESPONSIVE + ACCORDEON)
+// ============================================================================
+
+function toggleResponsiveInputs() {
+    const isMobile = window.innerWidth <= 768;
+    
+    document.querySelectorAll('.desktop-import-table input, .desktop-import-table select').forEach(el => {
+        if (!el.classList.contains('originally-disabled')) el.disabled = isMobile;
+    });
+    
+    document.querySelectorAll('.mobile-import-accordion input, .mobile-import-accordion select').forEach(el => {
+        if (!el.classList.contains('originally-disabled')) el.disabled = !isMobile;
+    });
+    checkValidation();
+}
+
+function filterCategorizedRows(hide) {
+    document.querySelectorAll('.import-row:not(.is-duplicate)').forEach(item => {
+        if (hide && item.getAttribute('data-categorized') === '1') {
+            item.style.display = 'none';
+        } else {
+            item.style.display = window.innerWidth <= 768 ? 'block' : 'table-row';
+        }
+    });
+}
+
+function toggleMobileAccordion(summaryEl, event) {
+    if (['INPUT', 'LABEL', 'BUTTON'].includes(event.target.tagName)) return;
+    const propItem = summaryEl.closest('.prop2-item');
+    propItem.classList.toggle('open');
+}
+
+function toggleIgnoreRow(checkbox) {
+    const row = checkbox.closest('.import-row');
+    const mainCheckbox = row.querySelector('.line-checkbox');
+    
+    if (checkbox.checked) {
+        mainCheckbox.checked = false;
+        row.classList.add('ignored');
+        const statusDot = row.querySelector('.prop2-status');
+        if (statusDot) statusDot.style.background = 'var(--text-muted)';
+        if (window.innerWidth > 768) row.style.background = '';
+    } else {
+        mainCheckbox.checked = true;
+        row.classList.remove('ignored');
+        updateRowStatus(row.querySelector('.line-select'));
+    }
+    checkValidation();
+}
+
+function updateRowStatus(select) {
+    const row = select.closest('.import-row');
+    if (!row || row.classList.contains('ignored') || row.classList.contains('is-duplicate')) return;
+    
+    const isCredit = row.querySelector('.is-credit-flag').value === '1';
+    const hasCat = select.value !== "";
+    row.setAttribute('data-categorized', hasCat ? '1' : '0');
+    
+    const statusDot = row.querySelector('.prop2-status');
+    if (statusDot) {
+        statusDot.style.background = (hasCat || (isCredit && !hasCat)) ? 'var(--success)' : 'var(--danger)';
+    }
+    
+    if (window.innerWidth > 768) {
+        row.style.background = (hasCat || (isCredit && !hasCat)) ? '' : 'var(--bg-danger-soft)';
+    }
+    
+    const toggleSwitch = document.getElementById('toggleCategorized');
+    if (toggleSwitch) filterCategorizedRows(toggleSwitch.checked);
+}
+
 function handleLineCatChange(select, isInit = false) {
-    const row = select.closest('tr');
+    const row = select.closest('.import-row');
     const fSel = row.querySelector('.select-frais'); 
     const iSel = row.querySelector('.select-income');
     const catKey = select.value.toUpperCase();
     const conf = catConfigs[select.value] || null;
     
     fSel.style.display = 'none'; iSel.style.display = 'none'; 
+    
+    const mFraisBlock = row.querySelector('.mobile-frais-block');
+    const mIncomeBlock = row.querySelector('.mobile-income-block');
+    if(mFraisBlock) mFraisBlock.style.display = 'none';
+    if(mIncomeBlock) mIncomeBlock.style.display = 'none';
+
     if (!isInit) { fSel.value = ''; iSel.value = ''; }
     fSel.disabled = true; iSel.disabled = true;
 
     if (conf && conf.db_type === 'Income') { 
-        // 👁️ Ne s'affiche que s'il y a des revenus à lier
-        if (iSel.options.length > 1) {
+        if (iSel.options.length > 1) { 
             iSel.style.display = 'block'; iSel.disabled = false; 
+            if(mIncomeBlock) mIncomeBlock.style.display = 'block';
         }
-    } 
-    else if (catKey === 'FIXED') { // 🔒 Strictement pour les Charges Fixes
+    } else if (catKey === 'FIXED') { 
         fSel.style.display = 'block'; fSel.disabled = false; 
+        if(mFraisBlock) mFraisBlock.style.display = 'block';
     }
-    checkValidation();
+    
+    if(!isInit) { updateRowStatus(select); checkValidation(); }
 }
 
-function toggleAll(src) { document.querySelectorAll('.line-checkbox:not([disabled])').forEach(c => c.checked = src.checked); checkValidation(); }
+function toggleAll(src) {
+    document.querySelectorAll('.desktop-import-table .line-checkbox:not([disabled])').forEach(c => {
+        c.checked = src.checked;
+        const row = c.closest('.import-row');
+        if (!src.checked && row && !row.classList.contains('is-duplicate')) {
+            row.style.background = ''; 
+        }
+    }); 
+    checkValidation(); 
+}
 
 function checkValidation() {
     let miss = 0;
-    document.querySelectorAll('.line-checkbox:checked').forEach(cb => { 
-        const row = cb.closest('tr'); 
+    const isMobile = window.innerWidth <= 768;
+    const activeSelector = isMobile ? '.mobile-import-accordion' : '.desktop-import-table';
+    
+    document.querySelectorAll(`${activeSelector} .line-checkbox:checked`).forEach(cb => { 
+        const row = cb.closest('.import-row'); 
+        if (!row || row.classList.contains('ignored')) return;
+
         const isCrd = row.querySelector('.is-credit-flag').value === '1'; 
         const cat = row.querySelector('.line-select').value;
         const catKey = cat.toUpperCase();
         const fSel = row.querySelector('.select-frais');
 
         let v = true; 
-        if (cat === "") { 
-            // La catégorie est obligatoire pour les dépenses (les revenus sont acceptés sans cat si souhaité)
-            if (!isCrd) v = false; 
-        } 
-        else if (catKey === 'FIXED' && fSel.value === "") {
-            v = false; // 🔥 Bloque l'import si une Charge Fixe n'est pas liée à une ligne du budget !
-        }
+        if (cat === "") { if (!isCrd) v = false; } 
+        else if (catKey === 'FIXED' && fSel.value === "") { v = false; }
         
-        if (!v) { miss++; row.style.background = '#fff1f2'; } else row.style.background = '';
+        if (!v) {
+            miss++;
+            if (!isMobile) row.style.background = 'var(--bg-danger-soft)';
+        }
     });
     
-    const btn = document.getElementById('btnImport'); const msg = document.getElementById('missingCount');
-    if(miss > 0) { btn.disabled = true; btn.style.opacity = 0.5; msg.style.display = 'inline'; msg.innerText = miss + ' ' + (window.I18N['bud_to_define_js'] || 'à définir'); } 
-    else { btn.disabled = false; btn.style.opacity = 1; msg.style.display = 'none'; }
+    const btn = document.getElementById('btnImport'); 
+    const msg = document.getElementById('missingCount');
+    if (btn && msg) {
+        if(miss > 0) { 
+            btn.disabled = true; btn.style.opacity = 0.5; 
+            msg.style.display = 'inline'; msg.innerText = miss + ' ' + (window.I18N['bud_to_define_js'] || 'à définir'); 
+        } else { 
+            btn.disabled = false; btn.style.opacity = 1; msg.style.display = 'none'; 
+        }
+    }
 }
 
-if (document.getElementById('formMapping')) { 
-    document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s, true)); 
-    checkValidation(); 
-}
-
+// L'écouteur demandé, préservé :
 window.addEventListener('click', (e) => {
     if (e.target.classList.contains('pf-modal')) {
         e.target.classList.remove('open', 'is-active');
@@ -1069,7 +1264,25 @@ window.addEventListener('click', (e) => {
     }
 });
 
-// --- 2. SUPPRESSION ASYNCHRONE ---
+window.addEventListener('resize', () => {
+    if (document.getElementById('formMapping')) {
+        toggleResponsiveInputs();
+        const toggleSwitch = document.getElementById('toggleCategorized');
+        filterCategorizedRows(toggleSwitch ? toggleSwitch.checked : false);
+    }
+});
+
+if (document.getElementById('formMapping')) {
+    document.querySelectorAll('.select-frais, .select-income').forEach(el => {
+        if (el.disabled) el.classList.add('originally-disabled');
+    });
+    document.querySelectorAll('.line-select').forEach(s => handleLineCatChange(s, true));
+    toggleResponsiveInputs();
+}
+
+// ============================================================================
+// SAUVEGARDE ET SUPPRESSION (ASYNCHRONE)
+// ============================================================================
 async function deleteExpense(id) {
     const confirmed = await pachaConfirm("Suppression", window.I18N['bud_confirm_delete']);
     if (!confirmed) return;
@@ -1087,7 +1300,6 @@ async function deleteExpense(id) {
     }
 }
 
-// --- 3. SAUVEGARDE ASYNCHRONE (AJOUT/MODIF) ---
 document.addEventListener('DOMContentLoaded', () => {
     const formExpense = document.querySelector('#manualExpenseModal form');
     if (formExpense) {

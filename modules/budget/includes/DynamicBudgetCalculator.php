@@ -146,6 +146,10 @@ class DynamicBudgetCalculator {
         $schoolMeal      = $this->getSetting('budget_school_meal', 5.62);
         $schoolAftercare = $this->getSetting('budget_school_aftercare', 1.97);
         $schoolFullday   = $this->getSetting('budget_school_fullday', 21.89);
+        $canteenStr    = $this->getSettingString('budget_school_canteen_days', '1,2,4,5');
+        $aftercareStr  = $this->getSettingString('budget_school_aftercare_days', '2,4');
+        $canteenDays   = $canteenStr === '' ? [] : explode(',', $canteenStr);
+        $aftercareDays = $aftercareStr === '' ? [] : explode(',', $aftercareStr);
 
         $offDays = $this->getOffDays();
         
@@ -210,16 +214,15 @@ class DynamicBudgetCalculator {
                 if ($kidsStats[$kidId]['isNanny']) {
                     if (!$nannyOffToday) $kidsStats[$kidId]['nannyDays']++;
                 } else {
-                    if ($isVacances) {
-                        if ($hasCenterEvent) $kidsStats[$kidId]['center']++;
-                    } else {
-                        if ($dayOfWeek == 3) {
-                            $kidsStats[$kidId]['center']++;
-                        } else {
-                            $kidsStats[$kidId]['schoolMeal']++;
-                            if (in_array($dayOfWeek, [2, 4])) $kidsStats[$kidId]['schoolAftercare']++;
-                        }
-                    }
+                    // Le Centre est piloté à 100% par le calendrier (Événement CENTRE ou Vacances avec CENTRE)
+                    if ($hasCenterEvent) {
+                        $kidsStats[$kidId]['center']++;
+                    } 
+                    // S'il n'y a pas de Centre et qu'on n'est pas en vacances, on applique la semaine type configurée
+                    elseif (!$isVacances) {
+                        if (in_array((string)$dayOfWeek, $canteenDays)) $kidsStats[$kidId]['schoolMeal']++;
+                        if (in_array((string)$dayOfWeek, $aftercareDays)) $kidsStats[$kidId]['schoolAftercare']++;
+                    }                
                 }
             }
         }

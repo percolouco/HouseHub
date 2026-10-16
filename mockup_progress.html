@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maquettes Jauge Mobile HouseHub</title>
+    <style>
+      :root {
+        --bg-page: #f8fafc;
+        --bg-panel: #ffffff;
+        --border-light: #e2e8f0;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --primary: #3b82f6;
+        --primary-dark: #1d4ed8;
+        --danger: #ef4444;
+        --danger-soft: #fee2e2;
+      }
+
+      body {
+        background-color: var(--bg-page);
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: var(--text-main);
+        padding: 40px;
+        margin: 0;
+      }
+
+      h1,
+      h2 {
+        color: var(--text-main);
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .grid {
+        display: flex;
+        gap: 40px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        margin-top: 20px;
+      }
+
+      .mockup-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--border-light);
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 650px;
+      }
+
+      /* Cadre de simulation Mobile */
+      .mobile-frame {
+        background: var(--bg-panel);
+        border: 12px solid #cbd5e1;
+        border-radius: 40px;
+        padding: 40px 20px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        width: 375px; /* Largeur typique iPhone */
+        box-sizing: border-box;
+        flex-shrink: 0;
+        position: relative;
+      }
+
+      .mobile-frame::before {
+        content: "";
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 6px;
+        background: #e2e8f0;
+        border-radius: 10px;
+      }
+
+      /* =========================================================
+       BASE DE LA JAUGE
+       ========================================================= */
+      .bud-gauge-wrapper {
+        position: relative;
+        margin: 40px 0;
+      }
+      .bud-gauge-track {
+        display: flex;
+        height: 18px;
+        background: var(--border-light);
+        border-radius: 999px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+      .bud-gauge-neg {
+        height: 100%;
+        background: var(--danger-soft);
+        border-right: 2px solid var(--danger);
+        border-radius: 999px 0 0 999px;
+      }
+      .bud-gauge-pos {
+        height: 100%;
+        flex: 1;
+        border-radius: 0 999px 999px 0;
+      }
+      .bud-gauge-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+        border-radius: 0 999px 999px 0;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+      }
+      .bud-gauge-marker-theo {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        height: 32px;
+        width: 4px;
+        background: var(--danger);
+        border-radius: 4px;
+        box-shadow: 0 0 12px var(--danger);
+        z-index: 10;
+      }
+      .bud-gauge-marker-zero {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        height: 26px;
+        width: 2px;
+        background: var(--text-muted);
+        opacity: 0.5;
+        z-index: 5;
+      }
+
+      /* =========================================================
+       LABELS DESKTOP (Par défaut)
+       ========================================================= */
+      .bud-gauge-labels {
+        position: relative;
+        height: 40px;
+        margin-top: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-muted);
+      }
+      .bud-label {
+        position: absolute;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+      .bud-label-theo {
+        top: -65px;
+        color: var(--danger);
+        background: var(--danger-soft);
+        padding: 4px 8px;
+        border-radius: 6px;
+      }
+      .bud-label-actual {
+        color: var(--primary-dark);
+      }
+      .bud-label-max {
+        right: 0;
+        transform: none;
+      }
+
+      /* Utilitaires maquette */
+      .mock-w-15 {
+        width: 15%;
+      }
+      .mock-w-40 {
+        width: 40%;
+      }
+      .mock-left-15 {
+        left: 15%;
+      }
+      .mock-left-05 {
+        left: 5%;
+      }
+      .mock-left-55 {
+        left: 55%;
+      }
+
+      /* =========================================================
+       PROPOSITION A : MOBILE QUINCONCE (TACTILE)
+       ========================================================= */
+      .prop-a .bud-gauge-track {
+        height: 24px;
+      }
+      .prop-a .bud-gauge-marker-theo {
+        height: 38px;
+      }
+      .prop-a .bud-gauge-marker-zero {
+        height: 32px;
+      }
+      .prop-a .bud-gauge-labels {
+        font-size: 0.7rem;
+      }
+      .prop-a .bud-label-theo {
+        top: -55px;
+      }
+      .prop-a .bud-label-actual {
+        top: -35px;
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+      .prop-a .bud-label-zero,
+      .prop-a .bud-label-max {
+        top: 30px;
+      }
+      .prop-a .bud-gauge-wrapper {
+        margin-top: 60px;
+        margin-bottom: 50px;
+      }
+
+      /* =========================================================
+       PROPOSITION B : MOBILE LÉGENDE COMPACTE
+       ========================================================= */
+      .prop-b .bud-gauge-track {
+        height: 20px;
+      }
+      .prop-b .bud-gauge-marker-theo {
+        height: 34px;
+      }
+      .prop-b .bud-gauge-marker-zero {
+        height: 30px;
+      }
+      .prop-b .bud-gauge-labels {
+        display: none;
+      } /* Masque les labels flottants */
+      .prop-b .bud-gauge-wrapper {
+        margin-top: 30px;
+        margin-bottom: 20px;
+      }
+
+      .prop-b-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: var(--bg-page);
+        padding: 15px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        border: 1px solid var(--border-light);
+      }
+      .prop-b-legend div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .prop-b-legend .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 4px;
+        flex-shrink: 0;
+      }
+      .prop-b-legend .val {
+        font-weight: 800;
+        color: var(--text-main);
+        margin-left: auto;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Maquettes : Jauge Budget</h1>
+      <p style="color: var(--text-muted); margin-bottom: 40px">
+        Comparaison de la version Desktop et des différentes approches UX pour
+        Mobile.
+      </p>
+
+      <!-- SECTION DESKTOP -->
+      <h2
+        style="
+          border-bottom: 2px solid var(--border-light);
+          padding-bottom: 10px;
+        "
+      >
+        1. Version Desktop (Validée)
+      </h2>
+      <div class="mockup-card">
+        <div style="margin-bottom: 20px">
+          <h3 style="margin: 0 0 4px 0; font-weight: 800">
+            Design V1 "Layered Glow"
+          </h3>
+          <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted)">
+            Adapté avec l'axe décalé pour supporter le découvert théorique.
+            Affichage large parfait pour les écrans PC.
+          </p>
+        </div>
+
+        <div class="bud-gauge-wrapper">
+          <div class="bud-gauge-track">
+            <div class="bud-gauge-neg mock-w-15"></div>
+            <div class="bud-gauge-pos">
+              <div class="bud-gauge-fill mock-w-40"></div>
+            </div>
+            <div class="bud-gauge-marker-zero mock-left-15"></div>
+            <div class="bud-gauge-marker-theo mock-left-05"></div>
+          </div>
+
+          <div class="bud-gauge-labels">
+            <div class="bud-label bud-label-theo mock-left-05">
+              Théorie : -500 €
+            </div>
+            <div class="bud-label bud-label-zero mock-left-15">0 €</div>
+            <div class="bud-label bud-label-actual mock-left-55">
+              Actuel : 1 600 €
+            </div>
+            <div class="bud-label bud-label-max">Max : 4 000 €</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION MOBILE -->
+      <h2
+        style="
+          border-bottom: 2px solid var(--border-light);
+          padding-bottom: 10px;
+          margin-top: 50px;
+        "
+      >
+        2. Propositions Mobile / iOS (Simulation iPhone)
+      </h2>
+      <div class="grid">
+        <!-- PROP A -->
+        <div class="mobile-frame prop-a">
+          <h3 style="margin: 0 0 5px 0; font-size: 1.1rem; text-align: center">
+            Prop. A : Quinconce
+          </h3>
+          <p
+            style="
+              margin: 0 0 20px 0;
+              font-size: 0.8rem;
+              color: var(--text-muted);
+              text-align: center;
+              line-height: 1.4;
+            "
+          >
+            Barre épaissie (fat-finger). Les labels sont éclatés en haut et en
+            bas pour ne pas se chevaucher.
+          </p>
+
+          <!-- Jauge A -->
+          <div class="bud-gauge-wrapper">
+            <div class="bud-gauge-track">
+              <div class="bud-gauge-neg mock-w-15"></div>
+              <div class="bud-gauge-pos">
+                <div class="bud-gauge-fill mock-w-40"></div>
+              </div>
+              <div class="bud-gauge-marker-zero mock-left-15"></div>
+              <div class="bud-gauge-marker-theo mock-left-05"></div>
+            </div>
+            <div class="bud-gauge-labels">
+              <div class="bud-label bud-label-theo mock-left-05">-500 €</div>
+              <div class="bud-label bud-label-zero mock-left-15">0 €</div>
+              <div class="bud-label bud-label-actual mock-left-55">1 600 €</div>
+              <div class="bud-label bud-label-max">4 000 €</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROP B -->
+        <div class="mobile-frame prop-b">
+          <h3 style="margin: 0 0 5px 0; font-size: 1.1rem; text-align: center">
+            Prop. B : Légende Externe
+          </h3>
+          <p
+            style="
+              margin: 0 0 20px 0;
+              font-size: 0.8rem;
+              color: var(--text-muted);
+              text-align: center;
+              line-height: 1.4;
+            "
+          >
+            Jauge 100% épurée visuellement. Les montants exacts sont rappelés
+            dans une légende claire en dessous.
+          </p>
+
+          <!-- Jauge B -->
+          <div class="bud-gauge-wrapper">
+            <div class="bud-gauge-track">
+              <div class="bud-gauge-neg mock-w-15"></div>
+              <div class="bud-gauge-pos">
+                <div class="bud-gauge-fill mock-w-40"></div>
+              </div>
+              <div class="bud-gauge-marker-zero mock-left-15"></div>
+              <div class="bud-gauge-marker-theo mock-left-05"></div>
+            </div>
+            <div class="bud-gauge-labels"></div>
+          </div>
+
+          <div class="prop-b-legend">
+            <div>
+              <div class="dot" style="background: var(--primary-dark)"></div>
+              Actuel <span class="val">1 600 €</span>
+            </div>
+            <div
+              style="
+                border-top: 1px dashed var(--border-light);
+                padding-top: 10px;
+              "
+            >
+              <div
+                class="dot"
+                style="
+                  background: var(--danger);
+                  box-shadow: 0 0 8px var(--danger);
+                "
+              ></div>
+              Théorie
+              <span class="val" style="color: var(--danger)">-500 €</span>
+            </div>
+            <div
+              style="
+                border-top: 1px dashed var(--border-light);
+                padding-top: 10px;
+              "
+            >
+              <div
+                class="dot"
+                style="
+                  background: transparent;
+                  border: 2px solid var(--text-muted);
+                "
+              ></div>
+              Capacité Max <span class="val">4 000 €</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

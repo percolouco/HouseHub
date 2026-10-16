@@ -2572,101 +2572,141 @@ body.sum-mode-active .sum-target {
   justify-content: space-between;
   margin-bottom: 6px;
 }
-.bud-scale-wrapper {
-  margin-top: 65px;
-  margin-bottom: 75px;
+/* =========================================================
+   JAUGE BUDGETAIRE "LAYERED GLOW" (Desktop + Mobile)
+   ========================================================= */
+.bud-gauge-wrapper {
   position: relative;
+  margin-top: 40px;
+  margin-bottom: 20px;
   font-family: inherit;
 }
-.bud-scale-track {
-  position: relative;
-  height: 24px;
+
+.bud-gauge-track {
+  display: flex;
+  height: 18px;
   background: var(--border-light);
-  border-radius: 12px;
-  width: 100%;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 999px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
-.bud-scale-zero {
+
+.bud-gauge-neg {
   position: absolute;
   left: 0;
   height: 100%;
   background: var(--bg-danger-soft);
-  border-radius: 12px 0 0 12px;
-}
-.bud-scale-bar {
-  position: absolute;
-  height: 100%;
-  background: repeating-linear-gradient(
-    45deg,
-    var(--warning),
-    var(--warning) 10px,
-    #f59e0b 10px,
-    #f59e0b 20px
-  );
-  transition: width 0.5s ease-out;
-}
-.bud-scale-bar--danger {
-  background: repeating-linear-gradient(
-    45deg,
-    var(--danger),
-    var(--danger) 10px,
-    #dc2626 10px,
-    #dc2626 20px
-  );
-  border-radius: 12px 0 0 12px;
-  opacity: 0.95;
-}
-.bud-scale-marker {
-  position: absolute;
-  width: 2px;
-  z-index: 10;
-}
-.bud-scale-marker--zero {
-  background: var(--text-muted);
-  top: -5px;
-  height: 35px;
-}
-.bud-scale-marker--actual {
-  background: var(--text-main);
-  top: -15px;
-  height: 40px;
-  width: 3px;
-  z-index: 15;
-}
-.bud-scale-marker--theo {
-  top: 24px;
-  height: 30px;
-  width: 3px;
-  z-index: 12;
-}
-.bud-scale-marker--max {
-  background: var(--border-strong);
+  border-right: 2px solid var(--danger);
+  border-radius: 999px 0 0 999px;
 }
 
-.bud-scale-label {
+.bud-gauge-pos {
   position: absolute;
-  font-size: 0.85rem;
-  font-weight: 800;
+  height: 100%;
+  border-radius: 0 999px 999px 0;
+}
+
+.bud-gauge-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+  border-radius: 0 999px 999px 0;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transition: width 0.5s ease-out;
+}
+
+/* Marqueurs */
+.bud-gauge-marker-theo {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 32px;
+  width: 4px;
+  border-radius: 4px;
+  z-index: 10;
+  transition: left 0.5s ease-out;
+}
+
+.bud-gauge-marker-zero {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 26px;
+  width: 2px;
+  background: var(--text-muted);
+  opacity: 0.5;
+  z-index: 5;
+}
+
+/* Labels */
+.bud-gauge-labels {
+  position: relative;
+  height: 40px;
+  margin-top: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.bud-label-theo,
+.bud-label-zero,
+.bud-label-actual {
+  position: absolute;
+  transform: translateX(-50%);
   white-space: nowrap;
+  transition: left 0.5s ease-out;
 }
-.bud-scale-label--zero {
-  color: var(--text-muted);
-  top: 32px;
-  transform: translateX(-50%);
+
+.bud-label-theo {
+  top: -65px;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
-.bud-scale-label--actual {
-  color: var(--text-main);
-  top: -35px;
-  transform: translateX(-50%);
-  font-size: 0.8rem;
+
+.bud-label-actual {
+  color: var(--primary-dark);
 }
-.bud-scale-label--theo {
-  top: 54px;
-  transform: translateX(-50%);
-}
-.bud-scale-label--max {
-  color: var(--text-muted);
+
+.bud-label-max {
+  position: absolute;
+  right: 0;
   cursor: help;
+}
+
+/* Responsive / iOS : Placement en quinconce */
+@media (max-width: 768px) {
+  .bud-gauge-wrapper {
+    margin-top: 60px;
+    margin-bottom: 50px;
+  }
+  .bud-gauge-track {
+    height: 24px;
+  }
+  .bud-gauge-marker-theo {
+    height: 38px;
+  }
+  .bud-gauge-marker-zero {
+    height: 32px;
+  }
+  .bud-gauge-labels {
+    font-size: 0.7rem;
+  }
+  .bud-label-theo {
+    top: -55px;
+  }
+  .bud-label-actual {
+    top: -35px;
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+  .bud-label-zero,
+  .bud-label-max {
+    top: 30px;
+  }
+  /* On masque le texte "Théorie :" et "Actuel :" sur mobile pour gagner de la place */
+  .lbl-desktop {
+    display: none;
+  }
 }
 
 .bud-categories-grid {
@@ -2733,4 +2773,366 @@ body.sum-mode-active .sum-target {
 .bs-cesu-row input[type="number"] {
   width: 100px;
   flex-shrink: 0;
+}
+/* === ACCORDÉON IMPORT CSV === */
+.prop2-container {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+  max-height: 55vh;
+  overflow-y: auto;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.prop2-item {
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.2s;
+}
+.prop2-item:last-child {
+  border-bottom: none;
+}
+.prop2-summary {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  gap: 12px;
+}
+.prop2-summary:hover {
+  background: var(--bg-subtle);
+}
+.prop2-summary-left {
+  flex: 1;
+  min-width: 0;
+}
+.prop2-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.prop2-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.amount-badge {
+  font-weight: 700;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+.amount-expense {
+  color: var(--text-main);
+}
+.amount-income {
+  color: var(--success);
+}
+
+.prop2-status {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+}
+.prop2-details {
+  display: none;
+  padding: 16px;
+  background: var(--bg-page);
+  border-top: 1px dashed var(--border-light);
+}
+.prop2-item.open .prop2-details {
+  display: block;
+}
+.prop2-item.open .prop2-summary {
+  background: var(--bg-soft);
+}
+.prop2-item.is-duplicate .prop2-summary {
+  opacity: 0.5;
+}
+.prop2-item.ignored .prop2-summary {
+  opacity: 0.4;
+}
+
+/* === SWITCH TOGGLE NATIF === */
+.pf-switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.pf-switch-wrap:hover {
+  color: var(--text-main);
+}
+.pf-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.pf-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pf-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-strong);
+  transition: 0.3s;
+  border-radius: 20px;
+}
+.pf-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+.pf-switch input:checked + .pf-switch-slider {
+  background-color: var(--primary);
+}
+.pf-switch input:checked + .pf-switch-slider:before {
+  transform: translateX(16px);
+}
+
+[data-theme="dark"] .prop2-container,
+[data-theme="dark"] .prop2-details {
+  background: var(--bg-panel);
+  border-color: var(--border-light);
+}
+
+/* === IMPORT CSV : SWITCH & RESPONSIVE === */
+.pf-switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.pf-switch-wrap:hover {
+  color: var(--text-main);
+}
+.pf-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.pf-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pf-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-strong);
+  transition: 0.3s;
+  border-radius: 20px;
+}
+.pf-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+.pf-switch input:checked + .pf-switch-slider {
+  background-color: var(--primary);
+}
+.pf-switch input:checked + .pf-switch-slider:before {
+  transform: translateX(16px);
+}
+
+/* Accordéon Mobile */
+.prop2-container {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  overflow: hidden;
+  max-height: 55vh;
+  overflow-y: auto;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.prop2-item {
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.2s;
+}
+.prop2-item:last-child {
+  border-bottom: none;
+}
+.prop2-summary {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  gap: 12px;
+}
+.prop2-summary:hover {
+  background: var(--bg-subtle);
+}
+.prop2-summary-left {
+  flex: 1;
+  min-width: 0;
+}
+.prop2-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.prop2-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.amount-badge {
+  font-weight: 700;
+  font-family: "Consolas", monospace;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+.amount-expense {
+  color: var(--text-main);
+}
+.amount-income {
+  color: var(--success);
+}
+.prop2-status {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+}
+.prop2-details {
+  display: none;
+  padding: 16px;
+  background: var(--bg-page);
+  border-top: 1px dashed var(--border-light);
+}
+.prop2-item.open .prop2-details {
+  display: block;
+}
+.prop2-item.open .prop2-summary {
+  background: var(--bg-soft);
+}
+.prop2-item.is-duplicate .prop2-summary {
+  opacity: 0.5;
+}
+.prop2-item.ignored .prop2-summary {
+  opacity: 0.4;
+}
+
+/* Bascule Desktop / Mobile */
+.desktop-import-table {
+  display: block;
+}
+.mobile-import-accordion {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-import-table {
+    display: none;
+  }
+  .mobile-import-accordion {
+    display: block;
+  }
+}
+
+[data-theme="dark"] .prop2-container,
+[data-theme="dark"] .prop2-details {
+  background: var(--bg-panel);
+  border-color: var(--border-light);
+}
+tr.bg-danger-soft {
+  background-color: var(--bg-danger-soft) !important;
+}
+[data-theme="dark"] tr.bg-danger-soft {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* --- IMPORT CSV : AGENCEMENT DES CELLULES --- */
+.category-cell-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-selects-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.category-selects-row > select {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 6px 10px;
+}
+
+.ignore-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  width: fit-content;
+}
+
+.ignore-checkbox-wrapper input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--danger);
+  cursor: pointer;
+}
+
+/* Amélioration du sticky header pour le tableau CSV */
+.bs-csv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-page);
+  box-shadow: 0 1px 0 var(--border-light);
+}
+.bs-csv-table tbody td {
+  vertical-align: middle;
 }

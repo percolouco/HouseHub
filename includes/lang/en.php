@@ -543,6 +543,15 @@ return [
     'bud_err_server'            => 'Server error: ',
     'bud_err_delete'            => 'Error while deleting.',
     'budget_mandatory_note' => 'Tracking and Summary tabs are mandatory and always active.',
+    'bud_dyn_canteen_pattern'  => 'Jours de cantine',
+    'bud_dyn_aftercare_pattern'=> 'Jours de périscolaire',
+    'bud_import_validate_title' => 'Validate import',
+    'bud_import_verify_msg'     => 'Please verify and categorize the rows before validating.',
+    'bud_category_and_link'     => 'Categorization & Link',
+    'bud_ignore_this_line'      => 'Ignore this line',
+    'bud_link_fixed_charge'     => 'Link to a Fixed Charge',
+    'bud_import_duplicate_hint' => '(Already imported / Duplicate ignored)',
+    'btn_import_data'           => 'Import data',
 
     // Categories (Budget)
     'cat_income'                => 'Income',
