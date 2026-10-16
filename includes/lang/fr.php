@@ -543,6 +543,15 @@ return [
     'bud_err_tech'              => 'Une erreur technique est survenue.',
     'bud_err_server'            => 'Erreur serveur : ',
     'bud_err_delete'            => 'Erreur lors de la suppression.',
+    'bud_dyn_canteen_pattern'  => 'Jours de cantine',
+    'bud_dyn_aftercare_pattern'=> 'Jours de périscolaire',
+    'bud_import_validate_title' => 'Valider l\'importation',
+    'bud_import_verify_msg'     => 'Veuillez vérifier et catégoriser les lignes avant de valider.',
+    'bud_category_and_link'     => 'Catégorisation & Liaison',
+    'bud_ignore_this_line'      => 'Ignorer cette ligne',
+    'bud_link_fixed_charge'     => 'Lier à une Charge Fixe',
+    'bud_import_duplicate_hint' => '(Déjà importé / Doublon ignoré)',
+    'btn_import_data'           => 'Importer les données',
 
     // Catégories (Budget)
     'cat_income'                => 'Revenus',

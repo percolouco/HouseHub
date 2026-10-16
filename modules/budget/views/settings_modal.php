@@ -274,6 +274,43 @@ if (!defined('CURRENCY')) {
                             </div>
                         </div>
 
+                        <div class="pf-attached-form pf-mt-md">
+                            <div style="flex: 1; min-width: 150px;">
+                                <label class="pf-label"><?= tr('bud_dyn_canteen_pattern') ?></label>
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_canteen_days[]" value="1" class="js-canteen-cb pf-checkbox-lg"> <?= tr('day_mon') ?>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_canteen_days[]" value="2" class="js-canteen-cb pf-checkbox-lg"> <?= tr('day_tue') ?>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_canteen_days[]" value="4" class="js-canteen-cb pf-checkbox-lg"> <?= tr('day_thu') ?>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_canteen_days[]" value="5" class="js-canteen-cb pf-checkbox-lg"> <?= tr('day_fri') ?>
+                                    </label>
+                                </div>
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label class="pf-label"><?= tr('bud_dyn_aftercare_pattern') ?></label>
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_aftercare_days[]" value="1" class="js-aftercare-cb pf-checkbox-lg"> <?= tr('day_mon') ?>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_aftercare_days[]" value="2" class="js-aftercare-cb pf-checkbox-lg"> <?= tr('day_tue') ?>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_aftercare_days[]" value="4" class="js-aftercare-cb pf-checkbox-lg"> <?= tr('day_thu') ?>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-main); font-size: 0.9rem;">
+                                        <input type="checkbox" name="budget_school_aftercare_days[]" value="5" class="js-aftercare-cb pf-checkbox-lg"> <?= tr('day_fri') ?>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="bs-text-right pf-mt-md">
                             <button type="submit" class="pf-btn btn-secondary">💾 <?= tr('btn_save') ?></button>
                         </div>
@@ -351,6 +388,12 @@ async function loadBudgetSettingsData() {
         if (document.getElementById('budget_school_meal')) document.getElementById('budget_school_meal').value = bs.budget_school_meal || 5.62;
         if (document.getElementById('budget_school_aftercare')) document.getElementById('budget_school_aftercare').value = bs.budget_school_aftercare || 1.97;
         if (document.getElementById('budget_school_fullday')) document.getElementById('budget_school_fullday').value = bs.budget_school_fullday || 21.89;
+
+        const canteenDays = (bs.budget_school_canteen_days !== undefined) ? bs.budget_school_canteen_days.split(',') : ['1','2','4','5'];
+        const aftercareDays = (bs.budget_school_aftercare_days !== undefined) ? bs.budget_school_aftercare_days.split(',') : ['2','4'];
+        
+        document.querySelectorAll('.js-canteen-cb').forEach(cb => cb.checked = canteenDays.includes(cb.value));
+        document.querySelectorAll('.js-aftercare-cb').forEach(cb => cb.checked = aftercareDays.includes(cb.value));
 
         try { cesuOverrides = JSON.parse(bs.budget_cesu_overrides || '{}'); } 
         catch (e) { cesuOverrides = {}; }

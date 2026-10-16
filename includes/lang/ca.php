@@ -541,6 +541,15 @@ return [
     'bud_err_tech'              => 'S\'ha produït un error tècnic.',
     'bud_err_server'            => 'Error del servidor: ',
     'bud_err_delete'            => 'Error en suprimir.',
+    'bud_dyn_canteen_pattern'  => 'Dies de menjador',
+    'bud_dyn_aftercare_pattern'=> 'Dies d\'acollida (Tarda)',
+    'bud_import_validate_title' => 'Validar la importació',
+    'bud_import_verify_msg'     => 'Si us plau, verifiqueu i categoritzeu les línies abans de validar.',
+    'bud_category_and_link'     => 'Categorització i Enllaç',
+    'bud_ignore_this_line'      => 'Ignorar aquesta línia',
+    'bud_link_fixed_charge'     => 'Enllaçar a un Càrrec Fix',
+    'bud_import_duplicate_hint' => '(Ja importat / Duplicat ignorat)',
+    'btn_import_data'           => 'Importar les dades',
 
     // Categories
     'cat_income'                => 'Ingressos',

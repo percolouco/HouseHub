@@ -4,15 +4,17 @@
 // 1. Initialisation autonome de la connexion Meta
 require __DIR__ . '/includes/meta_db.php';
 
-// 2. FIX CHICKEN & EGG 🛑 : Création de la colonne AVANT de charger l'authentification
 try {
-    $checkMetaCol = $meta_pdo->query("SHOW COLUMNS FROM families LIKE 'enabled_views'");
-    if ($checkMetaCol->rowCount() == 0) {
-        $meta_pdo->exec("ALTER TABLE families ADD COLUMN enabled_views JSON DEFAULT NULL AFTER enabled_modules");
-        echo "✅ Colonne 'enabled_views' ajoutée à la table families (Bypass Auth).<br><br>";
+    // Ajout de la colonne amount
+    $pdo->exec("ALTER TABLE pf_import_rules ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2) DEFAULT NULL AFTER keyword");
+    
+    // Suppression de la contrainte d'unicité sur le keyword si elle existe
+    $hasIndex = $pdo->query("SHOW INDEX FROM pf_import_rules WHERE Key_name = 'keyword'")->fetch();
+    if ($hasIndex) {
+        $pdo->exec("ALTER TABLE pf_import_rules DROP INDEX keyword");
     }
 } catch (Exception $e) {
-    die("❌ Erreur critique lors de la mise à jour structurelle : " . $e->getMessage());
+    // Log l'erreur si besoin
 }
 
 // 3. Chargement sécurisé de l'authentification (qui fonctionne maintenant)

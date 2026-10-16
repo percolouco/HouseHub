@@ -202,11 +202,12 @@ try {
     }
 
     // --- GESTION DES ESTIMATIONS DYNAMIQUES ---
+    // --- GESTION DES ESTIMATIONS DYNAMIQUES ---
     if ($action === 'save_dynamic_estimates') {
         $keys = [
             'budget_nanny_fixed', 'budget_nanny_daily', 'budget_nanny_aid', 'budget_nanny_cesu_avg',
             'budget_school_meal', 'budget_school_aftercare', 'budget_school_fullday',
-            'budget_cesu_overrides' 
+            'budget_cesu_overrides', 'budget_school_canteen_days', 'budget_school_aftercare_days'
         ];
         
         $pdo->beginTransaction();
@@ -214,7 +215,11 @@ try {
         
         foreach ($keys as $k) {
             if (isset($_POST[$k])) {
-                $stmt->execute([$k, $_POST[$k]]);
+                $val = is_array($_POST[$k]) ? implode(',', $_POST[$k]) : $_POST[$k];
+                $stmt->execute([$k, $val]);
+            } else if (in_array($k, ['budget_school_canteen_days', 'budget_school_aftercare_days'])) {
+                // Si aucune case n'est cochée, $_POST ne contient pas la clé, on force une chaîne vide
+                $stmt->execute([$k, '']);
             }
         }
         $pdo->commit();
