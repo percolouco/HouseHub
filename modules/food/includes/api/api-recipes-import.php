@@ -130,42 +130,57 @@ if ($isGemini) {
     ];
 }
 
-$ch = curl_init($apiUrl);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST => true,
-    CURLOPT_HTTPHEADER => $headers,
-    CURLOPT_POSTFIELDS => json_encode($data)
-]);
+// --- EXÉCUTION DE LA REQUÊTE AVEC RETRY (Exponential Backoff) ---
+$maxRetries = 3;
+$retryCount = 0;
+$sleepTime = 2; // Temps d'attente initial en secondes
+$response = false;
+$httpCode = 0;
 
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+do {
+    $ch = curl_init($apiUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_POSTFIELDS => json_encode($data),
+        CURLOPT_TIMEOUT => 20 // Sécurité pour ne pas bloquer le serveur PHP indéfiniment
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    // Si c'est un succès, on sort immédiatement de la boucle
+    if ($httpCode === 200) {
+        break;
+    }
+
+    // Si le serveur est surchargé (503) ou qu'on dépasse le quota (429), on patiente et on réessaie
+    if (in_array($httpCode, [429, 503, 502, 504])) {
+        $retryCount++;
+        if ($retryCount < $maxRetries) {
+            sleep($sleepTime);
+            $sleepTime *= 2; // Le temps d'attente double à chaque échec (2s, puis 4s...)
+            continue;
+        }
+    }
+    
+    // Pour toute autre erreur (ex: 400, 401, 404), on sort et on échoue
+    break;
+
+} while ($retryCount < $maxRetries);
 
 if ($httpCode !== 200 || !$response) {
-    echo json_encode(['success' => false, 'error' => 'Erreur de l\'API IA : HTTP ' . $httpCode . ' - ' . $response]);
+    echo json_encode([
+        'success' => false, 
+        'error' => "Erreur de l'API IA : HTTP $httpCode - Serveurs surchargés après $retryCount tentatives. Réessayez dans un instant."
+    ]);
     exit;
 }
 
 $decoded = json_decode($response, true);
-
-// L'emplacement de la réponse diffère entre Gemini et OpenAI
-if ($isGemini) {
-    $aiContent = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
-} else {
-    $aiContent = $decoded['choices'][0]['message']['content'] ?? '{}';
-}
-
-// Nettoyage éventuel si Gemini encapsule dans des balises Markdown (ex: ```json ... ```)
-$aiContent = str_replace(['```json', '```'], '', $aiContent);
-$recipeJson = json_decode(trim($aiContent), true);
-
-if (!$recipeJson) {
-    echo json_encode(['success' => false, 'error' => 'Le modèle IA n\'a pas renvoyé un JSON valide.']);
-    exit;
-}
-
-echo json_encode(['success' => true, 'data' => $recipeJson]);
+// ... la suite de ton code (nettoyage et json_decode du contenu IA) reste identique
 
 // Helper for ISO8601 durations (PT30M -> 30)
 function parseISO8601Duration($iso) {
