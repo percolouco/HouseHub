@@ -177,9 +177,22 @@ do {
 } while ($retryCount < $maxRetries);
 
 if ($httpCode !== 200 || !$response) {
-    // On extrait et on affiche la VRAIE erreur renvoyée par Groq/OpenAI
-    $apiError = json_decode($response, true);
-    $errorDetail = $apiError['error']['message'] ?? $response;
+    // Gestion ultra-robuste de l'erreur (anti-crash PHP)
+    $errorDetail = 'Erreur inconnue';
+    
+    if (!$response) {
+        $errorDetail = 'Erreur réseau/cURL : ' . curl_error($ch);
+    } else {
+        $apiError = json_decode($response, true);
+        if (is_array($apiError) && isset($apiError['error']['message'])) {
+            $errorDetail = $apiError['error']['message'];
+        } elseif (is_array($apiError) && isset($apiError['error'])) {
+            $errorDetail = json_encode($apiError['error']);
+        } else {
+            // Si l'API renvoie du HTML (ex: 502 Bad Gateway), on le nettoie
+            $errorDetail = substr(strip_tags($response), 0, 200); 
+        }
+    }
     
     echo json_encode([
         'success' => false, 
@@ -189,6 +202,24 @@ if ($httpCode !== 200 || !$response) {
 }
 
 $decoded = json_decode($response, true);
+
+// L'emplacement de la réponse diffère entre Gemini et OpenAI/Groq
+if ($isGemini) {
+    $aiContent = $decoded['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+} else {
+    $aiContent = $decoded['choices'][0]['message']['content'] ?? '{}';
+}
+
+// Nettoyage éventuel si l'IA encapsule dans des balises Markdown (ex: ```json ... ```)
+$aiContent = str_replace(['```json', '```'], '', $aiContent);
+$recipeJson = json_decode(trim($aiContent), true);
+
+if (!$recipeJson) {
+    echo json_encode(['success' => false, 'error' => 'Le modèle IA n\'a pas renvoyé un JSON valide.']);
+    exit;
+}
+
+echo json_encode(['success' => true, 'data' => $recipeJson]);
 
 // Helper for ISO8601 durations (PT30M -> 30)
 function parseISO8601Duration($iso) {
