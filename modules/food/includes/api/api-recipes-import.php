@@ -122,12 +122,17 @@ if ($isGemini) {
     ];
     $data = [
         'model' => $model,
-        'response_format' => ['type' => 'json_object'],
         'messages' => [
             ['role' => 'system', 'content' => $systemPrompt],
             ['role' => 'user', 'content' => "Extrais cette recette :\n\n" . $input]
-        ]
+        ],
+        'temperature' => 0.1 // Température basse pour forcer la structure
     ];
+
+    // On active le mode JSON strict uniquement pour OpenAI pour éviter les erreurs 400 sur Groq/Ollama
+    if (strpos($apiUrl, 'api.openai.com') !== false) {
+        $data['response_format'] = ['type' => 'json_object'];
+    }
 }
 
 // --- EXÉCUTION DE LA REQUÊTE AVEC RETRY (Exponential Backoff) ---
@@ -144,43 +149,46 @@ do {
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => json_encode($data),
-        CURLOPT_TIMEOUT => 20 // Sécurité pour ne pas bloquer le serveur PHP indéfiniment
+        CURLOPT_TIMEOUT => 20 // Sécurité
     ]);
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    // Si c'est un succès, on sort immédiatement de la boucle
+    // Si c'est un succès, on sort immédiatement
     if ($httpCode === 200) {
         break;
     }
 
-    // Si le serveur est surchargé (503) ou qu'on dépasse le quota (429), on patiente et on réessaie
+    // Si le serveur est surchargé (503) ou qu'on dépasse le quota (429), on patiente
     if (in_array($httpCode, [429, 503, 502, 504])) {
         $retryCount++;
         if ($retryCount < $maxRetries) {
             sleep($sleepTime);
-            $sleepTime *= 2; // Le temps d'attente double à chaque échec (2s, puis 4s...)
+            $sleepTime *= 2; 
             continue;
         }
     }
     
-    // Pour toute autre erreur (ex: 400, 401, 404), on sort et on échoue
+    // Pour toute autre erreur (400, 401, 404), on sort et on échoue
     break;
 
 } while ($retryCount < $maxRetries);
 
 if ($httpCode !== 200 || !$response) {
+    // On extrait et on affiche la VRAIE erreur renvoyée par Groq/OpenAI
+    $apiError = json_decode($response, true);
+    $errorDetail = $apiError['error']['message'] ?? $response;
+    
     echo json_encode([
         'success' => false, 
-        'error' => "Erreur de l'API IA : HTTP $httpCode - Serveurs surchargés après $retryCount tentatives. Réessayez dans un instant."
+        'error' => "Erreur IA (HTTP $httpCode) : " . $errorDetail
     ]);
     exit;
 }
 
 $decoded = json_decode($response, true);
-// ... la suite de ton code (nettoyage et json_decode du contenu IA) reste identique
 
 // Helper for ISO8601 durations (PT30M -> 30)
 function parseISO8601Duration($iso) {
