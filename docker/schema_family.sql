@@ -675,3 +675,40 @@ CREATE TABLE IF NOT EXISTS pf_meals_plan (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_meal_plan (plan_date, service, person_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─── Recettes (Food Module) ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS pf_recipes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  image_url VARCHAR(500) DEFAULT NULL,
+  prep_time INT DEFAULT 0, -- en minutes
+  cook_time INT DEFAULT 0, -- en minutes
+  rest_time INT DEFAULT 0, -- en minutes
+  base_servings INT DEFAULT 4,
+  difficulty INT DEFAULT 1, -- 1 à 3 (Facile, Moyen, Difficile)
+  cost INT DEFAULT 1, -- 1 à 3 (€, €€, €€€)
+  is_favorite TINYINT(1) DEFAULT 0,
+  equipment JSON DEFAULT NULL,
+  chef_tip TEXT DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_recipe_ingredients (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  recipe_id INT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  quantity DECIMAL(10,2) DEFAULT 0,
+  unit VARCHAR(50) DEFAULT NULL,
+  sort_order INT DEFAULT 0,
+  FOREIGN KEY (recipe_id) REFERENCES pf_recipes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_recipe_steps (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  recipe_id INT NOT NULL,
+  step_title VARCHAR(255) DEFAULT NULL,
+  instruction TEXT NOT NULL,
+  sort_order INT DEFAULT 0,
+  FOREIGN KEY (recipe_id) REFERENCES pf_recipes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

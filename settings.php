@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'set_modules' && $family_id) {
             $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka', 'food'];
-            $allViews = ['food_meals', 'food_liste', 'budget_prev', 'budget_epargne', 'budget_provisions'];
+            $allViews = ['food_meals', 'food_liste', 'food_recipes', 'budget_prev', 'budget_epargne', 'budget_provisions'];
 
             $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
             $enabledViews = array_values(array_filter($allViews, fn($v) => isset($_POST['view_' . $v])));
@@ -304,6 +304,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+
+        if ($action === 'save_ai_config') {
+            require_once __DIR__ . '/includes/db.php';
+            if (isset($pdo)) {
+                $stmt = $pdo->prepare("INSERT INTO pf_settings (setting_key, setting_value, module) VALUES (?, ?, 'ai') ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+                $stmt->execute(['ai_base_url', trim($_POST['ai_base_url'] ?? '')]);
+                $stmt->execute(['ai_model', trim($_POST['ai_model'] ?? '')]);
+                if (!empty($_POST['ai_api_key'])) {
+                    $stmt->execute(['ai_api_key', trim($_POST['ai_api_key'])]);
+                }
+                $success = tr('set_success_ai');
+            }
+        }
     }
 }
 
@@ -401,7 +414,7 @@ require __DIR__ . '/header.php';
     <p class="pf-muted-note"><?= tr('set_desc_modules') ?></p>
     <?php
       $enabledMods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','calendar_ios'];
-      $enabledViews = $_SESSION['enabled_views'] ?? ['food_meals', 'food_liste', 'budget_prev', 'budget_epargne', 'budget_provisions'];
+      $enabledViews = $_SESSION['enabled_views'] ?? ['food_meals', 'food_liste', 'food_recipes', 'budget_prev', 'budget_epargne', 'budget_provisions'];
       
       $allModules = [
           'calendar' => ['icon' => '📅', 'label' => tr('menu_calendar')],
@@ -426,7 +439,8 @@ require __DIR__ . '/header.php';
               'label' => tr('mod_food_name'),
               'views' => [
                   'food_meals' => tr('food_tab_meals'),
-                  'food_liste' => tr('food_tab_list')
+                  'food_liste' => tr('food_tab_list'),
+                  'food_recipes' => tr('food_tab_recipes')
               ]
           ],
           'calendar_ios' => ['icon' => '📱', 'label' => tr('menu_calendar_ios')],
@@ -547,6 +561,37 @@ require __DIR__ . '/header.php';
     <?php endif; ?>
   </section>
   <?php endif; ?>
+
+  <section class="pf-panel-card">
+    <h2 class="pf-card-h2">✨ <?= tr('set_title_ai') ?></h2>
+    <p class="pf-muted-note"><?= tr('set_desc_ai') ?></p>
+    
+    <?php
+      // Récupération des paramètres IA
+      $stmtAi = $pdo->query("SELECT setting_key, setting_value FROM pf_settings WHERE module = 'ai'");
+      $aiSettings = $stmtAi->fetchAll(PDO::FETCH_KEY_PAIR);
+    ?>
+    <form method="post" class="pf-stack-md">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="action" value="save_ai_config">
+      
+      <div class="pf-form-row">
+          <div class="pf-form-group">
+            <label class="pf-label"><?= tr('set_label_ai_url') ?></label>
+            <input type="url" name="ai_base_url" class="pf-input" value="<?= htmlspecialchars($aiSettings['ai_base_url'] ?? 'https://api.openai.com/v1/chat/completions') ?>" placeholder="https://api.openai.com/v1/chat/completions" required>
+          </div>
+          <div class="pf-form-group">
+            <label class="pf-label"><?= tr('set_label_ai_model') ?></label>
+            <input type="text" name="ai_model" class="pf-input" value="<?= htmlspecialchars($aiSettings['ai_model'] ?? 'gpt-4o-mini') ?>" placeholder="gpt-4o-mini" required>
+          </div>
+      </div>
+      <div class="pf-form-group">
+        <label class="pf-label"><?= tr('set_label_ai_key') ?></label>
+        <input type="password" name="ai_api_key" class="pf-input" value="<?= htmlspecialchars($aiSettings['ai_api_key'] ?? '') ?>" placeholder="sk-...">
+      </div>
+      <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
+    </form>
+  </section>
 
   <section class="pf-panel-card">
     <h2 class="pf-card-h2"><?= tr('set_title_profile') ?></h2>
