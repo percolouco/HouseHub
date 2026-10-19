@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['family_db']       = $user['db_name'];
                 $_SESSION['app_lang']        = $user['lang'] ?? 'fr';
                 $_SESSION['enabled_modules'] = json_decode($user['enabled_modules'] ?? '["calendar","budget","holidays","gifts","calendar_ios"]', true);
-                $_SESSION['enabled_views']   = json_decode($user['enabled_views'] ?? '["food_meals","food_liste"]', true);
+                $_SESSION['enabled_views']   = json_decode($user['enabled_views'] ?? '["food_meals","food_liste","food_recipes"]', true);
                 
                 // --- NOUVEAU : Logique "Se souvenir de moi" ---
                 if (isset($_POST['remember_me']) && $_POST['remember_me'] === '1') {

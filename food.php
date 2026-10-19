@@ -6,21 +6,20 @@ require_once __DIR__ . '/includes/i18n.php';
 require_login('/login.php');
 
 // 1. Détection des vues actives
-$enabledViews = $_SESSION['enabled_views'] ?? ['food_meals', 'food_liste'];
+$enabledViews = $_SESSION['enabled_views'] ?? ['food_meals', 'food_liste', 'food_recipes'];
 $allowedTabs = [];
 
 if (in_array('food_meals', $enabledViews)) $allowedTabs[] = 'meals';
 if (in_array('food_liste', $enabledViews)) $allowedTabs[] = 'liste';
+if (in_array('food_recipes', $enabledViews)) $allowedTabs[] = 'recipes';
+$allowedTabs[] = 'recipe_detail'; // Vue détail toujours autorisée si on a accès aux recettes
 
 // 2. Fallback intelligent de l'onglet actif
 if (empty($allowedTabs)) {
-    $tab = 'empty'; // L'utilisateur a désactivé les deux vues
+    $tab = 'empty';
 } else {
-    // Par défaut, on prend le premier onglet disponible (Meals, ou Liste si Meals est désactivé)
     $defaultTab = $allowedTabs[0]; 
     $tab = $_GET['tab'] ?? $defaultTab;
-    
-    // Sécurité URL : Si on force un onglet non autorisé
     if (!in_array($tab, $allowedTabs)) {
         $tab = $defaultTab;
     }
@@ -54,6 +53,13 @@ require __DIR__ . '/header.php';
                 <span><?= tr('food_tab_list') ?></span>
             </a>
             <?php endif; ?>
+            
+            <?php if (in_array('recipes', $allowedTabs)): ?>
+            <a href="?tab=recipes" class="tab-item <?= in_array($tab, ['recipes', 'recipe_detail']) ? 'active' : '' ?>">
+                <span class="tab-icon">📖</span> 
+                <span><?= tr('food_tab_recipes') ?></span>
+            </a>
+            <?php endif; ?>
         </nav>
         <?php endif; ?>
     </div>
@@ -61,7 +67,6 @@ require __DIR__ . '/header.php';
     <section class="pf-section">
         <?php 
         if ($tab === 'empty') {
-            // État Vide Intégré (Zéro vue activée)
             echo "
             <div class='pf-empty-state' style='text-align:center; padding: 60px 20px; max-width: 600px; margin: 0 auto; background: var(--bg-panel); border-radius: 16px; border: 1px dashed var(--border-strong); box-shadow: var(--shadow-sm);'>
                 <div style='font-size: 4rem; margin-bottom: 20px; opacity: 0.5;'>👀</div>
@@ -70,7 +75,6 @@ require __DIR__ . '/header.php';
                 <a href='/settings.php' class='pf-btn'>⚙️ " . tr('settings') . "</a>
             </div>";
         } else {
-            // Routage classique
             $viewPath = __DIR__ . "/modules/food/views/{$tab}.php";
             if (file_exists($viewPath)) {
                 require $viewPath;
