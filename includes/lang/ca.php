@@ -691,6 +691,7 @@ return [
     'bud_csv_file'              => 'Fitxer CSV (Punt i coma)',
     'bud_preview'               => 'Previsualitzar',
     'bud_validate_import'       => 'Si us plau, comproveu i categoritzeu les línies abans de validar.',
+    'bud_hide_categorized'      => 'Amagar les línies classificades',
     'bud_assign_month'          => 'Mes de gestió',
     'bud_op_date'               => 'Data',
     'bud_label'                 => 'Concepte',

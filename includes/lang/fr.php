@@ -693,6 +693,7 @@ return [
     'bud_csv_file'              => 'Fichier CSV (Point-virgule)',
     'bud_preview'               => 'Prévisualiser',
     'bud_validate_import'       => 'Valider l\'importation',
+    'bud_hide_categorized'      => 'Masquer les lignes classées',
     'bud_assign_month'          => 'Imputer au mois',
     'bud_op_date'               => 'Date Opération',
     'bud_label'                 => 'Libellé',

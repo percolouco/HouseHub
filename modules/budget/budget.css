@@ -3191,3 +3191,112 @@ tr.bg-danger-soft {
 .mobile-import-accordion .line-checkbox.hol-hidden {
   display: none;
 }
+
+/* === MODALE IMPORT CSV : design mobile « cartes accordéon » === */
+@media (max-width: 768px) {
+  #importCsvModal .mobile-import-accordion {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    padding: 2px 2px 8px;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #importCsvModal .prop2-item {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+    flex-shrink: 0;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  #importCsvModal .prop2-item.open {
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+  }
+  #importCsvModal .prop2-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: transparent !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #importCsvModal .prop2-date {
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+  }
+  #importCsvModal .prop2-label {
+    font-size: 0.92rem;
+  }
+  #importCsvModal .amount-badge {
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.98rem;
+  }
+  #importCsvModal .prop2-status {
+    width: 10px;
+    height: 10px;
+    box-shadow: none;
+  }
+  /* chevron : indique que la ligne se déplie */
+  #importCsvModal .prop2-summary::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin: 0 4px 3px 0;
+    border-right: 2px solid var(--text-muted);
+    border-bottom: 2px solid var(--text-muted);
+    transform: rotate(45deg);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  #importCsvModal .prop2-item.open .prop2-summary::after {
+    transform: rotate(225deg);
+    margin-bottom: -3px;
+  }
+  #importCsvModal .prop2-item.open .prop2-summary {
+    border-bottom: 1px solid var(--border-light);
+  }
+  #importCsvModal .prop2-details {
+    padding: 14px;
+    background: var(--bg-subtle, var(--bg-page));
+    border-top: none;
+  }
+  #importCsvModal .prop2-details .pf-stack-sm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  #importCsvModal .prop2-details .pf-label {
+    margin-bottom: 4px;
+  }
+  #importCsvModal .prop2-details .pf-input {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 10px;
+    font-size: 16px !important; /* évite le zoom automatique de iOS */
+  }
+  #importCsvModal .prop2-item.is-duplicate .prop2-summary,
+  #importCsvModal .prop2-item.ignored .prop2-summary {
+    opacity: 0.55;
+  }
+  /* bandeau d'information compact */
+  #importCsvModal #formMapping > div:first-of-type {
+    border-radius: 12px !important;
+    background: var(--bg-subtle) !important;
+  }
+  #importCsvModal #formMapping > div:first-of-type > p {
+    font-size: 0.85rem !important;
+    flex: 1 1 100%;
+  }
+  /* boutons du bas : pleine largeur, bien visibles */
+  #importCsvModal form > div:last-child .pf-btn {
+    min-height: 46px;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+}

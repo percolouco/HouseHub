@@ -26,11 +26,18 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
-  <link rel="stylesheet" href="/global.css">
+  <?php
+    // ?v=date de modification : une feuille de style modifiée est rechargée par tous les navigateurs
+    $hhAsset = function ($path) {
+        $f = __DIR__ . parse_url($path, PHP_URL_PATH);
+        return htmlspecialchars($path) . (is_file($f) ? '?v=' . filemtime($f) : '');
+    };
+  ?>
+  <link rel="stylesheet" href="<?= $hhAsset('/global.css') ?>">
   <?php if (!empty($pageCss)): ?>
-    <link rel="stylesheet" href="<?= htmlspecialchars($pageCss) ?>">
+    <link rel="stylesheet" href="<?= $hhAsset($pageCss) ?>">
   <?php endif; ?>
-  <link rel="stylesheet" href="/dark-mode.css">
+  <link rel="stylesheet" href="<?= $hhAsset('/dark-mode.css') ?>">
   <script>(function(){const t=localStorage.getItem('hh-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
   <style>
     /* Patch CSS pour la zone droite de l'en-tête (Desktop / Mobile) */
