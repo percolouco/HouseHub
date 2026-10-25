@@ -3136,3 +3136,58 @@ tr.bg-danger-soft {
 .bs-csv-table tbody td {
   vertical-align: middle;
 }
+
+/* --- MODALE IMPORT CSV sur téléphone : plus de place pour la liste, boutons toujours visibles --- */
+@media (max-width: 768px) {
+  #importCsvModal {
+    padding: 8px !important;
+  }
+  #importCsvModal .pf-modal-content {
+    padding: 14px !important;
+    border-radius: 16px !important;
+    max-height: 92vh !important;
+    max-height: calc(100dvh - 16px) !important; /* tient compte de la barre du navigateur mobile */
+  }
+  #importCsvModal .pf-modal-content::before {
+    display: none; /* poignée décorative : économise de la hauteur */
+  }
+  #importCsvModal .pf-modal-content > div:first-child {
+    padding-bottom: 10px !important;
+    margin-bottom: 10px !important;
+  }
+  #importCsvModal .pf-modal-content > div:first-child h3 {
+    font-size: 1.15rem !important;
+  }
+  #importCsvModal #formMapping > div:first-of-type {
+    padding: 8px 12px !important;
+    margin-bottom: 8px !important;
+    gap: 6px;
+  }
+  #importCsvModal #formMapping > div:first-of-type > div {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  #importCsvModal .mobile-import-accordion {
+    margin-top: 0 !important;
+  }
+  #importCsvModal form > div:last-child {
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+  }
+  #importCsvModal form > div:last-child .pf-btn {
+    flex: 1;
+    text-align: center;
+  }
+  #importCsvModal .import-dropzone {
+    padding: 20px 12px;
+  }
+  #importCsvModal .import-dropzone input[type="file"] {
+    max-width: 100% !important;
+    width: 100%;
+  }
+}
+
+/* La case « importer » de chaque ligne mobile est pilotée par le switch « Ignorer » : on la masque (classe définie seulement dans le module vacances) */
+.mobile-import-accordion .line-checkbox.hol-hidden {
+  display: none;
+}

@@ -1137,6 +1137,8 @@ function toggleMobileAccordion(summaryEl, event) {
     if (['INPUT', 'LABEL', 'BUTTON'].includes(event.target.tagName)) return;
     const propItem = summaryEl.closest('.prop2-item');
     propItem.classList.toggle('open');
+    // mobile : la ligne dépliée est ramenée dans la zone visible (la liste est petite sur un téléphone)
+    if (propItem.classList.contains('open')) setTimeout(() => propItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60);
 }
 
 function toggleIgnoreRow(checkbox) {
