@@ -1,0 +1,170 @@
+AUDIT DESIGN HOUSEHUB — 25/10/2026
+===================================
+Périmètre : cohérence et fonctionnement du design, desktop et mobile, mode clair et sombre.
+Version auditée : branche main, commit 875daa5 (prod).
+
+MÉTHODE ET LIMITES
+------------------
+- Analyse chiffrée de tout le CSS (global.css, dark-mode.css, 6 modules : 216 Ko) et des 54 fichiers PHP (715 styles écrits dans les pages).
+- Captures réelles desktop (1280 px) et mobile (390 px), clair et sombre, des pages publiques : connexion et inscription.
+- Tests sur maquettes fidèles (même CSS) du comportement des modales sur mobile.
+- NON FAIT : captures des pages privées (budget, calendrier, courses, vacances, cadeaux, garage, etc.). Elles exigent une session et contiennent les données de la famille ; je n'ai pas ouvert de session fictive. Les constats sur ces pages viennent de la lecture du code, pas d'un rendu. Pour un rendu réel : prévoir un compte de test avec des données fictives (voir tâche T-30).
+
+RÉSUMÉ (les 8 points les plus importants)
+-----------------------------------------
+1. Les modales trop hautes sont inutilisables sur téléphone (T-01). Déjà corrigé uniquement pour l'import CSV.
+2. Le mode sombre est cassé par endroits : plus de 230 couleurs claires écrites en dur dans le CSS des modules et des dizaines dans les pages (T-02).
+3. Sept systèmes de modales différents, sans comportement mobile commun (T-03).
+4. Tableaux larges (calendrier, vacances) sans version mobile pensée (T-05).
+5. Zones de clic trop petites (18 à 32 px, norme : 44 px) (T-06).
+6. Le zoom est interdit sur le téléphone et rien ne gère le focus clavier (T-07, T-08).
+7. Beaucoup de CSS dupliqué et de règles qui se battent entre elles (!important : 20 + 54 + 180 + 145 + 78 + 6) (T-09, T-10).
+8. 715 styles écrits directement dans les pages, donc non thémables (T-11).
+
+CHIFFRES CLÉS
+-------------
+Fichier CSS                       Taille   Règles  @media  !important  couleurs hex  règles mode sombre
+global.css                         41 Ko     328      3        20          66            50
+dark-mode.css                       7 Ko      32      0        54          16            91
+modules/budget/budget.css          68 Ko     551      7       180         180             5
+modules/family-calendar            27 Ko     165      1       145          82             6
+modules/food                       28 Ko     215      3         6         132            28
+modules/gift-list                  10 Ko      86      2         0           5             0
+modules/holidays                   29 Ko     208      1        78          70             0
+modules/home                        3 Ko      14      1         0           1             0
+
+Points d'arrêt mobile utilisés : 768 (partout), 650, 480, 400, 380 : pas de convention.
+Pages avec le plus de styles écrits en dur : budget/views/suivi.php (84), budget/views/recap.php (80, dont 46 couleurs), family-calendar.php (67), admin/index.php (64, dont 33 couleurs), budget/views/budget_prev.php (60), gift-list.php (56).
+
+=====================================================================
+TÂCHES PRIORITAIRES (P0 = bloquant, P1 = important, P2 = confort)
+=====================================================================
+
+T-01  [P0] Modales trop hautes inutilisables sur mobile
+  Constat (testé) : .pf-modal (global.css ~l.741 et règle mobile ~l.861) n'a ni max-height ni défilement. Une modale de 1 200 px sur un écran de 700 px dépasse en haut et en bas : le titre et surtout les boutons Enregistrer / Annuler sont hors de l'écran et inatteignables (bouton à 1 154 px sur un écran de 700 px). C'est la cause de fond du problème de l'import CSV.
+  À faire : dans global.css, pour <= 768 px : .pf-modal { align-items: flex-start; overflow-y: auto; padding: 8px } ; .pf-modal-content { max-height: none; margin: 0 auto } ; .modal-footer { position: sticky; bottom: 0; background: var(--bg-panel) } ; utiliser dvh à la place de vh. Puis retirer les contournements locaux (import CSV, etc.).
+  Effort : 0,5 j. Vérifier ensuite chaque modale (liste en T-03).
+
+T-02  [P0] Mode sombre incomplet
+  Constat : le CSS des modules écrit 115 (budget), 41 (calendrier), 39 (courses), 33 (vacances), 2 (cadeaux) couleurs claires en dur (#fff, #f8fafc, #e2e8f0, white). Seules global.css et dark-mode.css gèrent le sombre ; holidays, gift-list et home n'ont AUCUNE règle sombre. dark-mode.css corrige en force avec 54 !important, module par module.
+  Dans les pages : recap.php (46 couleurs en dur), admin/index.php (33), pdf_template.php (30, normal pour un PDF), detail.php vacances (13).
+  À faire : (1) remplacer les couleurs claires par les variables existantes (--bg-panel, --bg-subtle, --border-light, --text-main, --text-muted) ; (2) ajouter les variables manquantes (voir T-04) ; (3) supprimer les règles de dark-mode.css devenues inutiles ; (4) revue visuelle de chaque module en sombre.
+  Effort : 2 à 3 j.
+
+T-03  [P1] Sept systèmes de modales
+  Constat : .pf-modal (global), .budget-settings-modal / .modal-epargne / .provisions-modal-content (budget), .liste-modal (courses), .pf-bottom-sheet (courses), .gift-modal-custom (cadeaux), .hol-modal-* (vacances, qui redéfinit aussi .pf-modal et .pf-modal-content) et .bs-* (budget et courses). Chacun gère différemment fond, fermeture, taille, mobile.
+  À faire : une seule modale commune dans global.css (en-tête, corps défilant, pied collant, variantes sm / large / plein écran mobile), puis migrer les modules un par un. Ajouter fermeture à la touche Échap et au clic sur le fond.
+  Effort : 3 à 5 j (migration progressive).
+
+T-04  [P1] Variables CSS utilisées mais jamais définies
+  Constat : --border, --card-bg, --hover-bg, --input-bg, --muted, --muted-bg, --primary-light, --text (+ --duration, --cols, --swatch, --owner-color, --p1-main, --p2-main, qui sont posées en JavaScript ou en ligne : OK mais à documenter). Les 8 premières n'existent nulle part : le navigateur ignore la déclaration, donc le style n'est pas appliqué (bordure absente, fond transparent).
+  À faire : soit les définir dans :root et dans [data-theme="dark"], soit les remplacer par les variables existantes. Rechercher leurs usages : grep -n 'var(--border)' etc.
+  Effort : 0,5 j.
+
+T-05  [P1] Tableaux larges sur mobile
+  Constat : family-calendar #planningTable min-width 1000 px ; holidays .hol-modal-planning width 1400 px ; 16 tableaux répartis dans 8 fichiers (budget 8, calendrier 2, cadeaux 1, courses 1, PDF 2), un conteneur à défilement horizontal explicite dans 2 fichiers seulement (calendrier, budget_prev). Le budget est correct sur ses onglets principaux (cartes / colonnes collantes), mais pas partout.
+  À faire : conteneur .pf-table-scroll { overflow-x: auto } avec indicateur d'ombre sur les bords, colonne de gauche collante ; pour les tableaux courts (suivi, récap) une vue en cartes sur mobile, comme pour l'import CSV.
+  Effort : 2 j.
+
+T-06  [P1] Zones de clic trop petites
+  Constat : boutons de 18 à 32 px : .hol-dur-btn 18, .btn-cell-delete 24, .hol-unplace-btn 24, .hol-btn-action-icon 26, .btn-add-item 28, .btn-remove-line 28, .vl-col-btn 28, .service-icon 28, .btn-target-service 30, .btn-icon-action 32, .servings-btn 32, .recipe-fav-btn 32. Recommandation : 44 x 44 px sur écran tactile (au minimum 36).
+  À faire : @media (pointer: coarse) { .btn-icon-action, ... { min-width: 44px; min-height: 44px } } ou agrandir la zone sensible avec padding / ::before sans changer l'aspect.
+  Effort : 1 j.
+
+T-07  [P1] Zoom interdit
+  Constat : header.php : viewport "maximum-scale=1.0, user-scalable=no". Empêche les personnes malvoyantes d'agrandir les pages. Le seul but légitime était d'éviter le zoom automatique de iOS dans les champs : se règle avec font-size >= 16 px sur les champs.
+  À faire : retirer maximum-scale et user-scalable ; mettre font-size: 16px sur input, select, textarea en mobile (constaté : 2 champs de la connexion sous 16 px).
+  Effort : 0,25 j.
+
+T-08  [P1] Accessibilité clavier et lecteurs d'écran
+  Constat : seulement 11 attributs aria pour 345 boutons ; boutons icône sans nom accessible ; :focus défini 12 fois seulement sur 216 Ko de CSS (aucun pour cadeaux, vacances, accueil) ; pas de prefers-reduced-motion ; modales sans piège de focus.
+  À faire : aria-label sur chaque bouton icône (croix, supprimer, éditer), un style :focus-visible global (anneau --focus-ring) dans global.css, prefers-reduced-motion pour les animations, role="dialog" et aria-modal sur les modales.
+  Effort : 1,5 j.
+
+T-09  [P1] CSS dupliqué
+  Constat : mêmes sélecteurs écrits plusieurs fois : budget.css 83 doublons (ex. .prop2-*, .amount-badge, .month-actions x3, .eg-* , .recap-table th) ; family-calendar 14 (#planningTable x3) ; global.css 28 (.pf-m-0 x4, .pf-color-swatch x3, .pf-mb-md x3) ; food 6 ; holidays 3. Plus : .pf-btn, .pf-modal, .pf-modal-content, .modal-footer redéfinis par holidays.css ; .pf-module-card par home.css ; .pf-card-title par family-calendar.css ; .btn-settings-gear / .pf-input-sm / .pf-empty-dashed par budget.css ; .bs-header / .bs-close / .col-sticky à la fois dans budget et food.
+  Risque : on corrige une copie, l'autre gagne (c'est arrivé : la modale CSV).
+  À faire : fusionner les doublons (garder la dernière valeur effective), sortir les composants partagés (.bs-*, .col-sticky) dans global.css, interdire de redéfinir .pf-* dans un module.
+  Effort : 2 j.
+
+T-10  [P1] Guerre de spécificité (!important)
+  Constat : 20 (global) + 54 (dark-mode) + 180 (budget) + 145 (calendrier) + 78 (vacances) + 6 (courses).
+  À faire : après T-02 et T-09, supprimer les !important un à un ; ordre de chargement documenté (global puis module puis dark) ; au besoin préfixer les modules (.budget-view ..., .fc-view ...).
+  Effort : 2 j (en suite de T-02 et T-09).
+
+T-11  [P1] Styles écrits dans les pages
+  Constat : 715 attributs style="..." dans 54 fichiers, dont des largeurs fixes (jusqu'à 3 chiffres en px) et des couleurs. Non thémables, non adaptables au mobile (une media query ne peut pas les surcharger sans !important).
+  À faire : créer des classes utilitaires (.pf-flex, .pf-gap-sm, .pf-text-muted, .pf-w-full...) et déplacer les blocs répétés dans le CSS des modules. Commencer par budget/views/suivi.php, recap.php, family-calendar.php, admin/index.php, gift-list.php.
+  Effort : 3 à 4 j (par fichier, en même temps que T-02).
+
+T-12  [P2] Hauteur 100vh sur mobile
+  Constat : 24 occurrences de vh dans le CSS, 4 seulement en dvh. Sur iPhone la barre du navigateur masque le bas de page. body.no-scroll { height: 100vh !important } (global.css l.82) bloque le défilement et rogne la page.
+  À faire : remplacer par dvh avec repli vh ; pour .no-scroll utiliser position: fixed ou overflow hidden sans height.
+  Effort : 0,5 j.
+
+T-13  [P2] overflow-x: hidden sur html et body
+  Constat : global.css l.30. Cache les débordements au lieu de les corriger : un élément trop large est coupé sans alerte, et peut casser position: sticky dans certains navigateurs.
+  À faire : le retirer en développement pour repérer les débordements (document.documentElement.scrollWidth > innerWidth), corriger les éléments fautifs, puis le remettre seulement si utile.
+  Effort : 1 j.
+
+T-14  [P2] Points d'arrêt sans convention
+  Constat : 768 (majorité), 650, 480, 400, 380.
+  À faire : fixer 3 niveaux (<= 480 petit téléphone, <= 768 téléphone/tablette, >= 1024 desktop) dans un commentaire en tête de global.css et aligner les modules. Prévoir une tablette (768 à 1024) : seul global.css la traite.
+  Effort : 1 j.
+
+T-15  [P2] Échelle de z-index
+  Constat : valeurs 1, 2, 5, 10, 20, 29, 30, 50, 100, 998, 999, 2000, 8999, 9000, 9999.
+  À faire : variables --z-sticky, --z-header, --z-modal, --z-toast ; une seule valeur pour toutes les modales.
+  Effort : 0,25 j.
+
+T-16  [P2] Survols sans équivalent tactile
+  Constat : 119 règles :hover, aucune règle @media (hover: none) ni (pointer: coarse). Sur téléphone, le survol reste « collé » après un appui.
+  À faire : envelopper les :hover dans @media (hover: hover) ; vérifier qu'aucune information (infobulle, bouton) n'est visible seulement au survol (title seul = invisible au doigt).
+  Effort : 1 j.
+
+T-17  [P2] Petites polices
+  Constat : 0.65rem (soit 10 px) dans calendrier, courses et vacances.
+  À faire : minimum 0.75rem (12 px) pour tout texte lu.
+  Effort : 0,25 j.
+
+T-18  [P2] Icônes en emoji
+  Constat : icônes de l'interface écrites en emoji (☀, ⚙️, 📂, 🗓️...). Rendu différent selon l'appareil, certaines polices n'affichent qu'un carré (constaté sur les captures : icône du thème dans l'en-tête de la connexion).
+  À faire : jeu d'icônes SVG intégré (une seule police d'icônes ou sprite SVG), même taille et même couleur partout.
+  Effort : 2 j.
+
+T-19  [P2] Page de connexion et en-tête
+  Constat (captures) : (1) bouton « Connexion » de l'en-tête avec un liseré clair sur le bord gauche (en clair et en sombre) ; (2) interrupteur de thème dont l'icône de droite est coupée sur mobile ; (3) en sombre, la carte de connexion est presque de la même couleur que le fond : peu de relief ; (4) case « Se souvenir de moi » blanche en sombre ; (5) 5 éléments cliquables sous 36 px de haut.
+  À faire : corriger ces 5 points dans global.css ; accent-color sur les cases à cocher.
+  Effort : 0,5 j.
+
+T-20  [P2] Page hors ligne et pages d'authentification
+  Constat : offline.php a son propre style et 4 styles écrits dans la page ; ne suit pas le thème sombre.
+  À faire : charger global.css et dark-mode.css ; prévoir le thème sombre.
+  Effort : 0,25 j.
+
+T-21  [P2] Variables de couleur pour les modules
+  Constat : budget, courses, vacances ont chacun leurs couleurs (#10b981, #f59e0b, #ef4444 répétés en dur au lieu de --success, --warning, --danger ; vert #14532d et bleu #1e3a8a pour les thèmes de tableaux).
+  À faire : tout passer par les variables sémantiques, ajouter les teintes manquantes (--success-soft, --warning-soft, --danger-soft) pour clair et sombre.
+  Effort : 1 j (avec T-02).
+
+T-30  [P1] Vérification visuelle des pages privées (à faire ensuite)
+  Constat : non vérifié dans cet audit (voir Méthode).
+  À faire : créer une famille de test avec données fictives sur une instance de test, relever pour chaque module (accueil, budget x6 onglets, calendrier, courses, vacances, cadeaux, garage, mémo, tâches, Planka, impression 3D, paramètres, admin) : captures 390 px et 1280 px, clair et sombre ; liste des défauts dans ce fichier.
+  Effort : 2 j. C'est ce qui donnerait la liste exacte de ce qui est cassé page par page.
+
+ORDRE CONSEILLÉ
+---------------
+Sprint 1 (3 j)   : T-01, T-04, T-07, T-12, T-19, T-20
+Sprint 2 (5 j)   : T-02 + T-21 (couleurs et mode sombre), T-06
+Sprint 3 (5 j)   : T-03 (modale commune), T-05
+Sprint 4 (5 j)   : T-09, T-10, T-11 (nettoyage du CSS et des styles en dur)
+Sprint 5 (4 j)   : T-08, T-13 à T-18, puis T-30
+Total estimé : environ 20 à 25 jours-homme si tout est traité ; les sprints 1 et 2 règlent l'essentiel de ce que l'utilisateur voit.
+
+CE QUI VA BIEN
+--------------
+- Système de variables de couleur en place (232 usages dans global.css) : il suffit de l'utiliser partout.
+- Un thème sombre existe et fonctionne sur global.css, connexion et inscription.
+- Pas de débordement horizontal sur les pages publiques à 390 px.
+- Budget : colonnes collantes, version mobile en cartes pour l'import CSV (corrigée aujourd'hui).
+- Service worker corrigé aujourd'hui : les mises à jour de CSS et JS arrivent désormais sur les téléphones.
