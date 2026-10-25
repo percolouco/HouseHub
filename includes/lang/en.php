@@ -693,6 +693,7 @@ return [
     'bud_csv_file'              => 'CSV file (semicolon-separated)',
     'bud_preview'               => 'Preview',
     'bud_validate_import'       => 'Validate import',
+    'bud_hide_categorized'      => 'Hide categorized lines',
     'bud_assign_month'          => 'Assign to month',
     'bud_op_date'               => 'Operation date',
     'bud_label'                 => 'Label',

@@ -1,4 +1,4 @@
-const CACHE_NAME = "househub-static-v4";
+const CACHE_NAME = "househub-static-v5";
 const API_CACHE_NAME = "househub-api-v1";
 const ASSETS_TO_CACHE = [
   "/offline.php",
@@ -130,6 +130,25 @@ self.addEventListener("fetch", (event) => {
             return cachedResponse || caches.match("/offline.php");
           });
         }),
+    );
+    return;
+  }
+
+  // CSS / JS : réseau d'abord (cache seulement hors ligne), sinon un téléphone garde pour toujours
+  // l'ancienne feuille de style après une mise à jour
+  if (/\.(css|js)$/.test(requestUrl.pathname)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(event.request, responseToCache));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request)),
     );
     return;
   }
