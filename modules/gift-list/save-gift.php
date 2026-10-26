@@ -4,6 +4,8 @@
 require __DIR__ . '/../../includes/auth.php';
 require_login('/login.php');
 require __DIR__ . '/../../includes/db.php';
+require __DIR__ . '/ensure-schema.php';
+gift_ensure_schema($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /gift-list.php');
@@ -28,6 +30,16 @@ if (in_array($occasionForView, ['ANNIV', 'SANT'])) {
 }
 
 try {
+    // --- ACHETÉ / À ACHETER (coche rapide) ---
+    if ($action === 'toggle_bought') {
+        header('Content-Type: application/json');
+        $bought = !empty($_POST['is_bought']) ? 1 : 0;
+        $stmt = $pdo->prepare("UPDATE {$tableName} SET is_bought = :b WHERE id = :id");
+        $stmt->execute(['b' => $bought, 'id' => $gift_id]);
+        echo json_encode(['success' => true, 'is_bought' => $bought]);
+        exit;
+    }
+
     // --- SUPPRESSION ---
     if ($action === 'delete') {
         if ($gift_id > 0) {
@@ -46,7 +58,8 @@ try {
     $occasion   = trim($_POST['occasion'] ?? '');
     $gift_desc  = trim($_POST['gift_description'] ?? '');
     $prod_link  = trim($_POST['product_link'] ?? '');
-    $amount     = ($_POST['amount'] !== '') ? (float)$_POST['amount'] : 0.0;
+    $amount     = (isset($_POST['amount']) && $_POST['amount'] !== '') ? (float)str_replace(',', '.', $_POST['amount']) : 0.0;
+    $is_bought  = !empty($_POST['is_bought']) ? 1 : 0;
 
     // Si payeur vide, c'est l'adulte responsable qui paye
     if ($payer_name === '') {
@@ -71,7 +84,8 @@ try {
                 occasion = :occasion,
                 gift_description = :gift_description,
                 product_link = :product_link,
-                amount = :amount
+                amount = :amount,
+                is_bought = :is_bought
             WHERE id = :id
         ");
         $stmt->execute([
@@ -84,15 +98,16 @@ try {
             'gift_description' => $gift_desc,
             'product_link'     => $prod_link ?: null,
             'amount'           => $amount,
+            'is_bought'        => $is_bought,
         ]);
     } 
     // --- CREATE ---
     else {
         $stmt = $pdo->prepare("
             INSERT INTO {$tableName}
-              (year, adult_name, payer_name, child_name, occasion, gift_description, product_link, amount)
+              (year, adult_name, payer_name, child_name, occasion, gift_description, product_link, amount, is_bought)
             VALUES
-              (:year, :adult_name, :payer_name, :child_name, :occasion, :gift_description, :product_link, :amount)
+              (:year, :adult_name, :payer_name, :child_name, :occasion, :gift_description, :product_link, :amount, :is_bought)
         ");
         $stmt->execute([
             'year'             => $year,
@@ -103,6 +118,7 @@ try {
             'gift_description' => $gift_desc,
             'product_link'     => $prod_link ?: null,
             'amount'           => $amount,
+            'is_bought'        => $is_bought,
         ]);
     }
 

@@ -68,7 +68,7 @@ Tous les modules sont activables/désactivables par famille depuis `/settings.ph
 | 📅 Calendrier     | `/family-calendar.php` | Congés (CP/JRA/JA), modes de garde, planning hebdo, vacances scolaires          |
 | 🗓️ Calendrier iOS | `/calendar-ios.php`    | Synchronisation CalDAV avec iPhone/iPad                                         |
 | 🏖️ Voyages        | `/holidays.php`        | Roadtrips, cartographie Leaflet, itinéraires OSRM, météo Open-Meteo             |
-| 🎁 Cadeaux        | `/gift-list.php`       | Listes Noël / anniversaires, intégration Tricount                               |
+| 🎁 Cadeaux        | `/gift-list.php`       | Idées par fête, case « acheté », comptes (qui doit quoi), pensé mobile          |
 | 🚗 Garage         | `/garage.php`          | Véhicules, historique entretiens, pièces détachées                              |
 | 🛒 Courses        | `/groceries.php`       | Liste de courses partagée en temps réel                                         |
 | ✅ Todo           | `/todo.php`            | Listes de tâches avec rappels quotidiens via Discord webhook                    |
@@ -181,6 +181,7 @@ Afin de transformer complètement l'application héritée de Pacha Family en un 
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v2.4.0  | Cadeaux : refonte mobile (onglets par fête, chips de filtre, cartes, ＋ flottant, fiche d'ajout rapide, case « acheté », onglet Comptes) |
 | v2.3.0  | Multi-tenant (p.2) : Refonte BDD Budget (p1, p2), suppression IDs statiques et thèmes de profils dynamiques (color-mix()) |
 | v2.2.0  | Multi-tenant (p.1) : Paramètres dynamiques du foyer (€, Zone) via BDD + script migration                                  |
 | v2.1.0  | Module Planka : Kanban natif connecté à Planka via API proxy PHP                                                          |

@@ -5,8 +5,10 @@ require __DIR__ . '/includes/auth.php';
 require_login('/login.php');
 require __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/i18n.php';
+require __DIR__ . '/modules/gift-list/ensure-schema.php';
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
+gift_ensure_schema($pdo);
 
 // --- 1. CONFIGURATION DE BASE ---
 $year       = (int)date('Y');
@@ -16,15 +18,15 @@ $mainClass  = "pf-gift-list";
 $pageCss    = "/modules/gift-list/gift-list.css";
 
 // --- 2. RÉCUPÉRATION DYNAMIQUE DES DONNÉES ---
-// On inclut les enfants du foyer ET les proches enfants
+// Enfants du foyer + proches enfants
 $stmt = $pdo->query("SELECT name FROM pf_people WHERE role IN ('enfant', 'proche_enfant') ORDER BY name ASC");
 $children = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun enfant configuré'];
 
-// On inclut les adultes du foyer ET les proches adultes (On exclut nounou et les enfants)
+// Adultes du foyer + proches adultes (sans nounou ni enfants)
 $stmt = $pdo->query("SELECT name FROM pf_people WHERE role NOT IN ('enfant', 'proche_enfant', 'nounou') ORDER BY name ASC");
 $allAdultsList = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun adulte configuré'];
 
-// On récupère toutes les occasions (avec l'icône)
+// Occasions actives (avec icône)
 $stmt = $pdo->query("SELECT code, name, icon, month_date FROM pf_gift_occasions WHERE is_active = 1 ORDER BY sort_order ASC, month_date ASC, id ASC");
 $activeOccasions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -33,241 +35,130 @@ if (empty($activeOccasions)) {
 }
 $allowedOccasionCodes = array_column($activeOccasions, 'code');
 
+// Fête affichée par défaut : la prochaine à venir (sinon la première)
+$defaultOcc = $allowedOccasionCodes[0];
+$today = date('m-d');
+$bestDelta = null;
+foreach ($activeOccasions as $o) {
+    if (!preg_match('/^\d{2}-\d{2}$/', (string)$o['month_date'])) continue;
+    $delta = strcmp($o['month_date'], $today) >= 0 ? 0 : 1;
+    $key = $delta . $o['month_date'];
+    if ($bestDelta === null || $key < $bestDelta) { $bestDelta = $key; $defaultOcc = $o['code']; }
+}
+
 // --- 3. CHARGEMENT DES CADEAUX ---
 $inMarks = implode(',', array_fill(0, count($allowedOccasionCodes), '?'));
-$sql = "SELECT * FROM pf_gifts WHERE year = ? AND occasion IN ($inMarks) ORDER BY occasion ASC, child_name ASC, adult_name ASC";
+$sql = "SELECT id, occasion, child_name, adult_name, payer_name, gift_description, product_link, amount, is_bought
+        FROM pf_gifts WHERE year = ? AND occasion IN ($inMarks) ORDER BY child_name ASC, id ASC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute(array_merge([$year], $allowedOccasionCodes));
-$gifts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$giftsJs = array_map(function ($g) {
+    return [
+        'id'     => (int)$g['id'],
+        'occ'    => $g['occasion'],
+        'child'  => $g['child_name'],
+        'adult'  => $g['adult_name'],
+        'payer'  => ($g['payer_name'] ?: $g['adult_name']),
+        'desc'   => $g['gift_description'],
+        'link'   => $g['product_link'] ?: '',
+        'amount' => (float)$g['amount'],
+        'bought' => (int)($g['is_bought'] ?? 0),
+    ];
+}, $stmt->fetchAll(PDO::FETCH_ASSOC));
 
-$data = [];
-$adultsInView = [];
+$me = $_SESSION['user']['display_name'] ?? ($_SESSION['user']['username'] ?? '');
 
-foreach ($gifts as $g) {
-    $data[$g['occasion']][$g['child_name']]['gifts'][] = $g;
-    $data[$g['occasion']][$g['child_name']]['totals'][$g['adult_name']] = ($data[$g['occasion']][$g['child_name']]['totals'][$g['adult_name']] ?? 0) + $g['amount'];
-    $adultsInView[$g['adult_name']] = true;
-    if (!empty($g['payer_name'])) {
-        $adultsInView[$g['payer_name']] = true;
-    }
-}
-
-// --- 4. TRICOUNT (Bilan et Remboursements) ---
-$people = array_values(array_unique(array_merge($allAdultsList, array_keys($adultsInView))));
-$people = array_filter($people);
-sort($people);
-
-$matrix = [];
-foreach ($people as $p1) { foreach ($people as $p2) $matrix[$p1][$p2] = 0.0; }
-
-foreach ($gifts as $g) {
-    $adult = $g['adult_name'];
-    $payer = $g['payer_name'] ?? $g['adult_name'];
-    $amt   = (float)$g['amount'];
-    if ($amt > 0 && $adult && $payer && $adult !== $payer) {
-        $matrix[$adult][$payer] += $amt;
-    }
-}
-
-$settlements = [];
-$countPeople = count($people);
-for ($i = 0; $i < $countPeople; $i++) {
-    for ($j = $i + 1; $j < $countPeople; $j++) {
-        $a = $people[$i]; $b = $people[$j];
-        $net = $matrix[$a][$b] - $matrix[$b][$a];
-        if ($net > 0.01) { $settlements[] = ['from' => $a, 'to' => $b, 'amount' => $net]; }
-        elseif ($net < -0.01) { $settlements[] = ['from' => $b, 'to' => $a, 'amount' => -$net]; }
-    }
-}
+$glData = [
+    'year'       => $year,
+    'gifts'      => $giftsJs,
+    'children'   => array_values($children),
+    'adults'     => array_values($allAdultsList),
+    'occasions'  => array_map(fn($o) => ['code' => $o['code'], 'name' => $o['name'], 'icon' => $o['icon'] ?: '🎁'], $activeOccasions),
+    'defaultOcc' => $defaultOcc,
+    'me'         => $me,
+    'cur'        => defined('CURRENCY') ? CURRENCY : '€',
+    't'          => [
+        'ideas' => tr('gl_tab_ideas'), 'accounts' => tr('gl_tab_accounts'),
+        'for' => tr('gl_for'), 'by' => tr('gl_by'), 'status' => tr('gl_status'),
+        'toBuy' => tr('gl_to_buy'), 'bought' => tr('gl_bought'),
+        'spent' => tr('gl_spent'), 'planned' => tr('gl_planned'), 'remaining' => tr('gl_remaining'),
+        'addTitle' => tr('gl_add_title'), 'editTitle' => tr('gl_edit_title'),
+        'paidBy' => tr('gift_paid_by'), 'paid' => tr('gl_paid'), 'share' => tr('gl_share'),
+        'owes' => tr('gift_owes'), 'to' => tr('gl_to'),
+        'whoOwes' => tr('gl_who_owes'), 'settled' => tr('gl_settled'), 'basedOn' => tr('gl_based_on'),
+        'emptyOcc' => tr('gl_empty_occ'), 'noMatch' => tr('gl_no_match'), 'reset' => tr('gl_reset'),
+        'confirmDelete' => tr('gift_confirm_delete'), 'matrix' => tr('gift_view_matrix'),
+        'debtor' => tr('gift_debtor'), 'creditor' => tr('gift_creditor'), 'per' => tr('gl_per_person'),
+        'sameAsAdult' => tr('gl_same_payer'), 'plannedLeft' => tr('gl_planned_left'), 'markBought' => tr('gl_mark_bought'),
+    ],
+];
 
 require __DIR__ . '/header.php';
 ?>
 
-<div class="pf-container cl-view-dynamic">
+<div class="pf-container gl-app" id="glApp">
 
-    <div class="cl-titlebar">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <h1 style="margin: 0;">🎁 <?= sprintf(tr('gift_main_title'), $year) ?></h1>
-            <button id="btn-open-gift-settings" class="btn-settings-gear" title="<?= tr('gift_settings') ?>" style="font-size: 1.4rem; padding: 4px;">
-                ⚙️
-            </button>
+    <div class="gl-top">
+        <div class="gl-titlerow">
+            <h1>🎁 <?= sprintf(tr('gift_main_title'), $year) ?></h1>
+            <button id="btn-open-gift-settings" class="btn-settings-gear gl-gear" title="<?= tr('gift_settings') ?>" aria-label="<?= tr('gift_settings') ?>">⚙️</button>
+        </div>
+
+        <div class="gl-seg" role="tablist">
+            <button type="button" class="gl-seg-btn is-active" data-view="ideas" role="tab">🎁 <?= tr('gl_tab_ideas') ?></button>
+            <button type="button" class="gl-seg-btn" data-view="accounts" role="tab">⚖️ <?= tr('gl_tab_accounts') ?></button>
         </div>
     </div>
 
-    <div class="pf-filter-bar">
-        <span class="pf-filter-icon">🔍</span>
-
-        <div class="pf-multi-select" id="ms-child">
-            <div class="pf-ms-trigger" onclick="toggleMS('ms-child-list', this)">
-                👦 <span id="ms-child-label"><?= tr('gift_filter_all_children') ?></span>
-            </div>
-            <div class="pf-ms-dropdown" id="ms-child-list">
-                <label class="pf-ms-option is-all">
-                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'child')">
-                    <?= tr('gift_filter_all_children') ?>
-                </label>
-                <?php foreach($children as $c): ?>
-                    <label class="pf-ms-option"><input type="checkbox" value="<?= htmlspecialchars($c) ?>" onchange="handleMSChange(this, 'child')"> <?= htmlspecialchars($c) ?></label>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <div class="pf-multi-select" id="ms-adult">
-            <div class="pf-ms-trigger" onclick="toggleMS('ms-adult-list', this)">
-                👤 <span id="ms-adult-label"><?= tr('gift_filter_all_adults') ?></span>
-            </div>
-            <div class="pf-ms-dropdown" id="ms-adult-list">
-                <label class="pf-ms-option is-all">
-                    <input type="checkbox" value="all" checked onchange="handleMSChange(this, 'adult')">
-                    <?= tr('gift_filter_all_adults') ?>
-                </label>
-                <?php foreach($allAdultsList as $a): ?>
-                    <label class="pf-ms-option"><input type="checkbox" value="<?= htmlspecialchars($a) ?>" onchange="handleMSChange(this, 'adult')"> <?= htmlspecialchars($a) ?></label>
-                <?php endforeach; ?>
-            </div>
-        </div>
+    <div id="glIdeas">
+        <nav class="gl-tabs" id="glTabs" aria-label="Fêtes"></nav>
+        <div class="gl-summary" id="glSummary"></div>
+        <div class="gl-filters" id="glFilters"></div>
+        <div id="glList"></div>
     </div>
 
-    <section class="pf-section">
-        <?php foreach ($activeOccasions as $occ):
-            $occCode = $occ['code'];
-            // Affichage Brut de la BDD pour le nom de l'occasion
-            $occName = $occ['name'];
-            $occIcon = $occ['icon'] ?: '🎁';
-        ?>
-            <div class="js-occ-section">
-                <h2 class="cl-occasion-title">
-                    <span class="cl-occasion-icon"><?= htmlspecialchars($occIcon) ?></span>
-                    <?= htmlspecialchars($occName) ?>
-                </h2>
-
-                <?php foreach ($children as $child):
-                    $childData = $data[$occCode][$child] ?? ['gifts' => [], 'totals' => []];
-                ?>
-                <div class="pf-child-section js-child" data-name="<?= htmlspecialchars($child) ?>">
-                    <div class="pf-child-header">
-                        <h3>👦 <?= htmlspecialchars($child) ?></h3>
-                        <button class="pf-btn pf-btn-small btn-add-gift"
-                                data-child="<?= htmlspecialchars($child) ?>"
-                                data-occ="<?= htmlspecialchars($occCode) ?>"
-                                data-adults="<?= htmlspecialchars(json_encode(array_values($allAdultsList))) ?>">
-                            ＋ <?= tr('gift_add_gift') ?>
-                        </button>
-                    </div>
-
-                    <div class="pf-child-totals-bar">
-                        <?php foreach ($childData['totals'] as $adult => $tot): ?>
-                            <span class="pf-summary-pill js-pill-adult" data-adult="<?= htmlspecialchars($adult) ?>">👤 <?= htmlspecialchars($adult) ?> : <strong><?= number_format($tot, 2, ',', '') ?> €</strong></span>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <?php if (empty($childData['gifts'])): ?>
-                        <p class="js-empty-state gift-empty-state"><?= tr('gift_empty_state_no_gifts') ?></p>
-                    <?php else: ?>
-                        <p class="js-empty-state gift-empty-state pf-hidden"><?= tr('gift_empty_state_no_filter') ?></p>
-                        <div class="pf-gift-feed">
-                            <?php foreach ($childData['gifts'] as $g): ?>
-                            <div class="pf-gift-card-compact js-gift-card" data-adult="<?= htmlspecialchars($g['adult_name']) ?>">
-                                <div>
-                                    <h4 class="pf-gift-title">
-                                        <?= htmlspecialchars($g['gift_description']) ?>
-                                        <?php if($g['product_link']): ?><a href="<?= htmlspecialchars($g['product_link']) ?>" target="_blank" class="pf-gift-link">🔗</a><?php endif; ?>
-                                    </h4>
-                                    <span class="pf-pill-adult">👤 <?= htmlspecialchars($g['adult_name']) ?></span>
-                                    <?php if($g['payer_name'] && $g['payer_name'] !== $g['adult_name']): ?>
-                                        <div class="pf-gift-payer"><?= sprintf(tr('gift_paid_by'), htmlspecialchars($g['payer_name'])) ?></div>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="pf-gift-footer">
-                                    <span class="pf-gift-price"><?= number_format($g['amount'], 2, ',', ' ') ?> €</span>
-                                    <div class="pf-gift-actions">
-                                        <button class="btn-icon-action edit btn-edit-gift" data-gift="<?= htmlspecialchars(json_encode($g)) ?>">✏️</button>
-                                        <button class="btn-icon-action delete btn-delete-gift" data-id="<?= $g['id'] ?>">🗑️</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endforeach; ?>
-    </section>
-
-    <section class="pf-section pf-section--panel gift-tricount-section">
-        <h2 class="gift-tricount-title">⚖️ <?= tr('gift_liquidations') ?></h2>
-
-        <?php if (empty($settlements)): ?>
-            <p class="gift-tricount-success">✅ <?= tr('gift_no_debt') ?></p>
-        <?php else: ?>
-            <ul class="pf-tricount-list">
-                <?php foreach ($settlements as $s): ?>
-                    <li class="pf-tricount-item">
-                        <span><strong><?= htmlspecialchars($s['from']) ?></strong> <?= tr('gift_owes') ?> <?= tr('gift_to') ?> <?= htmlspecialchars($s['to']) ?></span>
-                        <strong class="gift-tricount-debt-amount"><?= number_format($s['amount'], 2, ',', ' ') ?> €</strong>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
-
-        <details class="gift-matrix-details">
-            <summary class="gift-matrix-summary"><?= tr('gift_view_matrix') ?></summary>
-            <div class="gift-matrix-wrapper">
-                <table class="pf-table pf-table--compact cl-debt-matrix">
-                    <thead>
-                        <tr>
-                            <th class="sticky-col bg-header"><?= tr('gift_debtor') ?> \ <?= tr('gift_creditor') ?></th>
-                            <?php foreach ($people as $p): ?><th><?= htmlspecialchars($p) ?></th><?php endforeach; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($people as $debtor): ?>
-                            <tr>
-                                <th class="sticky-col bg-body"><?= htmlspecialchars($debtor) ?></th>
-                                <?php foreach ($people as $creditor):
-                                    $val = $matrix[$debtor][$creditor] ?? 0;
-                                    $display = ($debtor === $creditor) || $val == 0 ? '—' : number_format($val, 2, ',', ' ') . ' €';
-                                    $cellClass = $val > 0 ? 'gift-cell-danger' : 'gift-cell-muted';
-                                ?>
-                                    <td class="<?= $cellClass ?>"><?= $display ?></td>
-                                <?php endforeach; ?>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </details>
-    </section>
+    <div id="glAccounts" hidden></div>
 </div>
 
-<!-- 1. Modale CRUD Cadeau -->
-<div id="pf-gift-modal" class="pf-modal">
-    <div class="pf-modal-content gift-modal-custom-content">
-        <div class="gift-modal-custom-header">
-            <h3 id="modalTitle" class="pf-modal-title gift-modal-custom-title">Cadeau</h3>
-            <button type="button" class="btn-modal-close gift-modal-close-btn">&times;</button>
+<button type="button" class="gl-fab" id="glFab" aria-label="<?= tr('gl_add_title') ?>">+</button>
+
+<!-- Fiche d'ajout / d'édition (bottom sheet) -->
+<div class="gl-sheet-back" id="glSheet" hidden>
+    <form class="gl-sheet" id="giftForm" method="post" action="/modules/gift-list/save-gift.php" autocomplete="off">
+        <div class="gl-grab"></div>
+        <div class="gl-sheet-head">
+            <h3 id="glSheetTitle"></h3>
+            <button type="button" class="gl-x" data-close aria-label="<?= tr('btn_cancel') ?>">&times;</button>
         </div>
 
-        <form method="post" action="/modules/gift-list/save-gift.php" id="giftForm">
-            <input type="hidden" name="year" value="<?= $year ?>">
-            <input type="hidden" name="child_name" id="modalChild">
-            <input type="hidden" name="occasion" id="modalOccasion">
-            <input type="hidden" name="action" id="modalAction">
-            <input type="hidden" name="gift_id" id="modalGiftId">
+        <input type="hidden" name="year" value="<?= $year ?>">
+        <input type="hidden" name="action" id="modalAction" value="create">
+        <input type="hidden" name="gift_id" id="modalGiftId" value="">
 
-            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_col_adult') ?></label><select name="adult_name" id="modalAdult" class="pf-input" required></select></div>
-            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_payer') ?></label><select name="payer_name" id="modalPayer" class="pf-input" required></select></div>
-            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_gift_name') ?></label><input type="text" name="gift_description" id="modalDesc" class="pf-input" required></div>
-            <div class="pf-form-group"><label class="pf-label"><?= tr('gift_modal_price') ?></label><input type="number" step="0.01" name="amount" id="modalAmount" class="pf-input"></div>
-            <div class="pf-form-group gift-form-group-spaced"><label class="pf-label"><?= tr('gift_modal_link') ?></label><input type="url" name="product_link" id="modalLink" class="pf-input"></div>
+        <input type="text" name="gift_description" id="modalDesc" class="gl-big" placeholder="<?= tr('gl_what') ?>" required enterkeyhint="done">
 
-            <div class="modal-footer gift-modal-custom-footer">
-                <button type="button" class="pf-btn btn-secondary btn-modal-close"><?= tr('btn_cancel') ?></button>
-                <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
+        <div class="gl-row">
+            <label class="gl-price-in"><input type="text" name="amount" id="modalAmount" inputmode="decimal" placeholder="0,00"><span><?= defined('CURRENCY') ? htmlspecialchars(CURRENCY) : '€' ?></span></label>
+            <label class="gl-switch"><input type="checkbox" name="is_bought" id="modalBought" value="1"><span class="gl-switch-ui"></span><span><?= tr('gl_bought_done') ?></span></label>
+        </div>
+
+        <div class="gl-field"><span class="gl-field-label"><?= tr('gl_for') ?></span><div class="gl-chips" id="modalChildChips"></div></div>
+        <div class="gl-field"><span class="gl-field-label"><?= tr('gl_by') ?></span><div class="gl-chips" id="modalAdultChips"></div></div>
+
+        <details class="gl-more">
+            <summary><?= tr('gl_more') ?></summary>
+            <div class="gl-more-body">
+                <label class="gl-lab"><?= tr('gift_modal_payer') ?><select name="payer_name" id="modalPayer" class="pf-input"></select></label>
+                <label class="gl-lab"><?= tr('gl_occasion') ?><select name="occasion" id="modalOccasion" class="pf-input"></select></label>
+                <label class="gl-lab"><?= tr('gift_modal_link') ?><input type="url" name="product_link" id="modalLink" class="pf-input" placeholder="https://"></label>
             </div>
-        </form>
-    </div>
+        </details>
+
+        <div class="gl-sheet-actions">
+            <button type="button" class="gl-btn-del" id="glDelete" hidden>🗑️ <?= tr('gl_delete') ?></button>
+            <button type="submit" class="gl-btn-save"><?= tr('btn_save') ?></button>
+        </div>
+    </form>
 </div>
 
 <!-- 2. Modale Paramètres (Occasions & Proches) -->
@@ -355,249 +246,313 @@ require __DIR__ . '/header.php';
     </div>
 </div>
 
+
 <script>
 // ==========================================
-// 1. GESTION DU COMPOSANT MULTI-SELECT VANILLA
+// 1. LISTE DES CADEAUX (rendu côté navigateur à partir de GL)
 // ==========================================
+const GL = <?= json_encode($glData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
+const T = GL.t;
 
-function toggleMS(listId, triggerEl) {
-    document.querySelectorAll('.pf-ms-dropdown').forEach(el => { if (el.id !== listId) el.classList.remove('open'); });
-    document.querySelectorAll('.pf-ms-trigger').forEach(el => { if (el !== triggerEl) el.classList.remove('active'); });
-    const list = document.getElementById(listId);
-    if (list) list.classList.toggle('open');
-    if (triggerEl) triggerEl.classList.toggle('active');
+const $id = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => n.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + GL.cur;
+const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const hue = name => { let h = 0; for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const avatar = name => `<span class="gl-av" style="--h:${hue(name)}">${esc(String(name).trim().charAt(0).toUpperCase())}</span>`;
+
+const saved = store.get('gl-state', {});
+const state = {
+    view: saved.view === 'accounts' ? 'accounts' : 'ideas',
+    occ: GL.occasions.some(o => o.code === saved.occ) ? saved.occ : GL.defaultOcc,
+    fChild: [], fAdult: [], fStatus: ''
+};
+const closedGroups = new Set(store.get('gl-closed', []));
+const persist = () => store.set('gl-state', {view: state.view, occ: state.occ});
+
+const giftsOf = occ => GL.gifts.filter(g => g.occ === occ);
+function filtered(occ) {
+    return giftsOf(occ).filter(g =>
+        (!state.fChild.length || state.fChild.includes(g.child)) &&
+        (!state.fAdult.length || state.fAdult.includes(g.adult)) &&
+        (!state.fStatus || (state.fStatus === 'bought') === !!g.bought));
 }
 
-document.addEventListener('click', e => {
-    if (!e.target.closest('.pf-multi-select')) {
-        document.querySelectorAll('.pf-ms-dropdown').forEach(el => el.classList.remove('open'));
-        document.querySelectorAll('.pf-ms-trigger').forEach(el => el.classList.remove('active'));
+function renderTabs() {
+    $id('glTabs').innerHTML = GL.occasions.map(o => {
+        const all = giftsOf(o.code), done = all.filter(g => g.bought).length;
+        return `<button type="button" class="gl-tab${o.code === state.occ ? ' is-active' : ''}" data-occ="${esc(o.code)}">
+            <span class="gl-tab-ic">${esc(o.icon)}</span><span class="gl-tab-nm">${esc(o.name)}</span>
+            <span class="gl-tab-ct">${all.length ? done + '/' + all.length : '0'}</span></button>`;
+    }).join('');
+    const active = $id('glTabs').querySelector('.is-active');
+    if (active) active.scrollIntoView({inline: 'center', block: 'nearest'});
+}
+
+function chipGroup(label, key, values, selected) {
+    if (values.length < 2) return '';
+    return `<div class="gl-frow"><span class="gl-flabel">${esc(label)}</span><div class="gl-chips gl-scroll">${
+        values.map(v => `<button type="button" class="gl-chip${selected.includes(v) ? ' is-on' : ''}" data-f="${key}" data-v="${esc(v)}">${esc(v)}</button>`).join('')
+    }</div></div>`;
+}
+
+function renderFilters() {
+    const all = giftsOf(state.occ);
+    const children = [...new Set(all.map(g => g.child))];
+    const adults = [...new Set(all.map(g => g.adult))];
+    state.fChild = state.fChild.filter(v => children.includes(v));
+    state.fAdult = state.fAdult.filter(v => adults.includes(v));
+    const statusChips = [['todo', T.toBuy], ['bought', T.bought]].map(([k, l]) =>
+        `<button type="button" class="gl-chip${state.fStatus === (k === 'todo' ? 'todo' : 'bought') ? ' is-on' : ''}" data-f="status" data-v="${k}">${esc(l)}</button>`).join('');
+    const active = state.fChild.length || state.fAdult.length || state.fStatus;
+    $id('glFilters').innerHTML = all.length === 0 ? '' :
+        chipGroup(T.for, 'child', children, state.fChild) +
+        chipGroup(T.by, 'adult', adults, state.fAdult) +
+        `<div class="gl-frow"><span class="gl-flabel">${esc(T.status)}</span><div class="gl-chips gl-scroll">${statusChips}${
+            active ? `<button type="button" class="gl-chip gl-chip-reset" data-f="reset">${esc(T.reset)} ✕</button>` : ''}</div></div>`;
+}
+
+function renderSummary() {
+    const list = filtered(state.occ);
+    if (!giftsOf(state.occ).length) { $id('glSummary').innerHTML = ''; return; }
+    const done = list.filter(g => g.bought);
+    const spent = done.reduce((s, g) => s + g.amount, 0);
+    const left = list.filter(g => !g.bought).reduce((s, g) => s + g.amount, 0);
+    const pct = list.length ? Math.round(done.length * 100 / list.length) : 0;
+    $id('glSummary').innerHTML = `
+        <div class="gl-sum-top"><strong>${done.length}/${list.length}</strong> ${esc(T.bought.toLowerCase())}
+            <span class="gl-sum-pct">${pct}%</span></div>
+        <div class="gl-bar"><i style="width:${pct}%"></i></div>
+        <div class="gl-sum-vals"><div><span>${esc(T.spent)}</span><b>${money(spent)}</b></div><div><span>${esc(T.remaining)}</span><b>${money(left)}</b></div></div>`;
+}
+
+function cardHtml(g) {
+    const payer = g.payer && g.payer !== g.adult ? `<span class="gl-tag gl-tag-pay">💳 ${esc(g.payer)}</span>` : '';
+    const link = g.link ? `<a class="gl-link" href="${esc(g.link)}" target="_blank" rel="noopener noreferrer" aria-label="Lien">🔗</a>` : '';
+    return `<article class="gl-card${g.bought ? ' is-bought' : ''}" data-id="${g.id}">
+        <button type="button" class="gl-check" data-act="toggle" aria-pressed="${g.bought ? 'true' : 'false'}" aria-label="${esc(T.markBought)}">✓</button>
+        <div class="gl-card-main" data-act="edit">
+            <div class="gl-card-title">${esc(g.desc)}</div>
+            <div class="gl-card-meta"><span class="gl-tag">${avatar(g.adult)}${esc(g.adult)}</span>${payer}</div>
+        </div>
+        ${link}
+        <div class="gl-price${g.amount ? '' : ' is-zero'}">${g.amount ? money(g.amount) : '—'}</div>
+    </article>`;
+}
+
+function renderList() {
+    const all = giftsOf(state.occ);
+    if (!all.length) { $id('glList').innerHTML = `<p class="gl-empty">${esc(T.emptyOcc)}</p>`; return; }
+    const list = filtered(state.occ);
+    if (!list.length) { $id('glList').innerHTML = `<p class="gl-empty">${esc(T.noMatch)}</p>`; return; }
+    const order = [...GL.children, ...new Set(list.map(g => g.child))].filter((v, i, a) => a.indexOf(v) === i);
+    $id('glList').innerHTML = order.map(child => {
+        const items = list.filter(g => g.child === child);
+        if (!items.length) return '';
+        const key = state.occ + '|' + child, done = items.filter(g => g.bought).length;
+        const total = items.reduce((s, g) => s + g.amount, 0);
+        return `<details class="gl-group" data-key="${esc(key)}"${closedGroups.has(key) ? '' : ' open'}>
+            <summary>${avatar(child)}<span class="gl-gname">${esc(child)}</span>
+                <span class="gl-gmeta">${done}/${items.length} · ${money(total)}</span><span class="gl-chev"></span></summary>
+            <div class="gl-cards">${items.map(cardHtml).join('')}</div></details>`;
+    }).join('');
+}
+
+function renderIdeas() { renderTabs(); renderSummary(); renderFilters(); renderList(); }
+
+// ==========================================
+// 2. COMPTES : qui a payé quoi, qui doit quoi (cadeaux achetés)
+// ==========================================
+function renderAccounts() {
+    const bought = GL.gifts.filter(g => g.bought && g.amount > 0);
+    const planned = GL.gifts.filter(g => !g.bought).reduce((s, g) => s + g.amount, 0);
+    const people = [...new Set([...GL.adults, ...bought.map(g => g.adult), ...bought.map(g => g.payer)])].filter(Boolean).sort();
+    const paid = {}, share = {}, matrix = {};
+    people.forEach(p => { paid[p] = 0; share[p] = 0; matrix[p] = {}; people.forEach(q => matrix[p][q] = 0); });
+    bought.forEach(g => {
+        paid[g.payer] += g.amount; share[g.adult] += g.amount;
+        if (g.adult !== g.payer) matrix[g.adult][g.payer] += g.amount;
+    });
+    const settle = [];
+    for (let i = 0; i < people.length; i++) for (let j = i + 1; j < people.length; j++) {
+        const a = people[i], b = people[j], net = matrix[a][b] - matrix[b][a];
+        if (net > 0.01) settle.push({from: a, to: b, amt: net});
+        else if (net < -0.01) settle.push({from: b, to: a, amt: -net});
+    }
+    settle.sort((x, y) => y.amt - x.amt);
+    const active = people.filter(p => paid[p] || share[p]);
+    const max = Math.max(1, ...active.map(p => Math.max(paid[p], share[p])));
+
+    const settleHtml = settle.length ? settle.map(s => `
+        <div class="gl-settle">${avatar(s.from)}<div class="gl-settle-txt"><b>${esc(s.from)}</b> ${esc(T.owes)} <span>${esc(T.to)}</span> <b>${esc(s.to)}</b></div>
+        <div class="gl-settle-amt">${money(s.amt)}</div></div>`).join('')
+        : `<p class="gl-ok">✅ ${esc(T.settled)}</p>`;
+
+    const personHtml = active.map(p => {
+        const net = paid[p] - share[p];
+        const cls = net > 0.01 ? 'is-pos' : net < -0.01 ? 'is-neg' : '';
+        return `<div class="gl-person">
+            <div class="gl-person-top">${avatar(p)}<b>${esc(p)}</b><span class="gl-net ${cls}">${net > 0.01 ? '+' : ''}${money(net)}</span></div>
+            <div class="gl-pbar"><span>${esc(T.paid)}</span><div class="gl-track"><i class="is-paid" style="width:${paid[p] * 100 / max}%"></i></div><em>${money(paid[p])}</em></div>
+            <div class="gl-pbar"><span>${esc(T.share)}</span><div class="gl-track"><i class="is-share" style="width:${share[p] * 100 / max}%"></i></div><em>${money(share[p])}</em></div>
+        </div>`;
+    }).join('');
+
+    const matrixHtml = `<div class="gl-mwrap"><table class="gl-matrix"><thead><tr><th>${esc(T.debtor)} \\ ${esc(T.creditor)}</th>${active.map(p => `<th>${esc(p)}</th>`).join('')}</tr></thead><tbody>${
+        active.map(d => `<tr><th>${esc(d)}</th>${active.map(c => {
+            const v = matrix[d][c];
+            return `<td class="${v > 0.01 ? 'is-due' : ''}">${d === c || v < 0.01 ? '—' : money(v)}</td>`;
+        }).join('')}</tr>`).join('')}</tbody></table></div>`;
+
+    $id('glAccounts').innerHTML = `
+        <section class="gl-card-block"><h2>⚖️ ${esc(T.whoOwes)}</h2>${settleHtml}
+            <p class="gl-note">${esc(T.basedOn)}${planned > 0 ? ' · ' + esc(T.plannedLeft) + ' ' + money(planned) : ''}</p></section>
+        <section class="gl-card-block"><h2>👥 ${esc(T.per)}</h2>${personHtml || `<p class="gl-note">—</p>`}</section>
+        ${active.length > 1 ? `<details class="gl-card-block gl-matrix-d"><summary>${esc(T.matrix)}</summary>${matrixHtml}</details>` : ''}`;
+}
+
+function setView(v) {
+    state.view = v; persist();
+    document.querySelectorAll('.gl-seg-btn').forEach(b => b.classList.toggle('is-active', b.dataset.view === v));
+    $id('glIdeas').hidden = v !== 'ideas';
+    $id('glAccounts').hidden = v !== 'accounts';
+    $id('glFab').hidden = v !== 'ideas';
+    if (v === 'ideas') renderIdeas(); else renderAccounts();
+}
+
+// ==========================================
+// 3. INTERACTIONS (onglets, filtres, coche, ouverture de la fiche)
+// ==========================================
+document.addEventListener('click', async e => {
+    const seg = e.target.closest('.gl-seg-btn');
+    if (seg) { setView(seg.dataset.view); return; }
+
+    const tab = e.target.closest('.gl-tab');
+    if (tab) { state.occ = tab.dataset.occ; state.fChild = []; state.fAdult = []; state.fStatus = ''; persist(); renderIdeas(); return; }
+
+    const chip = e.target.closest('.gl-chip[data-f]');
+    if (chip) {
+        const f = chip.dataset.f, v = chip.dataset.v;
+        if (f === 'reset') { state.fChild = []; state.fAdult = []; state.fStatus = ''; }
+        else if (f === 'status') { state.fStatus = state.fStatus === (v === 'todo' ? 'todo' : 'bought') ? '' : (v === 'todo' ? 'todo' : 'bought'); }
+        else {
+            const arr = f === 'child' ? state.fChild : state.fAdult;
+            const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v);
+        }
+        renderFilters(); renderSummary(); renderList();
+        return;
+    }
+
+    const card = e.target.closest('.gl-card');
+    if (card) {
+        const g = GL.gifts.find(x => x.id === +card.dataset.id);
+        if (!g) return;
+        if (e.target.closest('[data-act="toggle"]')) { toggleBought(g); return; }
+        if (e.target.closest('.gl-link')) return;
+        if (e.target.closest('[data-act="edit"]') || e.target.closest('.gl-price')) openSheet(g);
+        return;
+    }
+
+    if (e.target.closest('#glFab')) { openSheet(null); return; }
+    if (e.target.closest('[data-close]') || e.target === $id('glSheet')) { closeSheet(); return; }
+});
+
+document.addEventListener('toggle', e => {
+    const d = e.target;
+    if (!d.classList || !d.classList.contains('gl-group')) return;
+    if (d.open) closedGroups.delete(d.dataset.key); else closedGroups.add(d.dataset.key);
+    store.set('gl-closed', [...closedGroups]);
+}, true);
+
+async function toggleBought(g) {
+    g.bought = g.bought ? 0 : 1;
+    renderTabs(); renderSummary(); renderList();
+    const fd = new FormData();
+    fd.append('action', 'toggle_bought'); fd.append('gift_id', g.id); fd.append('is_bought', g.bought);
+    try {
+        const r = await fetch('/modules/gift-list/save-gift.php', {method: 'POST', body: fd});
+        if (!r.ok) throw new Error(r.status);
+    } catch (err) {
+        g.bought = g.bought ? 0 : 1;   // annulation visuelle si le serveur n'a pas suivi
+        renderTabs(); renderSummary(); renderList();
+    }
+}
+
+// ==========================================
+// 4. FICHE D'AJOUT / ÉDITION (bottom sheet)
+// ==========================================
+const sheet = $id('glSheet'), form = $id('giftForm');
+
+function radioChips(el, name, values, current) {
+    el.innerHTML = values.map(v => `<label class="gl-chip"><input type="radio" name="${name}" value="${esc(v)}"${v === current ? ' checked' : ''} required><span>${esc(v)}</span></label>`).join('');
+}
+
+function openSheet(g) {
+    const last = store.get('gl-last', {});
+    const occ = g ? g.occ : state.occ;
+    const child = g ? g.child : (state.fChild.length === 1 ? state.fChild[0] : (GL.children.includes(last.child) ? last.child : GL.children[0]));
+    const adult = g ? g.adult : (GL.adults.includes(last.adult) ? last.adult : (GL.adults.includes(GL.me) ? GL.me : GL.adults[0]));
+
+    $id('glSheetTitle').textContent = g ? T.editTitle : T.addTitle;
+    $id('modalAction').value = g ? 'update' : 'create';
+    $id('modalGiftId').value = g ? g.id : '';
+    $id('modalDesc').value = g ? g.desc : '';
+    $id('modalAmount').value = g && g.amount ? String(g.amount).replace('.', ',') : '';
+    $id('modalBought').checked = g ? !!g.bought : false;
+    $id('modalLink').value = g ? g.link : '';
+    radioChips($id('modalChildChips'), 'child_name', GL.children, child);
+    radioChips($id('modalAdultChips'), 'adult_name', GL.adults, adult);
+
+    const payer = $id('modalPayer');
+    payer.innerHTML = '<option value="">' + esc(T.sameAsAdult || '=') + '</option>' + GL.adults.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+    payer.value = g && g.payer && g.payer !== g.adult ? g.payer : '';
+    $id('modalOccasion').innerHTML = GL.occasions.map(o => `<option value="${esc(o.code)}">${esc(o.icon + ' ' + o.name)}</option>`).join('');
+    $id('modalOccasion').value = occ;
+
+    form.querySelector('.gl-more').open = !!(g && (g.link || (g.payer && g.payer !== g.adult)));
+    $id('glDelete').hidden = !g;
+    sheet.hidden = false;
+    document.body.classList.add('no-scroll');
+    if (!g) setTimeout(() => $id('modalDesc').focus(), 60);
+}
+
+function closeSheet() { sheet.hidden = true; document.body.classList.remove('no-scroll'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
+
+form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = form.querySelector('.gl-btn-save');
+    btn.disabled = true;
+    const fd = new FormData(form);
+    try {
+        const r = await fetch(form.getAttribute('action'), {method: 'POST', body: fd});
+        if (!r.ok) throw new Error(r.status);
+        store.set('gl-last', {child: fd.get('child_name'), adult: fd.get('adult_name')});
+        state.occ = fd.get('occasion'); persist();
+        window.location.reload();
+    } catch (err) {
+        console.error(err);
+        btn.disabled = false;
     }
 });
 
-function handleMSChange(cb, type) {
-    const container = document.getElementById('ms-' + type + '-list');
-    if (!container) return;
-
-    if (cb.value === 'all' && cb.checked) {
-        container.querySelectorAll('input[type="checkbox"]:not([value="all"])').forEach(i => i.checked = false);
-    } else if (cb.checked) {
-        const allCb = container.querySelector('input[value="all"]');
-        if (allCb) allCb.checked = false;
-    } else {
-        const checkedSpecifics = container.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])');
-        if (checkedSpecifics.length === 0) {
-            const allCb = container.querySelector('input[value="all"]');
-            if (allCb) allCb.checked = true;
-        }
-    }
-
-    const checkedSpecifics = container.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])');
-    const labelEl = document.getElementById('ms-' + type + '-label');
-
-    if (labelEl) {
-        if (checkedSpecifics.length === 0) {
-            let defaultText = 'Tous';
-            if (window.I18N) {
-                if (type === 'child' && window.I18N['gift_filter_all_children']) defaultText = window.I18N['gift_filter_all_children'];
-                if (type === 'adult' && window.I18N['gift_filter_all_adults']) defaultText = window.I18N['gift_filter_all_adults'];
-            }
-            labelEl.innerText = defaultText;
-        } else if (checkedSpecifics.length === 1) {
-            labelEl.innerText = checkedSpecifics[0].value;
-        } else {
-            labelEl.innerText = checkedSpecifics.length + ' sélections';
-        }
-    }
-    applyGiftFilters();
-}
-
-function applyGiftFilters() {
-    const cList = document.getElementById('ms-child-list');
-    const aList = document.getElementById('ms-adult-list');
-    if (!cList || !aList) return;
-
-    const allChildCb = cList.querySelector('input[value="all"]');
-    const cAll = allChildCb ? allChildCb.checked : true;
-    const cVals = Array.from(cList.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])')).map(i => i.value);
-
-    const allAdultCb = aList.querySelector('input[value="all"]');
-    const aAll = allAdultCb ? allAdultCb.checked : true;
-    const aVals = Array.from(aList.querySelectorAll('input[type="checkbox"]:checked:not([value="all"])')).map(i => i.value);
-
-    document.querySelectorAll('.js-occ-section').forEach(occSec => {
-        let occHasVisible = false;
-
-        occSec.querySelectorAll('.js-child').forEach(childSec => {
-            const cName = childSec.getAttribute('data-name');
-            const matchChild = cAll || (cVals.indexOf(cName) !== -1);
-            let childHasVisibleCard = false;
-
-            if (matchChild) {
-                childSec.querySelectorAll('.js-gift-card').forEach(card => {
-                    const aName = card.getAttribute('data-adult');
-                    const matchAdult = aAll || (aVals.indexOf(aName) !== -1);
-                    card.style.display = matchAdult ? 'flex' : 'none';
-                    if (matchAdult) childHasVisibleCard = true;
-                });
-
-                childSec.querySelectorAll('.js-pill-adult').forEach(pill => {
-                    const aName = pill.getAttribute('data-adult');
-                    const matchAdult = aAll || (aVals.indexOf(aName) !== -1);
-                    pill.style.opacity = matchAdult ? '1' : '0.2';
-                });
-
-                const empty = childSec.querySelector('.js-empty-state');
-                if (empty) empty.style.display = childHasVisibleCard ? 'none' : 'block';
-
-                childSec.style.display = 'block';
-                occHasVisible = true;
-            } else {
-                childSec.style.display = 'none';
-            }
-        });
-
-        occSec.style.display = occHasVisible ? 'block' : 'none';
-    });
-}
-
-// ==========================================
-// 2. GESTION DE LA MODALE CADEAU (AJOUT/ÉDITION)
-// ==========================================
-const modal = document.getElementById('pf-gift-modal');
-const adultSelect = document.getElementById('modalAdult');
-const payerSelect = document.getElementById('modalPayer');
-
-if (adultSelect && payerSelect) {
-    adultSelect.addEventListener('change', function() {
-        let exists = false;
-        for(let i = 0; i < payerSelect.options.length; i++) {
-            if(payerSelect.options[i].value === this.value) exists = true;
-        }
-        if (exists) payerSelect.value = this.value;
-    });
-}
-
-function populateSelects(adults) {
-    if (!adultSelect || !payerSelect) return;
-    adultSelect.innerHTML = '';
-    payerSelect.innerHTML = '';
-    adults.forEach(name => {
-        adultSelect.appendChild(new Option(name, name));
-        payerSelect.appendChild(new Option(name, name));
-    });
-}
-
-document.body.addEventListener('click', async function(e) {
-    if (e.target.closest('.btn-modal-close')) {
-        if (modal) {
-            modal.classList.remove('open');
-            document.body.classList.remove('no-scroll');
-        }
-        return;
-    }
-
-    const btnAdd = e.target.closest('.btn-add-gift');
-    if (btnAdd) {
-        const childName = btnAdd.dataset.child;
-        const occCode = btnAdd.dataset.occ;
-        const adultsList = JSON.parse(btnAdd.dataset.adults || '[]');
-
-        document.getElementById('modalAction').value = 'create';
-        document.getElementById('modalGiftId').value = '';
-        document.getElementById('modalChild').value = childName;
-        document.getElementById('modalOccasion').value = occCode;
-        document.getElementById('modalDesc').value = '';
-        document.getElementById('modalAmount').value = '';
-        document.getElementById('modalLink').value = '';
-
-        populateSelects(adultsList);
-
-        if (adultSelect && payerSelect) {
-            if (adultsList.indexOf('Laia') !== -1) {
-                adultSelect.value = 'Laia'; payerSelect.value = 'Laia';
-            } else if (adultsList.length > 0) {
-                adultSelect.value = adultsList[0]; payerSelect.value = adultsList[0];
-            }
-        }
-
-        const titleStr = window.I18N && window.I18N['gift_modal_title_add'] ? window.I18N['gift_modal_title_add'] : 'Ajouter pour %s';
-        document.getElementById('modalTitle').textContent = titleStr.replace('%s', childName);
-
-        if (modal) { modal.classList.add('open'); document.body.classList.add('no-scroll'); }
-        return;
-    }
-
-    const btnEdit = e.target.closest('.btn-edit-gift');
-    if (btnEdit) {
-        const data = JSON.parse(btnEdit.dataset.gift || '{}');
-
-        document.getElementById('modalAction').value = 'update';
-        document.getElementById('modalGiftId').value = data.id;
-        document.getElementById('modalChild').value = data.child_name;
-        document.getElementById('modalOccasion').value = data.occasion;
-        document.getElementById('modalDesc').value = data.gift_description;
-        document.getElementById('modalAmount').value = data.amount;
-        document.getElementById('modalLink').value = data.product_link;
-
-        const payerVal = data.payer_name || data.adult_name;
-        if (adultSelect && payerSelect) {
-            let adultExists = false, payerExists = false;
-            for(let i=0; i<adultSelect.options.length; i++) { if(adultSelect.options[i].value === data.adult_name) adultExists = true; }
-            for(let i=0; i<payerSelect.options.length; i++) { if(payerSelect.options[i].value === payerVal) payerExists = true; }
-
-            if (!adultExists) adultSelect.appendChild(new Option(data.adult_name, data.adult_name));
-            if (!payerExists) payerSelect.appendChild(new Option(payerVal, payerVal));
-
-            adultSelect.value = data.adult_name;
-            payerSelect.value = payerVal;
-        }
-
-        document.getElementById('modalTitle').textContent = window.I18N && window.I18N['gift_modal_title_edit'] ? window.I18N['gift_modal_title_edit'] : 'Modifier le cadeau';
-
-        if (modal) { modal.classList.add('open'); document.body.classList.add('no-scroll'); }
-        return;
-    }
-
-    const btnDel = e.target.closest('.btn-delete-gift');
-    if (btnDel) {
-        const giftId = btnDel.dataset.id;
-        const msg = window.I18N && window.I18N['gift_confirm_delete'] ? window.I18N['gift_confirm_delete'] : 'Supprimer ce cadeau ?';
-        if (!confirm(msg)) return;
-
-        const fd = new FormData();
-        fd.append('action', 'delete');
-        fd.append('gift_id', giftId);
-
-        try {
-            await fetch('/modules/gift-list/save-gift.php', { method: 'POST', body: fd });
-            window.location.reload();
-        } catch(err) {
-            console.error(err);
-        }
-        return;
-    }
+$id('glDelete').addEventListener('click', async () => {
+    const id = $id('modalGiftId').value;
+    const ok = typeof pachaConfirm === 'function' ? await pachaConfirm('🗑️', T.confirmDelete) : confirm(T.confirmDelete);
+    if (!ok) return;
+    const fd = new FormData();
+    fd.append('action', 'delete'); fd.append('gift_id', id);
+    try {
+        await fetch('/modules/gift-list/save-gift.php', {method: 'POST', body: fd});
+        window.location.reload();
+    } catch (err) { console.error(err); }
 });
 
-const giftForm = document.getElementById('giftForm');
-if (giftForm) {
-    giftForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
-        const oldText = btn.innerText;
-        btn.innerText = '...';
-        btn.disabled = true;
+setView(state.view);
 
-        try {
-            await fetch(e.target.getAttribute('action'), { method: 'POST', body: new FormData(e.target) });
-            window.location.reload();
-        } catch(err) {
-            console.error(err);
-            btn.innerText = oldText;
-            btn.disabled = false;
-        }
-    });
-}
 
 // ==========================================
 // 3. GESTION DES PARAMÈTRES (MODALE FÊTES & PROCHES)
@@ -968,6 +923,7 @@ async function saveInlineProche(id) {
 function cancelInlineEdit(rowId) {
     document.getElementById(rowId).innerHTML = rowStates[rowId];
 }
+
 
 </script>
 
