@@ -608,7 +608,7 @@ let hasSettingsChanged = false;
 
 async function loadSettingsData() {
     try {
-        const res = await pachaFetch('/modules/gift-list/api-settings.php?action=get_all');
+        const res = await pachaFetch('/modules/gift-list/api-settings.php?action=get_all&_=' + Date.now());
         if (!res.success) throw new Error(res.error);
         
         renderOccasions(res.data.occasions);

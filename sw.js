@@ -1,4 +1,4 @@
-const CACHE_NAME = "househub-static-v5";
+const CACHE_NAME = "househub-static-v6";
 const API_CACHE_NAME = "househub-api-v1";
 const ASSETS_TO_CACHE = [
   "/offline.php",
@@ -130,6 +130,15 @@ self.addEventListener("fetch", (event) => {
             return cachedResponse || caches.match("/offline.php");
           });
         }),
+    );
+    return;
+  }
+
+  // Appels PHP (ex. modules/gift-list/api-settings.php?action=get_all) : toujours le réseau,
+  // sinon l'application affiche pour toujours la première réponse mise en cache
+  if (requestUrl.pathname.endsWith(".php")) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request)),
     );
     return;
   }
