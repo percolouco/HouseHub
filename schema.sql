@@ -273,7 +273,8 @@ CREATE TABLE IF NOT EXISTS pf_gifts (
   occasion         VARCHAR(50) NOT NULL,
   gift_description TEXT NOT NULL,
   product_link     VARCHAR(500) DEFAULT NULL,
-  amount           DECIMAL(8,2) DEFAULT 0
+  amount           DECIMAL(8,2) DEFAULT 0,
+  is_bought        TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── Garage Manager ───────────────────────────────────────────────────────────
