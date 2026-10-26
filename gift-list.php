@@ -9,6 +9,8 @@ require __DIR__ . '/modules/gift-list/ensure-schema.php';
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 gift_ensure_schema($pdo);
+// Écran d'application installée (iOS) : ne jamais garder une ancienne version de la page
+header('Cache-Control: no-cache, must-revalidate');
 
 // --- 1. CONFIGURATION DE BASE ---
 $year       = (int)date('Y');
