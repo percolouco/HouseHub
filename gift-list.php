@@ -561,6 +561,8 @@ setView(state.view);
 function closeGiftSettings() {
     document.getElementById('modal-gift-settings').classList.remove('open');
     document.body.classList.remove('no-scroll');
+    // Fêtes et proches modifiés : on recharge pour que la liste, les filtres et la fiche d'ajout les prennent en compte
+    if (typeof hasSettingsChanged !== 'undefined' && hasSettingsChanged) window.location.reload();
 }
 
 document.getElementById('btn-open-gift-settings')?.addEventListener('click', async (e) => {
@@ -816,8 +818,7 @@ async function deleteProche(id) {
 document.getElementById('modal-gift-settings').addEventListener('click', (e) => {
     if (e.target.id === 'modal-gift-settings' || e.target.classList.contains('btn-close-settings')) {
         if (hasSettingsChanged) {
-            showToast(tr('gift_settings_saved') || 'Paramètres mis à jour !', 'success');
-            setTimeout(() => window.location.reload(), 1000);
+            window.location.reload();
         } else {
             closeGiftSettings();
         }
