@@ -386,6 +386,11 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                     </select>
                 </div>
 
+                <div class="form-group" id="cp_insert_group" style="margin-bottom:15px;">
+                    <label class="pf-label">Position de l'étape</label>
+                    <select name="insert_after" id="cp_insert_after" class="pf-input" onchange="const o=this.selectedOptions[0]; if(o && o.dataset.enddate){ document.getElementById('cp_start_date').value=o.dataset.enddate; document.getElementById('cp_end_date').value=o.dataset.enddate; }"></select>
+                </div>
+
                 <div style="display:flex; gap:15px; margin-bottom:15px; background:#f8fafc; padding:12px; border-radius:8px;">
                     <div class="form-group" id="grp_start_date" style="flex:1;">
                         <label class="pf-label" id="lbl_start_date"><?= tr('hdl_label_arrival') ?></label>
@@ -590,6 +595,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             const container = document.getElementById("cpExpensesContainer");
             const btnDel = document.getElementById("btnDeleteCp");
             const modalTitle = document.getElementById("cpModalTitle");
+            const insertGroup = document.getElementById("cp_insert_group");
+            const insertSelect = document.getElementById("cp_insert_after");
 
             if(container) container.innerHTML = "";
             if (document.getElementById("cp_start_date")) document.getElementById("cp_start_date").value = "";
@@ -602,8 +609,30 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             if (mode === "add") {
                 if (modalTitle) modalTitle.innerText = "📍 " + (window.I18N['hdl_btn_add_step'] || "Ajouter une étape");
                 if (searchBlock) searchBlock.style.display = "block";
-                if (formBlock) formBlock.style.display = "block"; 
+                if (formBlock) formBlock.style.display = "none"; // affiché par selectPlace() une fois le lieu choisi
                 if (btnDel) btnDel.style.display = "none";
+                if (insertGroup) insertGroup.style.display = "block";
+
+                let tripStart = new Date().toISOString().split("T")[0];
+                try { tripStart = JSON.parse(document.getElementById("holidayDataJson").textContent).main.start_date || tripStart; } catch (e) {}
+                const pts = window.MAP_POINTS || [];
+                const lastPt = pts[pts.length - 1];
+                const lastDate = lastPt ? (lastPt.step_end_date || lastPt.step_start_date || tripStart) : tripStart;
+                if (insertSelect) {
+                    insertSelect.innerHTML = '';
+                    const optEnd = document.createElement('option');
+                    optEnd.value = 'end'; optEnd.dataset.enddate = lastDate; optEnd.textContent = '-- À la fin du voyage --';
+                    insertSelect.appendChild(optEnd);
+                    pts.forEach((st) => {
+                        const o = document.createElement('option');
+                        o.value = st.sort_order;
+                        o.dataset.enddate = st.step_end_date || st.step_start_date || tripStart;
+                        o.textContent = 'Après : ' + st.location_name;
+                        insertSelect.appendChild(o);
+                    });
+                }
+                if (document.getElementById("cp_start_date")) document.getElementById("cp_start_date").value = lastDate;
+                if (document.getElementById("cp_end_date")) document.getElementById("cp_end_date").value = lastDate;
 
                 if (document.getElementById("cp_old_sort_order")) document.getElementById("cp_old_sort_order").value = "";
                 if (document.getElementById("cp_name")) document.getElementById("cp_name").value = "";
@@ -619,6 +648,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             } else if (mode === "edit" && data) {
                 if (modalTitle) modalTitle.innerText = "✏️ " + (window.I18N['hdl_js_edit_step'] || "Modifier l'étape");
                 if (searchBlock) searchBlock.style.display = "none"; 
+                if (insertGroup) insertGroup.style.display = "none";
                 if (formBlock) formBlock.style.display = "block";    
                 if (btnDel) btnDel.style.display = "block";
 
