@@ -338,12 +338,13 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         </div>
         
         <!-- LES ONGLETS SONT ICI -->
-        <div style="display: flex; gap: 15px; border-bottom: 1px solid var(--border-light); margin-bottom: 20px;">
-            <button type="button" id="tabBtnInfo" onclick="switchCpTab('info')" style="background: none; border: none; font-weight: bold; font-size: 1rem; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 8px; cursor: pointer; flex: 1;">📍 Infos de l'étape</button>
-            <button type="button" id="tabBtnProg" onclick="switchCpTab('prog')" style="background: none; border: none; font-weight: bold; font-size: 1rem; color: var(--text-muted); border-bottom: 2px solid transparent; padding-bottom: 8px; cursor: pointer; flex: 1;">🎟️ Programme & Frais</button>
+        <div id="cpTabs" class="cp-tabs" style="display:none;">
+            <button type="button" id="tabBtnInfo" onclick="switchCpTab('info')" class="cp-tab active">📍 L'étape</button>
+            <button type="button" id="tabBtnProg" onclick="switchCpTab('prog')" class="cp-tab">🎟️ Programme &amp; frais <span id="cpProgCount" class="cp-badge" style="display:none;">0</span></button>
         </div>
 
-        <div id="cpSearchBlock" style="margin-bottom:20px;">
+        <div id="cpSearchBlock" class="cp-search" style="margin-bottom:20px;">
+            <p class="cp-hint">Étape 1 sur 2 : cherche le lieu de l'étape (ville, adresse, site…).</p>
             <?php if (!empty($favorites)): ?>
             <div style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap;">
                 <?php foreach($favorites as $fav): ?>
@@ -356,7 +357,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
             <label class="pf-label"><?= tr('hdl_search_location') ?></label>
             <div style="display:flex; gap:10px;">
-                <input type="text" id="searchPlaceInput" class="pf-input" placeholder="<?= tr('hdl_ph_search') ?>" onkeypress="if(event.key === 'Enter') { searchPlace(); return false; }">
+                <input type="text" id="searchPlaceInput" class="pf-input" autocomplete="off" placeholder="<?= tr('hdl_ph_search') ?>" onkeydown="if(event.key === 'Enter') { event.preventDefault(); searchPlace(); }">
                 <button type="button" class="pf-btn btn-secondary" onclick="searchPlace()">🔍</button>
             </div>
             <div id="searchResults" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>
@@ -370,6 +371,12 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             <input type="hidden" name="lng" id="cp_lng">
             <input type="hidden" name="old_sort_order" id="cp_old_sort_order">
             
+            <div class="cp-place-chip">
+                <span class="cp-place-pin">📍</span>
+                <span id="cpPlaceChipName" class="cp-place-name"></span>
+                <button type="button" id="cpChangePlaceBtn" class="cp-link" onclick="cpChangePlace()">Changer de lieu</button>
+            </div>
+
             <!-- CONTENU DE L'ONGLET INFO -->
             <div id="cpTabInfo">
                 <div class="form-group" style="margin-bottom:15px;">
@@ -419,6 +426,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 </div>
 
                 <div id="cpExpensesContainer" style="margin-bottom:15px;"></div>
+                <p id="cpExpensesEmpty" class="cp-hint" style="display:none;">Rien de prévu pour l'instant : hébergement, activité, transport… Ajoute une ligne si besoin (facultatif).</p>
             </div>
 
             <div style="margin-bottom: 20px;">
@@ -595,6 +603,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             const container = document.getElementById("cpExpensesContainer");
             const btnDel = document.getElementById("btnDeleteCp");
             const modalTitle = document.getElementById("cpModalTitle");
+            const cpTabs = document.getElementById("cpTabs");
             const insertGroup = document.getElementById("cp_insert_group");
             const insertSelect = document.getElementById("cp_insert_after");
 
@@ -606,6 +615,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
             window.switchCpTab('info');
 
+            const chgBtn = document.getElementById("cpChangePlaceBtn");
+            if (chgBtn) chgBtn.style.display = "";
             if (mode === "add") {
                 if (modalTitle) modalTitle.innerText = "📍 " + (window.I18N['hdl_btn_add_step'] || "Ajouter une étape");
                 if (searchBlock) searchBlock.style.display = "block";
@@ -643,7 +654,10 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 }
                 if (document.getElementById("cp_set_as_return")) document.getElementById("cp_set_as_return").checked = false;
 
-                if (typeof window.addCpExpenseLine === 'function') window.addCpExpenseLine();
+                if (cpTabs) cpTabs.style.display = "none";
+                const chip0 = document.getElementById("cpPlaceChipName"); if (chip0) chip0.textContent = "";
+                if (searchBlock) searchBlock.style.display = "block";
+                setTimeout(() => { const si = document.getElementById("searchPlaceInput"); if (si) si.focus(); }, 50);
 
             } else if (mode === "edit" && data) {
                 if (modalTitle) modalTitle.innerText = "✏️ " + (window.I18N['hdl_js_edit_step'] || "Modifier l'étape");
@@ -652,6 +666,9 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 if (formBlock) formBlock.style.display = "block";    
                 if (btnDel) btnDel.style.display = "block";
 
+                if (cpTabs) cpTabs.style.display = "flex";
+                const chip1 = document.getElementById("cpPlaceChipName"); if (chip1) chip1.textContent = data.location_name || "";
+                const chg = document.getElementById("cpChangePlaceBtn"); if (chg) chg.style.display = "none";
                 if (document.getElementById("cp_lat")) document.getElementById("cp_lat").value = data.lat;
                 if (document.getElementById("cp_lng")) document.getElementById("cp_lng").value = data.lng;
                 if (document.getElementById("cp_old_sort_order")) document.getElementById("cp_old_sort_order").value = data.sort_order;
@@ -724,11 +741,11 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                     </select>
                     <input type="hidden" name="items[context][]" value="${expenseContext}">
                     
-                    <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${window.I18N['hdl_js_ph_expense_name'] || 'Nom de la dépense'}" value="${name}" required>
+                    <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${window.I18N['hdl_js_ph_expense_name'] || 'Nom de la dépense'}" value="${name}">
                     
                     <button type="button" class="btn-icon-action" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-light);border-radius:6px; margin:0; flex-shrink:0; ${pinBtnStyle}" onclick="window.toggleItemSearch(this)" title="Adresse précise">📍</button>
 
-                    <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}" required>
+                    <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
                     
                     <label class="hol-form-paid-label" title="${window.I18N['hdl_paid'] || 'Payé'}">
                         <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0" style="width:16px;height:16px;margin:0;accent-color:var(--primary);">
@@ -820,6 +837,64 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 pinBtn.style.borderColor = "var(--success)";
             }
         };
+
+        // 5. REVAMP MODALE D'ÉTAPE : choix du lieu -> formulaire, compteur, validation
+        const cpToast = (msg) => { if (typeof showToast === 'function') showToast(msg, 'error'); else alert(msg); };
+
+        window.selectPlace = function(lat, lng, fullName) {
+            const name = String(fullName).split(",")[0].trim();
+            document.getElementById("cp_lat").value = lat;
+            document.getElementById("cp_lng").value = lng;
+            document.getElementById("cp_name").value = name;
+            document.getElementById("cpPlaceChipName").textContent = fullName;
+            document.getElementById("cpSearchBlock").style.display = "none";
+            document.getElementById("formCheckpoint").style.display = "block";
+            document.getElementById("cpTabs").style.display = "flex";
+            window.switchCpTab('info');
+            setTimeout(() => document.getElementById("cp_name").focus(), 50);
+        };
+
+        window.cpChangePlace = function() {
+            document.getElementById("formCheckpoint").style.display = "none";
+            document.getElementById("cpTabs").style.display = "none";
+            document.getElementById("cpSearchBlock").style.display = "block";
+            const si = document.getElementById("searchPlaceInput"); if (si) si.focus();
+        };
+
+        const cpContainer = document.getElementById("cpExpensesContainer");
+        const refreshCpCount = () => {
+            const n = cpContainer.querySelectorAll(".hol-form-row").length;
+            const badge = document.getElementById("cpProgCount");
+            badge.textContent = n; badge.style.display = n ? "inline-block" : "none";
+            document.getElementById("cpExpensesEmpty").style.display = n ? "none" : "block";
+        };
+        if (cpContainer) {
+            new MutationObserver(refreshCpCount).observe(cpContainer, { childList: true });
+            refreshCpCount();
+        }
+
+        const cpForm = document.getElementById("formCheckpoint");
+        if (cpForm) {
+            cpForm.addEventListener("keydown", (e) => {
+                // Entrée dans un champ texte ne doit pas soumettre par erreur
+                if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "submit" && e.target.type !== "checkbox") e.preventDefault();
+            });
+            cpForm.addEventListener("submit", (e) => {
+                const lat = document.getElementById("cp_lat").value;
+                const lng = document.getElementById("cp_lng").value;
+                const name = document.getElementById("cp_name").value.trim();
+                if (!lat || !lng) { e.preventDefault(); cpToast("Choisis d'abord un lieu dans la recherche."); window.cpChangePlace(); return; }
+                if (!name) { e.preventDefault(); window.switchCpTab('info'); cpToast("Donne un nom à l'étape."); document.getElementById("cp_name").focus(); return; }
+                const sd = document.getElementById("cp_start_date").value, ed = document.getElementById("cp_end_date").value;
+                if (sd && ed && ed < sd) { e.preventDefault(); window.switchCpTab('info'); cpToast("La date de départ est avant la date d'arrivée."); return; }
+                // Retire les lignes de dépense totalement vides
+                cpContainer.querySelectorAll(".hol-form-row").forEach((row) => {
+                    const n = row.querySelector('input[name="items[name][]"]').value.trim();
+                    const a = row.querySelector('input[name="items[amount][]"]').value.trim();
+                    if (!n && !a) row.remove();
+                });
+            });
+        }
 
         window.closeCheckpointModal = function() {
             const modal = document.getElementById('checkpointModal');
