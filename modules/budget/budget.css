@@ -3664,3 +3664,251 @@ tr.bg-danger-soft {
     margin-bottom: 8px;
   }
 }
+
+/* ---------- Budget prévisionnel : revenus repliables, navigation fluide, colonne gauche mobile ---------- */
+.prev-container .bp-fold > summary {
+  list-style: none;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.prev-container .bp-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.prev-container .bp-fold-chips {
+  display: none;
+}
+.prev-container.bp-loading [data-swap] {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.prev-container .bp-modal-delete {
+  margin-right: auto;
+  color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .prev-container .bp-fold > summary {
+    cursor: pointer;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 0;
+  }
+  .prev-container .bp-fold > summary h2::after {
+    content: "▸";
+    margin-left: 8px;
+    color: var(--text-muted);
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  .prev-container .bp-fold[open] > summary h2::after {
+    transform: rotate(90deg);
+  }
+  .prev-container .bp-fold[open] > summary {
+    margin-bottom: 10px;
+  }
+  .prev-container .bp-fold-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .prev-container .bp-fold[open] .bp-fold-chips {
+    display: none;
+  }
+  .prev-container .bp-chip {
+    border-left: 3px solid var(--c, var(--border-strong));
+    padding-left: 6px;
+  }
+  .prev-container .bp-chip b {
+    color: var(--text-main);
+  }
+
+  /* Colonne de gauche du tableau : nom + objectif en petit, un seul bouton ✎ */
+  .prev-container .col-sticky {
+    min-width: 140px !important;
+    max-width: 150px !important;
+    background-color: var(--bg-panel) !important;
+    padding: 6px 28px 6px 8px !important;
+    position: sticky !important;
+    vertical-align: middle;
+  }
+  .prev-container th.col-sticky {
+    background-color: var(--bg-page) !important;
+  }
+  .prev-container .cat-name-label {
+    font-size: 0.82rem;
+    line-height: 1.2;
+    overflow-wrap: break-word;
+  }
+  .prev-container .cat-target-label {
+    font-size: 0.68rem;
+    font-style: normal;
+    text-align: left;
+    line-height: 1.25;
+    margin-top: 2px;
+    color: var(--text-muted);
+  }
+  .prev-container .col-sticky .row-actions {
+    position: absolute !important;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    padding: 0 !important;
+    width: auto !important;
+  }
+  .prev-container .col-sticky .row-actions .delete {
+    display: none;
+  }
+  .prev-container .col-sticky .row-actions .edit {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+  }
+}
+
+/* ---------- Épargne : mobile compact ---------- */
+@media (max-width: 768px) {
+  .budget-view .view-header {
+    margin-bottom: 10px;
+  }
+  .budget-view .owner-tabs {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    padding: 3px;
+  }
+  .budget-view .owner-tab {
+    flex: 1 0 auto;
+    text-align: center;
+    padding: 6px 12px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
+
+  /* Titre (enfants) et boutons sur une seule ligne compacte */
+  .budget-view .epargne-header-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .budget-view .epargne-header-bar .pf-flex-1 {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .budget-view .epargne-header-bar .pf-flex-1:empty {
+    display: none;
+  }
+  .budget-view .epargne-header-bar .nens-title {
+    font-size: 1rem;
+    padding: 5px 10px;
+  }
+  .budget-view .epargne-header-bar .pf-flex-gap-12-center {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .budget-view .epargne-header-bar .pf-btn {
+    min-height: 36px;
+    height: auto;
+    padding: 6px 8px;
+    font-size: 0.82rem;
+    width: 100%;
+    margin: 0;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  /* Grille : colonne des postes étroite, colonnes de mois serrées */
+  .budget-view .pf-card-epargne {
+    border-radius: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .budget-view .epargne-grid-table {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+  }
+  .budget-view .eg-header-row,
+  .budget-view .eg-row {
+    grid-template-columns: 92px repeat(var(--cols), 88px);
+  }
+  .budget-view .eg-header-row {
+    border-top-width: 3px;
+    font-size: 0.68rem;
+  }
+  .budget-view .eg-cell {
+    padding: 4px 4px;
+    font-size: 0.85rem;
+  }
+  .budget-view .eg-sticky {
+    font-size: 0.78rem;
+    line-height: 1.15;
+    padding: 4px 6px;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+  .budget-view .eg-header-row .eg-sticky {
+    font-size: 0.64rem;
+  }
+  .budget-view .eg-input {
+    width: 100%;
+    max-width: 72px;
+    padding: 3px 2px;
+    font-size: 0.85rem;
+  }
+  .budget-view .eg-cell-content {
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    width: 100%;
+  }
+  .budget-view .eg-currency-symbol {
+    font-size: 0.75rem;
+    margin: 0;
+  }
+  .budget-view .eg-extres-row .eg-sticky,
+  .budget-view .eg-total-row .eg-sticky {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+
+  /* En-tête de mois : nom court, date de cycle discrète, 2 petits boutons côte à côte */
+  .budget-view .month-header-container {
+    gap: 3px;
+  }
+  .budget-view .month-header-title {
+    line-height: 1.15;
+  }
+  .budget-view .month-cycle-start {
+    font-size: 0.62rem;
+    text-transform: none;
+  }
+  .budget-view .month-actions {
+    opacity: 1;
+    gap: 3px;
+  }
+  .budget-view .month-actions .btn-icon-small {
+    width: 24px;
+    height: 20px;
+    font-size: 0.65rem;
+    padding: 0;
+  }
+}

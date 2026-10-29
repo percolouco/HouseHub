@@ -161,10 +161,18 @@ if (count($parentMapping) >= 2) {
 
 <div class="prev-container" style="--p1-main: <?= $parentMapping[0]['color'] ?>; --p2-main: <?= $parentMapping[1]['color'] ?? '#f59e0b' ?>;">
 
-    <div>
-        <div class="prev-section-header">
+    <details class="bp-fold" id="bpIncomes">
+        <summary class="prev-section-header">
             <h2><?= tr('bud_prev_incomes') ?> <?= $currentYear ?></h2>
-        </div>
+            <span class="bp-fold-chips">
+                <?php foreach ($parentMapping as $map):
+                    $dd = $salaryConfig[$map['name']];
+                    $rr = $dd['salary'] - ($dd['mensualite'] + $dd['frais_func'] + $dd['eco_perso'] + $dd['eco_family']);
+                ?>
+                <span class="bp-chip" style="--c: <?= htmlspecialchars($map['color']) ?>;"><?= htmlspecialchars($map['name']) ?> <b id="fold_restant_<?= $map['css'] ?>"><?= number_format($rr, 0, ',', ' ') ?> €</b></span>
+                <?php endforeach; ?>
+            </span>
+        </summary>
 
         <table class="prev-salary-table bp-table">
             <thead>
@@ -202,16 +210,16 @@ if (count($parentMapping) >= 2) {
                 <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
+    </details>
 
-    <div>
+    <div data-swap="alloc">
         <div class="prev-section-header">
             <div class="prev-header-left">
                 <h2><?= tr('bud_prev_budget_alloc') ?></h2>
                 <div class="nav-group">
-                    <a href="?tab=budget_prev&focus_date=<?= $prevMonthLink ?>" class="btn-nav">◀</a>
-                    <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav"><?= tr('bud_prev_today') ?></a>
-                    <a href="?tab=budget_prev&focus_date=<?= $nextMonthLink ?>" class="btn-nav">▶</a>
+                    <a href="?tab=budget_prev&focus_date=<?= $prevMonthLink ?>" class="btn-nav" data-bp-nav>◀</a>
+                    <a href="?tab=budget_prev&focus_date=<?= date('Y-m-01') ?>" class="btn-nav" data-bp-nav><?= tr('bud_prev_today') ?></a>
+                    <a href="?tab=budget_prev&focus_date=<?= $nextMonthLink ?>" class="btn-nav" data-bp-nav>▶</a>
                 </div>
             </div>
             <div class="prev-header-actions">
@@ -334,7 +342,7 @@ if (count($parentMapping) >= 2) {
         </div>
     </div>
 
-    <div class="budget-notes-section">
+    <div class="budget-notes-section" data-swap="notes">
         <div class="notes-header">
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <h3 style="margin: 0;">📝 <?= tr('bud_prev_notes_for') ?></h3>
@@ -482,7 +490,7 @@ if (count($parentMapping) >= 2) {
     $allTargets = array_unique($allTargets);
     ?>
 
-    <div class="recap-wrapper">
+    <div class="recap-wrapper" data-swap="recap">
         <div class="recap-card">
             <div class="recap-header">
                 <?= tr('bud_prev_transfers_to_make') ?> <span><?= getTranslatedMonthName($focusMonth) ?></span>
@@ -625,6 +633,7 @@ if (count($parentMapping) >= 2) {
             
             <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
                 <button type="button" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
+                <button type="button" class="pf-btn btn-secondary bp-modal-delete" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll'); deleteAllocCategory(document.getElementById('edit_cat_id').value)">🗑️ <?= tr('delete') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
         </form>
@@ -729,7 +738,8 @@ window.CONFIG.parentMapping = <?= json_encode($parentMapping) ?>;
 window.CONFIG.CURRENCY = '<?= defined('CURRENCY') ? CURRENCY : "€" ?>';
 
 const currentYear = <?= $currentYear ?>;
-const months = <?= json_encode($months) ?>;
+let months = <?= json_encode($months) ?>;
+let nextMonth = <?= json_encode($nextMonthLink) ?>;
 
 /* --- LOGIQUE ALLOCATIONS & BUDGET --- */
 
@@ -766,42 +776,87 @@ function updateAlloc(month, catId, personId, input) {
     recalcAllAllocations();
 }
 
-function duplicateMonth() {
-    const targetDateStr = months[0];
-    const sourceDateStr = months[1];
+async function duplicateMonth() {
+    // Copie le mois affiché vers le mois SUIVANT (qui n'est pas affiché dans le tableau)
+    const sourceDateStr = months[0];
+    const targetDateStr = nextMonth;
     const parentMap = window.CONFIG.parentMapping;
-
-    if (!sourceDateStr) {
-        showToast(tr('bud_prev_err_no_history'), 'error');
-        return;
-    }
 
     const formatMonth = (d) => {
         let str = new Date(d).toLocaleDateString(window.appLang, { month: 'long', year: 'numeric' });
         return str.charAt(0).toUpperCase() + str.slice(1);
     };
 
-    const sourceName = formatMonth(sourceDateStr);
-    const targetName = formatMonth(targetDateStr);
-    const message = tr('bud_prev_confirm_copy').replace('%s', sourceName).replace('%t', targetName);
+    const message = tr('bud_prev_confirm_copy').replace('%s', formatMonth(sourceDateStr)).replace('%t', formatMonth(targetDateStr));
+    if (!confirm(message)) return;
 
-    if(!confirm(message)) return;
-
+    const writes = [];
     const firstCss = parentMap[0].css;
     document.querySelectorAll('.inp-' + firstCss + '-' + sourceDateStr).forEach(sourceInput => {
         const catIdMatch = sourceInput.getAttribute('onchange').match(/, (\d+),/);
-        if(!catIdMatch) return;
-        const catId = catIdMatch[1];
+        if (!catIdMatch) return;
         const row = sourceInput.closest('tr');
-
         parentMap.forEach(map => {
             const sInp = row.querySelector('.inp-' + map.css + '-' + sourceDateStr);
-            const tInp = row.querySelector('.inp-' + map.css + '-' + targetDateStr);
-            if(sInp && tInp) {
-                tInp.value = sInp.value;
-                updateAlloc(targetDateStr, catId, map.id, tInp);
-            }
+            if (sInp) writes.push(saveData('update_allocation', { month_date: targetDateStr, cat_id: catIdMatch[1], person_id: map.id, value: sInp.value || 0 }));
         });
+    });
+    await Promise.all(writes);
+    bpGoMonth('?tab=budget_prev&focus_date=' + targetDateStr);
+}
+
+/* Changement de mois sans recharger la page : on récupère la page du mois demandé
+   et on ne remplace que les blocs qui en dépendent (répartition, notes, virements). */
+async function bpGoMonth(url, push = true) {
+    const box = document.querySelector('.prev-container');
+    box.classList.add('bp-loading');
+    try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        const html = await res.text();
+        const mMatch = html.match(/let months = (\[[^\]]*\]);/);
+        const nMatch = html.match(/let nextMonth = ("[^"]*");/);
+        if (!res.ok || !mMatch) throw new Error('page');
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        ['alloc', 'notes', 'recap'].forEach(k => {
+            const cur = document.querySelector('[data-swap="' + k + '"]');
+            const nw = doc.querySelector('[data-swap="' + k + '"]');
+            if (cur && nw) cur.replaceWith(nw);
+        });
+        months = JSON.parse(mMatch[1]);
+        if (nMatch) nextMonth = JSON.parse(nMatch[1]);
+        if (push) history.pushState({ bp: 1 }, '', url);
+        recalcAllAllocations();
+    } catch (e) {
+        window.location.href = url;
+    } finally {
+        box.classList.remove('bp-loading');
+    }
+}
+
+document.addEventListener('click', function(e) {
+    const a = e.target.closest('a[data-bp-nav]');
+    if (!a) return;
+    e.preventDefault();
+    bpGoMonth(a.href);
+});
+window.addEventListener('popstate', () => bpGoMonth(location.href, false));
+
+/* Revenus : repliés sur mobile, toujours ouverts sur grand écran */
+(function() {
+    const d = document.getElementById('bpIncomes');
+    if (!d) return;
+    const mq = window.matchMedia('(max-width: 768px)');
+    const sync = () => { d.open = !mq.matches; };
+    sync();
+    mq.addEventListener('change', sync);
+    d.querySelector('summary').addEventListener('click', e => { if (!mq.matches) e.preventDefault(); });
+})();
+
+function bpSyncFoldChips() {
+    window.CONFIG.parentMapping.forEach(map => {
+        const src = document.getElementById('restant_' + map.css);
+        const dst = document.getElementById('fold_restant_' + map.css);
+        if (src && dst) dst.textContent = src.textContent.trim();
     });
 }
 
@@ -855,6 +910,7 @@ function recalcAllAllocations() {
         if(globEl) globEl.innerText = Math.round(totalGlobal) + ' €';
     });
 
+    bpSyncFoldChips();
     updateSummaryTable();
     if(isSumModeActive) updateSumResult();
 }
@@ -912,7 +968,7 @@ function saveData(action, data) {
     formData.append('ajax', '1');
     for (const key in data) formData.append(key, data[key]);
     
-    fetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
+    return fetch('/modules/budget/includes/api/save-budget.php', { method: 'POST', body: formData });
 }
 
 async function validateTransfers(personCss, month) {
