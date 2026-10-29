@@ -274,7 +274,7 @@ if (count($parentMapping) >= 2) {
                         <?php foreach ($months as $mi => $m): $mo = $mi > 0 ? ' m-old' : ''; ?>
                             <td class="td-separator<?= $mo ?>">-</td>
                             <?php foreach ($parentMapping as $map): ?>
-                                <td class="val-ok sum-target<?= $mo ?>" id="restant_alloc_<?= $map['css'] ?>_<?= $m ?>">0</td>
+                                <td class="val-ok sum-target<?= $mo ?>"<?= $mo ? ' data-old="1"' : '' ?> id="restant_alloc_<?= $map['css'] ?>_<?= $m ?>">0</td>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
                     </tr>
@@ -847,7 +847,7 @@ function recalcAllAllocations() {
             const elRest = document.getElementById('restant_alloc_' + map.css + '_' + m);
             if (elRest) {
                 elRest.innerText = Math.round(rest) + ' €';
-                elRest.className = 'val-' + (rest >= 0 ? 'ok' : 'ko') + ' sum-target';
+                elRest.className = 'val-' + (rest >= 0 ? 'ok' : 'ko') + ' sum-target' + (elRest.dataset.old ? ' m-old' : '');
             }
         });
 
