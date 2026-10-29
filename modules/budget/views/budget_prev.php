@@ -166,7 +166,7 @@ if (count($parentMapping) >= 2) {
             <h2><?= tr('bud_prev_incomes') ?> <?= $currentYear ?></h2>
         </div>
 
-        <table class="prev-salary-table">
+        <table class="prev-salary-table bp-table">
             <thead>
                 <tr>
                     <th><?= tr('bud_prev_person') ?></th>
@@ -188,14 +188,14 @@ if (count($parentMapping) >= 2) {
                     <td class="col-p<?= $map['css'] ?>">
                         <?= htmlspecialchars($map['name']) ?>
                     </td>
-                    <td><input type="number" class="prev-input" data-field="salary" value="<?= round($d['salary']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
-                    <td><input type="number" class="prev-input" data-field="mensualite" value="<?= round($d['mensualite']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
-                    <td><input type="number" class="prev-input" data-field="frais_func" value="<?= round($d['frais_func']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
-                    <td><input type="number" class="prev-input" data-field="eco_perso" value="<?= round($d['eco_perso']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
-                    <td class="td-family-savings">
+                    <td data-label="<?= tr('bud_prev_salary') ?>"><input type="number" class="prev-input" data-field="salary" value="<?= round($d['salary']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
+                    <td data-label="<?= tr('bud_prev_monthly_payment') ?>"><input type="number" class="prev-input" data-field="mensualite" value="<?= round($d['mensualite']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
+                    <td data-label="<?= tr('bud_prev_func_expenses') ?>"><input type="number" class="prev-input" data-field="frais_func" value="<?= round($d['frais_func']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
+                    <td data-label="<?= tr('bud_prev_perso_savings') ?>"><input type="number" class="prev-input" data-field="eco_perso" value="<?= round($d['eco_perso']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)"></td>
+                    <td class="td-family-savings" data-label="<?= tr('bud_prev_family_savings') ?>">
                         <input type="number" class="prev-input bold-blue" id="eco_family_<?= $map['css'] ?>" data-field="eco_family" value="<?= round($d['eco_family']) ?>" onchange="updateSalary('<?= htmlspecialchars($map['name']) ?>', this)">
                     </td>
-                    <td id="restant_<?= $map['css'] ?>" class="sum-target font-bold">
+                    <td id="restant_<?= $map['css'] ?>" class="sum-target font-bold" data-label="<?= tr('bud_prev_perso_remaining') ?>">
                         <?= number_format($restant, 0, ',', ' ') ?> €
                     </td>
                 </tr>
@@ -215,6 +215,9 @@ if (count($parentMapping) >= 2) {
                 </div>
             </div>
             <div class="prev-header-actions">
+                <button type="button" class="pf-btn btn-secondary bp-only-mobile" onclick="document.querySelector('.prev-container').classList.toggle('bp-show-old')">
+                    🗓️ Mois précédents
+                </button>
                 <button type="button" class="pf-btn btn-secondary" onclick="duplicateMonth()">
                     🔁 <?= tr('bud_sav_add_one_month') ?>
                 </button>
@@ -225,13 +228,13 @@ if (count($parentMapping) >= 2) {
         </div>
 
         <div class="prev-timeline-wrapper">
-            <table class="prev-alloc-table">
+            <table class="prev-alloc-table bp-table">
                 <thead>
                     <tr>
                         <th class="col-sticky header-cell"></th>
-                        <?php foreach ($months as $month):
+                        <?php foreach ($months as $mi => $month):
                             $isCurrent = ($month == date('Y-m-01'));
-                            $cls = $isCurrent ? 'current' : '';
+                            $cls = ($isCurrent ? 'current' : '') . ($mi > 0 ? ' m-old' : '');
                             $colspan = count($parentMapping) + 1;
                         ?>
                             <th colspan="<?= $colspan ?>" class="th-month <?= $cls ?>">
@@ -247,10 +250,10 @@ if (count($parentMapping) >= 2) {
                     </tr>
                     <tr>
                         <th class="col-sticky header-cell"></th>
-                        <?php foreach ($months as $month): ?>
-                            <th class="th-sub">Global</th>
+                        <?php foreach ($months as $mi => $month): $mo = $mi > 0 ? ' m-old' : ''; ?>
+                            <th class="th-sub<?= $mo ?>">Global</th>
                             <?php foreach ($parentMapping as $map): ?>
-                                <th class="th-sub txt-<?= $map['css'] ?>"><?= htmlspecialchars($map['name']) ?></th>
+                                <th class="th-sub txt-<?= $map['css'] ?><?= $mo ?>"><?= htmlspecialchars($map['name']) ?></th>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
                     </tr>
@@ -258,20 +261,20 @@ if (count($parentMapping) >= 2) {
                 <tbody>
                     <tr class="row-total">
                         <td class="col-sticky">Total</td>
-                        <?php foreach ($months as $m): ?>
-                            <td class="txt-global sum-target" id="total_global_<?= $m ?>">0</td>
+                        <?php foreach ($months as $mi => $m): $mo = $mi > 0 ? ' m-old' : ''; ?>
+                            <td class="txt-global sum-target<?= $mo ?>" id="total_global_<?= $m ?>">0</td>
                             <?php foreach ($parentMapping as $map): ?>
-                                <td class="txt-<?= $map['css'] ?> sum-target" id="total_<?= $map['css'] ?>_<?= $m ?>">0</td>
+                                <td class="txt-<?= $map['css'] ?> sum-target<?= $mo ?>" id="total_<?= $map['css'] ?>_<?= $m ?>">0</td>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
                     </tr>
 
                     <tr class="row-restant">
                         <td class="col-sticky"><?= tr('bud_prev_remaining') ?> (Eco Family)</td>
-                        <?php foreach ($months as $m): ?>
-                            <td class="td-separator">-</td>
+                        <?php foreach ($months as $mi => $m): $mo = $mi > 0 ? ' m-old' : ''; ?>
+                            <td class="td-separator<?= $mo ?>">-</td>
                             <?php foreach ($parentMapping as $map): ?>
-                                <td class="val-ok sum-target" id="restant_alloc_<?= $map['css'] ?>_<?= $m ?>">0</td>
+                                <td class="val-ok sum-target<?= $mo ?>" id="restant_alloc_<?= $map['css'] ?>_<?= $m ?>">0</td>
                             <?php endforeach; ?>
                         <?php endforeach; ?>
                     </tr>
@@ -309,13 +312,13 @@ if (count($parentMapping) >= 2) {
                             <button type="button" onclick="deleteAllocCategory(<?= $cat['id'] ?>)" class="btn-icon-action delete" title="<?= tr('delete') ?>">🗑️</button>
                         </div>
                     </td>
-                    <?php foreach ($months as $m): ?>
-                        <td class="txt-global sum-target" id="g_<?= $m ?>_<?= $cat['id'] ?>">0</td>
+                    <?php foreach ($months as $mi => $m): $mo = $mi > 0 ? ' m-old' : ''; ?>
+                        <td class="txt-global sum-target<?= $mo ?>" id="g_<?= $m ?>_<?= $cat['id'] ?>">0</td>
 
                         <?php foreach ($parentMapping as $map):
                             $cellValue = $allocs[$m][$cat['id']][$map['id']] ?? 0;
                         ?>
-                        <td>
+                        <td class="<?= trim($mo) ?>">
                             <input type="number" step="1" class="prev-input txt-<?= $map['css'] ?> inp-<?= $map['css'] ?>-<?= $m ?> <?= $inputClass ?>"
                                    value="<?= $cellValue == 0 ? '' : round($cellValue) ?>"
                                    placeholder="-"
@@ -372,97 +375,72 @@ if (count($parentMapping) >= 2) {
     </div>
 
     <?php if (count($parentMapping) > 1): ?>
-    <div style="margin: 30px 0; background: var(--bg-panel); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-light); box-shadow: var(--shadow);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
-            <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800;"><?= tr('bud_adv_title') ?></h3>
+    <div class="bp-card">
+        <div class="bp-card-head">
+            <h3><?= tr('bud_adv_title') ?></h3>
             <button type="button" class="pf-btn" onclick="document.getElementById('addAdvanceModal').classList.add('is-active')">
                 ＋ <?= tr('bud_adv_add') ?>
             </button>
         </div>
 
-        <div style="display: flex; gap: 20px; margin-bottom: 24px; flex-wrap: wrap;">
-            <?php foreach ($parentMapping as $idx => $map): 
-                $pName = $map['name'];
-                $bgClass = ($idx === 0) ? 'rgba(8, 145, 178, 0.06)' : 'rgba(217, 119, 6, 0.06)';
-                $bdClass = ($idx === 0) ? 'rgba(8, 145, 178, 0.2)' : 'rgba(217, 119, 6, 0.2)';
-                $colorMain = ($idx === 0) ? '#0891b2' : '#d97706';
-                $colorDark = ($idx === 0) ? '#164e63' : '#78350f';
-            ?>
-            <div style="flex: 1; min-width: 240px; background: <?= $bgClass ?>; border: 1px solid <?= $bdClass ?>; padding: 18px; border-radius: 12px;">
-                <div style="font-size: 0.85rem; color: <?= $colorMain ?>; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"><?= sprintf(tr('bud_adv_has_advanced'), htmlspecialchars($pName)) ?></div>
-                <div style="margin-top: 10px;">
-                    <div style="display: flex; align-items: baseline; gap: 6px;">
-                        <span style="font-size: 1.5rem; font-weight: 800; color: <?= $colorDark ?>; font-family: monospace;"><?= number_format($advTotal[$pName] ?? 0, 2, ',', ' ') ?> €</span>
-                    </div>
-                    <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: 500;"><?= tr('bud_adv_cc_label') ?></small>
-                    <?php if (!empty($labelsCC[$pName])): ?>
-                        <div style="font-size: 0.75rem; color: <?= $colorMain ?>; margin-top: 6px; line-height: 1.4; font-style: italic;">
-                            <?= implode(', ', $labelsCC[$pName]) ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-                <?php if(($livretTotal[$pName] ?? 0) > 0): ?>
-                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed <?= $bdClass ?>;">
-                    <div style="font-size: 1.2rem; font-weight: 800; color: <?= $colorDark ?>; font-family: monospace;">+ <?= number_format($livretTotal[$pName], 2, ',', ' ') ?> €</div>
-                    <small style="color: <?= $colorDark ?>; font-size: 0.75rem; font-weight: 600;"><?= tr('bud_adv_livret_label') ?></small>
+        <div class="bp-adv-summary">
+            <?php foreach ($parentMapping as $idx => $map): $pName = $map['name']; ?>
+            <div class="bp-adv-person" style="--bp-accent: <?= htmlspecialchars($map['color']) ?>;">
+                <div class="bp-adv-label"><?= sprintf(tr('bud_adv_has_advanced'), htmlspecialchars($pName)) ?></div>
+                <div class="bp-adv-amount"><?= number_format($advTotal[$pName] ?? 0, 2, ',', ' ') ?> €</div>
+                <?php if (!empty($labelsCC[$pName])): ?>
+                    <div class="bp-adv-detail"><?= implode(', ', $labelsCC[$pName]) ?></div>
+                <?php endif; ?>
+                <?php if (($livretTotal[$pName] ?? 0) > 0): ?>
+                    <div class="bp-adv-livret">+ <?= number_format($livretTotal[$pName], 2, ',', ' ') ?> € <small><?= tr('bud_adv_livret_label') ?></small></div>
                     <?php if (!empty($labelsLivret[$pName])): ?>
-                        <div style="font-size: 0.75rem; color: <?= $colorDark ?>; margin-top: 4px; line-height: 1.4;">
-                            <?= implode(', ', $labelsLivret[$pName]) ?>
-                        </div>
+                        <div class="bp-adv-detail"><?= implode(', ', $labelsLivret[$pName]) ?></div>
                     <?php endif; ?>
-                </div>
                 <?php endif; ?>
             </div>
             <?php endforeach; ?>
 
-            <div style="flex: 1; min-width: 240px; background: var(--bg-page); border: 1px solid var(--border-light); padding: 18px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
-                    🏛️ <?= tr('bud_adv_cc_balance_title') ?>
-                </div>
-                <div style="font-size: 1.15rem; font-weight: 800;">
-                    <?php if ($balanceDiff > 0.01): ?>
-                        <?= sprintf(tr('bud_adv_owed_to'), number_format($balanceDiff, 2, ',', ' '), htmlspecialchars($owedTo)) ?>
-                    <?php else: ?>
-                        <span style="color: var(--success); font-weight: bold;">✓ <?= tr('bud_adv_balanced') ?></span>
-                    <?php endif; ?>
-                </div>
+            <div class="bp-adv-balance">
+                <div class="bp-adv-label">🏛️ <?= tr('bud_adv_cc_balance_title') ?></div>
+                <?php if ($balanceDiff > 0.01): ?>
+                    <div class="bp-adv-balance-text"><?= sprintf(tr('bud_adv_owed_to'), number_format($balanceDiff, 2, ',', ' '), htmlspecialchars($owedTo)) ?></div>
+                <?php else: ?>
+                    <div class="bp-adv-balance-text ok">✓ <?= tr('bud_adv_balanced') ?></div>
+                <?php endif; ?>
             </div>
         </div>
 
         <?php if (!empty($activeAdvances)): ?>
-            <div style="overflow-x:auto;">
-                <table class="pf-table" style="margin: 0; box-shadow: none; border: 1px solid var(--border-light);">
+            <div class="bp-table-scroll">
+                <table class="pf-table bp-table bp-adv-table">
                     <thead>
                         <tr>
-                            <th><?= tr('date') ?></th>
+                            <th class="bp-hide-m"><?= tr('date') ?></th>
                             <th><?= tr('bud_adv_payer') ?></th>
-                            <th><?= tr('bud_label_name') ?></th>
+                            <th class="bp-left"><?= tr('bud_label_name') ?></th>
                             <th><?= tr('bud_amount') ?></th>
-                            <th style="text-align: right;"><?= tr('actions') ?></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($activeAdvances as $adv): 
-                            // Attribution de la couleur selon l'utilisateur
-                            $colorP = '#64748b'; // Defaut
-                            foreach($parentMapping as $idx => $m) {
-                                if($m['name'] === $adv['payer']) {
-                                    $colorP = ($idx === 0) ? '#0891b2' : '#d97706';
-                                    break;
-                                }
+                        <?php foreach ($activeAdvances as $adv):
+                            $colorP = 'var(--text-muted)';
+                            foreach ($parentMapping as $m) {
+                                if ($m['name'] === $adv['payer']) { $colorP = $m['color']; break; }
                             }
                         ?>
                         <tr>
-                            <td style="color: var(--text-muted);"><?= date('d/m/Y', strtotime($adv['advance_date'])) ?></td>
-                            <td style="font-weight: 700; color: <?= $colorP ?>;"><?= htmlspecialchars($adv['payer']) ?></td>
-                            <td>
+                            <td class="bp-hide-m bp-muted"><?= date('d/m/Y', strtotime($adv['advance_date'])) ?></td>
+                            <td class="bp-payer" style="color: <?= htmlspecialchars($colorP) ?>;"><?= htmlspecialchars($adv['payer']) ?></td>
+                            <td class="bp-left">
                                 <?= htmlspecialchars($adv['description']) ?>
                                 <?php if ($adv['from_savings']): ?>
-                                    <span style="background: var(--bg-soft); color: var(--primary); font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: bold; border: 1px solid rgba(59, 130, 246, 0.2);"><?= tr('bud_adv_saved_badge') ?></span>
+                                    <span class="bp-badge"><?= tr('bud_adv_saved_badge') ?></span>
                                 <?php endif; ?>
+                                <small class="bp-only-mobile bp-muted"><?= date('d/m/Y', strtotime($adv['advance_date'])) ?></small>
                             </td>
-                            <td style="font-weight: 700; font-family: monospace;"><?= number_format($adv['amount'], 2, ',', ' ') ?> €</td>
-                            <td style="text-align: right; white-space: nowrap;">
+                            <td class="bp-num"><?= number_format($adv['amount'], 2, ',', ' ') ?> €</td>
+                            <td class="bp-actions">
                                 <button class="btn-icon-action edit" title="<?= tr('edit') ?>"
                                         data-id="<?= $adv['id'] ?>"
                                         data-payer="<?= htmlspecialchars($adv['payer']) ?>"
@@ -472,7 +450,7 @@ if (count($parentMapping) >= 2) {
                                         data-savings="<?= $adv['from_savings'] ?>"
                                         onclick="triggerEditAdvanceModal(this)">✏️</button>
                                 <button class="btn-icon-action delete" title="<?= tr('delete') ?>" onclick="executeDeleteAdvance(<?= $adv['id'] ?>)">🗑️</button>
-                                <button class="pf-btn" style="padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; width:auto; height:auto;" onclick="executeResolveAdvance(<?= $adv['id'] ?>)">✓</button>
+                                <button class="pf-btn bp-resolve" onclick="executeResolveAdvance(<?= $adv['id'] ?>)">✓</button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -507,10 +485,10 @@ if (count($parentMapping) >= 2) {
     <div class="recap-wrapper">
         <div class="recap-card">
             <div class="recap-header">
-                <?= tr('bud_prev_transfers_to_make') ?> - <span><?= getTranslatedMonthName($focusMonth) ?></span>
+                <?= tr('bud_prev_transfers_to_make') ?> <span><?= getTranslatedMonthName($focusMonth) ?></span>
             </div>
 
-            <table class="recap-table">
+            <table class="recap-table bp-table">
                 <thead>
                     <tr>
                         <th><?= tr('bud_prev_destination') ?></th>

@@ -3300,3 +3300,335 @@ tr.bg-danger-soft {
     font-weight: 700;
   }
 }
+
+/* =========================================================
+   BUDGET PRÉVISIONNEL — système de tableaux unifié (bp-*)
+   Référence visuelle : tableau des virements à effectuer.
+   ========================================================= */
+.prev-container .bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-panel);
+  font-variant-numeric: tabular-nums;
+}
+.prev-container .bp-table th {
+  background: var(--bg-page);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-light);
+}
+.prev-container .bp-table td {
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-light);
+}
+.prev-container .bp-table th:first-child,
+.prev-container .bp-table td:first-child,
+.prev-container .bp-table .bp-left {
+  text-align: left;
+}
+.prev-container .bp-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.prev-container .bp-table th small {
+  font-weight: 400;
+  text-transform: none;
+}
+
+/* Cartes : même enveloppe pour tous les blocs */
+.prev-container .prev-salary-table,
+.prev-container .prev-timeline-wrapper,
+.prev-container .recap-card,
+.prev-container .bp-card,
+.prev-container .budget-notes-section {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: none;
+  background: var(--bg-panel);
+}
+.prev-container .prev-salary-table {
+  max-width: none;
+  overflow: hidden;
+}
+.prev-container .prev-section-header {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 12px;
+}
+.prev-container .prev-section-header h2 {
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+/* Virements : en-tête allégé, plus de bandeau sombre */
+.prev-container .recap-wrapper {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.prev-container .recap-card {
+  max-width: none;
+}
+.prev-container .recap-header {
+  background: transparent;
+  color: var(--text-main);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 1.05rem;
+  padding: 14px 16px 6px;
+}
+.prev-container .recap-header span {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.prev-container .recap-table th {
+  border-bottom: 1px solid var(--border-light);
+}
+.prev-container .row-grand-total td {
+  font-weight: 800;
+  background: var(--bg-page);
+  border-top: 1px solid var(--border-light);
+}
+
+/* Répartition : en-têtes de mois sobres */
+.prev-container .th-month {
+  background: var(--bg-page) !important;
+  color: var(--text-main) !important;
+  border-left: 1px solid var(--border-light);
+  font-size: 0.8rem !important;
+}
+.prev-container .th-month.current {
+  background: var(--bg-soft) !important;
+  color: var(--primary) !important;
+}
+.prev-container .th-month .cycle-start-label {
+  color: var(--text-muted);
+}
+.prev-container .row-total td,
+.prev-container .row-restant td,
+.prev-container .txt-global,
+.prev-container .row-indicative {
+  background: var(--bg-page);
+}
+.prev-container .row-restant td {
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* Avances (Tricount) */
+.prev-container .bp-card {
+  padding: 16px;
+}
+.prev-container .bp-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.prev-container .bp-card-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+.prev-container .bp-adv-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.prev-container .bp-adv-person,
+.prev-container .bp-adv-balance {
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--bp-accent, var(--border-strong));
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--bg-panel);
+}
+.prev-container .bp-adv-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.prev-container .bp-adv-amount {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.prev-container .bp-adv-livret {
+  margin-top: 8px;
+  font-weight: 700;
+}
+.prev-container .bp-adv-livret small,
+.prev-container .bp-adv-detail {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.prev-container .bp-adv-balance-text {
+  margin-top: 4px;
+  font-weight: 800;
+}
+.prev-container .bp-adv-balance-text.ok {
+  color: var(--success);
+}
+.prev-container .bp-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+}
+.prev-container .bp-adv-table {
+  margin: 0;
+  box-shadow: none;
+  border: none;
+}
+.prev-container .bp-payer,
+.prev-container .bp-num {
+  font-weight: 700;
+}
+.prev-container .bp-muted {
+  color: var(--text-muted);
+}
+.prev-container .bp-actions {
+  text-align: right !important;
+  white-space: nowrap;
+}
+.prev-container .bp-badge {
+  background: var(--bg-soft);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+.prev-container .bp-resolve {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  width: auto;
+  height: auto;
+}
+.prev-container .bp-only-mobile {
+  display: none;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 768px) {
+  .prev-container {
+    gap: 18px;
+  }
+  /* Les virements d'abord : c'est ce qu'on vient consulter */
+  .prev-container .recap-wrapper {
+    order: -1;
+    overflow: visible !important;
+    white-space: normal !important;
+    margin-bottom: 0;
+  }
+  .prev-container .recap-table th,
+  .prev-container .recap-table td {
+    padding: 10px 8px !important;
+    font-size: 0.85rem !important;
+  }
+  .prev-container .bp-only-mobile {
+    display: inline-flex;
+  }
+  .prev-container small.bp-only-mobile {
+    display: block;
+  }
+  .prev-container .bp-hide-m {
+    display: none;
+  }
+
+  /* Revenus : une fiche par personne, libellé + champ sur chaque ligne */
+  .prev-container .prev-salary-table,
+  .prev-container .prev-salary-table tbody {
+    display: block;
+    border: none;
+    background: transparent;
+  }
+  .prev-container .prev-salary-table thead {
+    display: none;
+  }
+  .prev-container .prev-salary-table tr {
+    display: block;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .prev-container .prev-salary-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px;
+    text-align: right;
+  }
+  .prev-container .prev-salary-table td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: left;
+  }
+  .prev-container .prev-salary-table td:first-child {
+    background: var(--bg-page);
+    font-weight: 800;
+    padding: 10px 14px;
+  }
+  .prev-container .prev-salary-table td:first-child::before {
+    content: none;
+  }
+  .prev-container .prev-salary-table .prev-input {
+    width: 110px;
+    text-align: right;
+    border-color: var(--border-light);
+    padding: 6px 8px;
+  }
+  .prev-container .prev-salary-table td.td-family-savings {
+    background: transparent !important;
+  }
+
+  /* Répartition : seul le mois affiché, les précédents sur demande */
+  .prev-container .m-old {
+    display: none;
+  }
+  .prev-container.bp-show-old .m-old {
+    display: table-cell;
+  }
+  .prev-container .col-sticky {
+    min-width: 110px;
+    max-width: 130px;
+    white-space: normal;
+    font-size: 0.82rem;
+  }
+  .prev-container .prev-alloc-table th,
+  .prev-container .prev-alloc-table td {
+    padding: 6px 6px;
+  }
+  .prev-container .prev-alloc-table .prev-input {
+    min-width: 54px;
+  }
+
+  /* Avances */
+  .prev-container .bp-card {
+    padding: 12px;
+  }
+  .prev-container .bp-adv-table td,
+  .prev-container .bp-adv-table th {
+    padding: 8px 6px;
+    font-size: 0.82rem;
+  }
+}
