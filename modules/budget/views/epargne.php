@@ -2,7 +2,7 @@
 // modules/budget/views/epargne.php
 
 // --- 🧠 CONFIGURATION AGNOSTIQUE DES MEMBRES (MULTI-TENANT) ---
-$stmtPeople = $pdo->query("SELECT name, role, color FROM pf_people ORDER BY id ASC");
+$stmtPeople = $pdo->query("SELECT name, role, color FROM pf_people WHERE COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY id ASC");
 $familyParents = [];
 $familyKids = [];
 $personColors = [];

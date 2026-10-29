@@ -201,7 +201,7 @@ if ($action === 'validate_transfers') {
         $bankAccountsMap = [];
         
         // Fallback intelligent : on récupère tous les prénoms de la famille
-        $familyNames = $pdo->query("SELECT name FROM pf_people")->fetchAll(PDO::FETCH_COLUMN);
+        $familyNames = $pdo->query("SELECT name FROM pf_people WHERE COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant')")->fetchAll(PDO::FETCH_COLUMN);
 
         while ($row = $stmtAcc->fetch(PDO::FETCH_ASSOC)) {
             $owner = $row['owner_name'];

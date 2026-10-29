@@ -104,6 +104,6 @@ function verify_csrf(?string $token): bool
 }
 if (!isset($familyPeople) && !empty($family_id)) {
     require_once __DIR__ . '/db.php'; 
-    $stmtPeople = $pdo->query("SELECT id, name, user_id FROM pf_people ORDER BY id ASC");
+    $stmtPeople = $pdo->query("SELECT id, name, user_id FROM pf_people WHERE COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY id ASC");
     $familyPeople = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 }

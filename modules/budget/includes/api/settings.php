@@ -37,7 +37,7 @@ try {
                    s.id as id
             FROM pf_people p 
             LEFT JOIN pf_salary_config s ON p.name = s.person AND s.year = $currentYear
-            WHERE p.role NOT IN ('enfant', 'nounou') AND p.is_active = 1
+            WHERE p.role NOT IN ('enfant', 'nounou', 'proche_adulte', 'proche_enfant') AND p.is_active = 1
             ORDER BY p.name ASC
         ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -51,7 +51,7 @@ try {
         $budgetSettings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
 
         // 6. Liste des membres (pour assigner un compte bancaire)
-        $people = $pdo->query("SELECT id, name FROM pf_people WHERE is_active = 1 ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $people = $pdo->query("SELECT id, name FROM pf_people WHERE is_active = 1 AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode([
             'success' => true,
