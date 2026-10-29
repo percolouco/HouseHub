@@ -3632,3 +3632,37 @@ tr.bg-danger-soft {
     font-size: 0.82rem;
   }
 }
+
+/* Virements : total sobre (plus de bandeaux sombres) */
+.prev-container .row-grand-total td,
+.prev-container .row-grand-total .col-global {
+  background: var(--bg-page) !important;
+  color: var(--text-main) !important;
+  border-top: 1px solid var(--border-light);
+  padding: 10px 12px;
+}
+.prev-container .row-grand-total .col-p1 {
+  color: color-mix(in srgb, var(--p1-main, #0891b2) 85%, #000000) !important;
+}
+.prev-container .row-grand-total .col-p2 {
+  color: color-mix(in srgb, var(--p2-main, #f59e0b) 85%, #000000) !important;
+}
+@media (max-width: 768px) {
+  .prev-container .prev-header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .prev-container .prev-header-actions .pf-btn {
+    min-height: 40px;
+    width: 100% !important;
+    margin: 0 !important;
+    justify-content: center;
+  }
+  .prev-container .prev-header-actions .pf-btn:last-child {
+    grid-column: 1 / -1;
+  }
+  .prev-container .prev-section-header {
+    margin-bottom: 8px;
+  }
+}
