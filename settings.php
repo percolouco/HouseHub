@@ -354,7 +354,7 @@ if ($family_id) {
     $members = $mem->fetchAll();
 
     if (isset($pdo)) {
-        $stmtAttached = $pdo->query("SELECT id, name, role, color FROM pf_people WHERE user_id IS NULL ORDER BY role ASC, name ASC");
+        $stmtAttached = $pdo->query("SELECT id, name, role, color FROM pf_people WHERE user_id IS NULL AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY role ASC, name ASC");
         $attached_profiles = $stmtAttached->fetchAll(PDO::FETCH_ASSOC);
     }
 }

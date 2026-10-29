@@ -12,7 +12,7 @@ try {
         $stmtFoyer = $pdo->query("SELECT zone_scolaire, care_modes FROM pf_foyer_settings LIMIT 1");
         $foyer = $stmtFoyer->fetch(PDO::FETCH_ASSOC) ?: ['zone_scolaire' => 'C', 'care_modes' => '[]'];
         
-        $stmtPeople = $pdo->query("SELECT id, name, role, care_modes, color FROM pf_people WHERE is_active = 1 ORDER BY role ASC, name ASC");
+        $stmtPeople = $pdo->query("SELECT id, name, role, care_modes, color FROM pf_people WHERE is_active = 1 AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY role ASC, name ASC");
         $people = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
         $stmtLeaves = $pdo->query("SELECT person_id, leave_type, anniversary_date, method, allowance, carry_over_max_days, carry_over_deadline_month FROM pf_person_leave_meta");
