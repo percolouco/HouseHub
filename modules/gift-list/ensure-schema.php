@@ -6,6 +6,18 @@
 function gift_ensure_schema(PDO $pdo): void
 {
     try {
+        // Bloc-notes d'idées en vrac par enfant (onglet « Notes »)
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pf_gift_ideas (
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            child_name VARCHAR(100) NOT NULL,
+            idea       VARCHAR(500) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_child (child_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } catch (Throwable $e) {
+        // droits insuffisants : l'onglet Notes restera vide
+    }
+    try {
         $cols = [];
         foreach ($pdo->query("SHOW COLUMNS FROM pf_gifts")->fetchAll(PDO::FETCH_ASSOC) as $c) {
             $cols[$c['Field']] = $c;

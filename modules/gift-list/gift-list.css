@@ -538,8 +538,8 @@
 .gl-gear { background: var(--bg-subtle); border: 0; border-radius: 12px; width: 44px; height: 44px; font-size: 1.25rem; cursor: pointer; }
 
 /* Bascule Idées / Comptes */
-.gl-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--bg-subtle); border-radius: 14px; }
-.gl-seg-btn { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-weight: 700; font-size: .95rem; padding: 11px 8px; border-radius: 11px; cursor: pointer; min-height: 44px; }
+.gl-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--bg-subtle); border-radius: 14px; }
+.gl-seg-btn { border: 0; background: transparent; color: var(--text-muted); font: inherit; font-weight: 700; font-size: .9rem; padding: 11px 4px; border-radius: 11px; cursor: pointer; min-height: 44px; }
 .gl-seg-btn.is-active { background: var(--bg-panel); color: var(--text-main); box-shadow: var(--shadow); outline: 1px solid var(--border-light); }
 
 /* Onglets des fêtes */
@@ -677,3 +677,17 @@ label.gl-chip:has(input:focus-visible) { outline: 2px solid var(--primary); outl
   .gl-sheet-back { align-items: center; }
   .gl-sheet { border-radius: 22px; max-height: 88dvh; }
 }
+
+/* Notes : idées en vrac par enfant */
+.gl-note-hint { margin: 4px 2px 12px; color: var(--text-muted); font-size: .85rem; }
+.gl-note-add { display: flex; gap: 8px; margin: 2px 0 10px; }
+.gl-note-input { flex: 1; min-width: 0; box-sizing: border-box; font: inherit; font-size: 1rem; padding: 11px 12px; border: 2px solid var(--border-light); border-radius: 12px; background: var(--bg-page); color: var(--text-main); }
+.gl-note-input:focus { outline: none; border-color: var(--primary); }
+.gl-note-btn { flex: 0 0 46px; border: 0; border-radius: 12px; background: var(--primary); color: var(--text-on-primary); font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.gl-notes { display: flex; flex-direction: column; gap: 6px; }
+.gl-note { display: flex; align-items: stretch; background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; }
+.gl-note-txt { flex: 1; min-width: 0; text-align: left; border: 0; background: transparent; color: var(--text-main); font: inherit; font-size: .95rem; padding: 11px 12px; cursor: pointer; overflow-wrap: anywhere; }
+.gl-note-txt:active { background: var(--bg-subtle); }
+.gl-note-del { flex: 0 0 40px; border: 0; border-left: 1px solid var(--border-light); background: transparent; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; }
+.gl-note-del:hover { color: var(--danger); }
+.gl-note-empty { margin: 4px 2px 6px; color: var(--text-muted); font-size: .85rem; }

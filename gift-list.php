@@ -68,11 +68,20 @@ $giftsJs = array_map(function ($g) {
     ];
 }, $stmt->fetchAll(PDO::FETCH_ASSOC));
 
+// Idées en vrac (onglet Notes)
+$ideasJs = [];
+try {
+    foreach ($pdo->query("SELECT id, child_name, idea FROM pf_gift_ideas ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $ideasJs[] = ['id' => (int)$r['id'], 'child' => $r['child_name'], 'text' => $r['idea']];
+    }
+} catch (Throwable $e) {}
+
 $me = $_SESSION['user']['display_name'] ?? ($_SESSION['user']['username'] ?? '');
 
 $glData = [
     'year'       => $year,
     'gifts'      => $giftsJs,
+    'ideas'      => $ideasJs,
     'children'   => array_values($children),
     'adults'     => array_values($allAdultsList),
     'occasions'  => array_map(fn($o) => ['code' => $o['code'], 'name' => $o['name'], 'icon' => $o['icon'] ?: '🎁'], $activeOccasions),
@@ -91,6 +100,7 @@ $glData = [
         'emptyOcc' => tr('gl_empty_occ'), 'noMatch' => tr('gl_no_match'), 'reset' => tr('gl_reset'),
         'confirmDelete' => tr('gift_confirm_delete'), 'matrix' => tr('gift_view_matrix'),
         'debtor' => tr('gift_debtor'), 'creditor' => tr('gift_creditor'), 'per' => tr('gl_per_person'),
+        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'),
         'sameAsAdult' => tr('gl_same_payer'), 'plannedLeft' => tr('gl_planned_left'), 'markBought' => tr('gl_mark_bought'),
     ],
 ];
@@ -108,6 +118,7 @@ require __DIR__ . '/header.php';
 
         <div class="gl-seg" role="tablist">
             <button type="button" class="gl-seg-btn is-active" data-view="ideas" role="tab">🎁 <?= tr('gl_tab_ideas') ?></button>
+            <button type="button" class="gl-seg-btn" data-view="notes" role="tab">📝 <?= tr('gl_tab_notes') ?></button>
             <button type="button" class="gl-seg-btn" data-view="accounts" role="tab">⚖️ <?= tr('gl_tab_accounts') ?></button>
         </div>
     </div>
@@ -118,6 +129,8 @@ require __DIR__ . '/header.php';
         <div class="gl-filters" id="glFilters"></div>
         <div id="glList"></div>
     </div>
+
+    <div id="glNotes" hidden></div>
 
     <div id="glAccounts" hidden></div>
 </div>
@@ -268,7 +281,7 @@ const avatar = name => `<span class="gl-av" style="--h:${hue(name)}">${esc(Strin
 
 const saved = store.get('gl-state', {});
 const state = {
-    view: saved.view === 'accounts' ? 'accounts' : 'ideas',
+    view: ['accounts', 'notes'].includes(saved.view) ? saved.view : 'ideas',
     occ: GL.occasions.some(o => o.code === saved.occ) ? saved.occ : GL.defaultOcc,
     fChild: [], fAdult: [], fStatus: ''
 };
@@ -416,13 +429,87 @@ function renderAccounts() {
         ${active.length > 1 ? `<details class="gl-card-block gl-matrix-d"><summary>${esc(T.matrix)}</summary>${matrixHtml}</details>` : ''}`;
 }
 
+// ==========================================
+// 2 bis. NOTES : idées en vrac par enfant (un clic = fiche d'ajout de cadeau pré-remplie)
+// ==========================================
+const IDEAS_API = '/modules/gift-list/ideas-api.php';
+const closedNotes = new Set(store.get('gl-notes-closed', []));
+const ideasOf = child => GL.ideas.filter(i => i.child === child);
+
+function renderNotes() {
+    const kids = [...new Set([...GL.children, ...GL.ideas.map(i => i.child)])];
+    $id('glNotes').innerHTML = `<p class="gl-note-hint">${esc(T.noteHint)}</p>` + kids.map(child => {
+        const list = ideasOf(child);
+        return `<details class="gl-group gl-notes-group" data-child="${esc(child)}"${closedNotes.has(child) ? '' : ' open'}>
+            <summary>${avatar(child)}<span class="gl-gname">${esc(child)}</span>
+                <span class="gl-gmeta">${list.length}</span><span class="gl-chev"></span></summary>
+            <form class="gl-note-add" data-child="${esc(child)}" autocomplete="off">
+                <input type="text" class="gl-note-input" placeholder="${esc(T.notePh)}" maxlength="500" enterkeyhint="done" aria-label="${esc(T.notePh)}">
+                <button type="submit" class="gl-note-btn" aria-label="${esc(T.noteAdd)}">＋</button>
+            </form>
+            <div class="gl-notes">${list.length ? list.map(i => `<div class="gl-note" data-id="${i.id}">
+                <button type="button" class="gl-note-txt" data-act="use">${esc(i.text)}</button>
+                <button type="button" class="gl-note-del" data-act="del" aria-label="${esc(T.noteDel)}">×</button></div>`).join('') : `<p class="gl-note-empty">${esc(T.noteEmpty)}</p>`}</div>
+        </details>`;
+    }).join('');
+}
+
+async function ideasCall(fields) {
+    const fd = new FormData();
+    for (const k in fields) fd.append(k, fields[k]);
+    const r = await fetch(IDEAS_API, {method: 'POST', body: fd});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.success) throw new Error(j.error || r.status);
+    return j;
+}
+
+document.addEventListener('submit', async e => {
+    const f = e.target.closest('.gl-note-add');
+    if (!f) return;
+    e.preventDefault();
+    const input = f.querySelector('.gl-note-input'), text = input.value.trim();
+    if (!text) return;
+    input.disabled = true;
+    try {
+        const j = await ideasCall({action: 'add', child_name: f.dataset.child, idea: text});
+        GL.ideas.push({id: j.id, child: f.dataset.child, text});
+        renderNotes();
+        const again = $id('glNotes').querySelector(`.gl-note-add[data-child="${CSS.escape(f.dataset.child)}"] .gl-note-input`);
+        if (again) again.focus();
+    } catch (err) { console.error(err); input.disabled = false; }
+});
+
+document.addEventListener('click', async e => {
+    const row = e.target.closest('.gl-note');
+    if (!row) return;
+    const idea = GL.ideas.find(i => i.id === +row.dataset.id);
+    if (!idea) return;
+    if (e.target.closest('[data-act="del"]')) {
+        try {
+            await ideasCall({action: 'delete', id: idea.id});
+            GL.ideas = GL.ideas.filter(i => i.id !== idea.id);
+            renderNotes();
+        } catch (err) { console.error(err); }
+        return;
+    }
+    if (e.target.closest('[data-act="use"]')) openSheet(null, {desc: idea.text, child: idea.child});
+});
+
+document.addEventListener('toggle', e => {
+    const d = e.target;
+    if (!d.classList || !d.classList.contains('gl-notes-group')) return;
+    if (d.open) closedNotes.delete(d.dataset.child); else closedNotes.add(d.dataset.child);
+    store.set('gl-notes-closed', [...closedNotes]);
+}, true);
+
 function setView(v) {
     state.view = v; persist();
     document.querySelectorAll('.gl-seg-btn').forEach(b => b.classList.toggle('is-active', b.dataset.view === v));
     $id('glIdeas').hidden = v !== 'ideas';
+    $id('glNotes').hidden = v !== 'notes';
     $id('glAccounts').hidden = v !== 'accounts';
-    $id('glFab').hidden = v !== 'ideas';
-    if (v === 'ideas') renderIdeas(); else renderAccounts();
+    $id('glFab').hidden = v === 'accounts';
+    if (v === 'ideas') renderIdeas(); else if (v === 'notes') renderNotes(); else renderAccounts();
 }
 
 // ==========================================
@@ -492,16 +579,16 @@ function radioChips(el, name, values, current) {
     el.innerHTML = values.map(v => `<label class="gl-chip"><input type="radio" name="${name}" value="${esc(v)}"${v === current ? ' checked' : ''} required><span>${esc(v)}</span></label>`).join('');
 }
 
-function openSheet(g) {
+function openSheet(g, prefill) {
     const last = store.get('gl-last', {});
     const occ = g ? g.occ : state.occ;
-    const child = g ? g.child : (state.fChild.length === 1 ? state.fChild[0] : (GL.children.includes(last.child) ? last.child : GL.children[0]));
+    const child = g ? g.child : (prefill && GL.children.includes(prefill.child) ? prefill.child : state.fChild.length === 1 ? state.fChild[0] : (GL.children.includes(last.child) ? last.child : GL.children[0]));
     const adult = g ? g.adult : (GL.adults.includes(last.adult) ? last.adult : (GL.adults.includes(GL.me) ? GL.me : GL.adults[0]));
 
     $id('glSheetTitle').textContent = g ? T.editTitle : T.addTitle;
     $id('modalAction').value = g ? 'update' : 'create';
     $id('modalGiftId').value = g ? g.id : '';
-    $id('modalDesc').value = g ? g.desc : '';
+    $id('modalDesc').value = g ? g.desc : (prefill ? prefill.desc : '');
     $id('modalAmount').value = g && g.amount ? String(g.amount).replace('.', ',') : '';
     $id('modalBought').checked = g ? !!g.bought : false;
     $id('modalLink').value = g ? g.link : '';
@@ -518,7 +605,7 @@ function openSheet(g) {
     $id('glDelete').hidden = !g;
     sheet.hidden = false;
     document.body.classList.add('no-scroll');
-    if (!g) setTimeout(() => $id('modalDesc').focus(), 60);
+    if (!g && !prefill) setTimeout(() => $id('modalDesc').focus(), 60);
 }
 
 function closeSheet() { sheet.hidden = true; document.body.classList.remove('no-scroll'); }
@@ -533,7 +620,7 @@ form.addEventListener('submit', async e => {
         const r = await fetch(form.getAttribute('action'), {method: 'POST', body: fd});
         if (!r.ok) throw new Error(r.status);
         store.set('gl-last', {child: fd.get('child_name'), adult: fd.get('adult_name')});
-        state.occ = fd.get('occasion'); persist();
+        state.occ = fd.get('occasion'); state.view = 'ideas'; persist();
         window.location.reload();
     } catch (err) {
         console.error(err);
