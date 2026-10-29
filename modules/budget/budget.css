@@ -3529,9 +3529,7 @@ tr.bg-danger-soft {
   .prev-container {
     gap: 18px;
   }
-  /* Les virements d'abord : c'est ce qu'on vient consulter */
   .prev-container .recap-wrapper {
-    order: -1;
     overflow: visible !important;
     white-space: normal !important;
     margin-bottom: 0;
