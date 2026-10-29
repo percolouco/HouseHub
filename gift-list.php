@@ -118,7 +118,7 @@ require __DIR__ . '/header.php';
 
         <div class="gl-seg" role="tablist">
             <button type="button" class="gl-seg-btn is-active" data-view="ideas" role="tab">🎁 <?= tr('gl_tab_ideas') ?></button>
-            <button type="button" class="gl-seg-btn" data-view="notes" role="tab">📝 <?= tr('gl_tab_notes') ?></button>
+            <button type="button" class="gl-seg-btn" data-view="notes" role="tab">💡 <?= tr('gl_tab_notes') ?></button>
             <button type="button" class="gl-seg-btn" data-view="accounts" role="tab">⚖️ <?= tr('gl_tab_accounts') ?></button>
         </div>
     </div>
