@@ -35,6 +35,21 @@ CREATE TABLE IF NOT EXISTS pf_garage_documents (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ");
 
+$pdo->exec("
+CREATE TABLE IF NOT EXISTS pf_garage_tco (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  label VARCHAR(255) NOT NULL,
+  mode VARCHAR(20) NOT NULL DEFAULT 'neuf',
+  brand VARCHAR(100) NOT NULL DEFAULT '',
+  model VARCHAR(100) NOT NULL DEFAULT '',
+  year INT DEFAULT NULL,
+  data MEDIUMTEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_tco_vehicle (brand, model, year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+");
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -163,6 +178,50 @@ if ($action === 'vehicles') {
         }
         $v = $pdo->prepare("SELECT photo FROM pf_vehicles WHERE id=?"); $v->execute([$id]); $row = $v->fetch(); if ($row['photo']) @unlink($UPLOAD_DIR . $row['photo']);
         $pdo->prepare("DELETE FROM pf_vehicles WHERE id = ?")->execute([$id]); gOk(['deleted' => true]);
+    }
+}
+
+// ─── Comparateur de coût (neuf / occasion / LLD / leasing) ────────────────────
+// Un « scénario » = un véhicule + un mode d'acquisition + tous ses frais (JSON dans data). Les calculs sont faits dans le navigateur.
+if ($action === 'tco') {
+    $row = function (array $r) {
+        $r['data'] = json_decode($r['data'], true) ?: new stdClass();
+        $r['id'] = (int)$r['id']; $r['year'] = $r['year'] !== null ? (int)$r['year'] : null;
+        return $r;
+    };
+    $clean = function (array $d) {
+        $mode = in_array($d['mode'] ?? '', ['neuf', 'occasion', 'lld', 'leasing'], true) ? $d['mode'] : 'neuf';
+        $year = isset($d['year']) && $d['year'] !== '' ? (int)$d['year'] : null;
+        if ($year !== null && ($year < 1950 || $year > 2100)) $year = null;
+        $data = is_array($d['data'] ?? null) ? $d['data'] : [];
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+        if ($json === false || strlen($json) > 60000) gErr('Données trop volumineuses');
+        return [mb_substr(trim((string)($d['label'] ?? '')), 0, 255), $mode, mb_substr(trim((string)($d['brand'] ?? '')), 0, 100),
+                mb_substr(trim((string)($d['model'] ?? '')), 0, 100), $year, $json];
+    };
+    if ($method === 'GET') {
+        $all = $pdo->query("SELECT * FROM pf_garage_tco ORDER BY brand, model, year, mode, label")->fetchAll();
+        gOk(array_map($row, $all));
+    }
+    if ($method === 'POST') {
+        [$label, $mode, $brand, $model, $year, $json] = $clean(gBody());
+        if ($brand === '' || $model === '') gErr('Marque et modèle requis');
+        if ($label === '') $label = trim("$brand $model");
+        $pdo->prepare("INSERT INTO pf_garage_tco (label, mode, brand, model, year, data) VALUES (?,?,?,?,?,?)")->execute([$label, $mode, $brand, $model, $year, $json]);
+        gOk(['id' => (int)$pdo->lastInsertId()]);
+    }
+    if ($method === 'PUT') {
+        $id = (int)($_GET['id'] ?? 0); if (!$id) gErr('ID manquant');
+        [$label, $mode, $brand, $model, $year, $json] = $clean(gBody());
+        if ($brand === '' || $model === '') gErr('Marque et modèle requis');
+        if ($label === '') $label = trim("$brand $model");
+        $pdo->prepare("UPDATE pf_garage_tco SET label=?, mode=?, brand=?, model=?, year=?, data=? WHERE id=?")->execute([$label, $mode, $brand, $model, $year, $json, $id]);
+        gOk(['updated' => true]);
+    }
+    if ($method === 'DELETE') {
+        $id = (int)($_GET['id'] ?? 0); if (!$id) gErr('ID manquant');
+        $pdo->prepare("DELETE FROM pf_garage_tco WHERE id = ?")->execute([$id]);
+        gOk(['deleted' => true]);
     }
 }
 

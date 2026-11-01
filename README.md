@@ -69,7 +69,7 @@ Tous les modules sont activables/désactivables par famille depuis `/settings.ph
 | 🗓️ Calendrier iOS | `/calendar-ios.php`    | Synchronisation CalDAV avec iPhone/iPad                                         |
 | 🏖️ Voyages        | `/holidays.php`        | Roadtrips, cartographie Leaflet, itinéraires OSRM, météo Open-Meteo             |
 | 🎁 Cadeaux        | `/gift-list.php`       | Idées par fête, case « acheté », comptes (qui doit quoi), pensé mobile          |
-| 🚗 Garage         | `/garage.php`          | Véhicules, historique entretiens, pièces détachées                              |
+| 🚗 Garage         | `/garage.php`          | Véhicules, historique entretiens, pièces détachées, comparateur de coût         |
 | 🛒 Courses        | `/groceries.php`       | Liste de courses partagée en temps réel                                         |
 | ✅ Todo           | `/todo.php`            | Listes de tâches avec rappels quotidiens via Discord webhook                    |
 | 📝 Mémo           | `/memo.php`            | Notes personnelles / familiales avec éditeur riche                              |
@@ -188,10 +188,21 @@ Les opérations de la famille sont chargées une fois, puis filtrées et agrég�
 - **Affichage** : barres empilées, barres, courbes, aires ; cumul ; comparaison avec la période précédente ; moyenne mobile ; cartes de synthèse (total, moyenne / mois, pic, nombre d'opérations, variation).
 - **Détail** : clic sur une barre ou une part du camembert = liste des opérations correspondantes (triable) ; export CSV de la sélection ; filtres mémorisés dans le navigateur.
 
+### ⚖️ Garage — Comparateur de coût
+
+Onglet « Comparateur » de `/garage.php` : compare le coût réel par mois, par an et au km d'un même véhicule **acheté neuf, d'occasion, en location longue durée (LLD) ou en leasing (LOA)**.
+Un *scénario* = marque / modèle / année + mode d'acquisition + tous les frais ; il est enregistré (table `pf_garage_tco`, créée automatiquement, API `modules/garage/api.php?action=tco`) et se retrouve par filtres marque / modèle / année / mode. Pré-remplissage possible depuis « Mes véhicules ».
+
+- **Achat** : prix, valeur de revente (bouton « Estimer »), carte grise, malus, bonus, frais divers, crédit (apport, taux, durée : intérêts réellement payés sur la durée de détention), coût d'opportunité de l'argent immobilisé.
+- **LLD / leasing** : loyer, apport / 1er loyer majoré, frais de dossier, dépôt de garantie, kilomètres inclus et prix du km excédentaire, remise en état, entretien / assurance inclus, levée d'option (leasing).
+- **Usage** : énergie (L ou kWh), assurance, entretien, pneus, contrôle technique (selon l'âge), taxes, stationnement, divers, réparations imprévues, lignes libres (ponctuelles / mensuelles / annuelles).
+- **Comparaison** : tableau (mensuel, annuel, au km, total, détail par poste) + graphique empilé ; le moins cher est mis en évidence. Calcul pur dans `modules/garage/assets/tco-calc.js` ; les montants sont des estimations basées sur les saisies.
+
 ## 📌 Versioning
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v2.6.0  | Garage : onglet « Comparateur » (coût mensuel / annuel / au km : neuf, occasion, LLD, leasing ; scénarios enregistrés par marque / modèle / année) |
 | v2.5.0  | Budget : nouvel onglet « Analyse » (graphiques d'évolution des dépenses / revenus / solde net, filtres avancés, comparaison avec la période précédente, export CSV) |
 | v2.4.0  | Cadeaux : refonte mobile (onglets par fête, chips de filtre, cartes, ＋ flottant, fiche d'ajout rapide, case « acheté », onglet Comptes) |
 | v2.3.0  | Multi-tenant (p.2) : Refonte BDD Budget (p1, p2), suppression IDs statiques et thèmes de profils dynamiques (color-mix()) |
