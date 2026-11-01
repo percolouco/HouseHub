@@ -22,7 +22,7 @@ $isBudgetSetupOk = ($hasCategories && $hasSalaries && $hasAccounts);
 $enabledViews = $_SESSION['enabled_views'] ?? ['budget_prev', 'budget_epargne', 'budget_provisions'];
 
 // Vues obligatoires pour le cœur du budget
-$allowedTabs = ['suivi', 'recap']; 
+$allowedTabs = ['suivi', 'recap', 'analyse']; 
 
 if (in_array('budget_prev', $enabledViews)) $allowedTabs[] = 'budget_prev';
 if (in_array('budget_epargne', $enabledViews)) $allowedTabs[] = 'epargne';
@@ -78,6 +78,11 @@ require __DIR__ . '/header.php';
                 <span><?= tr('budget_tab_recap') ?></span>
             </a>
 
+            <a href="?tab=analyse" class="tab-item <?= $tab == 'analyse' ? 'active' : '' ?>">
+                <span class="tab-icon">📈</span> 
+                <span><?= tr('budget_tab_analyse') ?></span>
+            </a>
+
             <?php if (in_array('provisions', $allowedTabs)): ?>
             <a href="?tab=provisions" class="tab-item <?= $tab == 'provisions' ? 'active' : '' ?>">
                 <span class="tab-icon">🧮</span> 
@@ -89,7 +94,7 @@ require __DIR__ . '/header.php';
 
     <section class="pf-section">
     <?php 
-    $allowedTabs = ['recap', 'suivi', 'epargne', 'budget_prev', 'provisions'];
+    $allowedTabs = ['recap', 'suivi', 'epargne', 'budget_prev', 'provisions', 'analyse'];
     
     if (in_array($tab, $allowedTabs)) {
         $viewPath = __DIR__ . "/modules/budget/views/" . $tab . ".php";
