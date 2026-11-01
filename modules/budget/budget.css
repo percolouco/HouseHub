@@ -3943,6 +3943,8 @@ tr.bg-danger-soft {
 .an-empty { padding: 30px; text-align: center; color: var(--text-muted, #64748b); }
 .an-hint, .an-muted { font-size: .8rem; color: var(--text-muted, #64748b); margin: 10px 0 0; }
 .an-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } .an-two .an-card { margin-bottom: 16px; }
+.an-two > *, .an-card { min-width: 0; }
+.an-chart-wrap, .an-donut-wrap { width: 100%; overflow: hidden; }
 .an-card h3 { margin: 0 0 12px; font-size: 1rem; }
 .an-bar { margin-bottom: 9px; } .an-bar-top { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; }
 .an-bar-top span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .an-bar-top small { color: var(--text-muted, #64748b); }
@@ -3959,3 +3961,4 @@ tr.bg-danger-soft {
   .an-chart-wrap { height: 300px; }
   .an-field input, .an-field select { font-size: 16px; }
 }
+@media (max-width: 760px) { .an-tx th:nth-child(3), .an-tx td:nth-child(3) { display: none; } .an-tx td, .an-tx th { padding: 8px 6px; } }
