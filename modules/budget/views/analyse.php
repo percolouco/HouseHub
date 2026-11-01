@@ -169,7 +169,7 @@ for ($i = 1; $i <= 12; $i++) $anT['mo' . $i] = tr('month_' . str_pad($i, 2, '0',
     var isoD = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
     var addDays = function (d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; };
     var monday = function (d) { var x = new Date(d.getTime()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
-    var monthLabel = function (k) { var p = k.split('-'); return T['mo' + (+p[1])].slice(0, 4) + (T['mo' + (+p[1])].length > 4 ? '.' : '') + ' ' + p[0].slice(2); };
+    var monthLabel = function (k) { var p = k.split('-'); var n = T['mo' + (+p[1])]; return (n.length > 4 ? n.slice(0, 3) + '.' : n) + ' ' + p[0].slice(2); };
 
     function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* ignore */ } }
 
@@ -366,7 +366,7 @@ for ($i = 1; $i <= 12; $i++) $anT['mo' . $i] = tr('month_' . str_pad($i, 2, '0',
             type: 'doughnut',
             data: { labels: s.map(function (x) { return x.name; }), datasets: [{ data: s.map(function (x) { return Math.round(x.sum * 100) / 100; }), backgroundColor: s.map(function (x) { return x.color; }), borderWidth: 1 }] },
             options: { responsive: true, maintainAspectRatio: false, cutout: '58%',
-                plugins: { legend: { position: 'right', labels: { color: tc.text, boxWidth: 12 } }, tooltip: { callbacks: { label: function (c) { var t = c.dataset.data.reduce(function (a, b) { return a + b; }, 0); return ' ' + c.label + ' : ' + nf2.format(c.parsed) + ' (' + Math.round(c.parsed / t * 100) + ' %)'; } } } },
+                plugins: { legend: { position: window.innerWidth < 760 ? 'bottom' : 'right', labels: { color: tc.text, boxWidth: 12 } }, tooltip: { callbacks: { label: function (c) { var t = c.dataset.data.reduce(function (a, b) { return a + b; }, 0); return ' ' + c.label + ' : ' + nf2.format(c.parsed) + ' (' + Math.round(c.parsed / t * 100) + ' %)'; } } } },
                 onClick: function (ev, els) { if (!els.length || !useGroup) return; focus = { bucket: null, series: s[els[0].index].name }; renderTx(); $('an-focus-tag').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
             }
         });
@@ -423,7 +423,7 @@ for ($i = 1; $i <= 12; $i++) $anT['mo' . $i] = tr('month_' . str_pad($i, 2, '0',
         [['an-presets', 'p', 'p'], ['an-flow', 'flow', 'v'], ['an-gran', 'gran', 'v'], ['an-type', 'type', 'v']].forEach(function (c) {
             Array.prototype.forEach.call($(c[0]).children, function (b) { b.classList.toggle('on', b.dataset[c[2]] === st[c[1]]); });
         });
-        Array.prototype.forEach.call($('an-cats').children, function (b) { b.classList.toggle('on', !st.cats || st.cats.indexOf(b.dataset.c) !== -1); });
+        Array.prototype.forEach.call($('an-cats').children, function (b) { b.classList.toggle('on', !st.cats || st.cats.indexOf(b.dataset.c) !== -1); b.hidden = b.dataset.c === 'SAVINGS' && !st.savings; });
     }
     function bind() {
         var upd = function () { focus = null; txLimit = 100; render(); };
