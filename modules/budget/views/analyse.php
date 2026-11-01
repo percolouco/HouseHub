@@ -144,7 +144,7 @@ for ($i = 1; $i <= 12; $i++) $anT['mo' . $i] = tr('month_' . str_pad($i, 2, '0',
     </div>
 </div>
 
-<script src="/modules/budget/vendor/chart.umd.min.js"></script>
+<script src="<?= $hhAsset('/modules/budget/vendor/chart.umd.min.js') ?>"></script>
 <script>
 (function () {
     'use strict';
