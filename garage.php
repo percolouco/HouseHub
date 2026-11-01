@@ -17,6 +17,7 @@ require __DIR__ . '/header.php';
   <button class="nav-link" data-page="vehicles">🚗 Véhicules</button>
   <button class="nav-link" data-page="maintenances-all">🔧 Entretiens</button>
   <button class="nav-link" data-page="parts">🔩 Pièces</button>
+  <button class="nav-link" data-page="compare">⚖️ Comparateur</button>
 </nav>
 
 <!-- ── DASHBOARD ─────────────────────────────────────────────────────────── -->
@@ -298,6 +299,37 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 
+<!-- ── COMPARATEUR DE COÛT (neuf / occasion / LLD / leasing) ───────────────── -->
+<div id="page-compare" class="page">
+  <div class="container">
+    <div class="card-header garage-card-header" style="margin-bottom:1rem">
+      <h1 style="font-size:1.2rem;font-weight:700">⚖️ Comparateur de coût</h1>
+      <button class="btn btn-primary" id="tco-add">+ Nouveau scénario</button>
+    </div>
+    <p class="tco-muted">Comparez le coût réel par mois et par an d'un même véhicule acheté neuf, d'occasion, en location longue durée ou en leasing, avec tous les frais réguliers et ponctuels. Chaque scénario est enregistré par marque / modèle / année pour être retrouvé plus tard.</p>
+
+    <div class="tco-layout">
+      <div class="card tco-lib">
+        <div class="tco-filters">
+          <select class="form-control" id="tco-f-brand"></select>
+          <select class="form-control" id="tco-f-model"></select>
+          <select class="form-control" id="tco-f-year"></select>
+          <select class="form-control" id="tco-f-mode"></select>
+          <input class="form-control" id="tco-f-q" type="search" placeholder="Rechercher…">
+        </div>
+        <div class="tco-lib-head"><span>Scénarios <small id="tco-count"></small></span>
+          <span><a href="#" id="tco-sel-all" onclick="return false">Tout cocher</a> · <a href="#" id="tco-sel-none" onclick="return false">Aucun</a></span></div>
+        <div id="tco-list"></div>
+      </div>
+      <div class="tco-res">
+        <div class="card"><div id="tco-result"></div></div>
+        <div class="card" id="tco-chart-wrap" hidden><canvas id="tco-chart"></canvas></div>
+        <p class="tco-muted">Les montants sont des estimations basées sur vos saisies. Le coût mensuel est le coût total sur la durée (dépréciation ou loyers, frais, financement, usage) divisé par le nombre de mois.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: PART -->
 <div id="modal-part" class="modal-backdrop">
   <div class="modal">
@@ -350,6 +382,35 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 
+<!-- MODAL: SCÉNARIO COMPARATEUR -->
+<div id="modal-tco" class="modal-backdrop">
+  <div class="modal tco-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="tco-m-title">Nouveau scénario</div>
+      <button class="modal-close" id="tco-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <select class="form-control" id="tco-from-vehicle" style="margin-bottom:.75rem"></select>
+      <datalist id="tco-brands"></datalist>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Marque *</label><input class="form-control" id="tco-brand" list="tco-brands" autocomplete="off"></div>
+        <div class="form-group"><label class="form-label">Modèle *</label><input class="form-control" id="tco-model" autocomplete="off"></div>
+        <div class="form-group"><label class="form-label">Année</label><input class="form-control" id="tco-year" type="number" min="1950" max="2100"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nom du scénario</label><input class="form-control" id="tco-label" placeholder="ex. Clio neuve comptant"></div>
+        <div class="form-group"><label class="form-label">Mode d'acquisition</label><select class="form-control" id="tco-mode"></select></div>
+        <div class="form-group"><label class="form-label">Énergie</label><select class="form-control" id="tco-fuel"></select></div>
+      </div>
+      <div id="tco-form-fields"></div>
+    </div>
+    <div class="modal-footer tco-foot">
+      <div id="tco-preview" class="tco-preview"></div>
+      <div><button class="btn btn-secondary" id="tco-cancel">Annuler</button> <button class="btn btn-primary" id="tco-save">Enregistrer</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: UPLOAD PHOTO VÉHICULE -->
 <div id="modal-upload-photo" class="modal-backdrop">
   <div class="modal" style="max-width:400px">
@@ -368,6 +429,9 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 
+<script src="/modules/budget/vendor/chart.umd.min.js"></script>
+<script src="/modules/garage/assets/tco-calc.js"></script>
 <script src="/modules/garage/assets/garage.js"></script>
+<script src="/modules/garage/assets/compare.js"></script>
 
 <?php require __DIR__ . '/footer.php'; ?>

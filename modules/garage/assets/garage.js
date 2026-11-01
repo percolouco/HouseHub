@@ -71,6 +71,7 @@ function navigate(page, params = {}) {
   else if (page === "maintenance") loadMaintenanceDetail(params.id);
   else if (page === "parts") loadParts();
   else if (page === "maintenances-all") loadAllMaintenances();
+  else if (page === "compare" && window.loadCompare) window.loadCompare();
 }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
