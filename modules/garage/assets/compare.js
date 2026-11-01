@@ -247,4 +247,9 @@
       await reload();
     } catch (e) { $('#tco-list').innerHTML = '<p class="tco-muted">' + esc(e.message) + '</p>'; }
   };
+  // Ouverture de l'onglet : branchement direct (ne dépend pas de la version de garage.js en cache du navigateur)
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.nav-link[data-page="compare"]');
+    if (b && !window.__tcoLoading) { window.__tcoLoading = true; window.loadCompare().finally(function () { window.__tcoLoading = false; }); }
+  });
 })();
