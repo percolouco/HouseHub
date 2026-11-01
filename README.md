@@ -64,7 +64,7 @@ Tous les modules sont activables/désactivables par famille depuis `/settings.ph
 
 | Module            | Route                  | Description                                                                     |
 | ----------------- | ---------------------- | ------------------------------------------------------------------------------- |
-| 💰 Budget         | `/budget.php`          | Suivi mensuel, prévisionnel, épargne, import CSV bancaire                       |
+| 💰 Budget         | `/budget.php`          | Suivi mensuel, prévisionnel, épargne, import CSV bancaire, analyse graphique    |
 | 📅 Calendrier     | `/family-calendar.php` | Congés (CP/JRA/JA), modes de garde, planning hebdo, vacances scolaires          |
 | 🗓️ Calendrier iOS | `/calendar-ios.php`    | Synchronisation CalDAV avec iPhone/iPad                                         |
 | 🏖️ Voyages        | `/holidays.php`        | Roadtrips, cartographie Leaflet, itinéraires OSRM, météo Open-Meteo             |
@@ -177,10 +177,22 @@ Afin de transformer complètement l'application héritée de Pacha Family en un 
 
 ---
 
+### 📈 Budget — onglet Analyse
+
+Onglet `?tab=analyse` du module Budget (`modules/budget/views/analyse.php`, données : `modules/budget/includes/api/analyse-data.php`, lecture seule).
+Les opérations de la famille sont chargées une fois, puis filtrées et agrégées dans le navigateur (Chart.js 4 embarqué dans `modules/budget/vendor/`).
+
+- **Flux** : dépenses, revenus ou solde net ; **regroupement** par catégorie, type de poste (fixe / estimation / hors budget), poste du budget, libellé, ou total seul (les plus petites séries sont regroupées en « Autres »).
+- **Période** : préréglages (3, 6, 12 mois, année, tout) ou mois de début / fin ; rattachement au mois de gestion ou à la date réelle ; granularité mois / semaine / jour.
+- **Filtres** : catégories (puces), montant min / max, recherche dans le libellé (`a, b` = ou), inclure l'épargne.
+- **Affichage** : barres empilées, barres, courbes, aires ; cumul ; comparaison avec la période précédente ; moyenne mobile ; cartes de synthèse (total, moyenne / mois, pic, nombre d'opérations, variation).
+- **Détail** : clic sur une barre ou une part du camembert = liste des opérations correspondantes (triable) ; export CSV de la sélection ; filtres mémorisés dans le navigateur.
+
 ## 📌 Versioning
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v2.5.0  | Budget : nouvel onglet « Analyse » (graphiques d'évolution des dépenses / revenus / solde net, filtres avancés, comparaison avec la période précédente, export CSV) |
 | v2.4.0  | Cadeaux : refonte mobile (onglets par fête, chips de filtre, cartes, ＋ flottant, fiche d'ajout rapide, case « acheté », onglet Comptes) |
 | v2.3.0  | Multi-tenant (p.2) : Refonte BDD Budget (p1, p2), suppression IDs statiques et thèmes de profils dynamiques (color-mix()) |
 | v2.2.0  | Multi-tenant (p.1) : Paramètres dynamiques du foyer (€, Zone) via BDD + script migration                                  |
