@@ -8,7 +8,7 @@ $activePage = "garage";
 require __DIR__ . '/header.php';
 ?>
 
-<link rel="stylesheet" href="/modules/garage/assets/garage.css">
+<link rel="stylesheet" href="<?= $hhAsset('/modules/garage/assets/garage.css') ?>">
 <div id="toasts" class="toast-container"></div>
 
 <!-- Sous-navigation -->
@@ -429,9 +429,9 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 
-<script src="/modules/budget/vendor/chart.umd.min.js"></script>
-<script src="/modules/garage/assets/tco-calc.js"></script>
-<script src="/modules/garage/assets/garage.js"></script>
-<script src="/modules/garage/assets/compare.js"></script>
+<script src="<?= $hhAsset('/modules/budget/vendor/chart.umd.min.js') ?>"></script>
+<script src="<?= $hhAsset('/modules/garage/assets/tco-calc.js') ?>"></script>
+<script src="<?= $hhAsset('/modules/garage/assets/garage.js') ?>"></script>
+<script src="<?= $hhAsset('/modules/garage/assets/compare.js') ?>"></script>
 
 <?php require __DIR__ . '/footer.php'; ?>
