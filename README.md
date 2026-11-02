@@ -196,12 +196,17 @@ Un *scénario* = marque / modèle / année + mode d'acquisition + tous les frais
 - **Achat** : prix, valeur de revente (bouton « Estimer »), carte grise, malus, bonus, frais divers, crédit (apport, taux, durée : intérêts réellement payés sur la durée de détention), coût d'opportunité de l'argent immobilisé.
 - **LLD / leasing** : loyer, apport / 1er loyer majoré, frais de dossier, dépôt de garantie, kilomètres inclus et prix du km excédentaire, remise en état, entretien / assurance inclus, levée d'option (leasing).
 - **Usage** : énergie (L ou kWh), assurance, entretien, pneus, contrôle technique (selon l'âge), taxes, stationnement, divers, réparations imprévues, lignes libres (ponctuelles / mensuelles / annuelles).
+- **Listes prédéfinies** marque / modèle (≈ 30 marques, avec « Autre » en saisie libre) et année de mise en circulation ; durée de simulation en mois ou en années.
+- **Garanties optionnelles** : garantie mécanique (pannes, assistance, véhicule de prêt) et protection pécuniaire (solde du financement + apport), avec leur coût mensuel.
+- **Usage (détail)** : assurance en €/mois ou €/an, pneus au remplacement (jeu été + jeu hiver) ou en budget annuel, entretien courant + pièces d'usure, mensualité du crédit affichée.
+- **Verdict** : solution la plus avantageuse en tête du tableau, et tableau « selon votre profil d'usage » (meilleur choix pour 5 000 à 30 000 km/an).
 - **Comparaison** : tableau (mensuel, annuel, au km, total, détail par poste) + graphique empilé ; le moins cher est mis en évidence. Calcul pur dans `modules/garage/assets/tco-calc.js` ; les montants sont des estimations basées sur les saisies.
 
 ## 📌 Versioning
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v2.7.0  | Garage / Comparateur : listes marque/modèle/année, garantie mécanique, protection pécuniaire, pneus été/hiver, durée en mois/années, verdict et profils d'usage |
 | v2.6.0  | Garage : onglet « Comparateur » (coût mensuel / annuel / au km : neuf, occasion, LLD, leasing ; scénarios enregistrés par marque / modèle / année) |
 | v2.5.0  | Budget : nouvel onglet « Analyse » (graphiques d'évolution des dépenses / revenus / solde net, filtres avancés, comparaison avec la période précédente, export CSV) |
 | v2.4.0  | Cadeaux : refonte mobile (onglets par fête, chips de filtre, cartes, ＋ flottant, fiche d'ajout rapide, case « acheté », onglet Comptes) |

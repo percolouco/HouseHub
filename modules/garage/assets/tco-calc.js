@@ -11,6 +11,7 @@
     { k: 'financement', label: 'Financement & capital immobilisé', color: '#ec4899' },
     { k: 'energie', label: 'Carburant / énergie', color: '#f59e0b' },
     { k: 'assurance', label: 'Assurance', color: '#10b981' },
+    { k: 'garanties', label: 'Garantie mécanique & protection pécuniaire', color: '#14b8a6' },
     { k: 'entretien', label: 'Entretien & pneus', color: '#06b6d4' },
     { k: 'taxes', label: 'Taxes & contrôle technique', color: '#84cc16' },
     { k: 'divers', label: 'Stationnement & divers', color: '#f97316' },
@@ -25,6 +26,11 @@
     var bal = principal, paid = 0, lim = Math.min(held, creditMonths);
     for (var i = 0; i < lim; i++) { var it = bal * r; paid += it; bal -= (m - it); }
     return paid;
+  }
+  // Mensualité d'un crédit amorti (hors assurance)
+  function monthlyPayment(principal, ratePct, creditMonths) {
+    if (principal <= 0 || creditMonths <= 0) return 0;
+    var r = ratePct / 100 / 12; return r === 0 ? principal / creditMonths : principal * r / (1 - Math.pow(1 + r, -creditMonths));
   }
   // Passages au contrôle technique sur la période : 1er à 4 ans, puis tous les 2 ans
   function ctCount(ageStart, years) {
@@ -44,7 +50,7 @@
     d = d || {};
     var mode = d.mode || 'neuf', lease = mode === 'lld' || mode === 'leasing';
     var months = Math.max(1, Math.round(n(d.months) || 48)), years = months / 12, kmAn = n(d.km_an), km = kmAn * years;
-    var c = {}; CATS.forEach(function (x) { c[x.k] = 0; });
+    var payment = 0, c = {}; CATS.forEach(function (x) { c[x.k] = 0; });
     var ageStart = mode === 'occasion' ? n(d.age_start) : 0;
 
     // 1) véhicule
@@ -62,6 +68,7 @@
       c.acquisition = oneOff;
       var cash = price + oneOff;
       var financed = d.credit ? Math.max(0, cash - n(d.apport)) : 0;
+      payment = monthlyPayment(financed, n(d.credit_rate), Math.round(n(d.credit_months)));
       c.financement += interestPaid(financed, n(d.credit_rate), Math.round(n(d.credit_months)), months);
       capital = d.credit ? Math.min(cash, n(d.apport)) : cash;
     }
@@ -70,9 +77,12 @@
     // 2) coûts d'usage
     var conso = n(d.conso), eprice = n(d.energy_price);
     c.energie = conso / 100 * km * eprice;
-    c.assurance = d.ass_incl ? 0 : n(d.assurance_an) * years;
+    c.assurance = d.ass_incl ? 0 : n(d.assurance_an) * (d.ass_unit === 'mois' ? 12 : 1) * years;
+    c.garanties = (d.garantie ? n(d.garantie_mois) * months : 0) + (d.protection ? n(d.protection_mois) * months : 0);
     if (!(lease && d.ent_incl)) {
-      c.entretien = n(d.entretien_an) * years + (n(d.pneus_km) > 0 ? km / n(d.pneus_km) * n(d.pneus_set) : 0);
+      c.entretien = (n(d.entretien_an) + n(d.usure_an)) * years;
+      if (d.pneus_mode === 'budget') c.entretien += n(d.pneus_an) * years;
+      else c.entretien += (n(d.pneus_km) > 0 ? km / n(d.pneus_km) * n(d.pneus_set) : 0) + (d.pneus_hiver && n(d.pneus_hiver_km) > 0 ? km / n(d.pneus_hiver_km) * n(d.pneus_hiver_set) : 0);
     }
     c.taxes = n(d.taxes_an) * years + ctCount(ageStart, years) * n(d.ct_cost);
     c.divers = n(d.parking_mois) * months + n(d.divers_an) * years;
@@ -84,9 +94,9 @@
     });
 
     var total = 0; CATS.forEach(function (x) { total += c[x.k]; });
-    return { months: months, years: years, km: km, total: total, perMonth: total / months, perYear: total / years, perKm: km > 0 ? total / km : null, cats: c };
+    return { payment: payment, months: months, years: years, km: km, total: total, perMonth: total / months, perYear: total / years, perKm: km > 0 ? total / km : null, cats: c };
   }
 
-  var api = { compute: compute, CATS: CATS, estimateResale: estimateResale, interestPaid: interestPaid, ctCount: ctCount };
+  var api = { compute: compute, CATS: CATS, monthlyPayment: monthlyPayment, estimateResale: estimateResale, interestPaid: interestPaid, ctCount: ctCount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TCO = api;
 })(this);

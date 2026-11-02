@@ -568,3 +568,12 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .tco-custom-row { display: grid; grid-template-columns: 1fr 110px 110px 32px; gap: 6px; margin-bottom: 6px; } .tco-x { background: none; border: 0; cursor: pointer; color: #dc2626; }
 .tco-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; } .tco-preview { font-size: .85rem; } .tco-preview b { font-size: 1.1rem; color: var(--primary, #3b82f6); }
 @media (max-width: 860px) { .tco-layout { grid-template-columns: 1fr; } .tco-custom-row { grid-template-columns: 1fr 90px 90px 28px; } .tco-input input { font-size: 16px; } }
+
+/* Comparateur : verdict, profils d'usage, notes */
+.tco-verdict{padding:.75rem 1rem;margin-bottom:.9rem;border-radius:10px;background:rgba(148,163,184,.15);line-height:1.5}
+.tco-verdict-ok{background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.45)}
+.tco-h4{margin:1.1rem 0 .5rem;font-size:1rem}
+.tco-best-cell{font-weight:700;background:rgba(16,185,129,.16)}
+.tco-note{margin:.1rem 0 .4rem;padding:.45rem .65rem;border-radius:8px;background:rgba(59,130,246,.1);font-size:.85rem;line-height:1.4}
+.tco-input select.form-control{width:auto;min-width:90px}
+#tco-brand-o,#tco-model-o{margin-top:.35rem}

@@ -391,11 +391,10 @@ require __DIR__ . '/header.php';
     </div>
     <div class="modal-body">
       <select class="form-control" id="tco-from-vehicle" style="margin-bottom:.75rem"></select>
-      <datalist id="tco-brands"></datalist>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Marque *</label><input class="form-control" id="tco-brand" list="tco-brands" autocomplete="off"></div>
-        <div class="form-group"><label class="form-label">Modèle *</label><input class="form-control" id="tco-model" autocomplete="off"></div>
-        <div class="form-group"><label class="form-label">Année</label><input class="form-control" id="tco-year" type="number" min="1950" max="2100"></div>
+        <div class="form-group"><label class="form-label">Marque *</label><select class="form-control" id="tco-brand"></select><input class="form-control" id="tco-brand-o" placeholder="Saisir la marque" autocomplete="off" hidden></div>
+        <div class="form-group"><label class="form-label">Modèle *</label><select class="form-control" id="tco-model"></select><input class="form-control" id="tco-model-o" placeholder="Saisir le modèle" autocomplete="off" hidden></div>
+        <div class="form-group"><label class="form-label">Année de mise en circulation</label><select class="form-control" id="tco-year"></select></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Nom du scénario</label><input class="form-control" id="tco-label" placeholder="ex. Clio neuve comptant"></div>
