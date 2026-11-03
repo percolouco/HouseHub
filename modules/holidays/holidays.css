@@ -9,18 +9,9 @@ body.no-scroll {
 
 :root {
   --primary: #2563eb;
-  --primary-hover: #1d4ed8;
   --bg-card: var(--bg-panel);
   --text-muted: #64748b;
-  --hol-accent-transport: #2563eb;
-  --hol-accent-accommodation: #059669;
-  --hol-accent-activity: #d97706;
-  --hol-info-bg: #e0f2fe;
-  --hol-info-text: #0369a1;
-  --hol-warning-bg: #fffbeb;
   --radius-l: 16px;
-  --radius-m: 10px;
-  --radius-s: 6px;
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);

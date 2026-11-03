@@ -117,7 +117,7 @@ require __DIR__ . '/header.php';
     </div>
 
     <?php if (!empty($calendarAlerts)): ?>
-    <div class="pf-alert pf-alert-warning" style="background: var(--bg-warning, #fffbeb); border: 1px solid var(--border-warning, #fcd34d); color: var(--text-warning, #92400e); padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-start;">
+    <div class="pf-alert pf-alert-warning" style="background: var(--alert-warning-bg); border: 1px solid var(--alert-warning-border); color: var(--alert-warning-text); padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-start;">
         <div style="font-size: 1.5rem; line-height: 1;">⚠️</div>
         <div>
             <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;">Configuration incomplète</h4>
@@ -194,7 +194,7 @@ require __DIR__ . '/header.php';
                         <div style="display:flex; align-items:center;">
                             <!-- 🔥 STEP 0.01 POUR DEUX DÉCIMALES STRICTES -->
                             <input type="number" step="0.01" id="snapBalance" class="pf-input" placeholder="<?= tr('fc_placeholder_balance') ?>" style="border-radius: 8px 0 0 8px; border-right: none; font-weight: bold; color: var(--pf-primary);" required>
-                            <span style="background: var(--pf-bg-lighter); border: 1px solid var(--pf-border); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--pf-text-muted); font-size: 0.9rem; font-weight: 600;">
+                            <span style="background: var(--bg-subtle); border: 1px solid var(--border-light); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">
                                 <?= tr('fc_unit_days') ?>
                             </span>
                         </div>
@@ -205,7 +205,7 @@ require __DIR__ . '/header.php';
                         <div style="display:flex; align-items:center;">
                             <!-- 🔥 STEP 0.01 POUR DEUX DÉCIMALES STRICTES -->
                             <input type="number" step="0.01" id="snapCarryOver" class="pf-input" placeholder="ex: 2.00" value="0" style="border-radius: 8px 0 0 8px; border-right: none; font-weight: bold; color: var(--danger);" required>
-                            <span style="background: var(--pf-bg-lighter); border: 1px solid var(--pf-border); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--pf-text-muted); font-size: 0.9rem; font-weight: 600;">
+                            <span style="background: var(--bg-subtle); border: 1px solid var(--border-light); padding: 0 12px; height: 42px; display: flex; align-items: center; border-radius: 0 8px 8px 0; color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">
                                 <?= tr('fc_unit_days') ?>
                             </span>
                         </div>
@@ -264,7 +264,7 @@ require __DIR__ . '/header.php';
                             </div>
                             <small class="pf-muted-note"><?= tr('fc_care_modes_desc') ?></small>
                         <?php else: ?>
-                            <div style="background: var(--bg-subtle); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-main); text-align: center;">
+                            <div style="background: var(--bg-subtle); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-strong); text-align: center;">
                                 <p style="margin: 0 0 10px 0; color: var(--text-muted); font-size: 0.9rem;">
                                     <?= tr('fc_empty_kids_msg') ?>
                                 </p>

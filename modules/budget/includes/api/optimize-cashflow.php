@@ -129,19 +129,19 @@ try {
     }
 
     // --- CONSTITUTION DU RENDU HTML FINAL ---
-    $html = '<div style="border-top: 1px dashed var(--border-color); padding-top:0.8rem;">';
+    $html = '<div style="border-top: 1px dashed var(--border-light); padding-top:0.8rem;">';
     
     // Titre de l'état du Clearing simplifié et clair
     $html .= '<h4 style="margin:0 0 0.4rem 0; font-size:0.95rem;">🤝 Résumé des apports et remboursements internes :</h4>';
-    $html .= '<div style="background: var(--bg-main); padding: 8px; border-radius: 6px; margin-bottom: 1rem; border: 1px solid var(--border-color);">';
+    $html .= '<div style="background: var(--bg-page); padding: 8px; border-radius: 6px; margin-bottom: 1rem; border: 1px solid var(--border-light);">';
     $html .= $contributions_html;
     $html .= '</div>';
 
     $html .= '<h4 style="margin:0 0 0.4rem 0; font-size:0.95rem;">Analyse des dépenses du mois :</h4>';
     $html .= $detail_html;
     
-    $html .= '<div style="background: var(--bg-main); padding: 8px; border-radius: 6px; border-left: 4px solid var(--accent-color);">';
-    $html .= '<h4 style="margin:0 0 0.5rem 0; color: var(--accent-color); font-size:0.95rem;">📋 Plan d\'action recommandé :</h4>';
+    $html .= '<div style="background: var(--bg-page); padding: 8px; border-radius: 6px; border-left: 4px solid var(--primary);">';
+    $html .= '<h4 style="margin:0 0 0.5rem 0; color: var(--primary); font-size:0.95rem;">📋 Plan d\'action recommandé :</h4>';
     
     foreach ($instructions as $ins) {
         $html .= '<p style="margin:0 0 0.4rem 0; font-size: 0.9rem; line-height: 1.4;">' . $ins . '</p>';

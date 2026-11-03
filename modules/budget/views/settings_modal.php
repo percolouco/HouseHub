@@ -670,7 +670,7 @@ async function saveCsvMapping(e) { e.preventDefault(); const form = e.target; co
 const dropZone = document.getElementById('csv-drop-zone'); const fileInput = document.getElementById('csv_file_input');
 if (dropZone && fileInput) {
     dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor = 'rgba(0, 123, 255, 0.05)'; dropZone.style.borderColor = 'var(--primary-color, #007bff)'; });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor = 'rgba(0, 123, 255, 0.05)'; dropZone.style.borderColor = 'var(--primary)'; });
     dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.backgroundColor = ''; dropZone.style.borderColor = 'var(--border-light, #ccc)'; });
     dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.backgroundColor = ''; dropZone.style.borderColor = 'var(--border-light, #ccc)'; if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleCsvUpload(e.dataTransfer.files[0]); } });
     fileInput.addEventListener('change', function() { if (this.files.length) { handleCsvUpload(this.files[0]); } });
