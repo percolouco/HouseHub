@@ -4,6 +4,13 @@ require __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/i18n.php';
 require_login('/login.php');
 
+// Schéma : les familles créées avant l'ajout du tri des catégories n'ont pas la colonne sort_order (le suivi plantait)
+try {
+    if (!$pdo->query("SHOW COLUMNS FROM pf_budget_categories LIKE 'sort_order'")->fetch()) {
+        $pdo->exec("ALTER TABLE pf_budget_categories ADD COLUMN sort_order INT NOT NULL DEFAULT 0");
+    }
+} catch (Throwable $e) { /* base en lecture seule ou colonne déjà ajoutée en parallèle */ }
+
 // ============================================================================
 // DIAGNOSTIC ONBOARDING (Vérifie si le budget est prêt à être utilisé)
 // ============================================================================

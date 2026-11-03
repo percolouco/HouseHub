@@ -263,7 +263,8 @@ CREATE TABLE IF NOT EXISTS pf_budget_categories (
   label VARCHAR(100) NOT NULL,
   type VARCHAR(50) NOT NULL,
   color VARCHAR(20) DEFAULT '#ccc',
-  icon VARCHAR(20) DEFAULT '?'
+  icon VARCHAR(20) DEFAULT '?',
+  sort_order INT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Insertion des catégories de base pour toute nouvelle famille
