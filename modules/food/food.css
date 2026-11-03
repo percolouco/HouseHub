@@ -624,17 +624,6 @@
   background: #2a2a3e;
   color: #cdd6f4;
 }
-[data-theme="dark"] .liste-modal {
-  background: #1e1e2e;
-  border-color: #3a3a4e;
-}
-[data-theme="dark"] .liste-modal-header,
-[data-theme="dark"] .liste-modal-footer {
-  border-color: #3a3a4e;
-}
-[data-theme="dark"] .liste-modal-header h3 {
-  color: #cdd6f4;
-}
 [data-theme="dark"] .liste-modal-name,
 [data-theme="dark"] .liste-modal-type {
   background: #2a2a3e;

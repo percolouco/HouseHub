@@ -803,54 +803,6 @@ body.no-scroll {
    ========================================================================== */
 /* Les bases de la modale (.pf-modal*, .modal-footer) sont dans global.css */
 
-.hol-modal-cp {
-  --pf-modal-w: 600px;
-  padding: 0;
-  overflow: hidden;
-}
-
-.hol-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 20px 0 20px;
-}
-
-.hol-modal-title {
-  margin: 0;
-  font-size: 1.3rem;
-  color: var(--text-main);
-}
-
-.hol-modal-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border-light);
-  margin-top: 15px;
-  padding: 0 20px;
-}
-
-.hol-modal-tab-btn {
-  flex: 1;
-  padding: 10px;
-  background: none;
-  border: none;
-  border-bottom: 3px solid transparent;
-  font-weight: bold;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-
-.hol-modal-tab-btn.active {
-  border-bottom-color: var(--primary);
-  color: var(--primary);
-}
-
-.hol-modal-form {
-  display: flex;
-  flex-direction: column;
-  max-height: calc(90vh - 100px);
-}
 
 .hol-tab-content {
   padding: 20px;
