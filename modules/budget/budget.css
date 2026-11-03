@@ -690,7 +690,7 @@ tr:hover .row-actions {
   height: auto !important;
   width: auto !important;
   font-weight: 600;
-  border-radius: 9px !important;
+  border-radius: 999px !important;
   box-shadow: none !important;
   transform: none !important;
   transition: all 0.2s ease;
@@ -775,27 +775,6 @@ tr:hover .row-actions {
   color: var(--text-muted);
   font-weight: 600;
   margin-top: 2px;
-}
-.btn-add-item {
-  background: rgba(255, 255, 255, 0.6);
-  color: inherit;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.btn-add-item:hover {
-  background: var(--bg-panel);
-  transform: rotate(90deg) scale(1.1);
-  box-shadow: var(--shadow-sm);
-  border-color: currentColor;
 }
 .progress-grid {
   display: grid;

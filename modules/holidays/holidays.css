@@ -101,20 +101,6 @@ body.no-scroll {
 /* ==========================================================================
    3. BOUTONS
    ========================================================================== */
-.hol-add-btn {
-  border: none;
-  border-radius: 50px;
-  padding: 10px 20px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
-  text-decoration: none;
-}
 
 /* ==========================================================================
    4. HERO HEADER IMMERSIF (detail.php)
