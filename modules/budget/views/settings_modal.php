@@ -134,6 +134,7 @@ if (!defined('CURRENCY')) {
                     <h5 class="bs-section-subtitle"><?= tr('bs_add_rule_title') ?></h5>
                     <form id="form-add-rule" class="bs-form-inline align-center">
                         <input type="text" name="keyword" class="pf-input bs-input-flex" placeholder="<?= tr('bs_rule_keyword_ph') ?>" required>
+                        <input type="text" name="amount" inputmode="decimal" class="pf-input bs-input-fixed" style="max-width:110px" placeholder="Montant (option)" title="Facultatif : la règle ne s'applique que si le montant est exactement celui-ci">
                         <select name="category" id="select-rule-category" class="pf-input bs-input-fixed" required></select>
                         <button type="submit" class="btn btn-secondary"><?= tr('btn_add') ?></button>
                     </form>
@@ -525,7 +526,7 @@ function renderRules(rules) {
                     <div class="bs-rule-tags">`;
         catRules.forEach(r => {
             html += `<div class="bs-rule-tag js-rule-tag" data-keyword="${r.keyword.toLowerCase()}">
-                        ${r.keyword}
+                        ${r.keyword}${(r.amount !== null && r.amount !== undefined && r.amount !== '') ? ' <small>(' + parseFloat(r.amount).toFixed(2) + ' €)</small>' : ''}
                         <button type="button" class="bs-rule-tag-del" onclick="deleteRule(${r.id})" title="${tr('btn_delete')}">×</button>
                      </div>`;
         });

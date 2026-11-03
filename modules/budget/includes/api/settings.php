@@ -131,11 +131,14 @@ try {
         $keyword = strtoupper(trim($_POST['keyword'] ?? ''));
         $category = trim($_POST['category'] ?? '');
         if (empty($keyword) || empty($category)) throw new Exception("Le mot-clé et la catégorie sont obligatoires.");
-        $check = $pdo->prepare("SELECT COUNT(*) FROM pf_import_rules WHERE keyword = ?");
-        $check->execute([$keyword]);
-        if ($check->fetchColumn() > 0) throw new Exception("Une règle pour ce mot-clé existe déjà.");
-        $stmt = $pdo->prepare("INSERT INTO pf_import_rules (keyword, category) VALUES (?, ?)");
-        $stmt->execute([$keyword, $category]);
+        $amountRaw = str_replace([' ', ','], ['', '.'], trim($_POST['amount'] ?? ''));
+        $amount = ($amountRaw !== '' && is_numeric($amountRaw)) ? abs((float)$amountRaw) : null;
+        try { $pdo->exec("ALTER TABLE pf_import_rules ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2) DEFAULT NULL AFTER keyword"); } catch (Exception $e) {}
+        $check = $pdo->prepare("SELECT COUNT(*) FROM pf_import_rules WHERE keyword = ? AND amount <=> ?");
+        $check->execute([$keyword, $amount]);
+        if ($check->fetchColumn() > 0) throw new Exception("Une règle pour ce mot-clé" . ($amount !== null ? " et ce montant" : "") . " existe déjà.");
+        $stmt = $pdo->prepare("INSERT INTO pf_import_rules (keyword, amount, category) VALUES (?, ?, ?)");
+        $stmt->execute([$keyword, $amount, $category]);
         echo json_encode(['success' => true]);
         exit;
     }
