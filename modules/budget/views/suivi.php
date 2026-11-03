@@ -702,7 +702,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 </div>
 
 <div id="manualExpenseModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width:400px;">
+    <div class="pf-modal-content pf-modal-sm">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="margin:0;" id="modalTitle"><?= tr('bud_new_transaction') ?></h3>
             <button type="button" onclick="closeSuiviModal('manualExpenseModal')" class="pf-modal-close">&times;</button>
@@ -776,9 +776,9 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 </div>
 
 <div id="snapshotModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width:350px;">
+    <div class="pf-modal-content pf-modal-sm">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;">🏦 <?= tr('bud_update_balance') ?></h3>
+            <h3 class="pf-modal-title">🏦 <?= tr('bud_update_balance') ?></h3>
             <button type="button" onclick="closeSuiviModal('snapshotModal')" style="background:none; border:none; font-size:1.8rem; cursor:pointer; color:#94a3b8; line-height:1;">&times;</button>
         </div>
         
@@ -801,7 +801,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
     </div>
 </div>
 
-<div id="importCsvModal" class="pf-modal <?= $showPreview ? 'open' : '' ?>">
+<div id="importCsvModal" data-keep-open class="pf-modal <?= $showPreview ? 'open' : '' ?>">
     <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>" style="display: flex; flex-direction: column; max-height: 90vh; padding: 24px; overflow: hidden;">
         
         <!-- HEADER FIXE -->

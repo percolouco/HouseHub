@@ -193,13 +193,13 @@ require __DIR__ . '/header.php';
 <!-- ══ MODALS ════════════════════════════════════════════════════════════════ -->
 
 <!-- MODAL: VEHICLE -->
-<div id="modal-vehicle" class="modal-backdrop">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-vehicle-title">Ajouter un véhicule</div>
-      <button class="modal-close" onclick="closeModal('modal-vehicle')">✕</button>
+<div id="modal-vehicle" class="pf-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md garage-modal">
+    <div class="pf-modal-header">
+      <div class="pf-modal-title" id="modal-vehicle-title">Ajouter un véhicule</div>
+      <button class="pf-modal-close" onclick="closeModal('modal-vehicle')">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="pf-modal-body">
       <form id="form-vehicle" onsubmit="return false">
         <input type="hidden" id="form-vehicle-id" name="id">
         <div class="form-row">
@@ -253,13 +253,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- MODAL: MAINTENANCE -->
-<div id="modal-maintenance" class="modal-backdrop">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-maintenance-title">Ajouter un entretien</div>
-      <button class="modal-close" onclick="closeModal('modal-maintenance')">✕</button>
+<div id="modal-maintenance" class="pf-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md garage-modal">
+    <div class="pf-modal-header">
+      <div class="pf-modal-title" id="modal-maintenance-title">Ajouter un entretien</div>
+      <button class="pf-modal-close" onclick="closeModal('modal-maintenance')">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="pf-modal-body">
       <form id="form-maintenance" onsubmit="return false">
         <input type="hidden" id="form-maintenance-id" name="id">
         <input type="hidden" id="maintenance-vehicle-id" name="vehicle_id">
@@ -331,13 +331,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- MODAL: PART -->
-<div id="modal-part" class="modal-backdrop">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-part-title">Ajouter une pièce</div>
-      <button class="modal-close" onclick="closeModal('modal-part')">✕</button>
+<div id="modal-part" class="pf-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md garage-modal">
+    <div class="pf-modal-header">
+      <div class="pf-modal-title" id="modal-part-title">Ajouter une pièce</div>
+      <button class="pf-modal-close" onclick="closeModal('modal-part')">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="pf-modal-body">
       <form id="form-part" onsubmit="return false">
         <input type="hidden" id="form-part-id" name="id">
         <input type="hidden" id="part-vehicle-id" name="vehicle_id">
@@ -383,13 +383,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- MODAL: SCÉNARIO COMPARATEUR -->
-<div id="modal-tco" class="modal-backdrop">
-  <div class="modal tco-modal">
-    <div class="modal-header">
-      <div class="modal-title" id="tco-m-title">Nouveau scénario</div>
-      <button class="modal-close" id="tco-close">✕</button>
+<div id="modal-tco" class="pf-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-lg garage-modal tco-modal">
+    <div class="pf-modal-header">
+      <div class="pf-modal-title" id="tco-m-title">Nouveau scénario</div>
+      <button class="pf-modal-close" id="tco-close">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="pf-modal-body">
       <select class="form-control" id="tco-from-vehicle" style="margin-bottom:.75rem"></select>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Marque *</label><select class="form-control" id="tco-brand"></select><input class="form-control" id="tco-brand-o" placeholder="Saisir la marque" autocomplete="off" hidden></div>
@@ -411,13 +411,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- MODAL: UPLOAD PHOTO VÉHICULE -->
-<div id="modal-upload-photo" class="modal-backdrop">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-header">
-      <div class="modal-title">📷 Changer la photo</div>
-      <button class="modal-close" onclick="closeModal('modal-upload-photo')">✕</button>
+<div id="modal-upload-photo" class="pf-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-sm garage-modal">
+    <div class="pf-modal-header">
+      <div class="pf-modal-title">📷 Changer la photo</div>
+      <button class="pf-modal-close" onclick="closeModal('modal-upload-photo')">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="pf-modal-body">
       <input type="hidden" id="upload-vehicle-id">
       <div class="form-group"><label class="form-label">Nouvelle photo</label><input class="form-control" id="upload-photo-file" type="file" accept="image/*"></div>
     </div>

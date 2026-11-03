@@ -911,7 +911,18 @@ p {
   background-color: var(--bg-page);
 }
 
-/* === 🪟 LE DESIGN SYSTEM DES MODALES (Applicable partout) === */
+/* ==========================================================================
+   🪟 MODALE COMMUNE + ONGLETS (composants réutilisables partout)
+   --------------------------------------------------------------------------
+   <div class="pf-modal" id="…">                      fond ; affiché avec .open / .is-active / .show
+     <div class="pf-modal-content [pf-modal-sm|md|lg|xl|full] [pf-modal-flush]">
+       <div class="pf-modal-header"><h3 class="pf-modal-title">…</h3><button class="pf-modal-close">×</button></div>
+       [<div class="pf-modal-layout"><nav class="pf-tabs pf-tabs--side">…</nav><div class="pf-modal-body">…</div></div>]
+       <div class="modal-footer">boutons</div>        collé en bas, toujours atteignable
+   Avec .pf-modal-flush : en-tête / corps / pied ont leur propre marge et seul le corps défile.
+   Sans : le contenu entier défile et le pied reste collé en bas.
+   Mobile (≤ 768 px) : feuille qui monte du bas ; plein écran pour .pf-modal-xl, .pf-modal-full et les modales à onglets.
+   ========================================================================== */
 .pf-modal {
   display: none;
   position: fixed;
@@ -921,52 +932,227 @@ p {
   backdrop-filter: blur(4px);
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
+  overscroll-behavior: contain;
 }
 .pf-modal.is-active,
-.pf-modal.open {
+.pf-modal.active,
+.pf-modal.open,
+.pf-modal.show {
   display: flex;
-} /* Supporte tes deux syntaxes JS */
+}
 
 .pf-modal-content {
-  background: var(--bg-panel);
-  width: 100%;
-  max-width: 500px;
-  border-radius: 20px;
-  box-shadow: var(--shadow-lg);
-  padding: 32px;
+  --pf-modal-pad: 24px;
   position: relative;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  width: 100%;
+  max-width: var(--pf-modal-w, 520px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  padding: var(--pf-modal-pad);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  animation: pfModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: pfModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   margin: auto;
 }
+.pf-modal-sm { --pf-modal-w: 400px; }
+.pf-modal-md { --pf-modal-w: 560px; }
+.pf-modal-lg { --pf-modal-w: 860px; }
+.pf-modal-xl { --pf-modal-w: 1100px; }
+.pf-modal-full { --pf-modal-w: none; width: 100%; height: calc(100dvh - 32px); }
+.pf-modal-tabbed { height: min(80dvh, 720px); }
+.pf-modal-flush { padding: 0; gap: 0; overflow: hidden; --pf-modal-pad: 0px; }
+
+.pf-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+.pf-modal-flush > .pf-modal-header { padding: 14px 20px; margin: 0; }
 .pf-modal-title {
-  margin-top: 0;
-  font-size: 1.5rem;
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--text-main);
-  border-bottom: 1px solid var(--border-light);
-  padding-bottom: 15px;
-  margin-bottom: 8px;
+  line-height: 1.3;
 }
+.pf-modal-content > .pf-modal-title {
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+}
+.pf-modal-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pf-modal-close:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+.pf-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pf-modal-flush > .pf-modal-body,
+.pf-modal-layout > .pf-modal-body { padding: 16px 20px; }
+
+/* Pied : toujours visible (collé au bas de la modale) */
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
+  margin: 16px calc(var(--pf-modal-pad, 24px) * -1) calc(var(--pf-modal-pad, 24px) * -1);
+  padding: 14px var(--pf-modal-pad, 24px);
   border-top: 1px solid var(--border-light);
-  width: 100%;
+  background: var(--bg-panel);
+  position: sticky;
+  bottom: calc(var(--pf-modal-pad, 24px) * -1);
+  z-index: 2;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
+.pf-modal-flush > .modal-footer { margin: 0; padding: 14px 20px; position: static; }
 .modal-footer .pf-btn {
   width: auto;
   min-width: 100px;
   padding: 10px 20px;
-} /* Ajustement pour modale */
+}
 
+/* Pied placé dans le corps (formulaire) : pas de débord négatif */
+.pf-modal-body .modal-footer { margin: 16px 0 0; padding: 14px 0 0; bottom: 0; }
+.pf-modal-content:not(.pf-modal-flush) > .pf-modal-body { overflow: visible; flex: 0 0 auto; }
+
+/* Onglets : bandeau horizontal par défaut ; .pf-tabs--side = colonne à gauche dans une modale (desktop) */
+.pf-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pf-tabs::-webkit-scrollbar { display: none; }
+.pf-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.pf-tab:hover { color: var(--text-main); background: var(--bg-subtle); }
+.pf-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.pf-modal-layout {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.pf-tabs--side {
+  flex-direction: column;
+  flex: 0 0 200px;
+  width: 200px;
+  padding: 12px;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-page);
+  border-right: 1px solid var(--border-light);
+}
+.pf-tabs--side .pf-tab {
+  width: 100%;
+  border-bottom: none;
+  border-radius: 8px;
+  text-align: left;
+}
+.pf-tabs--side .pf-tab.active { background: var(--bg-soft); color: var(--primary); }
+
+@media (max-width: 768px) {
+  .pf-modal { padding: 0; align-items: flex-end; }
+  .pf-modal-content {
+    --pf-modal-pad: 18px;
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    margin: 0;
+    animation: pfSheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pf-modal-content::before {
+    content: "";
+    display: block;
+    flex-shrink: 0;
+    width: 40px;
+    height: 5px;
+    background: var(--border-strong);
+    border-radius: 10px;
+    margin: -8px auto 8px;
+  }
+  .pf-modal-flush::before { margin: 8px auto 0; }
+  .pf-modal-xl,
+  .pf-modal-full,
+  .pf-modal-tabbed { height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .modal-footer { flex-direction: column-reverse; gap: 8px; }
+  .modal-footer .pf-btn { width: 100%; }
+  .pf-modal-layout { flex-direction: column; }
+  .pf-tabs--side {
+    flex: 0 0 auto;
+    width: auto;
+    flex-direction: row;
+    padding: 6px 8px 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .pf-tabs--side .pf-tab {
+    width: auto;
+    border-radius: 0;
+    border-bottom: 3px solid transparent;
+    padding: 10px 12px;
+  }
+  .pf-tabs--side .pf-tab.active { background: transparent; border-bottom-color: var(--primary); }
+}
+
+@keyframes pfSheetUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
 @keyframes pfModalPop {
   from {
     transform: scale(0.95) translateY(10px);
@@ -1029,42 +1215,6 @@ p {
     color: var(--text-main);
     padding: 12px 0;
     border-bottom: 1px solid var(--border-light);
-  }
-
-  /* 📱 BOTTOM SHEET MODALES MOBILE */
-  .pf-modal {
-    align-items: center !important; /* On remet au centre */
-    padding: 20px;
-  }
-  .pf-modal-content {
-    width: 100% !important;
-    max-width: none !important;
-    border-radius: 20px !important; /* On garde les arrondis partout */
-    transform: none !important;
-    animation: pfModalPop 0.3s ease !important; /* On remet l'animation desktop */
-    margin: auto !important;
-  }
-  .pf-modal-content::before {
-    content: "";
-    display: block;
-    width: 40px;
-    height: 5px;
-    background: var(--border-strong);
-    border-radius: 10px;
-    margin: -10px auto 20px auto;
-  }
-  .modal-footer {
-    flex-direction: column-reverse;
-  }
-  .modal-footer .pf-btn {
-    width: 100%;
-    margin-top: 8px;
-  }
-
-  @keyframes slideUpSheet {
-    to {
-      transform: translateY(0);
-    }
   }
 }
 
@@ -1328,17 +1478,6 @@ p {
 }
 [data-theme="dark"] .pf-table tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
-}
-[data-theme="dark"] .pf-modal-content {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-light);
-}
-[data-theme="dark"] .pf-modal-title {
-  border-color: var(--border-light);
-  color: var(--text-main);
-}
-[data-theme="dark"] .modal-footer {
-  border-color: var(--border-light);
 }
 [data-theme="dark"] .pf-footer {
   background: var(--bg-panel);

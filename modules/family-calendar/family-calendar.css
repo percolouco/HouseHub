@@ -813,34 +813,6 @@ td.col-p2-sub {
   background: #fafafa;
 }
 
-.pf-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 15px;
-  border-bottom: 1px solid var(--pf-border);
-  padding-bottom: 15px;
-}
-.pf-modal-header .pf-modal-title {
-  margin: 0;
-  padding: 0;
-  border-bottom: none;
-  flex-grow: 1;
-}
-.pf-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.8rem;
-  line-height: 1;
-  cursor: pointer;
-  color: #94a3b8;
-  padding: 0 0 0 15px;
-  transition: color 0.2s;
-}
-.pf-modal-close:hover {
-  color: #ef4444;
-}
-
 .fc-sidebar-tab {
   display: flex;
   align-items: center;

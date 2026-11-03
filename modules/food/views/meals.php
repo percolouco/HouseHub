@@ -109,11 +109,11 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
 </div>
 
 <!-- Bottom Sheet de Copie (Format Grille Ultra-compacte) -->
-<div id="copyModal" class="pf-modal pf-bottom-sheet">
-    <div class="pf-modal-content pf-bs-content copy-modal-large">
-        <div class="bs-header">
-            <h3 class="bs-title">🔄 <span data-i18n="modal_copy_title"><?= tr('modal_copy_title') ?></span></h3>
-            <button class="bs-close" onclick="closeCopyModal()">&times;</button>
+<div id="copyModal" class="pf-modal">
+    <div class="pf-modal-content pf-modal-md copy-modal-large">
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">🔄 <span data-i18n="modal_copy_title"><?= tr('modal_copy_title') ?></span></h3>
+            <button class="pf-modal-close" onclick="closeCopyModal()">&times;</button>
         </div>
         <div id="copySourceLabel" class="meals-copy-source">Source : ...</div>
         

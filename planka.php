@@ -29,13 +29,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- ── MODAL CARTE ──────────────────────────────────────────────────────────── -->
-<div class="pk-modal-backdrop hidden" id="pk-card-modal">
-  <div class="pk-modal">
-    <div class="pk-modal-header">
-      <h3>Carte</h3>
-      <button class="pk-modal-close" onclick="closeCardModal()">×</button>
+<div class="pf-modal" id="pk-card-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md pk-modal">
+    <div class="pf-modal-header">
+      <h3 class="pf-modal-title">Carte</h3>
+      <button class="pf-modal-close" onclick="closeCardModal()">×</button>
     </div>
-    <div class="pk-modal-body">
+    <div class="pf-modal-body">
       <div class="pk-form-group">
         <label class="pk-form-label">Titre</label>
         <input type="text" id="pk-card-name" class="pk-input" placeholder="Titre de la carte">
@@ -61,7 +61,7 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </div>
-    <div class="pk-modal-footer">
+    <div class="modal-footer">
       <button class="pk-btn pk-btn-danger" id="pk-delete-btn" onclick="deleteCard()">Supprimer</button>
       <button class="pk-btn pk-btn-secondary" onclick="closeCardModal()">Annuler</button>
       <button class="pk-btn pk-btn-primary" onclick="saveCard()">Enregistrer</button>
@@ -70,20 +70,20 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- ── MODAL PARAMÈTRES ─────────────────────────────────────────────────────── -->
-<div class="pk-modal-backdrop hidden" id="pk-settings-modal">
-  <div class="pk-modal">
-    <div class="pk-modal-header">
-      <h3>⚙️ Paramètres Planka</h3>
-      <button class="pk-modal-close" onclick="closeSettings()">×</button>
+<div class="pf-modal" id="pk-settings-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md pk-modal">
+    <div class="pf-modal-header">
+      <h3 class="pf-modal-title">⚙️ Paramètres Planka</h3>
+      <button class="pf-modal-close" onclick="closeSettings()">×</button>
     </div>
-    <div class="pk-modal-body">
+    <div class="pf-modal-body">
       <div class="pk-form-group">
         <label class="pk-form-label">Project ID</label>
         <input type="text" id="pk-project-id" class="pk-input" value="1713338747178714130">
         <span style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem">ID du projet Planka à afficher.</span>
       </div>
     </div>
-    <div class="pk-modal-footer">
+    <div class="modal-footer">
       <button class="pk-btn pk-btn-secondary" onclick="closeSettings()">Annuler</button>
       <button class="pk-btn pk-btn-primary" onclick="saveSettings()">Enregistrer</button>
     </div>
@@ -294,7 +294,7 @@ function openCardModal(id) {
     const sel = document.getElementById('pk-card-list');
     sel.innerHTML = state.lists.map(l => `<option value="${l.id}"${l.id === card.listId ? ' selected' : ''}>${esc(l.name)}</option>`).join('');
     renderTaskList(card);
-    document.getElementById('pk-card-modal').classList.remove('hidden');
+    document.getElementById('pk-card-modal').classList.add('open');
     document.getElementById('pk-new-task-name').value = '';
 }
 
@@ -309,7 +309,7 @@ function renderTaskList(card) {
 }
 
 function closeCardModal() {
-    document.getElementById('pk-card-modal').classList.add('hidden');
+    document.getElementById('pk-card-modal').classList.remove('open');
     editingCard = null;
 }
 
@@ -375,10 +375,10 @@ function openSettings() {
     apiFetch('config').then(res => {
         if (res.ok && res.data.project_id) document.getElementById('pk-project-id').value = res.data.project_id;
     });
-    document.getElementById('pk-settings-modal').classList.remove('hidden');
+    document.getElementById('pk-settings-modal').classList.add('open');
 }
 
-function closeSettings() { document.getElementById('pk-settings-modal').classList.add('hidden'); }
+function closeSettings() { document.getElementById('pk-settings-modal').classList.remove('open'); }
 
 async function saveSettings() {
     const project_id = document.getElementById('pk-project-id').value.trim();

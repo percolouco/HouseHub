@@ -65,7 +65,7 @@ function closeCalendarSettings() {
 
 function switchCalendarTab(tabId) {
   document
-    .querySelectorAll(".bs-tab-btn")
+    .querySelectorAll("#modalCalendarSettings .pf-tab")
     .forEach((btn) => btn.classList.remove("active"));
   document
     .querySelectorAll(".cal-settings-pane")

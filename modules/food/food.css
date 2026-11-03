@@ -366,73 +366,14 @@
   margin-bottom: 0.75rem;
 }
 
-/* ── List modal ────────────────────────────────────────────────────────────── */
-
-.liste-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 1rem;
+/* ── Modale de liste : composant commun (global.css) ───────────────────────── */
+.liste-modal-footer .btn-tool-danger {
+  margin-right: auto;
 }
-
-.liste-modal {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border, #dee2e6);
-  border-radius: 14px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-}
-
-.liste-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border, #dee2e6);
-}
-.liste-modal-header h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text, #212529);
-}
-
-.liste-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.3rem;
-  cursor: pointer;
-  color: var(--muted, #6c757d);
-  line-height: 1;
-  padding: 0 0.25rem;
-  transition: color 0.15s;
-}
-.liste-modal-close:hover {
-  color: var(--text, #212529);
-}
-
 .liste-modal-body {
-  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-}
-
-.liste-modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 0.85rem 1.25rem;
-  border-top: 1px solid var(--border, #dee2e6);
-}
-.liste-modal-footer .btn-tool-danger {
-  margin-right: auto;
 }
 
 .liste-form-group {
@@ -903,57 +844,6 @@
   border-color: var(--primary);
 }
 
-.pf-bottom-sheet {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  align-items: center;
-  z-index: 2000;
-  justify-content: center;
-}
-.pf-bottom-sheet.open {
-  display: flex;
-  animation: fadeInBg 0.2s;
-}
-.pf-bs-content {
-  background: var(--bg-page);
-  width: 95%;
-  max-width: 600px;
-  border-radius: 12px;
-  padding: 24px;
-  box-sizing: border-box;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-lg);
-}
-.bs-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  flex-shrink: 0;
-}
-.bs-title {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--text-main);
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.bs-close {
-  background: none;
-  border: none;
-  font-size: 1.8rem;
-  cursor: pointer;
-  color: var(--text-muted);
-  line-height: 1;
-  margin-top: -5px;
-}
 .meals-copy-source {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -1026,30 +916,9 @@
   background: #e2e8f0;
 }
 
-@media (max-width: 768px) {
-  .pf-bs-content {
-    padding: 16px;
-  }
-}
 @media (max-width: 380px) {
   .copy-days-grid {
     grid-template-columns: repeat(3, 1fr);
-  }
-}
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-@keyframes fadeInBg {
-  from {
-    background: transparent;
-  }
-  to {
-    background: rgba(15, 23, 42, 0.6);
   }
 }
 

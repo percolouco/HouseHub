@@ -46,9 +46,9 @@ $recipes =$stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <!-- MODALE CRÉATION/ÉDITION -->
 <div id="recipeModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
-        <div class="pf-modal-header" style="flex-shrink: 0;">
-            <h3 class="pf-modal-title" id="recipeModalTitle" style="margin:0; border:none; padding:0;"><?= tr('recipe_modal_title_add') ?></h3>
+    <div class="pf-modal-content pf-modal-lg">
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title" id="recipeModalTitle"><?= tr('recipe_modal_title_add') ?></h3>
             <button class="pf-modal-close" onclick="closeRecipeModal()">×</button>
         </div>
         
@@ -62,7 +62,7 @@ $recipes =$stmt->fetchAll(PDO::FETCH_ASSOC);
             <small style="color: var(--text-muted); display: block; margin-top: 5px;"><?= tr('recipe_magic_desc') ?></small>
         </div>
 
-        <form id="recipeForm" onsubmit="saveRecipe(event)" style="overflow-y: auto; padding-right: 5px; flex: 1;">
+        <form id="recipeForm" onsubmit="saveRecipe(event)">
             <input type="hidden" name="action" value="save_recipe">
             <input type="hidden" name="id" id="recipe_id">
 

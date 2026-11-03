@@ -1,5 +1,5 @@
 <div id="holidayModal" class="pf-modal">
-    <div class="pf-modal-content hol-modal-content" style="max-width: 500px;">
+    <div class="pf-modal-content pf-modal-md hol-modal-content">
         <h3 id="modalTitle" class="pf-modal-title"><?= tr('hdl_modal_title') ?></h3>
         
         <form action="/modules/holidays/includes/api/save_holiday.php" method="POST" id="holidayForm">

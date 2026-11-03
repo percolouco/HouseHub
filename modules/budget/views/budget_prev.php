@@ -544,7 +544,7 @@ if (count($parentMapping) >= 2) {
     <div class="pf-modal-content" onclick="event.stopPropagation()">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 class="pf-modal-title" style="margin: 0; font-size: 1.25rem;"><?= tr('bud_prev_new_line_title') ?></h3>
+            <h3 class="pf-modal-title"><?= tr('bud_prev_new_line_title') ?></h3>
             <button type="button" onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--text-muted, #64748b);">×</button>
         </div>
 
@@ -581,7 +581,7 @@ if (count($parentMapping) >= 2) {
                 </select>
             </div>
             
-            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+            <div class="modal-footer">
                 <button type="button" onclick="document.getElementById('addCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('bud_add_title') ?></button>
             </div>
@@ -593,7 +593,7 @@ if (count($parentMapping) >= 2) {
     <div class="pf-modal-content" onclick="event.stopPropagation()">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h3 class="pf-modal-title" style="margin: 0; font-size: 1.25rem;"><?= tr('bud_prev_edit_line_title') ?></h3>
+            <h3 class="pf-modal-title"><?= tr('bud_prev_edit_line_title') ?></h3>
             <button type="button" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--text-muted, #64748b);">×</button>
         </div>
 
@@ -631,7 +631,7 @@ if (count($parentMapping) >= 2) {
                 </select>
             </div>
             
-            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+            <div class="modal-footer">
                 <button type="button" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll');" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
                 <button type="button" class="pf-btn btn-secondary bp-modal-delete" onclick="document.getElementById('editCatModal').style.display='none'; document.body.classList.remove('no-scroll'); deleteAllocCategory(document.getElementById('edit_cat_id').value)">🗑️ <?= tr('delete') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
@@ -643,7 +643,7 @@ if (count($parentMapping) >= 2) {
 <div id="addAdvanceModal" class="pf-modal">
     <div class="pf-modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;">＋ <?= tr('bud_adv_add') ?></h3>
+            <h3 class="pf-modal-title">＋ <?= tr('bud_adv_add') ?></h3>
             <button type="button" onclick="closeSuiviModal('addAdvanceModal')" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <form action="/modules/budget/includes/api/save-budget.php" method="POST" id="formAddAdvance" onsubmit="handleAdvanceSubmit(event, this)">
@@ -683,7 +683,7 @@ if (count($parentMapping) >= 2) {
 <div id="editAdvanceModal" class="pf-modal">
     <div class="pf-modal-content">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 class="pf-modal-title" style="margin:0; border:none; padding:0;">✏️ <?= tr('bud_adv_edit') ?></h3>
+            <h3 class="pf-modal-title">✏️ <?= tr('bud_adv_edit') ?></h3>
             <button type="button" onclick="closeSuiviModal('editAdvanceModal')" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--text-muted);">&times;</button>
         </div>
         <form action="/modules/budget/includes/api/save-budget.php" method="POST" id="formEditAdvance" onsubmit="handleAdvanceSubmit(event, this)">

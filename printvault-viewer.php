@@ -163,13 +163,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- ── MODAL : ÉDITION ─────────────────────────────────────────────────────── -->
-<div class="pv-modal-backdrop" id="pv-edit-modal">
-  <div class="pv-modal">
-    <div class="pv-modal-header">
-      <h3>Modifier le modèle</h3>
-      <button class="pv-modal-close" onclick="document.getElementById('pv-edit-modal').classList.remove('show')">×</button>
+<div class="pf-modal" id="pv-edit-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md pv-modal">
+    <div class="pf-modal-header">
+      <h3 class="pf-modal-title">Modifier le modèle</h3>
+      <button class="pf-modal-close" onclick="document.getElementById('pv-edit-modal').classList.remove('show')">×</button>
     </div>
-    <div class="pv-modal-body">
+    <div class="pf-modal-body">
       <div class="form-group">
         <label class="form-label">Nom *</label>
         <input type="text" id="edit-name" class="form-control" value="<?= htmlspecialchars($model['name']) ?>">
@@ -193,7 +193,7 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </div>
-    <div class="pv-modal-footer">
+    <div class="modal-footer">
       <button class="btn btn-secondary" onclick="document.getElementById('pv-edit-modal').classList.remove('show')">Annuler</button>
       <button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button>
     </div>
@@ -241,7 +241,7 @@ async function deleteModel() {
     } catch(e) { toast(e.message,'error'); }
 }
 
-document.querySelectorAll('.pv-modal-backdrop').forEach(m => m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
+document.querySelectorAll('.pf-modal').forEach(m => m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
 </script>
 
 <?php if ($canView): ?>

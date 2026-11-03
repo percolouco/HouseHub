@@ -46,13 +46,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- ── MODAL : UPLOAD ──────────────────────────────────────────────────────── -->
-<div class="pv-modal-backdrop" id="pv-upload-modal">
-  <div class="pv-modal">
-    <div class="pv-modal-header">
-      <h3>Uploader un modèle</h3>
-      <button class="pv-modal-close" onclick="document.getElementById('pv-upload-modal').classList.remove('show')">×</button>
+<div class="pf-modal" id="pv-upload-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md pv-modal">
+    <div class="pf-modal-header">
+      <h3 class="pf-modal-title">Uploader un modèle</h3>
+      <button class="pf-modal-close" onclick="document.getElementById('pv-upload-modal').classList.remove('show')">×</button>
     </div>
-    <div class="pv-modal-body">
+    <div class="pf-modal-body">
       <div class="pv-drop-zone" id="pv-drop-zone">
         <div class="icon">📁</div>
         <div>Glissez un fichier ici ou cliquez</div>
@@ -83,7 +83,7 @@ require __DIR__ . '/header.php';
         <div style="font-size:.75rem;color:var(--text-muted);margin-top:.3rem">Upload en cours… (parsing géométrie)</div>
       </div>
     </div>
-    <div class="pv-modal-footer">
+    <div class="modal-footer">
       <button class="btn btn-secondary" onclick="document.getElementById('pv-upload-modal').classList.remove('show')">Annuler</button>
       <button class="btn btn-primary" onclick="saveUpload()">Uploader</button>
     </div>

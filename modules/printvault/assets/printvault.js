@@ -35,7 +35,7 @@ let categories = [];
 document.addEventListener('DOMContentLoaded', () => {
     loadAll();
     document.getElementById('pv-search')?.addEventListener('input', e => { searchQuery = e.target.value.trim(); renderModels(); });
-    document.querySelectorAll('.pv-modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target===m) m.classList.remove('show'); }));
+    document.querySelectorAll('.pf-modal').forEach(m => m.addEventListener('click', e => { if (e.target===m) m.classList.remove('show'); }));
 
     const dz = document.getElementById('pv-drop-zone');
     if (dz) {
