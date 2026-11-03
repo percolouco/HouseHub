@@ -13,13 +13,13 @@ try {
         $html = '<p class="pf-text-muted">' . tr('no_provisions') . '</p>';
     } else {
         $html = '<table class="pf-table" style="width:100%; border-collapse: collapse;">';
-        $html .= '<thead style="border-bottom: 2px solid var(--border-color); text-align: left;">';
+        $html .= '<thead style="border-bottom: 2px solid var(--border-light); text-align: left;">';
         $html .= '<tr><th>' . tr('provision_label') . '</th><th>' . tr('amount') . '</th><th>' . tr('expected_date') . '</th><th style="text-align:right;">Actions</th></tr>';
         $html .= '</thead><tbody>';
         
         foreach ($provisions as $p) {
             $dateFormated = date('d/m/Y', strtotime($p['expected_date']));
-            $html .= '<tr style="border-bottom: 1px solid var(--border-color); height: 45px;">';
+            $html .= '<tr style="border-bottom: 1px solid var(--border-light); height: 45px;">';
             $html .= '<td>' . htmlspecialchars($p['title']) . '</td>';
             $html .= '<td>' . number_format($p['amount'], 2, ',', ' ') . ' €</td>';
             $html .= '<td>' . $dateFormated . '</td>';
