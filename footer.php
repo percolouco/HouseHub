@@ -10,7 +10,7 @@
   (function () {
     var isOpen = function (m) { return /\b(open|active|show|is-active)\b/.test(m.className) || m.style.display === 'flex'; };
     var close = function (m) {
-      var x = m.querySelector('.pf-modal-close');
+      var x = m.querySelector('.pf-modal-close, [data-modal-cancel]');
       if (x) { x.click(); return; }
       ['open', 'active', 'show', 'is-active'].forEach(function (c) { m.classList.remove(c); });
       if (m.style.display) m.style.display = 'none';
