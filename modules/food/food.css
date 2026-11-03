@@ -1118,15 +1118,6 @@
   padding: 5px;
   margin-bottom: 20px;
 }
-.servings-btn {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
 .servings-val {
   font-weight: 700;
   font-size: 1.1rem;

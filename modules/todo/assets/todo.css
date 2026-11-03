@@ -457,18 +457,6 @@ textarea.form-control {
 }
 
 /* Show done toggle */
-.show-done-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
-}
 
 /* Toast */
 .todo-toast-container {
