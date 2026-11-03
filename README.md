@@ -196,6 +196,7 @@ Un *scénario* = marque / modèle / année + mode d'acquisition + tous les frais
 - **Achat** : prix, valeur de revente (bouton « Estimer »), carte grise, malus, bonus, frais divers, crédit (apport, taux, durée : intérêts réellement payés sur la durée de détention), coût d'opportunité de l'argent immobilisé.
 - **LLD / leasing** : loyer, apport / 1er loyer majoré, frais de dossier, dépôt de garantie, kilomètres inclus et prix du km excédentaire, remise en état, entretien / assurance inclus, levée d'option (leasing).
 - **Usage** : énergie (L ou kWh), assurance, entretien, pneus, contrôle technique (selon l'âge), taxes, stationnement, divers, réparations imprévues, lignes libres (ponctuelles / mensuelles / annuelles).
+- **Évolutions v2.8.0** : énergie « Hybride rechargeable » (2 coûts : essence + électricité, part de km en électrique) ; durée saisie uniquement pour les locations (les achats sont comparés sur la durée de la location sélectionnée, 48 mois sinon, revente estimée automatiquement si vide) ; carte grise réservée à l'achat, malus / aides au neuf uniquement ; prime CEE (électrique neuf, barème par décile de revenus + bonus batterie européenne) ; garanties réservées aux locations ; entretien d'une location : contrat sec / pack entretien / intégral (champs masqués selon le contrat, avec « Afficher quand même ») et assurance incluse masquable ; rendement de l'argent immobilisé supprimé.
 - **Listes prédéfinies** marque / modèle (≈ 30 marques, avec « Autre » en saisie libre) et année de mise en circulation ; durée de simulation en mois ou en années.
 - **Garanties optionnelles** : garantie mécanique (pannes, assistance, véhicule de prêt) et protection pécuniaire (solde du financement + apport), avec leur coût mensuel.
 - **Usage (détail)** : assurance en €/mois ou €/an, pneus au remplacement (jeu été + jeu hiver) ou en budget annuel, entretien courant + pièces d'usure, mensualité du crédit affichée.
@@ -206,6 +207,7 @@ Un *scénario* = marque / modèle / année + mode d'acquisition + tous les frais
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v2.8.0  | Comparateur : hybride rechargeable, durée réservée aux locations, prime CEE, packs d'entretien LLD, champs masquables |
 | v2.7.0  | Garage / Comparateur : listes marque/modèle/année, garantie mécanique, protection pécuniaire, pneus été/hiver, durée en mois/années, verdict et profils d'usage |
 | v2.6.0  | Garage : onglet « Comparateur » (coût mensuel / annuel / au km : neuf, occasion, LLD, leasing ; scénarios enregistrés par marque / modèle / année) |
 | v2.5.0  | Budget : nouvel onglet « Analyse » (graphiques d'évolution des dépenses / revenus / solde net, filtres avancés, comparaison avec la période précédente, export CSV) |

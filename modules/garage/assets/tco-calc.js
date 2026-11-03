@@ -46,23 +46,40 @@
     return Math.max(0, Math.round(v * Math.max(0.5, kmFactor) / 10) * 10);
   }
 
+  // Prime CEE (véhicule électrique neuf) : plafonds de revenu fiscal par part -> décile -> catégorie de ménage -> montant maximal indicatif
+  var DECILES = [1970, 7640, 11250, 14130, 16880, 19600, 22770, 27310, 35880];
+  function decile(rfr) { var r = n(rfr); for (var i = 0; i < DECILES.length; i++) if (r <= DECILES[i]) return i + 1; return 10; }
+  function menage(dec) { return dec === 1 ? { k: 'precaire', label: 'Ménage modeste en situation de précarité énergétique', max: 5700 } : dec <= 4 ? { k: 'modeste', label: 'Ménage modeste', max: 4700 } : { k: 'autre', label: 'Autre ménage', max: 3500 }; }
+  // Ce qui est compté dans les coûts d'usage (location : selon l'assurance / le pack d'entretien inclus ; un champ « réaffiché » est compté en supplément)
+  function vis(d, mode) {
+    var lease = mode === 'lld' || mode === 'leasing', pack = d.lease_pack || (d.ent_incl ? 'integral' : 'sec'), show = !!d.ent_show;
+    if (!lease) return { ass: true, rev: true, usure: true, pneus: true, pack: 'sec' };
+    return { ass: !d.ass_incl || !!d.ass_show, rev: pack === 'sec' || show, usure: pack === 'sec' || show, pneus: pack !== 'integral' || show, pack: pack };
+  }
+
   function compute(d) {
     d = d || {};
     var mode = d.mode || 'neuf', lease = mode === 'lld' || mode === 'leasing';
     var months = Math.max(1, Math.round(n(d.months) || 48)), years = months / 12, kmAn = n(d.km_an), km = kmAn * years;
     var payment = 0, c = {}; CATS.forEach(function (x) { c[x.k] = 0; });
-    var ageStart = mode === 'occasion' ? n(d.age_start) : 0;
+    var ageStart = mode === 'occasion' ? n(d.age_start) : 0, V = vis(d, mode);
 
     // 1) véhicule
-    var price = n(d.price), resale = n(d.resale), capital = 0;
-    var oneOff = n(d.carte_grise) + n(d.malus) - n(d.bonus) + n(d.frais_divers);
+    var price = n(d.price), resale = n(d.resale);
+    if (!lease && (d.resale === undefined || d.resale === '' || d.resale === null)) resale = estimateResale(price, mode, years, ageStart, kmAn); // revente non saisie : estimation automatique sur la durée comparée
+    var aides = 0;
+    if (mode === 'neuf') {
+      aides = n(d.bonus);
+      if (d.fuel === 'Électrique' && d.cee) aides += menage(decile(d.revenu_part)).max + (d.cee_europe ? n(d.cee_europe_montant) : 0);
+    }
+    var oneOff = n(d.carte_grise) + (mode === 'neuf' ? n(d.malus) : 0) - aides + n(d.frais_divers);
     if (lease) {
       c.vehicule = n(d.rent) * months + n(d.apport);
-      c.acquisition = n(d.frais_dossier) + n(d.carte_grise) + n(d.malus) - n(d.bonus);
+      c.acquisition = n(d.frais_dossier);
+      oneOff = 0;
       var inclKm = n(d.km_incl_an) * years;
       c.imprevus += (n(d.km_incl_an) > 0 ? Math.max(0, km - inclKm) * n(d.km_excess) : 0) + n(d.remise_etat);
       if (mode === 'leasing' && d.levee) { c.vehicule += n(d.option_achat) - resale; }
-      capital = n(d.apport) + n(d.depot_garantie);
     } else {
       c.vehicule = price - resale;
       c.acquisition = oneOff;
@@ -70,17 +87,16 @@
       var financed = d.credit ? Math.max(0, cash - n(d.apport)) : 0;
       payment = monthlyPayment(financed, n(d.credit_rate), Math.round(n(d.credit_months)));
       c.financement += interestPaid(financed, n(d.credit_rate), Math.round(n(d.credit_months)), months);
-      capital = d.credit ? Math.min(cash, n(d.apport)) : cash;
     }
-    c.financement += capital * n(d.opp_rate) / 100 * years;
 
     // 2) coûts d'usage
     var conso = n(d.conso), eprice = n(d.energy_price);
-    c.energie = conso / 100 * km * eprice;
-    c.assurance = d.ass_incl ? 0 : n(d.assurance_an) * (d.ass_unit === 'mois' ? 12 : 1) * years;
-    c.garanties = (d.garantie ? n(d.garantie_mois) * months : 0) + (d.protection ? n(d.protection_mois) * months : 0);
-    if (!(lease && d.ent_incl)) {
-      c.entretien = (n(d.entretien_an) + n(d.usure_an)) * years;
+    if (d.fuel === 'Hybride rechargeable') { var pe = Math.min(100, Math.max(0, n(d.part_elec))) / 100; c.energie = km * (pe * n(d.conso_elec) / 100 * n(d.price_elec) + (1 - pe) * conso / 100 * eprice); }
+    else c.energie = conso / 100 * km * eprice;
+    c.assurance = !V.ass ? 0 : n(d.assurance_an) * (d.ass_unit === 'mois' ? 12 : 1) * years;
+    c.garanties = !lease ? 0 : (d.garantie ? n(d.garantie_mois) * months : 0) + (d.protection ? n(d.protection_mois) * months : 0);
+    c.entretien = (V.rev ? n(d.entretien_an) * years : 0) + (V.usure ? n(d.usure_an) * years : 0) + (lease && V.pack !== 'sec' ? n(d.pack_mois) * months : 0);
+    if (V.pneus) {
       if (d.pneus_mode === 'budget') c.entretien += n(d.pneus_an) * years;
       else c.entretien += (n(d.pneus_km) > 0 ? km / n(d.pneus_km) * n(d.pneus_set) : 0) + (d.pneus_hiver && n(d.pneus_hiver_km) > 0 ? km / n(d.pneus_hiver_km) * n(d.pneus_hiver_set) : 0);
     }
@@ -97,6 +113,6 @@
     return { payment: payment, months: months, years: years, km: km, total: total, perMonth: total / months, perYear: total / years, perKm: km > 0 ? total / km : null, cats: c };
   }
 
-  var api = { compute: compute, CATS: CATS, monthlyPayment: monthlyPayment, estimateResale: estimateResale, interestPaid: interestPaid, ctCount: ctCount };
+  var api = { compute: compute, CATS: CATS, monthlyPayment: monthlyPayment, estimateResale: estimateResale, decile: decile, menage: menage, vis: vis, interestPaid: interestPaid, ctCount: ctCount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TCO = api;
 })(this);

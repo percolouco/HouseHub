@@ -5,7 +5,7 @@
   var TCO = window.TCO, SEL_KEY = 'garage-tco-sel', FILTER_KEY = 'garage-tco-filter';
   var BRANDS = ['Alfa Romeo', 'Audi', 'BMW', 'BYD', 'Citroën', 'Cupra', 'Dacia', 'DS', 'Fiat', 'Ford', 'Honda', 'Hyundai', 'Jeep', 'Kia', 'Lexus', 'Mazda', 'Mercedes', 'MG', 'Mini', 'Mitsubishi', 'Nissan', 'Opel', 'Peugeot', 'Renault', 'Seat', 'Skoda', 'Smart', 'Suzuki', 'Tesla', 'Toyota', 'Volkswagen', 'Volvo'];
   var FUELS = { 'Essence': { price: 1.85, conso: 6.5, unit: 'L' }, 'Diesel': { price: 1.75, conso: 5.5, unit: 'L' }, 'Hybride': { price: 1.85, conso: 4.8, unit: 'L' },
-                'Électrique': { price: 0.25, conso: 17, unit: 'kWh' }, 'GPL': { price: 0.85, conso: 9, unit: 'L' }, 'Autre': { price: 1.8, conso: 6, unit: 'L' } };
+                'Hybride rechargeable': { price: 1.85, conso: 6, unit: 'L' }, 'Électrique': { price: 0.25, conso: 17, unit: 'kWh' }, 'GPL': { price: 0.85, conso: 9, unit: 'L' }, 'Autre': { price: 1.8, conso: 6, unit: 'L' } };
   var MODELS = {
     'Alfa Romeo': ['Giulia', 'Giulietta', 'MiTo', 'Stelvio', 'Tonale', 'Junior'], 'Audi': ['A1', 'A3', 'A4', 'A5', 'A6', 'Q2', 'Q3', 'Q5', 'Q7', 'Q4 e-tron', 'e-tron GT', 'TT'],
     'BMW': ['Série 1', 'Série 2', 'Série 3', 'Série 4', 'Série 5', 'X1', 'X2', 'X3', 'X5', 'i4', 'iX1', 'iX3'], 'BYD': ['Dolphin', 'Atto 3', 'Seal', 'Seal U', 'Han', 'Tang'],
@@ -31,46 +31,61 @@
   var BUY = ['neuf', 'occasion'], LEASE = ['lld', 'leasing'], ALL = ['neuf', 'occasion', 'lld', 'leasing'];
 
   // Champs du formulaire : [clé, libellé, unité, modes concernés, aide, condition]
+  var NEUF = ['neuf'], vis = function (d, m) { return TCO.vis(d, m); };
   var GROUPS = [
     { t: '🚗 Utilisation', f: [
-      ['km_an', 'Kilométrage annuel', 'km/an', ALL, ''], ['months', 'Durée d\'utilisation simulée (durée du contrat en location : 24, 36, 48 mois…)', '', ALL, 'Sert aussi à calculer les coûts « par mois » et « par an »', null, 'dur'],
+      ['km_an', 'Kilométrage annuel prévisionnel', 'km/an', ALL, ''],
+      ['months', 'Durée du contrat de location', '', LEASE, 'Ex. 24, 36, 48 mois', null, 'dur'],
+      ['_horizon', '', '', BUY, '', null, 'horizon'],
       ['age_start', 'Âge du véhicule à l\'achat', 'ans', ['occasion'], 'Sert au contrôle technique (1er à 4 ans, puis tous les 2 ans)'] ] },
-    { t: '💶 Achat', modes: BUY, f: [
-      ['price', 'Prix d\'achat TTC', '€', BUY, ''], ['resale', 'Valeur de revente estimée à la fin', '€', BUY, 'Bouton « Estimer » : décote indicative (-20 % la 1re année pour le neuf, puis -10 %/an)', null, 'estimate'],
-      ['carte_grise', 'Carte grise', '€', ALL, ''], ['malus', 'Malus écologique / taxes à l\'achat', '€', ALL, ''], ['bonus', 'Bonus / aides (à déduire)', '€', ALL, ''],
+    { t: '💶 Achat', f: [
+      ['price', 'Prix d\'achat TTC', '€', BUY, ''], ['resale', 'Valeur de revente estimée à la fin', '€', BUY, 'Laisser vide : estimation automatique selon la durée comparée. Le bouton « Estimer » la remplit pour la durée actuelle.', null, 'estimate'],
+      ['carte_grise', 'Carte grise', '€', BUY, ''], ['malus', 'Malus écologique / taxes à l\'achat', '€', NEUF, ''], ['bonus', 'Autres aides à l\'achat (à déduire)', '€', NEUF, ''],
+      ['cee', 'Prime CEE (véhicule électrique neuf)', '', NEUF, 'Prime « Coup de pouce » des certificats d\'économies d\'énergie : le montant dépend des revenus du ménage (barème indicatif, « jusqu\'à »).', function (d) { return d.fuel === 'Électrique'; }, 'check'],
+      ['revenu_part', 'Revenu fiscal de référence du ménage par part', '€', NEUF, '', function (d) { return d.fuel === 'Électrique' && d.cee; }],
+      ['_cee', '', '', NEUF, '', function (d) { return d.fuel === 'Électrique' && d.cee; }, 'cee'],
+      ['cee_europe', 'Batterie fabriquée en Europe (bonus supplémentaire)', '', NEUF, '', function (d) { return d.fuel === 'Électrique' && d.cee; }, 'check'],
+      ['cee_europe_montant', 'Bonus batterie européenne', '€', NEUF, 'Environ 1 200 € à 2 000 €', function (d) { return d.fuel === 'Électrique' && d.cee && d.cee_europe; }],
       ['frais_divers', 'Autres frais d\'achat (livraison, garantie…)', '€', BUY, ''],
       ['credit', 'Achat financé par un crédit', '', BUY, '', null, 'check'],
       ['apport', 'Apport', '€', BUY, '', function (d) { return d.credit; }], ['credit_rate', 'Taux du crédit (TAEG)', '%', BUY, '', function (d) { return d.credit; }],
-      ['credit_months', 'Durée du crédit', 'mois', BUY, '', function (d) { return d.credit; }], ['_pay', '', '', BUY, '', function (d) { return d.credit; }, 'pay'],
-      ['opp_rate', 'Rendement de l\'argent immobilisé', '%/an', ALL, 'Coût d\'opportunité : ce que l\'argent immobilisé aurait rapporté placé (ex. 2-3 %). 0 pour l\'ignorer'] ] },
-    { t: '📄 Location (LLD / leasing)', modes: LEASE, f: [
+      ['credit_months', 'Durée du crédit', 'mois', BUY, '', function (d) { return d.credit; }], ['_pay', '', '', BUY, '', function (d) { return d.credit; }, 'pay'] ] },
+    { t: '📄 Location (LLD / LOA)', f: [
       ['rent', 'Loyer mensuel', '€/mois', LEASE, ''], ['apport', '1er loyer majoré / apport', '€', LEASE, ''], ['frais_dossier', 'Frais de dossier', '€', LEASE, ''],
-      ['depot_garantie', 'Dépôt de garantie (rendu en fin de contrat)', '€', LEASE, 'Argent immobilisé : compté dans le coût d\'opportunité'],
-      ['km_incl_an', 'Kilomètres inclus', 'km/an', LEASE, '0 = illimité'], ['km_excess', 'Prix du km excédentaire', '€/km', LEASE, ''],
+      ['depot_garantie', 'Dépôt de garantie (rendu en fin de contrat)', '€', LEASE, ''],
+      ['km_incl_an', 'Forfait kilométrique max', 'km/an', LEASE, '0 = illimité'], ['km_excess', 'Coût du km supplémentaire', '€/km', LEASE, ''],
       ['remise_etat', 'Remise en état / frais de restitution estimés', '€', LEASE, ''],
-      ['ent_incl', 'Entretien et pneus inclus dans le loyer', '', LEASE, '', null, 'check'], ['ass_incl', 'Assurance incluse dans le loyer', '', LEASE, '', null, 'check'],
+      ['lease_pack', 'Entretien du contrat', '', LEASE, '', null, 'pack'],
+      ['pack_mois', 'Coût mensuel du pack entretien', '€/mois', LEASE, 'À renseigner s\'il est facturé en plus du loyer (0 s\'il est déjà dans le loyer)', function (d, m) { return vis(d, m).pack !== 'sec'; }],
+      ['_reve', '', '', LEASE, '', function (d, m) { return vis(d, m).pack !== 'sec'; }, 'reveal-ent'],
+      ['ass_incl', 'Assurance incluse dans le loyer', '', LEASE, '', null, 'check'],
+      ['_reva', '', '', LEASE, '', function (d) { return d.ass_incl; }, 'reveal-ass'],
       ['levee', 'Levée de l\'option d\'achat en fin de contrat', '', ['leasing'], '', null, 'check'],
       ['option_achat', 'Prix de l\'option d\'achat', '€', ['leasing'], '', function (d) { return d.levee; }],
       ['resale', 'Valeur de revente estimée après levée', '€', ['leasing'], '', function (d) { return d.levee; }] ] },
     { t: '🛡️ Garanties optionnelles', f: [
-      ['garantie', 'Garantie mécanique', '', ALL, 'Couvre : pannes mécaniques, électriques et électroniques ; assistance dépannage / remorquage ; prêt d\'un véhicule jusqu\'à 90 jours (km illimité, jusqu\'à 7 ans).', null, 'check'],
-      ['garantie_mois', 'Coût mensuel de la garantie mécanique', '€/mois', ALL, '', function (d) { return d.garantie; }],
-      ['protection', 'Protection pécuniaire / perte financière', '', ALL, 'En cas de destruction ou de vol : prise en charge du solde du financement restant dû et remboursement de l\'apport initial.', null, 'check'],
-      ['protection_mois', 'Coût mensuel de la protection pécuniaire', '€/mois', ALL, '', function (d) { return d.protection; }] ] },
+      ['garantie', 'Garantie mécanique', '', LEASE, 'Couvre : pannes mécaniques, électriques et électroniques ; assistance dépannage / remorquage ; prêt d\'un véhicule jusqu\'à 90 jours (km illimité, jusqu\'à 7 ans).', null, 'check'],
+      ['garantie_mois', 'Coût mensuel de la garantie mécanique', '€/mois', LEASE, '', function (d) { return d.garantie; }],
+      ['protection', 'Protection pécuniaire / perte financière', '', LEASE, 'En cas de destruction ou de vol : prise en charge du solde du financement restant dû et remboursement de l\'apport initial.', null, 'check'],
+      ['protection_mois', 'Coût mensuel de la protection pécuniaire', '€/mois', LEASE, '', function (d) { return d.protection; }] ] },
     { t: '⛽ Coûts d\'usage', f: [
       ['conso', 'Consommation', '__unit__/100 km', ALL, ''], ['energy_price', 'Prix de l\'énergie', '€/__unit__', ALL, ''],
-      ['assurance_an', 'Assurance (prime tous risques / tiers)', '', ALL, '', null, 'ass'],
-      ['entretien_an', 'Entretien courant : révisions, vidanges', '€/an', ALL, ''], ['usure_an', 'Pièces d\'usure : freins, amortisseurs…', '€/an', ALL, 'Lissez le coût sur les années : ex. 600 € de freins tous les 3 ans = 200 €/an'],
-      ['pneus_mode', 'Pneumatiques', '', ALL, '', null, 'tyres'],
-      ['pneus_an', 'Budget pneus', '€/an', ALL, '', function (d) { return d.pneus_mode === 'budget'; }],
-      ['pneus_set', 'Jeu de pneus été (ou 4 saisons)', '€', ALL, '', function (d) { return d.pneus_mode !== 'budget'; }], ['pneus_km', 'Durée de vie du jeu', 'km', ALL, '', function (d) { return d.pneus_mode !== 'budget'; }],
-      ['pneus_hiver', 'Jeu de pneus hiver en plus', '', ALL, '', function (d) { return d.pneus_mode !== 'budget'; }, 'check'],
-      ['pneus_hiver_set', 'Jeu de pneus hiver', '€', ALL, '', function (d) { return d.pneus_mode !== 'budget' && d.pneus_hiver; }], ['pneus_hiver_km', 'Durée de vie du jeu hiver', 'km', ALL, 'Les pneus hiver servent une partie de l\'année : comptez davantage de km que pour les pneus été', function (d) { return d.pneus_mode !== 'budget' && d.pneus_hiver; }],
-      ['ct_cost', 'Contrôle technique', '€/passage', ALL, 'Carte grise : voir « Achat »'], ['taxes_an', 'Taxes annuelles (vignette, taxe au poids…)', '€/an', ALL, ''],
+      ['conso_elec', 'Consommation électrique', 'kWh/100 km', ALL, 'Hybride rechargeable : 2 coûts d\'énergie (essence ci-dessus + électricité)', function (d) { return d.fuel === 'Hybride rechargeable'; }],
+      ['price_elec', 'Prix de l\'électricité', '€/kWh', ALL, '', function (d) { return d.fuel === 'Hybride rechargeable'; }],
+      ['part_elec', 'Part des km parcourus en électrique', '%', ALL, 'Dépend de la recharge et des trajets (souvent 30 à 70 %)', function (d) { return d.fuel === 'Hybride rechargeable'; }],
+      ['assurance_an', 'Assurance (prime tous risques / tiers)', '', ALL, '', function (d, m) { return vis(d, m).ass; }, 'ass'],
+      ['entretien_an', 'Entretien courant : révisions, vidanges', '€/an', ALL, '', function (d, m) { return vis(d, m).rev; }],
+      ['usure_an', 'Pièces d\'usure : freins, amortisseurs…', '€/an', ALL, 'Lissez le coût sur les années : ex. 600 € de freins tous les 3 ans = 200 €/an', function (d, m) { return vis(d, m).usure; }],
+      ['pneus_mode', 'Pneumatiques', '', ALL, '', function (d, m) { return vis(d, m).pneus; }, 'tyres'],
+      ['pneus_an', 'Budget pneus', '€/an', ALL, '', function (d, m) { return vis(d, m).pneus && d.pneus_mode === 'budget'; }],
+      ['pneus_set', 'Jeu de pneus été (ou 4 saisons)', '€', ALL, '', function (d, m) { return vis(d, m).pneus && d.pneus_mode !== 'budget'; }], ['pneus_km', 'Durée de vie du jeu', 'km', ALL, '', function (d, m) { return vis(d, m).pneus && d.pneus_mode !== 'budget'; }],
+      ['pneus_hiver', 'Jeu de pneus hiver en plus', '', ALL, '', function (d, m) { return vis(d, m).pneus && d.pneus_mode !== 'budget'; }, 'check'],
+      ['pneus_hiver_set', 'Jeu de pneus hiver', '€', ALL, '', function (d, m) { return vis(d, m).pneus && d.pneus_mode !== 'budget' && d.pneus_hiver; }], ['pneus_hiver_km', 'Durée de vie du jeu hiver', 'km', ALL, 'Les pneus hiver servent une partie de l\'année : comptez davantage de km que pour les pneus été', function (d, m) { return vis(d, m).pneus && d.pneus_mode !== 'budget' && d.pneus_hiver; }],
+      ['ct_cost', 'Contrôle technique', '€/passage', ALL, ''], ['taxes_an', 'Taxes annuelles (vignette, taxe au poids…)', '€/an', ALL, ''],
       ['parking_mois', 'Stationnement / garage', '€/mois', ALL, ''], ['divers_an', 'Péages, lavage, accessoires…', '€/an', ALL, ''],
       ['repair_an', 'Provision pour réparations imprévues', '€/an', ALL, 'Plus élevée pour un véhicule d\'occasion ou hors garantie'] ] }
   ];
-  var DEFAULTS = { km_an: 12000, months: 48, age_start: 3, opp_rate: 2, credit_months: 48, credit_rate: 5, pneus_mode: 'sets', pneus_km: 40000, pneus_set: 500, pneus_hiver_km: 80000, pneus_hiver_set: 450, ass_unit: 'an', ct_cost: 80, assurance_an: 650, entretien_an: 300, divers_an: 100, km_excess: 0.1 };
+  var DEFAULTS = { km_an: 12000, months: 48, age_start: 3, part_elec: 50, conso_elec: 16, price_elec: 0.25, cee_europe_montant: 1200, lease_pack: 'sec', credit_months: 48, credit_rate: 5, pneus_mode: 'sets', pneus_km: 40000, pneus_set: 500, pneus_hiver_km: 80000, pneus_hiver_set: 450, ass_unit: 'an', ct_cost: 80, assurance_an: 650, entretien_an: 300, divers_an: 100, km_excess: 0.1 };
 
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -86,7 +101,9 @@
     var j = await r.json(); if (!j.ok) throw new Error(j.error || 'Erreur'); return j.data;
   }
 
-  var calc = function (s) { return TCO.compute(Object.assign({}, s.data || {}, { mode: s.mode })); }; // le mode est porté par le scénario, pas par ses données
+  var isLease = function (m) { return LEASE.indexOf(m) !== -1; };
+  // Achat : pas de durée saisie, on prend celle de la location comparée (horizon), 48 mois sinon
+  var calc = function (s, h, over) { var d = Object.assign({}, s.data || {}, { mode: s.mode }, over || {}); if (!isLease(s.mode)) d.months = h || 48; return TCO.compute(d); }; // le mode est porté par le scénario, pas par ses données
 
   // ----- Liste filtrée -----
   function filtered() {
@@ -126,7 +143,8 @@
   function renderCompare() {
     var chosen = list.filter(function (s) { return sel.has(s.id); }), box = $('#tco-result');
     if (!chosen.length) { box.innerHTML = '<p class="tco-muted">Cochez au moins un scénario (idéalement 2 à 4) pour les comparer.</p>'; if (chart) { chart.destroy(); chart = null; } $('#tco-chart-wrap').hidden = true; return; }
-    var res = chosen.map(function (s) { return { s: s, r: calc(s) }; });
+    var lz = chosen.filter(function (s) { return isLease(s.mode); }), hz = lz.length ? Math.round(+lz[0].data.months) || 36 : 0;
+    var res = chosen.map(function (s) { return { s: s, r: calc(s, hz) }; }); res.hz = hz;
     var best = Math.min.apply(null, res.map(function (x) { return x.r.perMonth; }));
     var head = '<tr><th></th>' + res.map(function (x) { return '<th class="' + (x.r.perMonth === best && res.length > 1 ? 'tco-best' : '') + '"><b>' + esc(x.s.label) + '</b><small>' + esc(x.s.brand + ' ' + x.s.model + (x.s.year ? ' ' + x.s.year : '')) + '</small><em class="tco-mode tco-m-' + x.s.mode + '">' + MODE_SHORT[x.s.mode] + '</em></th>'; }).join('') + '</tr>';
     var row = function (lab, fn, cls) { return '<tr class="' + (cls || '') + '"><th>' + lab + '</th>' + res.map(function (x) { return '<td>' + fn(x) + '</td>'; }).join('') + '</tr>'; };
@@ -137,7 +155,7 @@
       row('Coût total sur la durée', function (x) { return eur(x.r.total); }, 'tco-key');
     var cats = '<tr class="tco-sep"><th colspan="' + (res.length + 1) + '">Détail par poste (coût mensuel)</th></tr>' +
       TCO.CATS.map(function (c) { return row('<i class="tco-dot" style="background:' + c.color + '"></i>' + c.label, function (x) { var v = x.r.cats[c.k]; return v ? eur(v / x.r.months) : '<span class="tco-muted">—</span>'; }); }).join('');
-    box.innerHTML = verdict(res) + '<div class="tco-table-wrap"><table class="tco-table"><thead>' + head + '</thead><tbody>' + body + cats + '</tbody></table></div>' + profiles(res);
+    box.innerHTML = (hz ? '<p class="tco-muted">Les achats sont comparés sur ' + hz + ' mois, la durée de la location sélectionnée.</p>' : '') + verdict(res) + '<div class="tco-table-wrap"><table class="tco-table"><thead>' + head + '</thead><tbody>' + body + cats + '</tbody></table></div>' + profiles(res);
     drawChart(res);
   }
   // Verdict : solution la plus avantageuse (coût mensuel lissé et coût global)
@@ -156,7 +174,7 @@
     if (res.length < 2) return '';
     var kms = [5000, 10000, 15000, 20000, 30000], cur = res.map(function (x) { return +x.s.data.km_an || 0; });
     var rows = kms.map(function (km) {
-      var rr = res.map(function (x) { return TCO.compute(Object.assign({}, x.s.data, { mode: x.s.mode, km_an: km })).perMonth; }), m = Math.min.apply(null, rr);
+      var rr = res.map(function (x) { return calc(x.s, res.hz, { km_an: km }).perMonth; }), m = Math.min.apply(null, rr);
       return '<tr><th>' + new Intl.NumberFormat('fr-FR').format(km) + ' km/an</th>' + rr.map(function (v) { return '<td class="' + (v === m ? 'tco-best-cell' : '') + '">' + eur(v) + (v === m ? ' 🏆' : '') + '</td>'; }).join('') + '</tr>';
     }).join('');
     return '<h4 class="tco-h4">Quelle solution selon votre profil d\'usage ?</h4><div class="tco-table-wrap"><table class="tco-table"><thead><tr><th>Coût mensuel si vous roulez…</th>' + res.map(function (x) { return '<th>' + esc(x.s.label) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div><p class="tco-muted">Mêmes hypothèses que vos scénarios, seul le kilométrage annuel change (les kilomètres au-delà du forfait d\'une location sont facturés). Valeur de revente inchangée.</p>';
@@ -181,15 +199,20 @@
 
   // ----- Formulaire -----
   function fuelInfo(d) { return FUELS[d.fuel] || FUELS['Essence']; }
-  function calcDraft(d) { return TCO.compute(Object.assign({}, d, { mode: editing.mode })); }
+  function calcDraft(d) { return calc({ mode: editing.mode, data: d }); }
   function renderForm(s) {
     var d = s.data, fi = fuelInfo(d), box = $('#tco-form-fields'), html = '';
     GROUPS.forEach(function (g) {
-      var fields = g.f.filter(function (f) { return f[3].indexOf(s.mode) !== -1 && (!f[5] || f[5](d)); });
+      var fields = g.f.filter(function (f) { return f[3].indexOf(s.mode) !== -1 && (!f[5] || f[5](d, s.mode)); });
       if (!fields.length) return;
       html += '<fieldset class="tco-fs"><legend>' + g.t + '</legend><div class="tco-grid">';
       fields.forEach(function (f) {
         var k = f[0], unit = f[2].replace(/__unit__/g, fi.unit), v = d[k];
+        if (f[6] === 'horizon') { html += '<p class="tco-note tco-span">⏱️ Pas de durée à saisir pour un achat : elle est alignée sur celle de la location comparée (48 mois s\'il n\'y en a pas).</p>'; return; }
+        if (f[6] === 'cee') { var dc = TCO.decile(d.revenu_part), mg = TCO.menage(dc); html += '<p class="tco-note tco-span">🏷️ Décile ' + dc + ' · ' + esc(mg.label) + ' : prime CEE jusqu\'à <b>' + eur(mg.max) + '</b>' + (d.cee_europe ? ' + bonus Europe ' + eur(d.cee_europe_montant || 0) : '') + ' (déduits du coût).<br><small>Plafonds de revenu par part : D1 1 970 € · D2 7 640 € · D3 11 250 € · D4 14 130 € · D5 16 880 € · D6 19 600 € · D7 22 770 € · D8 27 310 € · D9 35 880 €. Ménages en précarité énergétique : jusqu\'à 5 700 € ; modestes : 4 700 € ; autres : 3 500 €.</small></p>'; return; }
+        if (f[6] === 'pack') { var pk = vis(d, s.mode).pack; html += '<div class="tco-field tco-span"><label>' + esc(f[1]) + '</label><div class="tco-input"><select class="form-control" data-k="lease_pack"><option value="sec"' + (pk === 'sec' ? ' selected' : '') + '>Contrat « sec » (sans pack entretien)</option><option value="pack"' + (pk === 'pack' ? ' selected' : '') + '>Avec « Pack entretien / révision »</option><option value="integral"' + (pk === 'integral' ? ' selected' : '') + '>« Intégral / tout compris »</option></select></div></div>' +
+          '<p class="tco-note tco-span">' + ({ sec: 'Contrat sec : révisions, freinage, suspension, essuie-glaces / ampoules / batterie et pneus sont à votre charge.', pack: 'Pack entretien (payant) : révisions incluses ; freinage et suspension généralement inclus ; essuie-glaces, ampoules, batterie souvent inclus ; pneus en option payante (restent comptés ici).', integral: 'Intégral : révisions, freinage, suspension, essuie-glaces / ampoules / batterie et pneus (selon quota) inclus.' })[pk] + '</p>'; return; }
+        if (f[6] === 'reveal-ent' || f[6] === 'reveal-ass') { var ek = f[6] === 'reveal-ent' ? 'ent_show' : 'ass_show'; html += '<p class="tco-note tco-span">' + (f[6] === 'reveal-ent' ? 'Entretien' : 'Assurance') + ' pris en charge par le contrat : champs masqués. <a href="#" data-reveal="' + ek + '">' + (d[ek] ? 'Masquer à nouveau' : 'Afficher quand même') + '</a>' + (d[ek] ? ' <small>(les montants saisis sont comptés en supplément)</small>' : '') + '</p>'; return; }
         if (f[6] === 'pay') { var cr = calcDraft(d); html += '<p class="tco-note tco-span">💳 Mensualité estimée du crédit : <b>' + eur2(cr.payment) + '</b> /mois (hors assurance emprunteur)</p>'; return; }
         if (f[6] === 'dur') { var yr = d.dur_unit === 'an'; html += '<div class="tco-field"><label>' + esc(f[1]) + '</label><div class="tco-input"><input type="number" step="any" inputmode="decimal" data-dur="1" value="' + (v === undefined || v === '' ? '' : esc(yr ? Math.round(v / 12 * 100) / 100 : v)) + '"><select class="form-control" data-k="dur_unit"><option value="mois"' + (yr ? '' : ' selected') + '>mois</option><option value="an"' + (yr ? ' selected' : '') + '>années</option></select></div></div>'; return; }
         if (f[6] === 'ass') { html += '<div class="tco-field"><label>' + esc(f[1]) + '</label><div class="tco-input"><input type="number" step="any" inputmode="decimal" data-k="assurance_an" value="' + (v === undefined || v === '' ? '' : esc(v)) + '"><select class="form-control" data-k="ass_unit"><option value="an"' + (d.ass_unit === 'mois' ? '' : ' selected') + '>€/an</option><option value="mois"' + (d.ass_unit === 'mois' ? ' selected' : '') + '>€/mois</option></select></div></div>'; return; }
@@ -298,7 +321,8 @@
       else if (t.dataset.c === 'freq') { editing.data.custom[+t.closest('.tco-custom-row').dataset.i].freq = t.value; upd(); }
     });
     $('#tco-form-fields').addEventListener('click', function (e) {
-      if (e.target.id === 'tco-add-line') { editing.data.custom = editing.data.custom || []; editing.data.custom.push({ label: '', amount: '', freq: 'unique' }); renderForm(editing); }
+      if (e.target.dataset && e.target.dataset.reveal) { e.preventDefault(); editing.data[e.target.dataset.reveal] = editing.data[e.target.dataset.reveal] ? 0 : 1; renderForm(editing); }
+      else if (e.target.id === 'tco-add-line') { editing.data.custom = editing.data.custom || []; editing.data.custom.push({ label: '', amount: '', freq: 'unique' }); renderForm(editing); }
       else if (e.target.classList.contains('tco-x')) { editing.data.custom.splice(+e.target.closest('.tco-custom-row').dataset.i, 1); renderForm(editing); }
       else if (e.target.classList.contains('tco-est')) {
         var d = editing.data; if (!(+d.price)) { alert('Renseignez d\'abord le prix d\'achat.'); return; }
