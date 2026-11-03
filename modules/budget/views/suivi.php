@@ -518,7 +518,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             
             <div class="action-toolbar bud-toolbar">
                 <?php if (!$isClosed): ?>
-                <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="openSuiviModal('importCsvModal')">
+                <button type="button" class="pf-btn btn-secondary" onclick="openSuiviModal('importCsvModal')">
                     📂 <?= tr('bud_import_csv') ?? 'Importer CSV' ?>
                 </button>
 
@@ -534,7 +534,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             <?php else: ?>
                 <form method="POST" onsubmit="return confirm('<?= tr('bud_confirm_reopen') ?>');">
                     <input type="hidden" name="action" value="reopen_month">
-                    <button type="submit" class="pf-btn btn-secondary pf-btn-small">🔓 <?= tr('bud_reopen_btn') ?></button>
+                    <button type="submit" class="pf-btn btn-secondary">🔓 <?= tr('bud_reopen_btn') ?></button>
                 </form>
             <?php endif; ?>
             
