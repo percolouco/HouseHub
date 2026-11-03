@@ -372,41 +372,6 @@
   }
 }
 
-/* === MODALE EDITION CADEAU === */
-.gift-modal-custom-content {
-  max-width: 500px;
-  width: 95%;
-}
-.gift-modal-custom-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.gift-modal-custom-title {
-  margin: 0;
-  border: none;
-  padding: 0;
-}
-.gift-modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 1.8rem;
-  cursor: pointer;
-  color: var(--text-muted);
-  line-height: 1;
-}
-.gift-form-group-spaced {
-  margin-bottom: 25px;
-}
-.gift-modal-custom-footer {
-  padding-top: 15px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid var(--border-light);
-}
-
 .gl-pane {
   display: none;
   animation: fadeIn 0.3s ease;
@@ -639,14 +604,7 @@ label.gl-chip:has(input:focus-visible) { outline: 2px solid var(--primary); outl
 .gl-fab[hidden] { display: none; }
 
 /* Fiche d'ajout (bottom sheet) */
-.gl-sheet-back { position: fixed; inset: 0; z-index: 9000; background: var(--bg-overlay); display: flex; align-items: flex-end; justify-content: center; }
-.gl-sheet-back[hidden] { display: none; }
-.gl-sheet { width: 100%; max-width: 560px; max-height: 92dvh; overflow-y: auto; background: var(--bg-panel); border-radius: 22px 22px 0 0; padding: 8px 18px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; animation: glUp .25s cubic-bezier(.16,1,.3,1); overscroll-behavior: contain; }
 @keyframes glUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-.gl-grab { width: 40px; height: 5px; border-radius: 9px; background: var(--border-strong); margin: 4px auto 0; }
-.gl-sheet-head { display: flex; align-items: center; justify-content: space-between; }
-.gl-sheet-head h3 { margin: 0; font-size: 1.2rem; }
-.gl-x { width: 44px; height: 44px; border: 0; border-radius: 50%; background: var(--bg-subtle); color: var(--text-main); font-size: 1.5rem; cursor: pointer; }
 .gl-big { width: 100%; box-sizing: border-box; font: inherit; font-size: 1.15rem; font-weight: 600; padding: 14px; border: 2px solid var(--border-light); border-radius: 12px; background: var(--bg-page); color: var(--text-main); }
 .gl-big:focus, .gl-price-in:focus-within { outline: none; border-color: var(--primary); }
 .gl-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -666,7 +624,8 @@ label.gl-chip:has(input:focus-visible) { outline: 2px solid var(--primary); outl
 .gl-more-body { display: flex; flex-direction: column; gap: 12px; padding-top: 6px; }
 .gl-lab { display: flex; flex-direction: column; gap: 6px; }
 .gl-lab .pf-input { font-size: 16px; text-transform: none; letter-spacing: 0; font-weight: 400; }
-.gl-sheet-actions { display: flex; gap: 10px; position: sticky; bottom: 0; background: var(--bg-panel); padding-top: 4px; }
+.gl-sheet { gap: 14px; }
+.gl-sheet-actions { gap: 10px; flex-wrap: nowrap; }
 .gl-btn-save { flex: 1; min-height: 54px; border: 0; border-radius: 14px; background: var(--primary); color: var(--text-on-primary); font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer; }
 .gl-btn-save:disabled { opacity: .6; }
 .gl-btn-del { min-height: 54px; padding: 0 16px; border: 1px solid var(--border-danger-soft); border-radius: 14px; background: var(--bg-danger-soft); color: var(--danger); font: inherit; font-weight: 700; cursor: pointer; }
@@ -674,8 +633,6 @@ label.gl-chip:has(input:focus-visible) { outline: 2px solid var(--primary); outl
 
 @media (min-width: 769px) {
   .gl-tabs { margin-inline: 0; padding-inline: 2px; }
-  .gl-sheet-back { align-items: center; }
-  .gl-sheet { border-radius: 22px; max-height: 88dvh; }
 }
 
 /* Notes : idées en vrac par enfant */

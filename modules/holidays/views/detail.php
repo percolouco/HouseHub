@@ -331,7 +331,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
 
 <div id="checkpointModal" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 600px;">
+    <div class="pf-modal-content pf-modal-md">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 id="cpModalTitle" style="margin:0;">📍 <?= tr('hdl_btn_add_step') ?></h3>
             <button type="button" onclick="closeCheckpointModal()" class="pf-modal-close">&times;</button>
@@ -445,7 +445,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
     </div>
 </div>
 
-<div id="planningModal" class="pf-modal">
+<div id="planningModal" data-keep-open class="pf-modal">
     <div class="pf-modal-content hol-modal-planning">
         <div class="hol-modal-header">
             <h3 id="planningModalTitle" class="hol-modal-title">📅 Planning Global</h3>

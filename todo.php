@@ -47,13 +47,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- ── MODAL : TÂCHE ──────────────────────────────────────────────────────────── -->
-<div class="todo-modal-backdrop" id="todo-modal">
-  <div class="todo-modal">
-    <div class="todo-modal-header">
-      <h3 id="todo-modal-title">Nouvelle tâche</h3>
-      <button class="todo-modal-close" onclick="closeModal('todo-modal')">×</button>
+<div class="pf-modal" id="todo-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md todo-modal">
+    <div class="pf-modal-header">
+      <h3 id="todo-modal-title" class="pf-modal-title">Nouvelle tâche</h3>
+      <button class="pf-modal-close" onclick="closeModal('todo-modal')">×</button>
     </div>
-    <div class="todo-modal-body">
+    <div class="pf-modal-body">
 
       <div class="form-group">
         <label class="form-label">Titre *</label>
@@ -88,7 +88,7 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </div>
-    <div class="todo-modal-footer">
+    <div class="modal-footer">
       <button class="btn btn-danger btn-sm" id="todo-delete-btn" onclick="deleteTodoFromModal()" style="display:none;margin-right:auto">Supprimer</button>
       <button class="btn btn-secondary" onclick="closeModal('todo-modal')">Annuler</button>
       <button class="btn btn-primary" onclick="saveTodo()">Enregistrer</button>
@@ -97,13 +97,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- ── MODAL : LISTE ──────────────────────────────────────────────────────────── -->
-<div class="todo-modal-backdrop" id="list-modal">
-  <div class="todo-modal">
-    <div class="todo-modal-header">
-      <h3 id="list-modal-title">Nouvelle liste</h3>
-      <button class="todo-modal-close" onclick="closeModal('list-modal')">×</button>
+<div class="pf-modal" id="list-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md todo-modal">
+    <div class="pf-modal-header">
+      <h3 id="list-modal-title" class="pf-modal-title">Nouvelle liste</h3>
+      <button class="pf-modal-close" onclick="closeModal('list-modal')">×</button>
     </div>
-    <div class="todo-modal-body">
+    <div class="pf-modal-body">
 
       <div class="form-group">
         <label class="form-label">Nom *</label>
@@ -120,7 +120,7 @@ require __DIR__ . '/header.php';
         <div class="color-swatches" id="list-color-swatches"></div>
       </div>
     </div>
-    <div class="todo-modal-footer">
+    <div class="modal-footer">
       <button class="btn btn-danger btn-sm" id="list-delete-btn" onclick="deleteList()" style="display:none;margin-right:auto">Supprimer</button>
       <button class="btn btn-secondary" onclick="closeModal('list-modal')">Annuler</button>
       <button class="btn btn-primary" onclick="saveList()">Enregistrer</button>
@@ -129,13 +129,13 @@ require __DIR__ . '/header.php';
 </div>
 
 <!-- ── MODAL : PARAMÈTRES ─────────────────────────────────────────────────────── -->
-<div class="todo-modal-backdrop" id="settings-modal">
-  <div class="todo-modal">
-    <div class="todo-modal-header">
-      <h3>⚙️ Paramètres Todo</h3>
-      <button class="todo-modal-close" onclick="closeModal('settings-modal')">×</button>
+<div class="pf-modal" id="settings-modal">
+  <div class="pf-modal-content pf-modal-flush pf-modal-md todo-modal">
+    <div class="pf-modal-header">
+      <h3 class="pf-modal-title">⚙️ Paramètres Todo</h3>
+      <button class="pf-modal-close" onclick="closeModal('settings-modal')">×</button>
     </div>
-    <div class="todo-modal-body">
+    <div class="pf-modal-body">
       <div class="form-group">
         <label class="form-label">Webhook Discord</label>
         <input type="url" id="settings-webhook" class="form-control" placeholder="https://discord.com/api/webhooks/…">
@@ -144,7 +144,7 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </div>
-    <div class="todo-modal-footer">
+    <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('settings-modal')">Annuler</button>
       <button class="btn btn-primary" onclick="saveSettings()">Enregistrer</button>
     </div>

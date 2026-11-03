@@ -326,5 +326,5 @@ function closeModal(id){document.getElementById(id)?.classList.remove('show');}
 document.addEventListener('DOMContentLoaded',()=>{
   loadSidebar();
   loadTodos();
-  document.querySelectorAll('.todo-modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
+  document.querySelectorAll('.pf-modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show');}));
 });

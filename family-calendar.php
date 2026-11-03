@@ -124,7 +124,7 @@ require __DIR__ . '/header.php';
     <?php endif; ?>
 
     <div id="modalHolidays" class="pf-modal">
-        <div class="pf-modal-content">
+        <div class="pf-modal-content pf-modal-md pf-modal-flush">
             <div class="pf-modal-header">
                 <h3 class="pf-modal-title">
                     <?= tr('fc_modal_holidays_title') ?>
@@ -150,7 +150,7 @@ require __DIR__ . '/header.php';
     </div>
 
     <div id="modalSnapshot" class="pf-modal">
-        <div class="pf-modal-content">
+        <div class="pf-modal-content pf-modal-md">
             <div class="pf-modal-header">
                 <h3 class="pf-modal-title">📸 <?= tr('fc_modal_snap_title') ?></h3>
                 <button type="button" id="btnCloseSnapshot" class="pf-modal-close" onclick="document.getElementById('modalSnapshot').classList.remove('open'); document.body.classList.remove('no-scroll');">&times;</button>
@@ -206,7 +206,7 @@ require __DIR__ . '/header.php';
                     </div>
 
                     <!-- FOOTER INTÉGRÉ DANS LE FORMULAIRE POUR ÉVITER LE BUG DE CIBLAGE -->
-                    <div class="pf-modal-footer" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--pf-border); display: flex; justify-content: flex-end; gap: 10px;">
+                    <div class="modal-footer">
                         <button type="button" class="pf-btn pf-btn-secondary" onclick="document.getElementById('modalSnapshot').style.display = 'none'; document.body.classList.remove('no-scroll');"><?= tr('btn_cancel') ?></button>
                         <button type="submit" id="btnSubmitSnapshot" class="pf-btn pf-btn-primary"><?= tr('fc_btn_save_snap') ?></button>
                     </div>
@@ -216,23 +216,20 @@ require __DIR__ . '/header.php';
     </div>
 
     <div id="modalCalendarSettings" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 650px; width: 95%;">
-        
+    <div class="pf-modal-content pf-modal-flush pf-modal-lg pf-modal-tabbed">
+
         <div class="pf-modal-header">
             <h3 class="pf-modal-title">⚙️ <?= tr('fc_modal_settings_title') ?></h3>
             <button type="button" class="pf-modal-close" onclick="closeCalendarSettings()">&times;</button>
         </div>
 
-        <div style="display: flex; gap: 4px; background: var(--bg-page); padding: 4px; border-radius: 8px; margin: 1rem;">
-            <button type="button" id="tab-btn-foyer" class="bs-tab-btn active" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('foyer')">
-                🏡 <?= tr('fc_tab_foyer') ?>
-            </button>
-            <button type="button" id="tab-btn-membres" class="bs-tab-btn" style="flex: 1; padding: 8px 12px; font-weight: 600;" onclick="switchCalendarTab('membres')">
-                👥 <?= tr('fc_tab_members') ?>
-            </button>
-        </div>
+        <div class="pf-modal-layout">
+        <nav class="pf-tabs pf-tabs--side">
+            <button type="button" id="tab-btn-foyer" class="pf-tab active" onclick="switchCalendarTab('foyer')">🏡 <?= tr('fc_tab_foyer') ?></button>
+            <button type="button" id="tab-btn-membres" class="pf-tab" onclick="switchCalendarTab('membres')">👥 <?= tr('fc_tab_members') ?></button>
+        </nav>
 
-        <div class="pf-modal-body" style="max-height: 65vh; overflow-y: auto; padding-top: 0; padding-bottom: 1rem;">
+        <div class="pf-modal-body">
 
             <div id="cal-pane-foyer" class="cal-settings-pane">
                 
@@ -346,6 +343,7 @@ require __DIR__ . '/header.php';
 
             </div>
 
+        </div>
         </div>
     </div>
 </div>

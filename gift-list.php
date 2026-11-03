@@ -138,12 +138,11 @@ require __DIR__ . '/header.php';
 <button type="button" class="gl-fab" id="glFab" aria-label="<?= tr('gl_add_title') ?>">+</button>
 
 <!-- Fiche d'ajout / d'édition (bottom sheet) -->
-<div class="gl-sheet-back" id="glSheet" hidden>
-    <form class="gl-sheet" id="giftForm" method="post" action="/modules/gift-list/save-gift.php" autocomplete="off">
-        <div class="gl-grab"></div>
-        <div class="gl-sheet-head">
-            <h3 id="glSheetTitle"></h3>
-            <button type="button" class="gl-x" data-close aria-label="<?= tr('btn_cancel') ?>">&times;</button>
+<div class="pf-modal" id="glSheet">
+    <form class="pf-modal-content pf-modal-sm gl-sheet" id="giftForm" method="post" action="/modules/gift-list/save-gift.php" autocomplete="off">
+        <div class="pf-modal-header gl-sheet-head">
+            <h3 id="glSheetTitle" class="pf-modal-title"></h3>
+            <button type="button" class="pf-modal-close" data-close aria-label="<?= tr('btn_cancel') ?>">&times;</button>
         </div>
 
         <input type="hidden" name="year" value="<?= $year ?>">
@@ -169,7 +168,7 @@ require __DIR__ . '/header.php';
             </div>
         </details>
 
-        <div class="gl-sheet-actions">
+        <div class="modal-footer gl-sheet-actions">
             <button type="button" class="gl-btn-del" id="glDelete" hidden>🗑️ <?= tr('gl_delete') ?></button>
             <button type="submit" class="gl-btn-save"><?= tr('btn_save') ?></button>
         </div>
@@ -178,19 +177,17 @@ require __DIR__ . '/header.php';
 
 <!-- 2. Modale Paramètres (Occasions & Proches) -->
 <div id="modal-gift-settings" class="pf-modal">
-    <div class="pf-modal-content" style="max-width: 600px; width: 90%;">
-        
-        <div class="pf-modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 class="pf-modal-title" style="margin: 0;">⚙️ <?= tr('gift_settings') ?></h3>
-            <button type="button" class="pf-modal-close" style="background:none; border:none; font-size:1.5rem; cursor:pointer;" onclick="closeGiftSettings()">&times;</button>
+    <div class="pf-modal-content pf-modal-flush pf-modal-lg pf-modal-tabbed">
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">⚙️ <?= tr('gift_settings') ?></h3>
+            <button type="button" class="pf-modal-close" onclick="closeGiftSettings()">&times;</button>
         </div>
-
-        <div style="display: flex; gap: 4px; background: var(--bg-page); padding: 4px; border-radius: 8px; margin: 1rem 0;">
-            <button type="button" id="tab-btn-occasions" class="bs-tab-btn active" style="flex: 1; padding: 8px 12px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s;" onclick="switchGLTab('occasions')"><?= tr('gift_tab_occasions') ?></button>
-            <button type="button" id="tab-btn-proches" class="bs-tab-btn" style="flex: 1; padding: 8px 12px; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; background: transparent;" onclick="switchGLTab('proches')"><?= tr('gift_tab_proches') ?></button>
-        </div>
-
-        <div class="pf-modal-body" style="min-height: 450px; max-height: 60vh; overflow-y: auto; padding: 0 1rem 1rem 1rem; display: flex; flex-direction: column;">
+        <div class="pf-modal-layout">
+        <nav class="pf-tabs pf-tabs--side">
+            <button type="button" id="tab-btn-occasions" class="pf-tab active" onclick="switchGLTab('occasions')"><?= tr('gift_tab_occasions') ?></button>
+            <button type="button" id="tab-btn-proches" class="pf-tab" onclick="switchGLTab('proches')"><?= tr('gift_tab_proches') ?></button>
+        </nav>
+        <div class="pf-modal-body">
             
             <div id="gl-pane-occasions" class="gl-pane active" style="display: block; animation: fadeIn 0.3s ease;">
                 <div id="occasions-list" style="margin-bottom: 20px;">⏳ <?= tr('loading') ?></div>
@@ -257,6 +254,7 @@ require __DIR__ . '/header.php';
                 </form>
             </div>
 
+        </div>
         </div>
     </div>
 </div>
@@ -603,13 +601,13 @@ function openSheet(g, prefill) {
 
     form.querySelector('.gl-more').open = !!(g && (g.link || (g.payer && g.payer !== g.adult)));
     $id('glDelete').hidden = !g;
-    sheet.hidden = false;
+    sheet.classList.add('open');
     document.body.classList.add('no-scroll');
     if (!g && !prefill) setTimeout(() => $id('modalDesc').focus(), 60);
 }
 
-function closeSheet() { sheet.hidden = true; document.body.classList.remove('no-scroll'); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
+function closeSheet() { sheet.classList.remove('open'); document.body.classList.remove('no-scroll'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet.classList.contains('open')) closeSheet(); });
 
 form.addEventListener('submit', async e => {
     e.preventDefault();
@@ -664,31 +662,10 @@ document.getElementById('btn-open-gift-settings')?.addEventListener('click', asy
 document.querySelectorAll('.btn-close-settings').forEach(btn => btn.addEventListener('click', closeGiftSettings));
 
 function switchGLTab(tabId) {
-    // Gestion du contenu (Afficher/Cacher)
     document.getElementById('gl-pane-occasions').style.display = (tabId === 'occasions') ? 'block' : 'none';
     document.getElementById('gl-pane-proches').style.display = (tabId === 'proches') ? 'block' : 'none';
-
-    // Gestion du style des boutons d'onglet
-    const btnOcc = document.getElementById('tab-btn-occasions');
-    const btnProche = document.getElementById('tab-btn-proches');
-
-    if (tabId === 'occasions') {
-        btnOcc.style.background = 'var(--bg-panel)';
-        btnOcc.style.color = 'var(--primary)';
-        btnOcc.style.boxShadow = 'var(--shadow-sm)';
-        
-        btnProche.style.background = 'transparent';
-        btnProche.style.color = 'var(--text-muted)';
-        btnProche.style.boxShadow = 'none';
-    } else {
-        btnProche.style.background = 'var(--bg-panel)';
-        btnProche.style.color = 'var(--primary)';
-        btnProche.style.boxShadow = 'var(--shadow-sm)';
-        
-        btnOcc.style.background = 'transparent';
-        btnOcc.style.color = 'var(--text-muted)';
-        btnOcc.style.boxShadow = 'none';
-    }
+    document.getElementById('tab-btn-occasions').classList.toggle('active', tabId === 'occasions');
+    document.getElementById('tab-btn-proches').classList.toggle('active', tabId === 'proches');
 }
 
 let hasSettingsChanged = false;

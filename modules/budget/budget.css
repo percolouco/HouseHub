@@ -220,7 +220,7 @@ input[type="number"] {
 
 /* --- 5. MODALES (Extras Budget) --- */
 .pf-modal-content.modal-large {
-  max-width: 900px;
+  --pf-modal-w: 900px;
   transition: max-width 0.3s ease;
 }
 .import-table-wrapper {
@@ -1025,102 +1025,7 @@ body.sum-mode-active .sum-target {
   transition: background-color 0.2s;
 }
 
-/* --- 13. MODALE PARAMÈTRES BUDGET (Design System HouseHub) --- */
-.budget-settings-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(4px);
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-.budget-settings-backdrop.show {
-  display: flex;
-}
-.budget-settings-modal {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-light);
-  border-radius: 14px;
-  width: 100%;
-  max-width: 800px;
-  height: 80vh;
-  max-height: 700px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  animation: modalIn 0.18s ease;
-}
-.bs-header {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-light);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.bs-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: var(--text-main);
-}
-.bs-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--text-muted);
-  border-radius: 6px;
-  padding: 0 0.5rem;
-}
-.bs-close:hover {
-  background: var(--bg-page);
-  color: var(--text-main);
-}
-.bs-layout {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-.bs-sidebar {
-  width: 200px;
-  border-right: 1px solid var(--border-light);
-  background: var(--bg-page);
-  display: flex;
-  flex-direction: column;
-  padding: 0.75rem;
-  gap: 0.4rem;
-  overflow-y: auto;
-}
-.bs-tab-btn {
-  text-align: left;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.15s;
-  font-size: 0.9rem;
-}
-.bs-tab-btn:hover {
-  background: var(--border-light);
-  color: var(--text-main);
-}
-.bs-tab-btn.active {
-  background: var(--text-main);
-  color: var(--bg-panel);
-}
-.bs-content {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
-  background: var(--bg-panel);
-}
+/* --- 13. PARAMÈTRES BUDGET : contenu des onglets (la modale est le composant commun de global.css) --- */
 .bs-pane {
   display: none;
 }
@@ -1503,28 +1408,6 @@ body.sum-mode-active .sum-target {
   animation: none; /* Pas de clignotement dans le menu pour ne pas agresser l'œil */
 }
 
-/* Responsive Modale Paramètres */
-@media (max-width: 650px) {
-  .bs-layout {
-    flex-direction: column;
-  }
-  .bs-sidebar {
-    width: 100%;
-    flex-direction: row;
-    overflow-x: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border-light);
-    padding: 0.5rem;
-    white-space: nowrap;
-  }
-  .bs-tab-btn {
-    flex-shrink: 0;
-  }
-  .bs-content {
-    padding: 1rem;
-  }
-}
-
 /* Responsive Mobile Budget */
 @media (max-width: 768px) {
   .budget-view {
@@ -1738,12 +1621,6 @@ body.sum-mode-active .sum-target {
 }
 
 /* Modale d'optimisation */
-.provisions-modal-content {
-  max-width: 600px;
-  width: 95%;
-  max-height: 85vh;
-  overflow-y: auto;
-}
 .provision-person-card {
   background: var(--bg-subtle);
   padding: 10px;
@@ -2003,11 +1880,6 @@ body.sum-mode-active .sum-target {
   font-size: 0.9rem;
 }
 
-/* Modale Épargne */
-.modal-epargne {
-  max-width: 600px;
-  width: 95%;
-}
 .pf-form-row {
   display: flex;
   gap: 15px;
@@ -2338,11 +2210,6 @@ body.sum-mode-active .sum-target {
   font-size: 0.9rem;
 }
 
-/* Modale Épargne & Ventilation */
-.modal-epargne {
-  max-width: 600px;
-  width: 95%;
-}
 .pf-form-row {
   display: flex;
   gap: 15px;
@@ -3139,18 +3006,6 @@ tr.bg-danger-soft {
 
 /* --- MODALE IMPORT CSV sur téléphone : plus de place pour la liste, boutons toujours visibles --- */
 @media (max-width: 768px) {
-  #importCsvModal {
-    padding: 8px !important;
-  }
-  #importCsvModal .pf-modal-content {
-    padding: 14px !important;
-    border-radius: 16px !important;
-    max-height: 92vh !important;
-    max-height: calc(100dvh - 16px) !important; /* tient compte de la barre du navigateur mobile */
-  }
-  #importCsvModal .pf-modal-content::before {
-    display: none; /* poignée décorative : économise de la hauteur */
-  }
   #importCsvModal .pf-modal-content > div:first-child {
     padding-bottom: 10px !important;
     margin-bottom: 10px !important;

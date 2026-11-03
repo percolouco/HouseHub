@@ -12,32 +12,32 @@ if (!defined('CURRENCY')) {
     define('CURRENCY', '€');
 }
 ?>
-<div class="budget-settings-backdrop" id="modal-budget-settings">
-    <div class="budget-settings-modal">
-        <div class="bs-header">
-            <h3>⚙️ <?= tr('budget_settings_title') ?></h3>
-            <button class="bs-close" onclick="closeBudgetSettings()">×</button>
+<div class="pf-modal" id="modal-budget-settings">
+    <div class="pf-modal-content pf-modal-flush pf-modal-lg pf-modal-tabbed">
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">⚙️ <?= tr('budget_settings_title') ?></h3>
+            <button class="pf-modal-close" onclick="closeBudgetSettings()">×</button>
         </div>
-        <div class="bs-layout">
-            <div class="bs-sidebar">
-                <button class="bs-tab-btn active" onclick="switchBsTab('accounts', this)">
+        <div class="pf-modal-layout">
+            <nav class="pf-tabs pf-tabs--side">
+                <button class="pf-tab active" onclick="switchBsTab('accounts', this)">
                     <?= tr('bs_tab_accounts') ?>
                     <?php if (!$hasAccounts): ?><span class="alert-dot alert-dot-inline">!</span><?php endif; ?>
                 </button>
-                <button class="bs-tab-btn" onclick="switchBsTab('categories', this)">
+                <button class="pf-tab" onclick="switchBsTab('categories', this)">
                     <?= tr('bs_tab_categories') ?>
                     <?php if (!$hasCategories): ?><span class="alert-dot alert-dot-inline">!</span><?php endif; ?>
                 </button>
-                <button class="bs-tab-btn" onclick="switchBsTab('rules', this)"><?= tr('bs_tab_rules') ?></button>
-                <button class="bs-tab-btn" onclick="switchBsTab('salaries', this)">
+                <button class="pf-tab" onclick="switchBsTab('rules', this)"><?= tr('bs_tab_rules') ?></button>
+                <button class="pf-tab" onclick="switchBsTab('salaries', this)">
                     <?= tr('bs_tab_salaries') ?> 
                     <?php if (!$hasSalaries): ?><span class="alert-dot alert-dot-inline">!</span><?php endif; ?>
                 </button>
-                <button class="bs-tab-btn" onclick="switchBsTab('csv', this)"><?= tr('bs_tab_csv') ?></button>
-                <button class="bs-tab-btn" onclick="switchBsTab('children', this)">👶 <?= tr('bud_settings_dyn_title') ?></button>
-            </div>
+                <button class="pf-tab" onclick="switchBsTab('csv', this)"><?= tr('bs_tab_csv') ?></button>
+                <button class="pf-tab" onclick="switchBsTab('children', this)">👶 <?= tr('bud_settings_dyn_title') ?></button>
+            </nav>
             
-            <div class="bs-content">
+            <div class="pf-modal-body">
                 
                 <?php if (!isset($isBudgetSetupOk) || !$isBudgetSetupOk || !$hasBudgetItems): ?>
                 <div class="bs-onboarding-card">
@@ -48,15 +48,15 @@ if (!defined('CURRENCY')) {
                     <ul class="bs-onboarding-list">
                         <li>
                             <strong class="<?= $hasCategories ? 'text-success' : 'text-danger' ?>"><?= $hasCategories ? '✅' : '❌' ?></strong>
-                            <a class="bs-onboarding-link" onclick="switchBsTab('categories', document.querySelectorAll('.bs-tab-btn')[1]); return false;"><?= tr('bs_onb_cat_link') ?></a> : <?= tr('bs_onb_cat_desc') ?>
+                            <a class="bs-onboarding-link" onclick="switchBsTab('categories', document.querySelectorAll('#modal-budget-settings .pf-tab')[1]); return false;"><?= tr('bs_onb_cat_link') ?></a> : <?= tr('bs_onb_cat_desc') ?>
                         </li>
                         <li>
                             <strong class="<?= $hasAccounts ? 'text-success' : 'text-danger' ?>"><?= $hasAccounts ? '✅' : '❌' ?></strong>
-                            <a class="bs-onboarding-link" onclick="switchBsTab('accounts', document.querySelectorAll('.bs-tab-btn')[0]); return false;"><?= tr('bs_onb_acc_link') ?></a> : <?= tr('bs_onb_acc_desc') ?>
+                            <a class="bs-onboarding-link" onclick="switchBsTab('accounts', document.querySelectorAll('#modal-budget-settings .pf-tab')[0]); return false;"><?= tr('bs_onb_acc_link') ?></a> : <?= tr('bs_onb_acc_desc') ?>
                         </li>
                         <li>
                             <strong class="<?= $hasSalaries ? 'text-success' : 'text-danger' ?>"><?= $hasSalaries ? '✅' : '❌' ?></strong>
-                            <a class="bs-onboarding-link" onclick="switchBsTab('salaries', document.querySelectorAll('.bs-tab-btn')[3]); return false;"><?= tr('bs_onb_sal_link') ?></a> : <?= tr('bs_onb_sal_desc') ?>
+                            <a class="bs-onboarding-link" onclick="switchBsTab('salaries', document.querySelectorAll('#modal-budget-settings .pf-tab')[3]); return false;"><?= tr('bs_onb_sal_link') ?></a> : <?= tr('bs_onb_sal_desc') ?>
                         </li>
                         <li style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(180, 83, 9, 0.3);">
                             <strong class="<?= $hasBudgetItems ? 'text-success' : 'text-warning' ?>" style="color: <?= $hasBudgetItems ? '' : '#f59e0b' ?>"><?= $hasBudgetItems ? '✅' : '⏳' ?></strong>
@@ -352,7 +352,7 @@ document.getElementById('modal-budget-settings')?.addEventListener('click', (e) 
 });
 
 function switchBsTab(tabId, btnEl) {
-    document.querySelectorAll('.bs-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#modal-budget-settings .pf-tab').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.bs-pane').forEach(p => p.classList.remove('active'));
     btnEl.classList.add('active');
     document.getElementById('pane-' + tabId).classList.add('active');

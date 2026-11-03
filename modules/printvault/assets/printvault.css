@@ -99,27 +99,8 @@
 .pv-empty { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
 .pv-empty .icon { font-size: 3rem; opacity: .3; margin-bottom: 1rem; }
 
-/* Modal */
-.pv-modal-backdrop {
-  display: none; position: fixed; inset: 0; z-index: 200;
-  background: rgba(15,23,42,.5); backdrop-filter: blur(4px);
-  align-items: center; justify-content: center; padding: 1rem;
-}
-.pv-modal-backdrop.show { display: flex; }
-.pv-modal {
-  background: var(--bg-panel); border: 1px solid var(--border-light);
-  border-radius: 14px; width: 100%; max-width: 520px;
-  max-height: 92vh; display: flex; flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0,0,0,.15);
-  animation: pvModalIn .18s ease;
-}
-@keyframes pvModalIn { from{opacity:0;transform:scale(.96) translateY(-8px)} to{opacity:1;transform:none} }
-.pv-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-light); }
-.pv-modal-header h3 { font-size: 1rem; font-weight: 700; margin: 0; }
-.pv-modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1.2rem; border-radius: 6px; padding: .2rem .4rem; }
-.pv-modal-close:hover { background: var(--bg-page); }
-.pv-modal-body { padding: 1.25rem; overflow-y: auto; display: flex; flex-direction: column; gap: .9rem; }
-.pv-modal-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: .5rem; }
+/* Modale : composant commun (global.css) */
+.pv-modal .pf-modal-body { display: flex; flex-direction: column; gap: .9rem; }
 
 /* Upload zone */
 .pv-drop-zone {
@@ -180,7 +161,6 @@
 [data-theme="dark"] .pv-sidebar { background: var(--bg-panel); }
 [data-theme="dark"] .pv-card { background: var(--bg-panel); border-color: var(--border-light); }
 [data-theme="dark"] .pv-card-thumb { background: #1c2128; }
-[data-theme="dark"] .pv-modal { background: var(--bg-panel); }
 [data-theme="dark"] .form-control { background: #1c2128; border-color: var(--border-light); color: var(--text-main); }
 [data-theme="dark"] .pv-drop-zone { border-color: var(--border-light); }
 [data-theme="dark"] .pv-drop-zone:hover { background: rgba(59,130,246,.1); }

@@ -202,7 +202,7 @@ function getMonthName($dateString) {
 </div>
 
 <div id="savingsModal" class="pf-modal">
-    <div class="pf-modal-content modal-epargne">
+    <div class="pf-modal-content pf-modal-md">
         <div class="pf-modal-header">
             <h3 id="savingsModalTitle" class="pf-modal-title"><?= tr('bud_sav_modal_title_add') ?></h3>
             <button type="button" onclick="document.getElementById('savingsModal').classList.remove('open'); document.body.classList.remove('no-scroll');" class="pf-modal-close">&times;</button>

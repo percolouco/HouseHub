@@ -101,7 +101,7 @@ function formatDate($dateString) {
 </div>
 
 <div id="optimizeModal" class="pf-modal">
-    <div class="pf-modal-content provisions-modal-content">
+    <div class="pf-modal-content pf-modal-md">
         
         <div class="pf-modal-header">
             <h3 class="pf-modal-title">🧠 <?= tr('optimization_assistant_title') ?></h3>

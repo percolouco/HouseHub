@@ -1542,7 +1542,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $$(".nav-link").forEach((n) =>
     n.addEventListener("click", () => navigate(n.dataset.page)),
   );
-  $$(".modal-backdrop").forEach((m) =>
+  $$(".pf-modal").forEach((m) =>
     m.addEventListener("click", (e) => {
       if (e.target === m) m.classList.remove("show");
     }),

@@ -810,38 +810,10 @@ body.no-scroll {
 /* ==========================================================================
    9. MODALES & DIALOGUES (Sécurisation complète)
    ========================================================================== */
-.pf-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-}
-
-.pf-modal.open {
-  display: flex;
-}
-
-.pf-modal-content {
-  position: relative;
-  background: var(--bg-panel);
-  width: 95%;
-  max-width: 1100px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border-radius: 20px;
-  box-shadow: var(--shadow-lg);
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  margin: auto;
-}
+/* Les bases de la modale (.pf-modal*, .modal-footer) sont dans global.css */
 
 .hol-modal-cp {
-  max-width: 600px;
+  --pf-modal-w: 600px;
   padding: 0;
   overflow: hidden;
 }
@@ -1001,22 +973,11 @@ body.no-scroll {
   display: none;
 }
 
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-light);
-}
-
 /* --- Modale Planning Global --- */
 .hol-modal-planning {
-  max-width: 95vw;
-  width: 1400px;
-  height: 90vh;
-  display: flex;
-  flex-direction: column;
+  --pf-modal-w: 1400px;
+  --pf-modal-pad: 20px;
+  height: calc(100dvh - 32px);
   padding: 20px;
 }
 
@@ -1028,7 +989,7 @@ body.no-scroll {
 
 /* --- Modale Trajets & GPS --- */
 .hol-modal-sm {
-  max-width: 500px;
+  --pf-modal-w: 500px;
 }
 
 .hol-transit-container {
@@ -1038,12 +999,9 @@ body.no-scroll {
 }
 
 .hol-modal-gps {
-  max-width: 320px;
-  height: auto !important;
-  min-height: 0 !important;
+  --pf-modal-w: 320px;
   text-align: center;
   padding: 20px;
-  margin: auto;
 }
 
 .hol-gps-buttons {
@@ -1068,7 +1026,7 @@ body.no-scroll {
 
 /* --- Modale Porte-Documents --- */
 .hol-modal-docs {
-  max-width: 450px;
+  --pf-modal-w: 450px;
   padding: 20px;
 }
 
@@ -1409,35 +1367,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     justify-content: center;
   }
 
-  .pf-modal {
-    padding: 0 !important;
-  }
-
-  .pf-modal-content {
-    padding: 16px;
-    width: 100% !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* --- MODALE DE PLANNING MOBILE (BOTTOM SHEET) --- */
-  #planningModal .pf-modal-content {
-    padding: 6px !important;
-    height: 98vh !important;
-    max-height: 98vh !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-
-  #planningModal .pf-modal-content > div:first-child {
-    margin-bottom: 6px !important;
-    padding-bottom: 6px !important;
-  }
+  .hol-modal-planning { height: 100dvh; border-radius: 0; --pf-modal-pad: 8px; padding: 8px; }
+  .hol-modal-planning > div:first-child { margin-bottom: 6px; padding-bottom: 6px; }
 
   #planningContainer > div {
     flex-direction: column !important;
@@ -1555,7 +1486,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* --- Modale d'étape (revamp) --- */
-#checkpointModal .pf-modal-content { max-height: 92vh; }
 .cp-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border-light); margin-bottom: 18px; }
 .cp-tab { flex: 1; background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 6px; font-weight: 700; font-size: 0.95rem; color: var(--text-muted); cursor: pointer; }
 .cp-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -1564,10 +1494,4 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .cp-place-chip { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 15px; background: var(--bg-subtle); border: 1px solid var(--border-light); border-radius: 10px; }
 .cp-place-name { flex: 1; min-width: 0; font-size: 0.85rem; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cp-link { background: none; border: none; color: var(--primary); font-weight: 600; font-size: 0.85rem; cursor: pointer; padding: 0; }
-#formCheckpoint .modal-footer { position: sticky; bottom: -32px; background: var(--bg-panel); padding-bottom: 4px; }
-@media (max-width: 640px) {
-  #checkpointModal { align-items: flex-end; }
-  #checkpointModal .pf-modal-content { width: 100%; max-height: 94vh; border-radius: 20px 20px 0 0; padding: 20px 16px; margin: 0; }
-  #formCheckpoint .modal-footer { bottom: -20px; }
-  #formCheckpoint .modal-footer .pf-btn { flex: 1; }
-}
+

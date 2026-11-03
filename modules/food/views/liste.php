@@ -129,14 +129,14 @@ function openListModal(listId = null) {
   const isNew = !listId;
 
   const backdrop = document.createElement('div');
-  backdrop.className = 'liste-modal-backdrop';
+  backdrop.className = 'pf-modal open';
   backdrop.innerHTML = `
-    <div class="liste-modal" role="dialog" aria-modal="true">
-      <div class="liste-modal-header">
-        <h3>${isNew ? 'Nouvelle liste' : 'Modifier la liste'}</h3>
-        <button class="liste-modal-close" aria-label="Fermer">×</button>
+    <div class="pf-modal-content pf-modal-flush pf-modal-sm" role="dialog" aria-modal="true">
+      <div class="pf-modal-header">
+        <h3 class="pf-modal-title">${isNew ? 'Nouvelle liste' : 'Modifier la liste'}</h3>
+        <button class="pf-modal-close liste-modal-close" aria-label="Fermer">×</button>
       </div>
-      <div class="liste-modal-body">
+      <div class="pf-modal-body liste-modal-body">
         <div class="liste-form-group">
           <label class="liste-form-label">Nom</label>
           <input class="liste-modal-name" type="text" maxlength="100"
@@ -162,7 +162,7 @@ function openListModal(listId = null) {
           </select>
         </div>
       </div>
-      <div class="liste-modal-footer">
+      <div class="modal-footer liste-modal-footer">
         ${!isNew && state.lists.length > 1
           ? `<button class="btn-tool btn-tool-danger liste-modal-delete">Supprimer</button>`
           : ''}
