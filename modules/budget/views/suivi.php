@@ -651,7 +651,18 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 
 
     <div class="bud-categories-grid">
-    <?php foreach ($categoriesConfig as $key => $conf): ?>
+    <?php
+    // Ordre des cartes : Revenus puis Charges fixes (fixes), ensuite par dépense cumulée décroissante, sans dépense à la fin
+    $cardKeys = array_keys($categoriesConfig);
+    $cardRank = fn($k) => $categoriesConfig[$k]['db_type'] === 'Income' ? 0 : ($k === 'FIXED' ? 1 : 2);
+    $cardPos = array_flip($cardKeys);
+    usort($cardKeys, function ($a, $b) use ($cardRank, $totals, $cardPos) {
+        $ra = $cardRank($a); $rb = $cardRank($b);
+        if ($ra !== $rb) return $ra <=> $rb;
+        if ($ra < 2) return $cardPos[$a] <=> $cardPos[$b];
+        return (($totals[$b] ?? 0) <=> ($totals[$a] ?? 0)) ?: ($cardPos[$a] <=> $cardPos[$b]);
+    });
+    foreach ($cardKeys as $key): $conf = $categoriesConfig[$key]; ?>
     <div class="cat-card" <?= $isClosed ? 'style="opacity:0.8;"' : '' ?>>
         <div class="cat-card-header" style="background:<?= $conf['color'] ?>15; border-bottom:1px solid <?= $conf['color'] ?>30;">
             <div class="cat-card-title-group">
