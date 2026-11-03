@@ -80,7 +80,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
       <?php if (isset($_SESSION['user'])): ?>
         <div class="pf-desktop-actions" style="display: flex; align-items: center; gap: 10px; border-left: 1px solid #cbd5e1; padding-left: 15px;">
           <a href="/settings.php" class="pf-user-badge" style="text-decoration:none;color:inherit" title="Paramètres">
-            ⚙️ <?= htmlspecialchars($_SESSION['user']['display_name'] ?? $_SESSION['user']['username']) ?>
+            <span class="pf-ico-gear"></span> <?= htmlspecialchars($_SESSION['user']['display_name'] ?? $_SESSION['user']['username']) ?>
           </a>
           <?php if (!empty($_SESSION['user']['is_admin'])): ?>
             <a href="/admin/" class="pf-nav-link" style="font-size:0.85rem;color:#2563eb" title="Admin">Admin</a>
@@ -118,7 +118,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         <?php if (in_array('calendar_ios', $mods)): ?><a href="/calendar-ios.php" class="pf-mobile-nav-link">📱 <?= tr('menu_calendar_ios') ?></a><?php endif; ?>
         <?php if (in_array('printvault',  $mods)): ?><a href="/printvault.php" class="pf-mobile-nav-link">🖨️ <?= tr('menu_printvault') ?></a><?php endif; ?>
         <?php if (in_array('planka',      $mods)): ?><a href="/planka.php" class="pf-mobile-nav-link">📋 <?= tr('menu_planka') ?></a><?php endif; ?>
-        <a href="/settings.php" class="pf-mobile-nav-link">⚙️ Paramètres</a>
+        <a href="/settings.php" class="pf-mobile-nav-link"><span class="pf-ico-gear"></span> Paramètres</a>
         <?php if (!empty($_SESSION['user']['is_admin'])): ?>
         <a href="/admin/" class="pf-mobile-nav-link" style="color:#2563eb">🛡️ Admin</a>
         <?php endif; ?>

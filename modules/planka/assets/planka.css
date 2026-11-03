@@ -61,21 +61,7 @@
   margin-left: auto;
 }
 
-.pk-btn-icon {
-  background: none;
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  padding: .3rem .5rem;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: .9rem;
-  transition: all .15s;
-}
 
-.pk-btn-icon:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
 
 .pk-board-area {
   display: flex;
@@ -339,43 +325,13 @@
 
 .pk-add-task-row .pk-input { flex: 1; }
 
-.pk-btn {
-  padding: .45rem 1rem;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-size: .83rem;
-  font-weight: 600;
-  transition: all .15s;
-}
 
-.pk-btn-primary {
-  background: var(--primary);
-  color: #fff;
-}
 
-.pk-btn-primary:hover { filter: brightness(1.1); }
 
-.pk-btn-secondary {
-  background: var(--bg-page);
-  border: 1px solid var(--border-light);
-  color: var(--text-main);
-}
 
-.pk-btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
 
-.pk-btn-danger {
-  background: #ef4444;
-  color: #fff;
-  margin-right: auto;
-}
 
-.pk-btn-danger:hover { filter: brightness(1.1); }
 
-.pk-btn-sm {
-  padding: .3rem .65rem;
-  font-size: .78rem;
-}
 
 .pk-label-color--berry-red        { background: #ef4444; }
 .pk-label-color--fresh-salad      { background: #22c55e; }

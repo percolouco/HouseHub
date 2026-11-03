@@ -98,9 +98,7 @@ require __DIR__ . '/header.php';
         <!-- Bloc Titre + Roue crantée -->
         <div style="display: flex; align-items: center; gap: 12px;">
             <h1 style="margin: 0;"><?= tr('fc_main_header') ?></h1>
-            <button id="btnOpenCalendarSettings" class="btn-settings-gear" title="Paramètres du calendrier" style="font-size: 1.4rem; padding: 4px;">
-                ⚙️
-            </button>
+            <button id="btnOpenCalendarSettings" class="pf-gear" title="Paramètres du calendrier" aria-label="Paramètres du calendrier"></button>
         </div>
 
         <!-- Boutons d'actions -->

@@ -110,16 +110,16 @@ require __DIR__ . '/header.php';
 
 <div class="pf-container gl-app" id="glApp">
 
-    <div class="gl-top">
-        <div class="gl-titlerow">
+    <div class="gl-top pf-hero">
+        <div class="pf-hero-title gl-titlerow">
             <h1>🎁 <?= sprintf(tr('gift_main_title'), $year) ?></h1>
-            <button id="btn-open-gift-settings" class="btn-settings-gear gl-gear" title="<?= tr('gift_settings') ?>" aria-label="<?= tr('gift_settings') ?>">⚙️</button>
+            <button id="btn-open-gift-settings" class="pf-gear" title="<?= tr('gift_settings') ?>" aria-label="<?= tr('gift_settings') ?>"></button>
         </div>
 
-        <div class="gl-seg" role="tablist">
-            <button type="button" class="gl-seg-btn is-active" data-view="ideas" role="tab">🎁 <?= tr('gl_tab_ideas') ?></button>
-            <button type="button" class="gl-seg-btn" data-view="notes" role="tab">💡 <?= tr('gl_tab_notes') ?></button>
-            <button type="button" class="gl-seg-btn" data-view="accounts" role="tab">⚖️ <?= tr('gl_tab_accounts') ?></button>
+        <div class="pf-pills gl-seg" role="tablist">
+            <button type="button" class="pf-pill gl-seg-btn is-active" data-view="ideas" role="tab">🎁 <?= tr('gl_tab_ideas') ?></button>
+            <button type="button" class="pf-pill gl-seg-btn" data-view="notes" role="tab">💡 <?= tr('gl_tab_notes') ?></button>
+            <button type="button" class="pf-pill gl-seg-btn" data-view="accounts" role="tab">⚖️ <?= tr('gl_tab_accounts') ?></button>
         </div>
     </div>
 
