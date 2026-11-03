@@ -469,10 +469,6 @@ textarea.form-control {
   padding: 0.2rem 0.4rem;
   border-radius: 6px;
 }
-.show-done-btn:hover {
-  background: var(--bg-page);
-  color: var(--text-main);
-}
 
 /* Toast */
 .todo-toast-container {

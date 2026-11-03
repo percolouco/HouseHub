@@ -223,23 +223,6 @@
   opacity: 1;
 }
 
-.btn-edit-item,
-.btn-delete-item {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.2rem 0.3rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  transition: background 0.15s;
-}
-.btn-edit-item:hover {
-  background: var(--bg-subtle);
-}
-.btn-delete-item:hover {
-  background: rgba(230, 57, 70, 0.1);
-}
-
 .liste-cart-divider {
   font-size: 0.78rem;
   color: var(--text-muted);
@@ -466,7 +449,7 @@
   flex-shrink: 0;
   background: none;
   border: 1px solid var(--border-light);
-  border-radius: 6px;
+  border-radius: 999px;
   padding: 0.1rem 0.3rem;
   cursor: pointer;
   font-size: 0.85rem;
@@ -777,24 +760,6 @@
 .context-toolbar.active {
   bottom: 0;
 }
-.ctx-btn {
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-main);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.ctx-btn.primary {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
 
 .meals-copy-source {
   font-size: 0.85rem;
@@ -1087,7 +1052,7 @@
   font-weight: 600;
   background: rgba(0, 0, 0, 0.5);
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: 999px;
   backdrop-filter: blur(4px);
 }
 .recipe-title {

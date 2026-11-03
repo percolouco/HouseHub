@@ -589,22 +589,6 @@ input.txt-p2:focus {
   display: flex;
   gap: 5px;
 }
-.btn-nav {
-  background: white;
-  border: 1px solid #cbd5e1;
-  padding: 4px 10px;
-  border-radius: 6px;
-  text-decoration: none;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: 0.2s;
-}
-.btn-nav:hover {
-  background: #f1f5f9;
-  color: var(--text-main);
-  border-color: #94a3b8;
-}
 
 .row-actions {
   position: absolute;
@@ -832,30 +816,6 @@ tr:hover .row-actions {
   100% {
     opacity: 0.8;
   }
-}
-.suivi-nav-group {
-  display: flex;
-  background: #e2e8f0;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.suivi-btn-nav {
-  padding: 6px 12px;
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: bold;
-  border-right: 1px solid #cbd5e1;
-  transition:
-    background 0.2s,
-    color 0.2s;
-}
-.suivi-btn-nav:last-child {
-  border-right: none;
-}
-.suivi-btn-nav:hover {
-  background: var(--bg-panel);
-  color: var(--primary);
 }
 input[type="month"].pf-input {
   font-family: inherit;
@@ -1539,10 +1499,6 @@ body.sum-mode-active .sum-target {
   .suivi-nav-group {
     width: 100%;
     justify-content: space-between;
-  }
-  .suivi-btn-nav {
-    flex: 1;
-    text-align: center;
   }
   .month-actions {
     opacity: 1 !important;
@@ -2350,15 +2306,6 @@ body.sum-mode-active .sum-target {
   flex-wrap: wrap;
   align-items: center;
 }
-.bud-btn-lock {
-  background: linear-gradient(135deg, #10b981, #059669);
-  padding: 6px 12px;
-  height: auto;
-  width: auto;
-  font-size: 0.85rem;
-  border: none;
-  color: white;
-}
 .bud-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2399,17 +2346,6 @@ body.sum-mode-active .sum-target {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  transition: background 0.2s;
-}
-.bud-kpi-edit-btn:hover {
-  background: var(--bg-subtle);
 }
 .bud-pending-toggle {
   background: none;
@@ -3767,7 +3703,6 @@ tr.bg-danger-soft {
 
 /* --- ANALYSE (graphiques + filtres) --- */
 .an-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.an-btn-ghost { background: transparent !important; color: var(--primary, #3b82f6) !important; border: 1px solid var(--primary, #3b82f6) !important; }
 #an-filters-toggle { display: none; }
 .an-panel, .an-card { background: var(--bg-panel); border: 1px solid var(--border-light, #e2e8f0); border-radius: 16px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05)); padding: 16px; margin-bottom: 16px; }
 .an-panel { display: flex; flex-direction: column; gap: 14px; }
