@@ -2865,44 +2865,29 @@ tr.bg-danger-soft {
   background-color: rgba(239, 68, 68, 0.1) !important;
 }
 
-/* --- IMPORT CSV : AGENCEMENT DES CELLULES --- */
-.category-cell-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* --- IMPORT CSV : une ligne par opération, tout visible --- */
+.pf-modal-content.modal-import { --pf-modal-w: min(1320px, 96vw); }
 
-.category-selects-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
+.bs-csv-table { table-layout: fixed; width: 100%; margin: 0; border: none; box-shadow: none; }
+.bs-csv-table th, .bs-csv-table td { padding: 8px 10px; }
+.bs-csv-table .c-chk    { width: 40px; text-align: center; }
+.bs-csv-table .c-chk input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+.bs-csv-table .c-month  { width: 136px; }
+.bs-csv-table .c-date   { width: 56px; white-space: nowrap; }
+.bs-csv-table .c-label  { width: 30%; }
+.bs-csv-table .c-amount { width: 104px; text-align: right; white-space: nowrap; }
+.bs-csv-table .c-cat    { width: auto; }
+.bs-csv-table .c-month input { height: 34px; padding: 4px 6px; font-size: .82rem; }
 
-.category-selects-row > select {
-  flex: 1;
-  min-width: 0;
-  height: 36px;
-  padding: 6px 10px;
-}
+.csv-label { font-size: .85rem; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.csv-dup-hint { font-size: .72rem; color: var(--text-muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ignore-checkbox-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  width: fit-content;
-}
+.category-cell-wrapper { display: block; }
+.category-selects-row { display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; }
+.category-selects-row > select { flex: 1 1 0; min-width: 0; height: 34px; padding: 4px 8px; font-size: .82rem; }
 
-.ignore-checkbox-wrapper input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--danger);
-  cursor: pointer;
-}
+/* ligne ignorée (décochée) */
+.bs-csv-tr.ignored td, .prop2-item.ignored .prop2-summary { opacity: .45; }
 
 /* Amélioration du sticky header pour le tableau CSV */
 .bs-csv-table thead th {

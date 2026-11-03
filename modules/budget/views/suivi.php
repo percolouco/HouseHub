@@ -141,17 +141,14 @@ if (isset($_FILES['csv_file'])) {
         $colRef     = isset($mapping['col_ref']) ? (int)$mapping['col_ref'] : 3;
         $dateFormat = $mapping['date_format'] ?? 'd/m/Y';
         
-        // 🔥 CHARGEMENT INTELLIGENT DES RÈGLES (Priorité au montant !)
-        $rules = []; 
-        try { 
-            $stmtRules = $pdo->query("SELECT keyword, category, budget_item_id, amount FROM pf_import_rules ORDER BY amount DESC, keyword ASC");
+        // Règles d'import : 1re passe libellé + montant, 2e passe libellé seul
+        try { $pdo->exec("ALTER TABLE pf_import_rules ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2) DEFAULT NULL AFTER keyword"); } catch(Exception $e){}
+        $rulesAmount = []; $rulesLabel = [];
+        try {
+            $stmtRules = $pdo->query("SELECT keyword, category, budget_item_id, amount FROM pf_import_rules ORDER BY CHAR_LENGTH(keyword) DESC, id ASC");
             while ($r = $stmtRules->fetch(PDO::FETCH_ASSOC)) {
-                $rules[] = [
-                    'keyword' => $r['keyword'],
-                    'cat' => $r['category'], 
-                    'budget_item_id' => $r['budget_item_id'],
-                    'amount' => $r['amount']
-                ];
+                $rule = ['keyword' => $r['keyword'], 'cat' => $r['category'], 'budget_item_id' => $r['budget_item_id'], 'amount' => $r['amount']];
+                if ($r['amount'] !== null && (float)$r['amount'] > 0) $rulesAmount[] = $rule; else $rulesLabel[] = $rule;
             }
         } catch(Exception $e){}
         
@@ -193,18 +190,20 @@ if (isset($_FILES['csv_file'])) {
             $uniqueKey = !empty($refCSV) ? "REF_".$refCSV : "HASH_".md5($dateSql.$label.number_format($amount, 2).$isCredit);
             $isDuplicate = in_array($uniqueKey, $existingRefs);
             
-            // 🔥 MOTEUR DE MATCHING : Mot-clé + Montant strict
+            // Matching : libellé + montant exact d'abord, libellé seul ensuite
             $suggestedCat = '';
             $suggestedItemId = null;
-            foreach ($rules as $ruleData) { 
-                if (stripos($label, $ruleData['keyword']) !== false) { 
-                    if (!empty($ruleData['amount']) && abs($amount) != abs((float)$ruleData['amount'])) {
-                        continue; // Montant exigé par la règle mais non respecté
+            foreach ($rulesAmount as $ruleData) {
+                if (stripos($label, $ruleData['keyword']) !== false && abs(abs($amount) - abs((float)$ruleData['amount'])) < 0.005) {
+                    $suggestedCat = $ruleData['cat']; $suggestedItemId = $ruleData['budget_item_id']; break;
+                }
+            }
+            if ($suggestedCat === '') {
+                foreach ($rulesLabel as $ruleData) {
+                    if (stripos($label, $ruleData['keyword']) !== false) {
+                        $suggestedCat = $ruleData['cat']; $suggestedItemId = $ruleData['budget_item_id']; break;
                     }
-                    $suggestedCat = $ruleData['cat']; 
-                    $suggestedItemId = $ruleData['budget_item_id'];
-                    break; 
-                } 
+                }
             }
             
             $csvData[] = ['date'=>$dateSql, 'label'=>$label, 'amount'=>$amount, 'cat'=>$suggestedCat, 'suggested_item_id'=>$suggestedItemId, 'ref'=>$uniqueKey, 'is_duplicate'=>$isDuplicate, 'is_credit'=>$isCredit];
@@ -802,7 +801,7 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 </div>
 
 <div id="importCsvModal" data-keep-open class="pf-modal <?= $showPreview ? 'open' : '' ?>">
-    <div class="pf-modal-content <?= $showPreview ? 'modal-large' : '' ?>" style="display: flex; flex-direction: column; max-height: 90vh; padding: 24px; overflow: hidden;">
+    <div class="pf-modal-content <?= $showPreview ? 'modal-import' : '' ?>" style="display: flex; flex-direction: column; max-height: 90vh; padding: 24px; overflow: hidden;">
         
         <!-- HEADER FIXE -->
         <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 16px; margin-bottom: 16px;">
@@ -850,15 +849,15 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
 
                 <!-- VUE DESKTOP : TABLEAU STRICT -->
                 <div class="desktop-import-table" style="flex: 1; overflow-y: auto; min-height: 0; border: 1px solid var(--border-light); border-radius: 8px;">
-                    <table class="pf-table bs-csv-table" style="table-layout: auto; width: 100%; margin: 0; border: none; box-shadow: none;">
+                    <table class="pf-table bs-csv-table">
                         <thead>
                             <tr>
-                                <th style="width: 40px; text-align: center; padding: 12px 8px;"><input type="checkbox" onclick="toggleAll(this)" checked style="width: 16px; height: 16px; cursor: pointer;"></th>
-                                <th style="width: 140px; padding: 12px 8px;"><?= tr('bud_assign_month') ?></th>
-                                <th style="width: 80px; padding: 12px 8px;"><?= tr('bud_op_date') ?></th>
-                                <th style="width: 25%; padding: 12px 8px;"><?= tr('bud_label') ?></th>
-                                <th style="width: 100px; text-align: right; padding: 12px 8px;"><?= tr('bud_amount') ?></th>
-                                <th><?= tr('bud_category_and_link') ?></th>
+                                <th class="c-chk"><input type="checkbox" onclick="toggleAll(this)" checked title="<?= htmlspecialchars(tr('bud_ignore')) ?>"></th>
+                                <th class="c-month"><?= tr('bud_assign_month') ?></th>
+                                <th class="c-date"><?= tr('bud_op_date') ?></th>
+                                <th class="c-label"><?= tr('bud_label') ?></th>
+                                <th class="c-amount"><?= tr('bud_amount') ?></th>
+                                <th class="c-cat"><?= tr('bud_category_and_link') ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -868,8 +867,8 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                                 $bgColClass = $dup ? 'is-duplicate' : (!$hasCat && !$isCrd ? 'bg-danger-soft' : '');
                             ?>
                             <tr class="import-row bs-csv-tr <?= $bgColClass ?>" data-categorized="<?= $hasCat ? '1' : '0' ?>" style="<?= $dup ? 'opacity:0.5;' : '' ?>">
-                                <td style="text-align: center; padding: 12px 8px;">
-                                    <input type="checkbox" class="line-checkbox" style="width: 16px; height: 16px; cursor: pointer;" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
+                                <td class="c-chk">
+                                    <input type="checkbox" class="line-checkbox" name="lines[<?= $idx ?>][import_check]" value="1" <?= $dup?'':'checked' ?> <?= $dis ?> onchange="checkValidation()">
                                     <input type="hidden" name="lines[<?= $idx ?>][date]" value="<?= $row['date'] ?>">
                                     <input type="hidden" name="lines[<?= $idx ?>][label]" value="<?= htmlspecialchars($row['label']) ?>">
                                     <input type="hidden" name="lines[<?= $idx ?>][amount]" value="<?= $row['amount'] ?>">
@@ -877,23 +876,23 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                                     <input type="hidden" class="is-credit-flag" name="lines[<?= $idx ?>][is_credit]" value="<?= $isCrd ?>">
                                 </td>
                                 <td>
-                                    <input type="month" name="lines[<?= $idx ?>][gestion_month]" value="<?= substr($viewMonthDate, 0, 7) ?>" class="pf-input" style="height: 36px; padding: 6px;" <?= $dis ?>>
+                                    <input type="month" name="lines[<?= $idx ?>][gestion_month]" value="<?= substr($viewMonthDate, 0, 7) ?>" class="pf-input" <?= $dis ?>>
                                 </td>
-                                <td class="font-bold text-main">
+                                <td class="font-bold text-main c-date">
                                     <?= date('d/m', strtotime($row['date'])) ?>
                                 </td>
-                                <td>
-                                    <div style="font-size: 0.85rem; line-height: 1.4; color: var(--text-main);" title="<?= htmlspecialchars($row['label']) ?>">
+                                <td class="c-label">
+                                    <div class="csv-label" title="<?= htmlspecialchars($row['label']) ?><?= $dup ? ' — ' . htmlspecialchars(tr('bud_import_duplicate_hint')) : '' ?>">
                                         <?= htmlspecialchars($row['label']) ?>
                                     </div>
                                     <?php if ($dup): ?>
-                                        <div style="font-size: 0.75rem; color: var(--text-muted); font-style: italic; margin-top: 4px;"><?= tr('bud_import_duplicate_hint') ?></div>
+                                        <div class="csv-dup-hint"><?= tr('bud_import_duplicate_hint') ?></div>
                                     <?php endif; ?>
                                 </td>
-                                <td class="font-bold <?= $isCrd ? 'text-success' : 'text-main' ?>" style="text-align: right; white-space: nowrap;">
+                                <td class="font-bold c-amount <?= $isCrd ? 'text-success' : 'text-main' ?>">
                                     <?= $isCrd ? '+' : '-' ?> <?= number_format($row['amount'], 2) ?> €
                                 </td>
-                                <td style="padding: 12px 8px;">
+                                <td class="c-cat">
                                     <div class="category-cell-wrapper">
                                         <div class="category-selects-row">
                                             <select name="lines[<?= $idx ?>][cat]" class="pf-input line-select" onchange="handleLineCatChange(this)" <?= $dis ?>>
@@ -917,10 +916,6 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                        <label class="ignore-checkbox-wrapper">
-                                            <input type="checkbox" onchange="toggleIgnoreRow(this)" <?= $dup?'checked disabled':'' ?>> 
-                                            <?= tr('bud_ignore_this_line') ?>
-                                        </label>
                                     </div>
                                 </td>
                             </tr>
@@ -1143,39 +1138,36 @@ function toggleMobileAccordion(summaryEl, event) {
 
 function toggleIgnoreRow(checkbox) {
     const row = checkbox.closest('.import-row');
-    const mainCheckbox = row.querySelector('.line-checkbox');
-    
-    if (checkbox.checked) {
-        mainCheckbox.checked = false;
-        row.classList.add('ignored');
-        const statusDot = row.querySelector('.prop2-status');
-        if (statusDot) statusDot.style.background = 'var(--text-muted)';
-        if (window.innerWidth > 768) row.style.background = '';
-    } else {
-        mainCheckbox.checked = true;
-        row.classList.remove('ignored');
-        updateRowStatus(row.querySelector('.line-select'));
-    }
+    row.querySelector('.line-checkbox').checked = !checkbox.checked;
     checkValidation();
+}
+
+// État visuel d'une ligne : ignorée (décochée), à définir (rouge) ou prête
+function paintRow(row) {
+    if (!row || row.classList.contains('is-duplicate')) return true;
+    const main = row.querySelector('.line-checkbox');
+    const ignored = !main.checked;
+    const isCrd = row.querySelector('.is-credit-flag').value === '1';
+    const cat = row.querySelector('.line-select').value;
+    const fSel = row.querySelector('.select-frais');
+    let ok = true;
+    if (cat === '') { if (!isCrd) ok = false; }
+    else if (cat.toUpperCase() === 'FIXED' && fSel && fSel.value === '') ok = false;
+
+    row.classList.toggle('ignored', ignored);
+    row.classList.toggle('bg-danger-soft', !ignored && !ok);
+    row.setAttribute('data-categorized', cat !== '' ? '1' : '0');
+    const dot = row.querySelector('.prop2-status');
+    if (dot) dot.style.background = ignored ? 'var(--text-muted)' : (ok ? 'var(--success)' : 'var(--danger)');
+    const mobileIgnore = row.querySelector('.prop2-details input[onchange^="toggleIgnoreRow"]');
+    if (mobileIgnore) mobileIgnore.checked = ignored;
+    return ignored || ok;
 }
 
 function updateRowStatus(select) {
     const row = select.closest('.import-row');
-    if (!row || row.classList.contains('ignored') || row.classList.contains('is-duplicate')) return;
-    
-    const isCredit = row.querySelector('.is-credit-flag').value === '1';
-    const hasCat = select.value !== "";
-    row.setAttribute('data-categorized', hasCat ? '1' : '0');
-    
-    const statusDot = row.querySelector('.prop2-status');
-    if (statusDot) {
-        statusDot.style.background = (hasCat || (isCredit && !hasCat)) ? 'var(--success)' : 'var(--danger)';
-    }
-    
-    if (window.innerWidth > 768) {
-        row.style.background = (hasCat || (isCredit && !hasCat)) ? '' : 'var(--bg-danger-soft)';
-    }
-    
+    if (!row) return;
+    paintRow(row);
     const toggleSwitch = document.getElementById('toggleCategorized');
     if (toggleSwitch) filterCategorizedRows(toggleSwitch.checked);
 }
@@ -1213,10 +1205,6 @@ function handleLineCatChange(select, isInit = false) {
 function toggleAll(src) {
     document.querySelectorAll('.desktop-import-table .line-checkbox:not([disabled])').forEach(c => {
         c.checked = src.checked;
-        const row = c.closest('.import-row');
-        if (!src.checked && row && !row.classList.contains('is-duplicate')) {
-            row.style.background = ''; 
-        }
     }); 
     checkValidation(); 
 }
@@ -1225,24 +1213,10 @@ function checkValidation() {
     let miss = 0;
     const isMobile = window.innerWidth <= 768;
     const activeSelector = isMobile ? '.mobile-import-accordion' : '.desktop-import-table';
-    
-    document.querySelectorAll(`${activeSelector} .line-checkbox:checked`).forEach(cb => { 
-        const row = cb.closest('.import-row'); 
-        if (!row || row.classList.contains('ignored')) return;
 
-        const isCrd = row.querySelector('.is-credit-flag').value === '1'; 
-        const cat = row.querySelector('.line-select').value;
-        const catKey = cat.toUpperCase();
-        const fSel = row.querySelector('.select-frais');
-
-        let v = true; 
-        if (cat === "") { if (!isCrd) v = false; } 
-        else if (catKey === 'FIXED' && fSel.value === "") { v = false; }
-        
-        if (!v) {
-            miss++;
-            if (!isMobile) row.style.background = 'var(--bg-danger-soft)';
-        }
+    document.querySelectorAll(`${activeSelector} .import-row`).forEach(row => {
+        const ok = paintRow(row);
+        if (!ok) miss++;
     });
     
     const btn = document.getElementById('btnImport'); 
