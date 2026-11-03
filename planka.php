@@ -15,7 +15,7 @@ require __DIR__ . '/header.php';
     <h1>📋 Planka</h1>
     <div class="pk-board-selector" id="pk-board-selector"></div>
     <div class="pk-topbar-actions">
-      <button class="pk-btn-icon" onclick="openSettings()" title="Paramètres">⚙️</button>
+      <button class="pf-gear" onclick="openSettings()" title="Paramètres" aria-label="Paramètres"></button>
     </div>
   </div>
 

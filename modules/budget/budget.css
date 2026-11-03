@@ -1355,9 +1355,6 @@ body.sum-mode-active .sum-target {
 
 /* Ajouts Structure Global Budget */
 
-.btn-settings-gear {
-  position: relative;
-}
 .budget-error-msg {
   text-align: center;
   padding: 50px;

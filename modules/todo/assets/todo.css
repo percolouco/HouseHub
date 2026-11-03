@@ -419,63 +419,6 @@ textarea.form-control {
 }
 
 /* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-.btn-primary:hover {
-  background: var(--primary-dark);
-}
-.btn-secondary {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border-color: var(--border-light);
-}
-.btn-secondary:hover {
-  background: var(--bg-page);
-}
-.btn-danger {
-  background: #fff;
-  color: var(--danger);
-  border-color: #fecaca;
-}
-.btn-danger:hover {
-  background: #fef2f2;
-}
-.btn-sm {
-  padding: 0.25rem 0.55rem;
-  font-size: 0.78rem;
-}
-.btn-icon {
-  padding: 0.25rem;
-  min-width: 28px;
-  justify-content: center;
-}
-.btn-ghost {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  padding: 0.2rem 0.4rem;
-}
-.btn-ghost:hover {
-  color: var(--text-main);
-  background: var(--bg-page);
-  border-radius: 6px;
-}
 
 /* Stats bar */
 .todo-stats {
@@ -637,16 +580,6 @@ textarea.form-control {
   background: #1c2128;
   border-color: var(--border-light);
   color: var(--text-main);
-}
-[data-theme="dark"] .btn-secondary {
-  background: var(--bg-panel);
-  border-color: var(--border-light);
-}
-[data-theme="dark"] .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-[data-theme="dark"] .btn-danger {
-  background: var(--bg-panel);
 }
 [data-theme="dark"] .todo-stats {
   background: var(--bg-panel);

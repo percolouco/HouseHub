@@ -74,7 +74,6 @@
 }
 
 /* ─── BOUTONS & ÉTATS ACTIFS ───────────────────────────────────────── */
-[data-theme="dark"] .pf-btn.btn-secondary,
 [data-theme="dark"] .fc-nav-button,
 [data-theme="dark"] .fc-view-button,
 [data-theme="dark"] .hol-map-toggle,
@@ -86,7 +85,6 @@
   border-color: var(--border-light) !important;
 }
 
-[data-theme="dark"] .pf-btn.btn-secondary:hover,
 [data-theme="dark"] .fc-nav-button:hover,
 [data-theme="dark"] .hol-map-toggle:hover,
 [data-theme="dark"] .pf-btn-icon-text:hover {

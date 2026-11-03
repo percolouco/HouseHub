@@ -173,26 +173,6 @@
   flex-wrap: wrap;
   margin-bottom: 0.75rem;
 }
-.btn-tool {
-  padding: 0.35rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-light);
-  background: var(--bg-panel);
-  cursor: pointer;
-  font-size: 0.8rem;
-  color: var(--text-main);
-  transition: background 0.15s;
-}
-.btn-tool:hover {
-  background: var(--bg-subtle);
-}
-.btn-tool-danger {
-  color: var(--danger, #e63946);
-  border-color: var(--danger, #e63946);
-}
-.btn-tool-danger:hover {
-  background: rgba(230, 57, 70, 0.08);
-}
 
 /* ── Items ─────────────────────────────────────────────────────────────────── */
 
@@ -409,15 +389,6 @@
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
 }
 
-.btn-tool-primary {
-  background: var(--primary, #4361ee);
-  color: #fff;
-  border-color: var(--primary, #4361ee);
-}
-.btn-tool-primary:hover {
-  filter: brightness(1.1);
-  background: var(--primary, #4361ee);
-}
 
 /* ── Color picker ──────────────────────────────────────────────────────────── */
 
@@ -606,14 +577,6 @@
   background: #313155;
   border-color: #4361ee;
   color: #89b4fa;
-}
-[data-theme="dark"] .btn-tool {
-  background: #1e1e2e;
-  border-color: #3a3a4e;
-  color: #cdd6f4;
-}
-[data-theme="dark"] .btn-tool:hover {
-  background: #2a2a3e;
 }
 [data-theme="dark"] .liste-new-form input {
   background: #1e1e2e;

@@ -6,27 +6,7 @@
   --fg: #0f172a;
 }
 
-/* ─── SOUS-NAVIGATION ──────────────────────────────────────────────────────── */
-.garage-subnav {
-  display: flex;
-  gap: 4px;
-  padding: 10px 20px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border-light);
-}
-.garage-subnav .nav-link {
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 7px 16px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: all .15s;
-}
-.garage-subnav .nav-link:hover { background: #f1f5f9; color: var(--text-main); }
-.garage-subnav .nav-link.active { background: #eff6ff; color: var(--primary); border-color: #bfdbfe; }
+/* Sous-navigation : composant commun .pf-hero / .pf-pills (global.css) */
 
 /* ─── CONTAINER & PAGES ────────────────────────────────────────────────────── */
 .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
@@ -165,21 +145,6 @@
 .badge-purple { background: #ede9fe; color: #6d28d9; }
 
 /* ─── BUTTONS ────────────────────────────────────────────────────────────────── */
-.btn {
-  display: inline-flex; align-items: center; gap: .4rem;
-  padding: .5rem 1rem; border-radius: 8px;
-  font-size: .875rem; font-weight: 500; cursor: pointer;
-  border: 1px solid transparent; transition: all .15s;
-  white-space: nowrap; text-decoration: none; line-height: 1.4;
-}
-.btn-primary  { background: var(--primary); color: #fff; border-color: var(--primary); }
-.btn-primary:hover  { background: var(--primary-dark); border-color: var(--primary-dark); }
-.btn-secondary { background: var(--bg-panel); color: var(--text-main); border-color: var(--border-light); }
-.btn-secondary:hover { background: #f1f5f9; }
-.btn-danger   { background: #fff; color: var(--danger); border-color: #fecaca; }
-.btn-danger:hover   { background: #fef2f2; }
-.btn-sm   { padding: .3rem .65rem; font-size: .8rem; }
-.btn-icon { padding: .3rem; min-width: 30px; justify-content: center; }
 
 /* ─── FORMS ──────────────────────────────────────────────────────────────────── */
 .form-group { display: flex; flex-direction: column; gap: .35rem; }
@@ -415,8 +380,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .vehicles-grid { grid-template-columns: 1fr; }
   .meta-grid { gap: 0.75rem; }
-  .garage-subnav { padding: 8px 12px; overflow-x: auto; flex-wrap: nowrap; }
-  .garage-subnav .nav-link { white-space: nowrap; }
   .garage-dash-layout { grid-template-columns: 1fr; }
   .garage-dash-aside { order: -1; }
   .garage-doc-upload-bar { flex-direction: column; align-items: stretch; }
@@ -446,10 +409,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 /* ══ DARK MODE — Garage module ══════════════════════════════════ */
 [data-theme="dark"] { --muted: #8b949e; --fg: #e6edf3; }
-[data-theme="dark"] .garage-subnav                { background: var(--bg-panel); border-color: var(--border-light); }
-[data-theme="dark"] .garage-subnav .nav-link      { color: var(--text-muted); }
-[data-theme="dark"] .garage-subnav .nav-link:hover { background: rgba(255,255,255,.06); color: var(--text-main); }
-[data-theme="dark"] .garage-subnav .nav-link.active { background: rgba(59,130,246,.15); color: var(--primary); border-color: rgba(59,130,246,.3); }
 [data-theme="dark"] .card,
 [data-theme="dark"] .vehicle-detail-header        { background: var(--bg-panel); border-color: var(--border-light); }
 [data-theme="dark"] .stat-pill                    { background: var(--bg-panel); border-color: var(--border-light); }
@@ -475,10 +434,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 [data-theme="dark"] .form-control                 { background: #1c2128; border-color: var(--border-light); color: var(--text-main); }
 [data-theme="dark"] .form-control::placeholder    { color: #484f58; }
 [data-theme="dark"] select.form-control option    { background: #1c2128; }
-[data-theme="dark"] .btn-secondary                { background: #1c2128; border-color: var(--border-light); color: var(--text-main); }
-[data-theme="dark"] .btn-secondary:hover          { background: rgba(255,255,255,.06); }
-[data-theme="dark"] .btn-danger                   { background: #1c2128; border-color: rgba(239,68,68,.4); }
-[data-theme="dark"] .btn-danger:hover             { background: rgba(239,68,68,.08); }
 [data-theme="dark"] .badge-gray                   { background: rgba(139,148,158,.15); color: var(--text-muted); }
 [data-theme="dark"] .toast                        { background: var(--bg-panel); border-color: var(--border-light); color: var(--text-main); }
 [data-theme="dark"] .part-thumb                   { border-color: var(--border-light); }
@@ -489,7 +444,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 [data-theme="dark"] #inline-part-form             { background: #1c2128 !important; border-color: var(--border-light) !important; }
 [data-theme="dark"] .garage-docs-recap             { background: rgba(255,255,255,.04); border-color: var(--border-light); color: var(--text-muted); }
 [data-theme="dark"] .garage-docs-recap strong      { color: var(--text-main); }
-[data-theme="dark"] .btn-link-sm                   { color: var(--primary); }
 [data-theme="dark"] .garage-doc-list               { border-color: var(--border-light); }
 [data-theme="dark"] .garage-doc-item               { background: #1c2128; border-color: rgba(48,54,61,.5); }
 [data-theme="dark"] .garage-doc-link               { color: #93c5fd; }

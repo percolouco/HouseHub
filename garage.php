@@ -11,14 +11,19 @@ require __DIR__ . '/header.php';
 <link rel="stylesheet" href="<?= $hhAsset('/modules/garage/assets/garage.css') ?>">
 <div id="toasts" class="toast-container"></div>
 
-<!-- Sous-navigation -->
-<nav class="garage-subnav">
-  <button class="nav-link active" data-page="dashboard">📊 Dashboard</button>
-  <button class="nav-link" data-page="vehicles">🚗 Véhicules</button>
-  <button class="nav-link" data-page="maintenances-all">🔧 Entretiens</button>
-  <button class="nav-link" data-page="parts">🔩 Pièces</button>
-  <button class="nav-link" data-page="compare">⚖️ Comparateur</button>
-</nav>
+<!-- En-tête + sous-navigation (composant commun, comme Budget et Repas) -->
+<div class="pf-container">
+<div class="pf-hero">
+  <div class="pf-hero-title"><h1>🚗 Garage</h1></div>
+  <nav class="pf-pills">
+    <button class="pf-pill nav-link active" data-page="dashboard">📊 Dashboard</button>
+    <button class="pf-pill nav-link" data-page="vehicles">🚗 Véhicules</button>
+    <button class="pf-pill nav-link" data-page="maintenances-all">🔧 Entretiens</button>
+    <button class="pf-pill nav-link" data-page="parts">🔩 Pièces</button>
+    <button class="pf-pill nav-link" data-page="compare">⚖️ Comparateur</button>
+  </nav>
+</div>
+</div>
 
 <!-- ── DASHBOARD ─────────────────────────────────────────────────────────── -->
 <div id="page-dashboard" class="page active">

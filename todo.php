@@ -35,7 +35,7 @@ require __DIR__ . '/header.php';
         <button class="show-done-btn" id="show-done-btn" onclick="toggleShowDone()">
           👁 Afficher terminées
         </button>
-        <button class="btn btn-ghost btn-icon" onclick="openSettings()" title="Paramètres Todo">⚙️</button>
+        <button class="pf-gear" onclick="openSettings()" title="Paramètres Todo" aria-label="Paramètres Todo"></button>
         <button class="btn btn-primary btn-sm" onclick="openAddTodo()">+ Tâche</button>
       </div>
     </div>

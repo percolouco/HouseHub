@@ -72,7 +72,7 @@ require __DIR__ . '/header.php';
                 <div style='font-size: 4rem; margin-bottom: 20px; opacity: 0.5;'>👀</div>
                 <h3 style='color: var(--text-main); margin-bottom: 10px; font-size: 1.3rem;'>" . tr('food_err_no_views') . "</h3>
                 <p style='color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem; line-height: 1.5;'>" . tr('food_err_no_views_desc') . "</p>
-                <a href='/settings.php' class='pf-btn'>⚙️ " . tr('settings') . "</a>
+                <a href='/settings.php' class='pf-btn'><span class='pf-ico-gear'></span> " . tr('settings') . "</a>
             </div>";
         } else {
             $viewPath = __DIR__ . "/modules/food/views/{$tab}.php";

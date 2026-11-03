@@ -818,35 +818,616 @@ p {
   gap: 4px;
 }
 
-/* Boutons Standards */
-.pf-btn {
+/* ==========================================================================
+   BOUTONS — une apparence par fonction (à utiliser partout)
+   --------------------------------------------------------------------------
+   Principal    .pf-btn (ou .btn-primary)  : valider, enregistrer, ajouter
+   Secondaire   .btn-secondary             : annuler, fermer, retour, action neutre
+   Destructif   .btn-danger                : supprimer (rouge doux)
+   Discret      .btn-ghost                 : action tertiaire, sans cadre
+   Icône        .btn-icon-action [.edit|.delete] / .btn-icon : modifier, supprimer, actions de ligne
+   Paramètres   .pf-gear                   : roue crantée (ouvre les paramètres du module)
+   Taille       .btn-sm (32 px) ; défaut 40 px ; icônes 36 px
+   Forme unique : rectangle arrondi de 10 px (rond réservé au bouton flottant +)
+   Les anciens noms (.btn, .pk-btn-*, .btn-tool-*, .pf-btn-secondary…) sont des alias.
+   ========================================================================== */
+.pf-btn,
+.btn,
+.pk-btn,
+.btn-tool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--primary);
-  color: var(--text-on-primary);
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.9rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-  padding: 12px 24px;
+  line-height: 1.2;
   text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
-.pf-btn:hover {
+.btn:hover,
+.pk-btn:hover,
+.btn-tool:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+/* Principal */
+.pf-btn,
+.btn-primary,
+.pf-btn-primary,
+.pk-btn-primary,
+.btn-tool-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--text-on-primary);
+}
+.pf-btn:hover,
+.btn-primary:hover,
+.pf-btn-primary:hover,
+.pk-btn-primary:hover,
+.btn-tool-primary:hover {
   background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: var(--text-on-primary);
 }
+/* Secondaire */
+.btn-secondary,
+.pf-btn-secondary,
+.pk-btn-secondary,
 .pf-btn.btn-secondary {
   background: var(--bg-panel);
-  color: var(--text-muted);
-  border: 1px solid var(--border-light);
+  border-color: var(--border-light);
+  color: var(--text-main);
 }
+.btn-secondary:hover,
+.pf-btn-secondary:hover,
+.pk-btn-secondary:hover,
 .pf-btn.btn-secondary:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+/* Destructif */
+.btn-danger,
+.pf-btn-danger,
+.pk-btn-danger,
+.btn-tool-danger {
+  background: var(--bg-danger-soft);
+  border-color: var(--border-danger-soft);
+  color: var(--danger);
+}
+.btn-danger:hover,
+.pf-btn-danger:hover,
+.pk-btn-danger:hover,
+.btn-tool-danger:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--text-on-primary);
+}
+/* Discret */
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+.btn-ghost:hover {
+  background: var(--bg-subtle);
+  border-color: transparent;
+  color: var(--text-main);
+}
+/* Tailles */
+.btn-sm,
+.pf-btn-sm,
+.pf-btn-small,
+.pk-btn-sm {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.82rem;
+  border-radius: 8px;
+}
+.pf-btn:disabled,
+.btn:disabled,
+.pk-btn:disabled,
+.btn-tool:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pf-btn:focus-visible,
+.btn:focus-visible,
+.pk-btn:focus-visible,
+.btn-tool:focus-visible,
+.pf-gear:focus-visible,
+.btn-icon-action:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Icône : actions de ligne (modifier / supprimer), compacte */
+.btn-icon-action,
+.btn-icon,
+.btn-icon-small,
+.pk-btn-icon,
+.pf-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-icon-action:hover,
+.btn-icon:hover,
+.btn-icon-small:hover,
+.pk-btn-icon:hover,
+.pf-gear:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-color: transparent;
+}
+.btn-icon-small { width: 32px; height: 32px; min-width: 32px; }
+.btn-icon-action.edit { color: var(--primary); }
+.btn-icon-action.edit:hover { background: var(--bg-soft); color: var(--primary); }
+.btn-icon-action.delete { color: var(--danger); }
+.btn-icon-action.delete:hover { background: var(--bg-danger-soft); color: var(--danger); }
+
+/* Roue crantée : même bouton partout ; l'icône est dessinée en CSS (pas d'emoji, rendu identique sur tous les appareils) */
+.pf-gear {
+  position: relative;
+}
+.pf-gear::before,
+.pf-ico-gear::before {
+  content: "";
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 0.3s ease;
+}
+.pf-gear:hover::before { transform: rotate(90deg); }
+.pf-ico-gear { display: inline-flex; vertical-align: -0.2em; }
+.pf-ico-gear::before { width: 1.15em; height: 1.15em; }
+
+/* Bouton flottant d'ajout : seul bouton rond */
+.pf-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 90;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--text-on-primary);
+  font-size: 1.8rem;
+  line-height: 1;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+
+/* Formulaires & Inputs Standards */
+.pf-form-group {
+  margin-bottom: 20px;
+}
+.pf-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.pf-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 1rem;
   background: var(--bg-page);
   color: var(--text-main);
-  border-color: var(--border-strong);
+  transition: all 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.pf-input:focus {
+  background: var(--bg-panel);
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Tableaux Standards */
+.pf-table {
+  width: 100%;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.pf-table th {
+  background: var(--bg-page);
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+.pf-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--bg-page);
+  vertical-align: middle;
+  font-size: 0.95rem;
+}
+.pf-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.pf-table tbody tr:hover {
+  background-color: var(--bg-page);
+}
+
+/* ==========================================================================
+   🪟 MODALE COMMUNE + ONGLETS (composants réutilisables partout)
+   --------------------------------------------------------------------------
+   <div class="pf-modal" id="…">                      fond ; affiché avec .open / .is-active / .show
+     <div class="pf-modal-content [pf-modal-sm|md|lg|xl|full] [pf-modal-flush]">
+       <div class="pf-modal-header"><h3 class="pf-modal-title">…</h3><button class="pf-modal-close">×</button></div>
+       [<div class="pf-modal-layout"><nav class="pf-tabs pf-tabs--side">…</nav><div class="pf-modal-body">…</div></div>]
+       <div class="modal-footer">boutons</div>        collé en bas, toujours atteignable
+   Avec .pf-modal-flush : en-tête / corps / pied ont leur propre marge et seul le corps défile.
+   Sans : le contenu entier défile et le pied reste collé en bas.
+   Mobile (≤ 768 px) : feuille qui monte du bas ; plein écran pour .pf-modal-xl, .pf-modal-full et les modales à onglets.
+   ========================================================================== */
+.pf-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overscroll-behavior: contain;
+}
+.pf-modal.is-active,
+.pf-modal.active,
+.pf-modal.open,
+.pf-modal.show {
+  display: flex;
+}
+
+.pf-modal-content {
+  --pf-modal-pad: 24px;
+  position: relative;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  width: 100%;
+  max-width: var(--pf-modal-w, 520px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  padding: var(--pf-modal-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: pfModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+}
+.pf-modal-sm { --pf-modal-w: 400px; }
+.pf-modal-md { --pf-modal-w: 560px; }
+.pf-modal-lg { --pf-modal-w: 860px; }
+.pf-modal-xl { --pf-modal-w: 1100px; }
+.pf-modal-full { --pf-modal-w: none; width: 100%; height: calc(100dvh - 32px); }
+.pf-modal-tabbed { height: min(80dvh, 720px); }
+.pf-modal-flush { padding: 0; gap: 0; overflow: hidden; --pf-modal-pad: 0px; }
+
+.pf-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+.pf-modal-flush > .pf-modal-header { padding: 14px 20px; margin: 0; }
+.pf-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+.pf-modal-content > .pf-modal-title {
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+}
+.pf-modal-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pf-modal-close:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+.pf-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pf-modal-flush > .pf-modal-body,
+.pf-modal-layout > .pf-modal-body { padding: 16px 20px; }
+
+/* Pied : toujours visible (collé au bas de la modale) */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px calc(var(--pf-modal-pad, 24px) * -1) calc(var(--pf-modal-pad, 24px) * -1);
+  padding: 14px var(--pf-modal-pad, 24px);
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-panel);
+  position: sticky;
+  bottom: calc(var(--pf-modal-pad, 24px) * -1);
+  z-index: 2;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.pf-modal-flush > .modal-footer { margin: 0; padding: 14px 20px; position: static; }
+.modal-footer .pf-btn {
+  width: auto;
+  min-width: 100px;
+  padding: 10px 20px;
+}
+
+/* Pied placé dans le corps (formulaire) : pas de débord négatif */
+.pf-modal-body .modal-footer { margin: 16px 0 0; padding: 14px 0 0; bottom: 0; }
+.pf-modal-content:not(.pf-modal-flush) > .pf-modal-body { overflow: visible; flex: 0 0 auto; }
+
+/* Onglets : bandeau horizontal par défaut ; .pf-tabs--side = colonne à gauche dans une modale (desktop) */
+.pf-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pf-tabs::-webkit-scrollbar { display: none; }
+.pf-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.pf-tab:hover { color: var(--text-main); background: var(--bg-subtle); }
+.pf-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.pf-modal-layout {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.pf-tabs--side {
+  flex-direction: column;
+  flex: 0 0 200px;
+  width: 200px;
+  padding: 12px;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-page);
+  border-right: 1px solid var(--border-light);
+}
+.pf-tabs--side .pf-tab {
+  width: 100%;
+  border-bottom: none;
+  border-radius: 8px;
+  text-align: left;
+}
+.pf-tabs--side .pf-tab.active { background: var(--bg-soft); color: var(--primary); }
+
+@media (max-width: 768px) {
+  .pf-modal { padding: 0; align-items: flex-end; }
+  .pf-modal-content {
+    --pf-modal-pad: 18px;
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    margin: 0;
+    animation: pfSheetUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .pf-modal-content::before {
+    content: "";
+    display: block;
+    flex-shrink: 0;
+    width: 40px;
+    height: 5px;
+    background: var(--border-strong);
+    border-radius: 10px;
+    margin: -8px auto 8px;
+  }
+  .pf-modal-flush::before { margin: 8px auto 0; }
+  .pf-modal-xl,
+  .pf-modal-full,
+  .pf-modal-tabbed { height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .modal-footer { flex-direction: column-reverse; gap: 8px; }
+  .modal-footer .pf-btn { width: 100%; }
+  .pf-modal-layout { flex-direction: column; }
+  .pf-tabs--side {
+    flex: 0 0 auto;
+    width: auto;
+    flex-direction: row;
+    padding: 6px 8px 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .pf-tabs--side .pf-tab {
+    width: auto;
+    border-radius: 0;
+    border-bottom: 3px solid transparent;
+    padding: 10px 12px;
+  }
+  .pf-tabs--side .pf-tab.active { background: transparent; border-bottom-color: var(--primary); }
+}
+
+@keyframes pfSheetUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes pfModalPop {
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* === FOOTER & TOASTS === */
+.pf-footer {
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-panel);
+  padding: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+.pf-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 24px;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid var(--primary);
+  z-index: 10000;
+  transform: translateX(120%);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-weight: 600;
+  color: var(--text-main);
+}
+.pf-toast.is-visible {
+  transform: translateX(0);
+}
+
+/* === RESPONSIVE MOBILE === */
+@media (max-width: 768px) {
+  .pf-header {
+    padding: 0 16px;
+  }
+  .pf-nav,
+  .pf-header-actions {
+    display: none;
+  }
+  .pf-burger-btn {
+    display: block;
+  }
+  .pf-main {
+    padding: 16px 10px;
+  }
+  .pf-mobile-nav-link {
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-main);
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+}
+
+
+/* Roue crantée : même bouton partout ; l'icône est dessinée en CSS (pas d'emoji, rendu identique sur tous les appareils) */
+.pf-gear::before {
+  content: "";
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 0.3s ease;
+}
+.pf-gear:hover::before { transform: rotate(90deg); }
+
+/* Bouton flottant d'ajout : seul bouton rond */
+.pf-fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 90;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--text-on-primary);
+  font-size: 1.8rem;
+  line-height: 1;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
 }
 
 /* Formulaires & Inputs Standards */
@@ -1446,16 +2027,6 @@ p {
 [data-theme="dark"] p {
   color: var(--text-muted);
 }
-[data-theme="dark"] .pf-btn.btn-secondary {
-  background: var(--bg-panel);
-  color: var(--text-muted);
-  border-color: var(--border-light);
-}
-[data-theme="dark"] .pf-btn.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-main);
-  border-color: #484f58;
-}
 [data-theme="dark"] .pf-input {
   background: #1c2128;
   border-color: var(--border-light);
@@ -1499,12 +2070,6 @@ p {
 [data-theme="dark"] .pf-login-error {
   background: rgba(239, 68, 68, 0.1);
   border-color: rgba(239, 68, 68, 0.3);
-}
-[data-theme="dark"] .btn-icon-action.edit:hover {
-  background: rgba(59, 130, 246, 0.15);
-}
-[data-theme="dark"] .btn-icon-action.delete:hover {
-  background: rgba(239, 68, 68, 0.1);
 }
 
 /* ─── Pill toggle thème ────────────────────────────────────── */
@@ -1619,29 +2184,6 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   display: flex;
   flex-direction: column;
   gap: 15px;
-}
-
-/* Bouton Paramètres avec icône rotative (Roue crantée) */
-.btn-settings-gear {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  outline: none;
-  font-size: 1.4rem;
-  padding: 4px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s ease;
-  line-height: 1;
-  color: inherit;
-}
-
-.btn-settings-gear:hover {
-  transform: rotate(
-    90deg
-  ); /* 90deg rend mieux sur une roue crantée qu'un 45deg ! */
 }
 
 /* ==========================================================================
@@ -2051,8 +2593,11 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   padding: 8px 16px;
 }
 
-/* === COMPOSANT : NAVIGATION TABS (Pills) === */
-.budget-tabs-container {
+/* === COMPOSANT : EN-TÊTE DE MODULE + ONGLETS PILULES (Budget, Repas, Garage, Cadeaux…) ===
+   <div class="pf-hero"><div class="pf-hero-title"><h1>…</h1> [<button class="pf-gear">]</div>
+   <nav class="pf-pills"><a class="pf-pill active">…</a></nav></div>   (anciens noms .budget-hero, .budget-tabs-container, .tab-item conservés) */
+.budget-tabs-container,
+.pf-pills {
   display: inline-flex;
   background: var(--bg-panel);
   padding: 6px;
@@ -2062,7 +2607,8 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   position: relative;
   z-index: 10;
 }
-.tab-item {
+.tab-item,
+.pf-pill {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2075,15 +2621,27 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
 }
-.tab-item:hover {
+.tab-item:hover,
+.pf-pill:hover {
   background-color: var(--bg-page);
   color: var(--text-main);
 }
-.tab-item.active {
+.tab-item.active,
+.pf-pill.active,
+.pf-pill.is-active {
   background: var(--primary);
   color: white;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   transform: scale(1.02);
+}
+button.pf-pill {
+  font-family: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+button.pf-pill.active,
+button.pf-pill.is-active {
+  background: var(--primary);
 }
 .tab-icon {
   font-size: 1.1em;
@@ -2091,7 +2649,8 @@ details[open].pf-accordion > .pf-accordion-summary::after {
 }
 
 @media (max-width: 768px) {
-  .budget-tabs-container {
+  .budget-tabs-container,
+  .pf-pills {
     display: flex !important;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
@@ -2101,22 +2660,26 @@ details[open].pf-accordion > .pf-accordion-summary::after {
     padding-bottom: 5px;
     scrollbar-width: none;
   }
-  .budget-tabs-container::-webkit-scrollbar {
+  .budget-tabs-container::-webkit-scrollbar,
+  .pf-pills::-webkit-scrollbar {
     display: none;
   }
-  .tab-item {
+  .tab-item,
+  .pf-pill {
     flex: 0 0 auto !important;
     padding: 8px 16px !important;
   }
 }
 
 /* === COMPOSANT : EN-TÊTE DE MODULE CENTRÉ === */
-.budget-hero {
+.budget-hero,
+.pf-hero {
   text-align: center;
   margin-bottom: 30px;
 }
 
-.budget-title-group {
+.budget-title-group,
+.pf-hero-title {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2124,6 +2687,7 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   margin-bottom: 20px;
 }
 
-.budget-title-group h1 {
+.budget-title-group h1,
+.pf-hero-title h1 {
   margin: 0;
 }

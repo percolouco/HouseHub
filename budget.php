@@ -52,8 +52,7 @@ require __DIR__ . '/header.php';
     <div class="pf-hero budget-hero">
         <div class="budget-title-group">
             <h1><?= tr('budget_main_header') ?></h1>
-            <button class="btn-header-settings" onclick="openBudgetSettings()" title="<?= tr('settings') ?>">
-                <span class="gear-icon-anim">⚙️</span>
+            <button class="pf-gear" onclick="openBudgetSettings()" title="<?= tr('settings') ?>" aria-label="<?= tr('settings') ?>">
                 <?php if (!$isBudgetSetupOk || !$hasBudgetItems): ?>
                     <span class="alert-dot">!</span>
                 <?php endif; ?>
