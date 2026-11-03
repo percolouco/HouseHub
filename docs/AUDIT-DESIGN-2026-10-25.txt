@@ -168,3 +168,20 @@ CE QUI VA BIEN
 - Pas de débordement horizontal sur les pages publiques à 390 px.
 - Budget : colonnes collantes, version mobile en cartes pour l'import CSV (corrigée aujourd'hui).
 - Service worker corrigé aujourd'hui : les mises à jour de CSS et JS arrivent désormais sur les téléphones.
+
+=====================================================================
+SUIVI — 03/11/2026
+=====================================================================
+FAIT
+- T-30 (vérification des pages privées) : compte test « claude-test-hhmh » (famille 3, données fictives : véhicules, entretiens, opérations budget, cadeaux, tâches, recettes, calendrier, voyage…). Tous les modules activés. 22 pages / onglets parcourus en 390 px et 1280 px, clair et sombre, avec contrôle automatique (débordement horizontal, zones claires en mode sombre, boutons < 32 px) et ouverture de chaque modale.
+- T-01 : modales utilisables sur téléphone (voir T-03).
+- T-03 : modale commune dans global.css (.pf-modal, .pf-modal-content + tailles sm / md / lg / xl / full, .pf-modal-flush, .pf-modal-header / -title / -close / -body, .modal-footer collant, onglets .pf-tabs / .pf-tab / .pf-tabs--side, .pf-modal-layout, .pf-modal-tabbed). Mobile : feuille qui monte du bas, plein écran pour les modales à onglets ; onglets à gauche en desktop, en haut en mobile. Échap et clic sur le fond ferment la modale (footer.php ; data-keep-open pour l'empêcher). Modules migrés : garage (5), todo (3), planka (2), printvault (2), repas / courses (liste, copie, recettes, import), cadeaux (fiche + paramètres), calendrier (3), vacances (7), budget (suivi, prévisionnel, épargne, provisions, paramètres, import CSV), confirmation pachaConfirm.
+- T-04 : variables utilisées mais non définies remplacées par les variables existantes ; variables définies mais jamais utilisées supprimées ; --alert-warning-* ajoutées (clair et sombre).
+- Bugs trouvés pendant T-30 et corrigés : (1) budget, onglet Suivi : plantage « Unknown column sort_order » pour toute nouvelle famille (schéma_family.sql incomplet) ; (2) calendrier familial : plantage « Unknown column care_modes » (colonne cares_modes mal nommée dans le schéma) — les deux sont corrigés dans le schéma et rattrapés automatiquement pour les familles existantes.
+
+CONSTATS T-30 (à traiter, surtout avec T-02)
+- Mode sombre, zones restées claires : budget Suivi (.suivi-nav-group), Prévisionnel / Épargne (#sumResultBar, .td-family-savings), Récap (tableau complet : .table-responsive, thead, tr.row-income, tfoot), calendrier familial (colonnes mois / semaine collantes, jours de vacances scolaires, légende, sélecteur de mois), PrintVault (menu actif .pv-nav-item.active). Les autres pages n'ont pas de grande zone claire détectée.
+- En-tête desktop (1280 px) avec les 12 modules activés : le menu passe sur deux lignes et le bloc utilisateur est écrasé.
+- Zones de clic < 32 px sur mobile : budget (boutons « + » des postes, champs du prévisionnel), liste de courses (cases, badges, ✏️ 🗑️), vacances (boutons d'action), todo (boutons ghost), calendrier (sélecteur de vue), calendrier iOS (segments), paramètres (cases des modules, pastilles couleur), logo / bascule thème / burger de l'en-tête.
+- Bouton « Ajouter » des paramètres budget (comptes) non stylé (bouton natif).
+- Aucun défilement horizontal de page sur aucune des pages testées.

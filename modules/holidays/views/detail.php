@@ -447,8 +447,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
 <div id="planningModal" data-keep-open class="pf-modal">
     <div class="pf-modal-content hol-modal-planning">
-        <div class="hol-modal-header">
-            <h3 id="planningModalTitle" class="hol-modal-title">📅 Planning Global</h3>
+        <div class="pf-modal-header">
+            <h3 id="planningModalTitle" class="pf-modal-title">📅 Planning Global</h3>
             <button type="button" onclick="closePlanningModal()" class="pf-modal-close">&times;</button>
         </div>
         
@@ -463,8 +463,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
 <div id="transitModal" class="pf-modal">
     <div class="pf-modal-content hol-modal-sm">
-        <div class="hol-modal-header">
-            <h3 class="hol-modal-title">🛣️ Détail des trajets</h3>
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">🛣️ Détail des trajets</h3>
             <button type="button" onclick="closeTransitModal()" class="pf-modal-close">&times;</button>
         </div>
         <div id="transitDetailsContainer" class="hol-transit-container">
@@ -478,8 +478,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
 <div id="gpsModal" class="pf-modal">
     <div class="pf-modal-content hol-modal-gps">
-        <div class="hol-modal-header">
-            <h3 class="hol-modal-title">🧭 Y aller avec...</h3>
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">🧭 Y aller avec...</h3>
             <button type="button" onclick="closeGpsModal()" class="pf-modal-close">×</button>
         </div>
         
@@ -504,8 +504,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
 <div id="docsModal" class="pf-modal">
     <div class="pf-modal-content hol-modal-docs">
-        <div class="hol-modal-header">
-            <h3 class="hol-modal-title">📎 Porte-documents</h3>
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title">📎 Porte-documents</h3>
             <button type="button" onclick="closeDocsModal()" class="pf-modal-close">×</button>
         </div>
         
