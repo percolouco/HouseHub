@@ -834,7 +834,21 @@ p {
 .pf-btn,
 .btn,
 .pk-btn,
-.btn-tool {
+.btn-tool,
+.bud-kpi-edit-btn,
+.btn-nav,
+.pf-btn-icon-text,
+.ctx-btn,
+.groceries-toolbar-btn,
+.an-btn-ghost,
+.fc-today-button,
+.btn-small,
+.show-done-btn,
+.suivi-btn-nav,
+.bud-btn-lock,
+.groceries-add-submit,
+.hol-map-toggle,
+.hol-add-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -856,7 +870,16 @@ p {
 }
 .btn:hover,
 .pk-btn:hover,
-.btn-tool:hover {
+.btn-tool:hover,
+.bud-kpi-edit-btn:hover,
+.btn-nav:hover,
+.pf-btn-icon-text:hover,
+.ctx-btn:hover,
+.groceries-toolbar-btn:hover,
+.an-btn-ghost:hover,
+.fc-today-button:hover,
+.btn-small:hover,
+.hol-map-toggle:hover {
   background: var(--bg-subtle);
   border-color: var(--border-strong);
 }
@@ -865,7 +888,11 @@ p {
 .btn-primary,
 .pf-btn-primary,
 .pk-btn-primary,
-.btn-tool-primary {
+.btn-tool-primary,
+.bud-btn-lock,
+.ctx-btn.primary,
+.groceries-add-submit,
+.hol-add-btn {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--text-on-primary);
@@ -874,7 +901,11 @@ p {
 .btn-primary:hover,
 .pf-btn-primary:hover,
 .pk-btn-primary:hover,
-.btn-tool-primary:hover {
+.btn-tool-primary:hover,
+.bud-btn-lock:hover,
+.ctx-btn.primary:hover,
+.groceries-add-submit:hover,
+.hol-add-btn:hover {
   background: var(--primary-dark);
   border-color: var(--primary-dark);
   color: var(--text-on-primary);
@@ -883,7 +914,9 @@ p {
 .btn-secondary,
 .pf-btn-secondary,
 .pk-btn-secondary,
-.pf-btn.btn-secondary {
+.pf-btn.btn-secondary,
+.an-btn-ghost,
+.hol-map-toggle {
   background: var(--bg-panel);
   border-color: var(--border-light);
   color: var(--text-main);
@@ -891,7 +924,9 @@ p {
 .btn-secondary:hover,
 .pf-btn-secondary:hover,
 .pk-btn-secondary:hover,
-.pf-btn.btn-secondary:hover {
+.pf-btn.btn-secondary:hover,
+.an-btn-ghost:hover,
+.hol-map-toggle:hover {
   background: var(--bg-subtle);
   border-color: var(--border-strong);
   color: var(--text-main);
@@ -900,7 +935,8 @@ p {
 .btn-danger,
 .pf-btn-danger,
 .pk-btn-danger,
-.btn-tool-danger {
+.btn-tool-danger,
+.groceries-toolbar-btn--danger {
   background: var(--bg-danger-soft);
   border-color: var(--border-danger-soft);
   color: var(--danger);
@@ -908,18 +944,23 @@ p {
 .btn-danger:hover,
 .pf-btn-danger:hover,
 .pk-btn-danger:hover,
-.btn-tool-danger:hover {
+.btn-tool-danger:hover,
+.groceries-toolbar-btn--danger:hover {
   background: var(--danger);
   border-color: var(--danger);
   color: var(--text-on-primary);
 }
 /* Discret */
-.btn-ghost {
+.btn-ghost,
+.show-done-btn,
+.suivi-btn-nav {
   background: transparent;
   border-color: transparent;
   color: var(--text-muted);
 }
-.btn-ghost:hover {
+.btn-ghost:hover,
+.show-done-btn:hover,
+.suivi-btn-nav:hover {
   background: var(--bg-subtle);
   border-color: transparent;
   color: var(--text-main);
@@ -928,7 +969,13 @@ p {
 .btn-sm,
 .pf-btn-sm,
 .pf-btn-small,
-.pk-btn-sm {
+.pk-btn-sm,
+.btn-small,
+.bud-kpi-edit-btn,
+.btn-nav,
+.fc-today-button,
+.show-done-btn,
+.suivi-btn-nav {
   min-height: 32px;
   padding: 0 14px;
   font-size: 0.82rem;
@@ -955,7 +1002,12 @@ p {
 .btn-icon,
 .btn-icon-small,
 .pk-btn-icon,
-.pf-gear {
+.pf-gear,
+.btn-edit-item,
+.btn-delete-item,
+.hol-btn-action-icon,
+.pf-sum-close,
+.bud-pending-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -979,12 +1031,70 @@ p {
 .btn-icon:hover,
 .btn-icon-small:hover,
 .pk-btn-icon:hover,
-.pf-gear:hover {
+.pf-gear:hover,
+.btn-edit-item:hover,
+.btn-delete-item:hover,
+.hol-btn-action-icon:hover,
+.pf-sum-close:hover,
+.bud-pending-toggle:hover {
   background: var(--bg-subtle);
   color: var(--text-main);
   border-color: transparent;
 }
-.btn-icon-small { width: 32px; height: 32px; min-width: 32px; }
+.btn-icon-small,
+.btn-edit-item,
+.btn-delete-item,
+.hol-btn-action-icon,
+.pf-sum-close,
+.bud-pending-toggle { width: 32px; height: 32px; min-width: 32px; }
+.btn-delete-item,
+.pf-sum-close:hover { color: var(--danger); }
+.btn-delete-item:hover { background: var(--bg-danger-soft); }
+.btn-edit-item { color: var(--primary); }
+/* Icône cerclée (précédent / suivant, ±, ajout rapide) */
+.fc-nav-button,
+.servings-btn,
+.btn-add-item,
+.btn-icon-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.fc-nav-button:hover,
+.servings-btn:hover,
+.btn-add-item:hover,
+.btn-icon-outline:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+.servings-btn,
+.btn-add-item { width: 32px; height: 32px; min-width: 32px; }
+
+/* Groupe segmenté (mois précédent / actif / suivant, vues du calendrier) */
+.suivi-nav-group,
+.fc-view-controls,
+.pf-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
 .btn-icon-action.edit { color: var(--primary); }
 .btn-icon-action.edit:hover { background: var(--bg-soft); color: var(--primary); }
 .btn-icon-action.delete { color: var(--danger); }
