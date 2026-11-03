@@ -28,6 +28,13 @@ foreach ($familyPeople as $p) {
     }
 }
 
+// Schéma : d'anciennes familles ont la colonne mal nommée « cares_modes » (le calendrier plantait)
+try {
+    if (!$pdo->query("SHOW COLUMNS FROM pf_foyer_settings LIKE 'care_modes'")->fetch()
+        && $pdo->query("SHOW COLUMNS FROM pf_foyer_settings LIKE 'cares_modes'")->fetch()) {
+        $pdo->exec("ALTER TABLE pf_foyer_settings CHANGE cares_modes care_modes TEXT DEFAULT NULL");
+    }
+} catch (Throwable $e) { /* déjà renommée en parallèle */ }
 // 2. Modes de garde (globaux du foyer, pour synchroniser avec le JS)
 $stmtFoyer = $pdo->query("SELECT care_modes, zone_scolaire FROM pf_foyer_settings LIMIT 1");
 $foyerData = $stmtFoyer->fetch(PDO::FETCH_ASSOC);
