@@ -321,11 +321,11 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
             const modal = document.createElement('div');
             modal.className = 'pf-modal open';
             modal.innerHTML = `
-                <div class="pf-modal-content" style="max-width: 400px; align-self: center;">
-                    <h3 style="margin-top:0;">${title}</h3>
-                    <p style="color:var(--text-muted);">${message}</p>
+                <div class="pf-modal-content pf-modal-sm" role="alertdialog" aria-modal="true">
+                    <h3 class="pf-modal-title">${title}</h3>
+                    <p style="color:var(--text-muted);margin:0;">${message}</p>
                     <div class="modal-footer">
-                        <button class="pf-btn btn-secondary" id="confirm-cancel">${tr('btn_cancel')}</button>
+                        <button class="pf-btn btn-secondary" id="confirm-cancel" data-modal-cancel>${tr('btn_cancel')}</button>
                         <button class="pf-btn" id="confirm-ok" style="background:var(--danger);">${tr('btn_delete')}</button>
                     </div>
                 </div>

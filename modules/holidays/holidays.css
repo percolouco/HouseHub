@@ -1367,7 +1367,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     justify-content: center;
   }
 
-  .hol-modal-planning { height: 100dvh; border-radius: 0; --pf-modal-pad: 8px; padding: 8px; }
+  .hol-modal-planning { height: 100dvh; max-height: 100dvh; border-radius: 0; --pf-modal-pad: 8px; padding: 8px; }
   .hol-modal-planning > div:first-child { margin-bottom: 6px; padding-bottom: 6px; }
 
   #planningContainer > div {
