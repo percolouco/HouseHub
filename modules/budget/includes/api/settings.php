@@ -109,6 +109,21 @@ try {
         exit;
     }
 
+    if ($action === 'update_category') {
+        // Le code reste inchangé (utilisé par l'application) ; seuls libellé, icône et couleur sont modifiables
+        $id = (int)($_POST['id'] ?? 0);
+        $label = trim($_POST['label'] ?? '');
+        $icon = trim($_POST['icon'] ?? '');
+        $color = $_POST['color'] ?? '';
+        if ($id <= 0 || $label === '') throw new Exception("Le libellé est obligatoire.");
+        if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) $color = '#cccccc';
+        if ($icon === '') $icon = '📌';
+        $stmt = $pdo->prepare("UPDATE pf_budget_categories SET label = ?, icon = ?, color = ? WHERE id = ?");
+        $stmt->execute([mb_substr($label, 0, 100), mb_substr($icon, 0, 20), $color, $id]);
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     if ($action === 'delete_category') {
         $id = (int)($_POST['id'] ?? 0);
 

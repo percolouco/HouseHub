@@ -452,16 +452,20 @@ function renderCategories(categories) {
         return (a.sort_order || 0) - (b.sort_order || 0);
     });
 
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    window._bsCats = {};
     let html = '';
     categories.forEach(cat => {
+        window._bsCats[cat.id] = cat;
         let typeLabel = cat.type === 'Income' ? tr('bs_type_income') : cat.type === 'Expense' ? tr('bs_type_expense') : tr('bs_type_savings_cat');
         html += `
-            <div class="bs-list-item" data-id="${cat.id}" style="border-left: 4px solid ${cat.color || '#ccc'};">
-                <div>
-                    <span style="font-size:1.2rem; margin-right:8px;">${cat.icon || '📌'}</span>
-                    <strong>${cat.label}</strong> <small class="text-muted">(${cat.code} — ${typeLabel})</small>
+            <div class="bs-list-item" data-id="${cat.id}" style="border-left: 4px solid ${esc(cat.color || '#ccc')};">
+                <div class="bs-cat-view">
+                    <span style="font-size:1.2rem; margin-right:8px;">${esc(cat.icon || '📌')}</span>
+                    <strong>${esc(cat.label)}</strong> <small class="text-muted">(${esc(cat.code)} — ${typeLabel})</small>
                 </div>
-                <div class="pf-flex-gap-8">
+                <div class="pf-flex-gap-8 bs-cat-actions">
+                    <button type="button" class="btn-icon-action edit" onclick="editBudgetCategory(${cat.id})" title="Modifier">✏️</button>
                     <button type="button" class="btn-icon-action" onclick="moveCatUp(this)" title="Monter">⬆️</button>
                     <button type="button" class="btn-icon-action" onclick="moveCatDown(this)" title="Descendre">⬇️</button>
                     <button type="button" class="btn-icon-action delete" onclick="deleteBudgetCategory(${cat.id})" title="${tr('btn_delete')}">🗑️</button>
@@ -469,6 +473,47 @@ function renderCategories(categories) {
             </div>`;
     });
     container.innerHTML = html;
+}
+
+// Édition d'une catégorie : libellé, icône, couleur (le code n'est pas modifiable)
+function editBudgetCategory(id) {
+    const cat = (window._bsCats || {})[id];
+    const row = document.querySelector(`#bs-list-categories .bs-list-item[data-id="${id}"]`);
+    if (!cat || !row) return;
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const color = /^#[0-9a-fA-F]{6}$/.test(cat.color || '') ? cat.color : '#cccccc';
+    row.innerHTML = `
+        <div class="pf-flex-gap-8" style="flex:1; align-items:center; flex-wrap:wrap;">
+            <input type="text" class="pf-input js-cat-icon" value="${esc(cat.icon || '📌')}" maxlength="8" style="width:64px; text-align:center;" title="Icône">
+            <input type="text" class="pf-input js-cat-label" value="${esc(cat.label)}" maxlength="100" style="flex:1; min-width:140px;" placeholder="Nom de la catégorie">
+            <input type="color" class="js-cat-color" value="${color}" title="Couleur" style="width:40px; height:40px; padding:0; border:none; background:none;">
+            <small class="text-muted">${esc(cat.code)}</small>
+        </div>
+        <div class="pf-flex-gap-8">
+            <button type="button" class="btn-icon-action" onclick="saveBudgetCategory(${id})" title="Enregistrer">✅</button>
+            <button type="button" class="btn-icon-action" onclick="loadBudgetSettingsData()" title="Annuler">✖️</button>
+        </div>`;
+    row.querySelector('.js-cat-label').focus();
+    row.querySelector('.js-cat-label').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveBudgetCategory(id); } });
+}
+
+async function saveBudgetCategory(id) {
+    const row = document.querySelector(`#bs-list-categories .bs-list-item[data-id="${id}"]`);
+    if (!row) return;
+    const fd = new FormData();
+    fd.append('action', 'update_category');
+    fd.append('id', id);
+    fd.append('label', row.querySelector('.js-cat-label').value);
+    fd.append('icon', row.querySelector('.js-cat-icon').value);
+    fd.append('color', row.querySelector('.js-cat-color').value);
+    try {
+        const res = await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd });
+        if (res && res.success === false) throw new Error(res.error || tr('error_occured'));
+        await loadBudgetSettingsData();
+        if (typeof showToast === 'function') showToast('Catégorie modifiée (visible dans le suivi après actualisation de la page)', 'success');
+    } catch (err) {
+        if (typeof showToast === 'function') showToast(err.message, 'error'); else alert(err.message);
+    }
 }
 
 // Nouvelles fonctions pour réordonner visuellement et sauvegarder
