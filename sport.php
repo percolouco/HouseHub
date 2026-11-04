@@ -13,18 +13,21 @@ require __DIR__ . '/header.php';
 
 <div class="pf-container">
   <div class="pf-hero">
-    <div class="pf-hero-title"><h1>⚽ Sport</h1></div>
+    <div class="pf-hero-title">
+      <h1>⚽ Sport</h1>
+      <button class="pf-gear" id="sp-gear" title="Paramètres Sport" aria-label="Paramètres Sport"></button>
+      <button class="btn-icon-outline" id="sp-refresh" title="Actualiser" aria-label="Actualiser">↻</button>
+    </div>
     <nav class="pf-pills">
       <button class="pf-pill active" data-tab="upcoming">📅 À venir</button>
       <button class="pf-pill" data-tab="results">✅ Résultats</button>
     </nav>
-    <div class="sp-tools">
-      <button class="btn-icon-outline" id="sp-refresh" title="Actualiser" aria-label="Actualiser">↻</button>
-      <button class="pf-gear" id="sp-gear" title="Paramètres Sport" aria-label="Paramètres Sport"></button>
-    </div>
   </div>
 
-  <div class="sp-filter pf-seg" id="sp-filter" role="group" aria-label="Équipe"></div>
+  <div class="sp-filters">
+    <div class="pf-seg" id="sp-filter" role="group" aria-label="Équipe"></div>
+    <div class="pf-seg" id="sp-filter-comp" role="group" aria-label="Championnat"></div>
+  </div>
   <div id="sp-next" class="sp-next"></div>
   <div id="sp-list"></div>
   <p class="sp-foot" id="sp-foot"></p>
@@ -47,8 +50,8 @@ require __DIR__ . '/header.php';
       <div class="sp-note">Équipes suivies : Paris Saint-Germain, FC Barcelone. Les données sont mises en cache 6 h pour limiter les appels à l'API.</div>
     </div>
     <div class="modal-footer">
-      <button class="btn-danger btn-sm" id="sp-key-remove" type="button">Retirer la clé</button>
-      <button class="btn-primary" id="sp-key-save" type="button">Enregistrer et actualiser</button>
+      <button class="pf-btn btn-danger btn-sm" id="sp-key-remove" type="button">Retirer la clé</button>
+      <button class="pf-btn btn-primary" id="sp-key-save" type="button">Enregistrer et actualiser</button>
     </div>
   </div>
 </div>

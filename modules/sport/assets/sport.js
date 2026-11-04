@@ -3,7 +3,7 @@
   const API = '/modules/sport/api.php';
   const COMP = { FL1: 'Ligue 1', PD: 'Liga', CL: 'Ligue des champions', FAC: 'Coupe de France', CDR: 'Copa del Rey' };
   const FINIS = ['FINISHED', 'AWARDED'], ANNULES = ['CANCELLED'], EN_COURS = ['IN_PLAY', 'PAUSED', 'LIVE'];
-  let data = null, tab = 'upcoming', team = 'all', rafraichi = false, limite = 25;
+  let data = null, tab = 'upcoming', team = 'all', comp = 'all', rafraichi = false, limite = 25;
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
   const fmtJour = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', weekday: 'short', day: 'numeric', month: 'short' });
@@ -26,7 +26,8 @@
   // statut SCHEDULED = date connue mais heure pas encore fixée (l'API renvoie alors minuit UTC)
   const heure = (m) => m.status === 'SCHEDULED' ? 'horaire \u00e0 confirmer' : fmtHeure.format(dt(m));
   const aVenir = (m) => !FINIS.includes(m.status) && !ANNULES.includes(m.status);
-  const visibles = () => data.matches.filter((m) => team === 'all' || String(m.home_team_id) === team || String(m.away_team_id) === team);
+  const duChamp = (m) => comp === 'all' || m.competition_code === comp;
+  const visibles = () => data.matches.filter((m) => (team === 'all' || String(m.home_team_id) === team || String(m.away_team_id) === team) && duChamp(m));
 
   function relatif(d) {
     const j = Math.round((d - Date.now()) / 86400000);
@@ -40,11 +41,22 @@
     opts.forEach(([v, lab]) => { const b = el('button', 'pf-seg-btn' + (v === team ? ' active' : ''), lab); b.type = 'button'; b.addEventListener('click', () => { team = v; limite = 25; render(); }); f.appendChild(b); });
   }
 
+  function renderFiltreChamp() {
+    const f = $('sp-filter-comp'); f.textContent = '';
+    const codes = []; data.matches.forEach((m) => { if (!codes.includes(m.competition_code)) codes.push(m.competition_code); });
+    const ordre = ['FL1', 'PD', 'CL']; codes.sort((a, b) => (ordre.indexOf(a) + 1 || 99) - (ordre.indexOf(b) + 1 || 99));
+    [['all', 'Tous les championnats']].concat(codes.map((c) => [c, COMP[c] || c])).forEach(([v, lab]) => {
+      const b = el('button', 'pf-seg-btn' + (v === comp ? ' active' : ''), lab); b.type = 'button';
+      if (v !== 'all') b.classList.add('sp-comp--' + v);
+      b.addEventListener('click', () => { comp = v; limite = 25; render(); }); f.appendChild(b);
+    });
+  }
+
   function renderProchains() {
     const box = $('sp-next'); box.textContent = '';
     if (tab !== 'upcoming') return;
     data.teams.filter((t) => team === 'all' || String(t.team_id) === team).forEach((t) => {
-      const m = data.matches.filter((x) => aVenir(x) && (String(x.home_team_id) === String(t.team_id) || String(x.away_team_id) === String(t.team_id)))[0];
+      const m = data.matches.filter((x) => aVenir(x) && duChamp(x) && (String(x.home_team_id) === String(t.team_id) || String(x.away_team_id) === String(t.team_id)))[0];
       const c = el('div', 'sp-card'); c.appendChild(el('h3', null, 'Prochain match · ' + (t.short_name || t.name)));
       if (!m) { c.appendChild(el('div', 'sp-when', 'Aucun match programmé')); box.appendChild(c); return; }
       const l = el('div', 'sp-teams'); l.appendChild(matchLine(m)); c.appendChild(l);
@@ -70,11 +82,12 @@
       const mt = el('div', 'sp-match'); mt.appendChild(matchLine(m));
       if (m.status === 'POSTPONED') mt.appendChild(el('span', 'sp-badge', 'Reporté'));
       if (EN_COURS.includes(m.status)) mt.appendChild(el('span', 'sp-badge', 'En cours'));
-      row.appendChild(date); row.appendChild(mt); row.appendChild(el('span', 'sp-comp', COMP[m.competition_code] || m.competition_name));
+      row.classList.add('sp-comp--' + m.competition_code);
+      row.appendChild(date); row.appendChild(mt); row.appendChild(el('span', 'sp-comp sp-comp--' + m.competition_code, COMP[m.competition_code] || m.competition_name));
       L.appendChild(row);
     });
     if (total > ms.length) {
-      const more = el('button', 'btn-secondary', 'Afficher plus (' + (total - ms.length) + ' restants)'); more.type = 'button'; more.style.margin = '12px auto'; more.style.display = 'block';
+      const more = el('button', 'pf-btn btn-secondary', 'Afficher plus (' + (total - ms.length) + ' restants)'); more.type = 'button'; more.style.margin = '12px auto'; more.style.display = 'block';
       more.addEventListener('click', () => { limite += 25; renderListe(); });
       L.appendChild(more);
     }
@@ -89,13 +102,13 @@
     if (!data) return;
     document.querySelectorAll('.pf-pill[data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     if (!data.has_key) {
-      $('sp-filter').textContent = ''; $('sp-next').textContent = ''; $('sp-foot').textContent = '';
+      $('sp-filter').textContent = ''; $('sp-filter-comp').textContent = ''; $('sp-next').textContent = ''; $('sp-foot').textContent = '';
       const L = $('sp-list'); L.textContent = '';
       const e = el('div', 'sp-empty'); e.appendChild(el('p', null, 'Aucune clé football-data.org n’est renseignée.'));
       const b = el('button', 'btn-primary', 'Renseigner la clé'); b.type = 'button'; b.addEventListener('click', spOpenModal); e.appendChild(b); L.appendChild(e);
       return;
     }
-    renderFiltre(); renderProchains(); renderListe(); renderPied();
+    renderFiltre(); renderFiltreChamp(); renderProchains(); renderListe(); renderPied();
   }
 
   async function charger() {
