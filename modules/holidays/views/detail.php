@@ -339,12 +339,12 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         
         <!-- LES ONGLETS SONT ICI -->
         <div id="cpTabs" class="cp-tabs" style="display:none;">
-            <button type="button" id="tabBtnInfo" onclick="switchCpTab('info')" class="cp-tab active">📍 L'étape</button>
+            <button type="button" id="tabBtnInfo" onclick="switchCpTab('info')" class="cp-tab active"><?= htmlspecialchars(tr('hol_step_tab_info')) ?></button>
             <button type="button" id="tabBtnProg" onclick="switchCpTab('prog')" class="cp-tab">🎟️ Programme &amp; frais <span id="cpProgCount" class="cp-badge" style="display:none;">0</span></button>
         </div>
 
         <div id="cpSearchBlock" class="cp-search" style="margin-bottom:20px;">
-            <p class="cp-hint">Étape 1 sur 2 : cherche le lieu de l'étape (ville, adresse, site…).</p>
+            <p class="cp-hint"><?= htmlspecialchars(tr('hol_step_hint_place')) ?></p>
             <?php if (!empty($favorites)): ?>
             <div style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap;">
                 <?php foreach($favorites as $fav): ?>
@@ -394,7 +394,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 </div>
 
                 <div class="form-group" id="cp_insert_group" style="margin-bottom:15px;">
-                    <label class="pf-label">Position de l'étape</label>
+                    <label class="pf-label"><?= htmlspecialchars(tr('hol_step_position')) ?></label>
                     <select name="insert_after" id="cp_insert_after" class="pf-input" onchange="const o=this.selectedOptions[0]; if(o && o.dataset.enddate){ document.getElementById('cp_start_date').value=o.dataset.enddate; document.getElementById('cp_end_date').value=o.dataset.enddate; }"></select>
                 </div>
 
@@ -426,7 +426,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 </div>
 
                 <div id="cpExpensesContainer" style="margin-bottom:15px;"></div>
-                <p id="cpExpensesEmpty" class="cp-hint" style="display:none;">Rien de prévu pour l'instant : hébergement, activité, transport… Ajoute une ligne si besoin (facultatif).</p>
+                <p id="cpExpensesEmpty" class="cp-hint" style="display:none;"><?= htmlspecialchars(tr('hol_step_expenses_empty')) ?></p>
             </div>
 
             <div style="margin-bottom: 20px;">
@@ -464,7 +464,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 <div id="transitModal" class="pf-modal">
     <div class="pf-modal-content hol-modal-sm">
         <div class="pf-modal-header">
-            <h3 class="pf-modal-title">🛣️ Détail des trajets</h3>
+            <h3 class="pf-modal-title"><?= htmlspecialchars(tr('hol_routes_detail_title')) ?></h3>
             <button type="button" onclick="closeTransitModal()" class="pf-modal-close">&times;</button>
         </div>
         <div id="transitDetailsContainer" class="hol-transit-container">
@@ -632,13 +632,13 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 if (insertSelect) {
                     insertSelect.innerHTML = '';
                     const optEnd = document.createElement('option');
-                    optEnd.value = 'end'; optEnd.dataset.enddate = lastDate; optEnd.textContent = '-- À la fin du voyage --';
+                    optEnd.value = 'end'; optEnd.dataset.enddate = lastDate; optEnd.textContent = <?= json_encode(tr('hol_step_opt_end'), JSON_UNESCAPED_UNICODE) ?>;
                     insertSelect.appendChild(optEnd);
                     pts.forEach((st) => {
                         const o = document.createElement('option');
                         o.value = st.sort_order;
                         o.dataset.enddate = st.step_end_date || st.step_start_date || tripStart;
-                        o.textContent = 'Après : ' + st.location_name;
+                        o.textContent = <?= json_encode(tr('hol_step_opt_after') . ' ', JSON_UNESCAPED_UNICODE) ?> + st.location_name;
                         insertSelect.appendChild(o);
                     });
                 }
@@ -884,9 +884,9 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 const lng = document.getElementById("cp_lng").value;
                 const name = document.getElementById("cp_name").value.trim();
                 if (!lat || !lng) { e.preventDefault(); cpToast("Choisis d'abord un lieu dans la recherche."); window.cpChangePlace(); return; }
-                if (!name) { e.preventDefault(); window.switchCpTab('info'); cpToast("Donne un nom à l'étape."); document.getElementById("cp_name").focus(); return; }
+                if (!name) { e.preventDefault(); window.switchCpTab('info'); cpToast(<?= json_encode(tr('hol_step_toast_name'), JSON_UNESCAPED_UNICODE) ?>); document.getElementById("cp_name").focus(); return; }
                 const sd = document.getElementById("cp_start_date").value, ed = document.getElementById("cp_end_date").value;
-                if (sd && ed && ed < sd) { e.preventDefault(); window.switchCpTab('info'); cpToast("La date de départ est avant la date d'arrivée."); return; }
+                if (sd && ed && ed < sd) { e.preventDefault(); window.switchCpTab('info'); cpToast(<?= json_encode(tr('hol_step_toast_dates'), JSON_UNESCAPED_UNICODE) ?>); return; }
                 // Retire les lignes de dépense totalement vides
                 cpContainer.querySelectorAll(".hol-form-row").forEach((row) => {
                     const n = row.querySelector('input[name="items[name][]"]').value.trim();

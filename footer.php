@@ -31,7 +31,7 @@
     }
     function upgrade(inp) {
       if (inp._pfBtn) return;
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'pf-colorpick-btn'; b.title = inp.title || 'Couleur';
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'pf-colorpick-btn'; b.title = inp.title || <?= json_encode(tr('color_title'), JSON_UNESCAPED_UNICODE) ?>;
       inp._pfBtn = b; inp.style.display = 'none'; inp.parentNode.insertBefore(b, inp); paint(inp);
       b.addEventListener('click', function (e) { e.stopPropagation(); if (current === inp) closePop(); else openPop(inp); });
     }

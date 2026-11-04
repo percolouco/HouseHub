@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__, 3) . '/includes/i18n.php';
 // Module Sport : calendrier des matchs des équipes suivies (football-data.org), stocké en base pour limiter les appels à l'API.
 const SPORT_TTL_H = 6;              // pas de nouvel appel pour une équipe avant 6 h
 const SPORT_MIN_FORCE_MIN = 10;     // « Actualiser » manuel : au plus une fois toutes les 10 min
@@ -53,7 +54,7 @@ function sportStale(PDO $pdo): bool {
 function sportSync(PDO $pdo, bool $force = false): array {
     $key = sportGetKey($pdo);
     $out = ['appels' => 0, 'erreurs' => []];
-    if ($key === '') { $out['erreurs'][] = 'Clé football-data.org non renseignée (⚙️).'; return $out; }
+    if ($key === '') { $out['erreurs'][] = tr('sport_err_no_key'); return $out; }
     $utc = fn($s) => $s ? gmdate('Y-m-d H:i:s', strtotime($s)) : null;
     foreach ($pdo->query("SELECT team_id, name FROM pf_football_teams WHERE followed = 1")->fetchAll(PDO::FETCH_ASSOC) as $t) {
         $tid = (int)$t['team_id'];
@@ -71,7 +72,7 @@ function sportSync(PDO $pdo, bool $force = false): array {
         $j = json_decode((string)$body, true);
         if ($code !== 200 || !isset($j['matches'])) {
             $pdo->prepare("REPLACE INTO pf_football_fetch (team_id, fetched_at, nb_matches, http_code) VALUES (?, NOW(), 0, ?)")->execute([$tid, $code]);
-            $out['erreurs'][] = $t['name'] . ' : ' . ($code === 403 || $code === 401 ? 'clé refusée' : ($code === 429 ? 'trop d\'appels, réessaie dans une minute' : "erreur HTTP $code"));
+            $out['erreurs'][] = $t['name'] . ' : ' . ($code === 403 || $code === 401 ? tr('sport_err_key_refused') : ($code === 429 ? tr('sport_err_rate') : str_replace('{n}', (string)$code, tr('sport_err_http'))));
             continue;
         }
         // le nom court choisi à l'installation (PSG, Barça) est conservé si l'API n'en renvoie pas
