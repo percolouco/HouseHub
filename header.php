@@ -16,6 +16,10 @@ function getLangUrl($newLang) {
 $pageTitle = $pageTitle ?? "HouseHub";
 $activePage = $activePage ?? "";
 $currentLang = $_SESSION['app_lang'] ?? 'fr';
+
+// Vue « apps » (icônes façon mobile) : préférence par utilisateur
+require_once __DIR__ . '/includes/ui_prefs.php';
+$hhAppsMode = isset($_SESSION['user']) && hhUiPrefs()['mode'] === 'apps';
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($currentLang) ?>">
@@ -38,6 +42,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     <link rel="stylesheet" href="<?= $hhAsset($pageCss) ?>">
   <?php endif; ?>
   <link rel="stylesheet" href="<?= $hhAsset('/dark-mode.css') ?>">
+  <?php if ($hhAppsMode): ?><link rel="stylesheet" href="<?= $hhAsset('/apps-view.css') ?>"><?php endif; ?>
   <script>(function(){const t=localStorage.getItem('hh-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
   <style>
     /* Patch CSS pour la zone droite de l'en-tête (Desktop / Mobile) */
@@ -47,7 +52,7 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
     }
   </style>
 </head>
-<body data-page="<?= htmlspecialchars($activePage ?? '') ?>">
+<body data-page="<?= htmlspecialchars($activePage ?? '') ?>"<?= $hhAppsMode ? ' class="hh-apps"' : '' ?>>
 
   <header class="pf-header">
     <a href="/index.php" class="pf-logo">HouseHub</a>
@@ -127,6 +132,10 @@ $currentLang = $_SESSION['app_lang'] ?? 'fr';
         <a href="/logout.php" class="pf-mobile-nav-link pf-mobile-logout" style="margin-top: auto;">🚪 <?= tr('btn_logout') ?></a>
     </div>
   </div>
+  <?php endif; ?>
+
+  <?php if ($hhAppsMode && $activePage !== 'home'): ?>
+  <a href="/index.php" class="hh-home-fab" aria-label="<?= tr('menu_home') ?>" title="<?= tr('menu_home') ?>">⌂</a>
   <?php endif; ?>
 
   <main class="pf-main<?= ($mainClass ?? '') ? ' '.htmlspecialchars($mainClass) : '' ?>">

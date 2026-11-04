@@ -1289,4 +1289,15 @@ return [
 
     'sport_tv_none_prio'               => 'Encara no hi ha canal ({c})',
 
+    'set_title_ui' => '📱 Visualització mòbil',
+    'set_desc_ui' => 'Clàssic: menú ☰. Apps: l’inici es converteix en una pantalla d’icones com al mòbil, amb un botó Inici a cada pàgina (només mòbil).',
+    'set_ui_classic' => 'Clàssic',
+    'set_ui_apps' => 'Apps',
+    'set_success_ui' => 'Visualització actualitzada.',
+    'apps_settings' => 'Configuració',
+    'apps_admin' => 'Admin',
+    'apps_organize' => 'Organitzar',
+    'apps_done' => 'Fet',
+    'apps_reset' => 'Reinicialitzar l’ordre',
+    'apps_hint' => 'Arrossega les icones per reorganitzar-les.',
 ];

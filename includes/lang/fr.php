@@ -1294,4 +1294,15 @@ return [
 
     'sport_tv_none_prio'               => 'Pas encore de chaîne ({c})',
 
+    'set_title_ui' => '📱 Affichage mobile',
+    'set_desc_ui' => 'Classique : menu ☰. Apps : l’accueil devient un écran d’icônes façon smartphone, avec un bouton Accueil sur chaque page (sur mobile uniquement).',
+    'set_ui_classic' => 'Classique',
+    'set_ui_apps' => 'Apps',
+    'set_success_ui' => 'Affichage mis à jour.',
+    'apps_settings' => 'Paramètres',
+    'apps_admin' => 'Admin',
+    'apps_organize' => 'Organiser',
+    'apps_done' => 'OK',
+    'apps_reset' => 'Réinitialiser l’ordre',
+    'apps_hint' => 'Glisse les icônes pour les réorganiser.',
 ];

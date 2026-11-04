@@ -1303,4 +1303,15 @@ return [
 
     'sport_tv_none_prio'               => 'No channel yet ({c})',
 
+    'set_title_ui' => '📱 Mobile display',
+    'set_desc_ui' => 'Classic: ☰ menu. Apps: the home page becomes a smartphone-style icon screen, with a Home button on every page (mobile only).',
+    'set_ui_classic' => 'Classic',
+    'set_ui_apps' => 'Apps',
+    'set_success_ui' => 'Display updated.',
+    'apps_settings' => 'Settings',
+    'apps_admin' => 'Admin',
+    'apps_organize' => 'Arrange',
+    'apps_done' => 'Done',
+    'apps_reset' => 'Reset order',
+    'apps_hint' => 'Drag the icons to rearrange them.',
 ];
