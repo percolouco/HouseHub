@@ -50,6 +50,7 @@ function tvLines(string $html): array {
     $b = preg_replace('#<script.*?</script>|<style.*?</style>#si', '', $html);
     $t = preg_replace('#<(?:br|/p|/li|/h\d|/div|/tr|/td|/a|/span)[^>]*>#i', "\n", $b);
     $t = html_entity_decode(strip_tags($t), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $t = str_replace("\xC2\xA0", ' ', $t);   // espaces insécables
     return array_values(array_filter(array_map('trim', preg_split('/\R/u', $t)), 'strlen'));
 }
 
@@ -130,8 +131,9 @@ function tvSyncBarca(PDO $pdo, array $targets): void {
             // « Canada - Vancouver (1.00 PM) / Toronto (3.00 PM) » puis « FC Barcelona: @… » puis la ligne des chaînes
             if (preg_match('/\(\d{1,2}[.:]\d{2}\s*[AP]?M?\)/i', $L[$i]) && !str_starts_with($L[$i], 'FC Barcelona')) {
                 $country = trim(preg_split('/\s+-\s+/u', $L[$i], 2)[0]);
-                $j = $i + 1; if (isset($L[$j]) && stripos($L[$j], 'FC Barcelona') === 0) $j++;
-                if (isset($L[$j]) && !preg_match('/\(\d{1,2}[.:]\d{2}/', $L[$j]) && mb_strlen($L[$j]) < 160) $by[$country] = array_map('trim', explode(',', $L[$j]));
+                $j = $i + 1; if (isset($L[$j]) && preg_match('/^FC ?Barcelona\s*:/i', $L[$j])) $j++;
+                // ligne des chaînes : ni heure, ni comptes / sites du club
+                if (isset($L[$j]) && !preg_match('/\(\d{1,2}[.:]\d{2}/', $L[$j]) && !preg_match('/@|www\.|^FC ?Barcelona/i', $L[$j]) && mb_strlen($L[$j]) < 160) $by[$country] = array_map('trim', explode(',', $L[$j]));
             }
             if (count($by) >= 25 || stripos($L[$i], 'partager') === 0 && $by) break;
         }
