@@ -91,6 +91,12 @@ Calendrier et résultats des équipes de foot suivies (aujourd'hui **Paris Saint
 
 ---
 
+## 📱 Vue « apps » (mobile)
+
+Préférence par utilisateur (Paramètres › Affichage mobile) : sur mobile, le menu ☰ est remplacé par un écran d'icônes (modules + Paramètres + Admin). Un bouton ⌂ flottant ramène à l'accueil depuis n'importe quelle page. « Organiser » (ou appui long) fait trembler les icônes : glisser-déposer pour les réordonner, l'ordre est enregistré par compte (`users.app_order`, `home-layout.php`). Le bureau reste inchangé.
+
+---
+
 ## 📋 Planka
 
 Module Kanban natif connecté à l'instance Planka du NAS — affichage et gestion directement dans HouseHub sans iframe.
@@ -220,6 +226,7 @@ Un *scénario* = marque / modèle / année + mode d'acquisition + tous les frais
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v3.0.0  | Vue « apps » mobile (Paramètres › Affichage mobile) : accueil en icônes façon smartphone, bouton Accueil flottant, apps réorganisables par glisser-déposer |
 | v2.9.0  | Module Sport : calendrier et résultats PSG / FC Barcelone (football-data.org), cache en base, un appel par équipe toutes les 6 h |
 | v2.8.0  | Comparateur : hybride rechargeable, durée réservée aux locations, prime CEE, packs d'entretien LLD, champs masquables |
 | v2.7.0  | Garage / Comparateur : listes marque/modèle/année, garantie mécanique, protection pécuniaire, pneus été/hiver, durée en mois/années, verdict et profils d'usage |
