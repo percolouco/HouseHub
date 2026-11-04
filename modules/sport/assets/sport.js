@@ -84,7 +84,7 @@
       if (m.status === 'POSTPONED') mt.appendChild(el('span', 'sp-badge', tr('sport_postponed')));
       if (EN_COURS.includes(m.status)) mt.appendChild(el('span', 'sp-badge', tr('sport_live')));
       row.classList.add('sp-comp--' + m.competition_code);
-      row.appendChild(date); row.appendChild(mt); row.appendChild(el('span', 'sp-comp sp-comp--' + m.competition_code, COMP[m.competition_code] || m.competition_name));
+      row.appendChild(date); row.appendChild(mt); row.appendChild(el('span', 'sp-comp sp-comp--' + m.competition_code, compNom(m.competition_code, m.competition_name)));
       L.appendChild(row);
     });
     if (total > ms.length) {
