@@ -74,8 +74,9 @@ function sportSync(PDO $pdo, bool $force = false): array {
             $out['erreurs'][] = $t['name'] . ' : ' . ($code === 403 || $code === 401 ? 'clé refusée' : ($code === 429 ? 'trop d\'appels, réessaie dans une minute' : "erreur HTTP $code"));
             continue;
         }
-        $pdo->prepare("UPDATE pf_football_teams SET name = ?, short_name = ?, tla = ?, crest = ? WHERE team_id = ?")
-            ->execute([$j['team']['name'] ?? $t['name'], $j['team']['shortName'] ?? '', $j['team']['tla'] ?? '', $j['team']['crest'] ?? '', $tid]);
+        // le nom court choisi à l'installation (PSG, Barça) est conservé si l'API n'en renvoie pas
+        $pdo->prepare("UPDATE pf_football_teams SET name = IF(? <> '', ?, name), short_name = IF(? <> '', ?, short_name), tla = IF(? <> '', ?, tla), crest = IF(? <> '', ?, crest) WHERE team_id = ?")
+            ->execute([$j['team']['name'] ?? '', $j['team']['name'] ?? '', $j['team']['shortName'] ?? '', $j['team']['shortName'] ?? '', $j['team']['tla'] ?? '', $j['team']['tla'] ?? '', $j['team']['crest'] ?? '', $j['team']['crest'] ?? '', $tid]);
         $up = $pdo->prepare("INSERT INTO pf_football_matches (match_id, competition_code, competition_name, season_year, matchday, stage, kickoff_utc, status, home_team_id, home_name, away_team_id, away_name, score_home, score_away, api_last_updated, fetched_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ON DUPLICATE KEY UPDATE kickoff_utc = VALUES(kickoff_utc), status = VALUES(status), matchday = VALUES(matchday), stage = VALUES(stage),
