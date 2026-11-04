@@ -130,7 +130,8 @@ function tvSyncBarca(PDO $pdo, array $targets): void {
             if (!$on) { if (stripos($L[$i], 'horaires internationaux') !== false) $on = true; continue; }
             // « Canada - Vancouver (1.00 PM) / Toronto (3.00 PM) » puis « FC Barcelona: @… » puis la ligne des chaînes
             if (preg_match('/\(\d{1,2}[.:]\d{2}\s*[AP]?M?\)/i', $L[$i]) && !preg_match('/^FC[\p{Z}\s]*Barcelona/iu', $L[$i])) {
-                $country = trim(preg_split('/\s+-\s+/u', $L[$i], 2)[0]);
+                $country = trim(preg_replace('/\s*\(.*$/u', '', preg_split('/\s+-\s+/u', $L[$i], 2)[0]));
+                if ($country === 'Barcelone') $country = 'Espagne';
                 $j = $i + 1; if (isset($L[$j]) && preg_match('/^FC[\p{Z}\s]*Barcelona[\p{Z}\s]*:/iu', $L[$j])) $j++;
                 // ligne des chaînes : ni heure, ni comptes / sites du club
                 if (isset($L[$j]) && !preg_match('/\(\d{1,2}[.:]\d{2}/', $L[$j]) && !preg_match('/@|www\.|^FC[\p{Z}\s]*Barcelona/iu', $L[$j]) && mb_strlen($L[$j]) < 160) $by[$country] = array_map('trim', explode(',', $L[$j]));

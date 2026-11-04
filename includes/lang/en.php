@@ -1293,4 +1293,12 @@ return [
     // ─── Clé manquante — 2026-11-04 ───
     'btn_save_config'                  => 'Save',
 
+
+    // ─── Sport : chaînes TV ───
+    'sport_tv_where'                   => 'Where to watch',
+    'sport_tv_in_france'               => 'In France',
+    'sport_tv_none_france'             => 'Channel in France: not available',
+    'sport_tv_other'                   => 'Other countries ({n})',
+    'sport_tv_sources'                 => 'Sources: {s}',
+
 ];

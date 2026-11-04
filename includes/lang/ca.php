@@ -1279,4 +1279,12 @@ return [
     'garage_date'                      => 'Data',
     'btn_save_config'                  => 'Desar',
 
+
+    // ─── Sport : chaînes TV ───
+    'sport_tv_where'                   => 'On veure el partit',
+    'sport_tv_in_france'               => 'A França',
+    'sport_tv_none_france'             => 'Canal a França: no disponible',
+    'sport_tv_other'                   => 'Altres països ({n})',
+    'sport_tv_sources'                 => 'Fonts: {s}',
+
 ];
