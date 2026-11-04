@@ -91,6 +91,15 @@ if ($_has_custom_bg): ?>
       </a>
       <?php endif; ?>
 
+      <?php if (in_array('sport', $mods)): ?>
+      <a href="/sport.php" class="pf-module-card">
+        <div class="pf-card-icon">⚽</div>
+        <h3 class="pf-card-title"><?= tr('mod_sport_name') ?></h3>
+        <div class="pf-card-desc"><?= tr('mod_sport_desc') ?></div>
+        <span class="pf-card-cta"><?= tr('cta_service') ?></span>
+      </a>
+      <?php endif; ?>
+
       <?php if (in_array('food', $mods)): ?>
       <a href="/food.php" class="pf-module-card">
         <div class="pf-card-icon">🍳</div>

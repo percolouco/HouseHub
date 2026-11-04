@@ -75,6 +75,19 @@ Tous les modules sont activables/désactivables par famille depuis `/settings.ph
 | 📝 Mémo           | `/memo.php`            | Notes personnelles / familiales avec éditeur riche                              |
 | 🖨️ PrintVault     | `/printvault.php`      | Gestionnaire de fichiers d'impression 3D (STL, 3MF, GCode) avec viewer Three.js |
 | 📋 Planka         | `/planka.php`          | Kanban natif connecté à Planka — boards, listes, cartes, drag & drop, checklist |
+| ⚽ Sport          | `/sport.php`           | Calendrier et résultats du PSG et du FC Barcelone (football-data.org), en cache |
+
+---
+
+## ⚽ Sport
+
+Calendrier et résultats des équipes de foot suivies (aujourd'hui **Paris Saint-Germain** et **FC Barcelone**), avec les matchs de Ligue 1, Liga et Ligue des champions jusqu'à la fin de la saison.
+
+- **Source** : API gratuite [football-data.org](https://www.football-data.org) ; la clé de la famille se saisit dans ⚙️ (elle reste sur le serveur, jamais réaffichée)
+- **Anti-appels inutiles** : les matchs sont gardés en base (`pf_football_matches`, clé = n° de match de l'API, mise à jour sur place pour les reports et scores) ; **un seul appel par équipe toutes les 6 h** (`pf_football_fetch`), « Actualiser » limité à une fois toutes les 10 min
+- **Affichage** : onglets « À venir » / « Résultats », filtre par équipe, prochain match de chaque équipe en tête, horaires de Paris, mobile d'abord
+- **Limites du plan gratuit** : championnats et Ligue des champions seulement (pas les coupes nationales) ; les phases à élimination directe de la C1 apparaissent une fois programmées
+- **À venir** : chaînes de diffusion (voir `docs/` pour les pistes étudiées)
 
 ---
 
@@ -207,6 +220,7 @@ Un *scénario* = marque / modèle / année + mode d'acquisition + tous les frais
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v2.9.0  | Module Sport : calendrier et résultats PSG / FC Barcelone (football-data.org), cache en base, un appel par équipe toutes les 6 h |
 | v2.8.0  | Comparateur : hybride rechargeable, durée réservée aux locations, prime CEE, packs d'entretien LLD, champs masquables |
 | v2.7.0  | Garage / Comparateur : listes marque/modèle/année, garantie mécanique, protection pécuniaire, pneus été/hiver, durée en mois/années, verdict et profils d'usage |
 | v2.6.0  | Garage : onglet « Comparateur » (coût mensuel / annuel / au km : neuf, occasion, LLD, leasing ; scénarios enregistrés par marque / modèle / année) |
