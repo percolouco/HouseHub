@@ -143,27 +143,27 @@ function tvSyncBarca(PDO $pdo, array $targets): void {
     }
 }
 
-// ── Source 3 : footmercato.net (programme TV du PSG, France)
+// ── Source 3 : footmercato.net (programme TV du PSG, France) : logos des diffuseurs dans <span class="matchFull__broadcasts">
 function tvSyncFootMercato(PDO $pdo, array $targets): void {
     $prog = null;
-    $mois = ['janvier'=>1,'février'=>2,'fevrier'=>2,'mars'=>3,'avril'=>4,'mai'=>5,'juin'=>6,'juillet'=>7,'août'=>8,'aout'=>8,'septembre'=>9,'octobre'=>10,'novembre'=>11,'décembre'=>12,'decembre'=>12];
     foreach ($targets as $m) {
         if ($m['team_id'] !== 524 || !tvIsDue($pdo, $m, 'footmercato')) continue;
         if ($prog === null) {
             $prog = [];
             $html = tvHttp('https://www.footmercato.net/programme-tv/club/psg/', 20);
-            if ($html) { $L = tvLines($html);
-                for ($i = 0; $i + 3 < count($L); $i++) if (preg_match('/^(?:Lundi|Mardi|Mercredi|Jeudi|Vendredi|Samedi|Dimanche) (\d{1,2}) (\p{L}+)$/u', $L[$i], $d)) {
-                    $mo = $mois[mb_strtolower($d[2], 'UTF-8')] ?? 0;
-                    $chan = (isset($L[$i + 4]) && str_starts_with($L[$i + 4], 'Voir sur ')) ? trim(substr($L[$i + 4], 9)) : '';
-                    $prog[] = ['jour' => (int)$d[1], 'mois' => $mo, 'home' => $L[$i + 1], 'away' => $L[$i + 2], 'chan' => $chan];
-                } }
+            if ($html) foreach (array_slice(preg_split('#<div class="matchFull"#', $html), 1) as $blk) {
+                if (!preg_match('#<time datetime="([^"]+)"#', $blk, $t)) continue;
+                $chans = [];
+                if (preg_match('#matchFull__broadcasts">(.*?)</span>#s', $blk, $bm)) {
+                    preg_match_all('#alt="([^"]*)"#', $bm[1], $alts);
+                    foreach ($alts[1] as $a) { $a = trim(preg_replace('/^Logo\s+/iu', '', html_entity_decode($a, ENT_QUOTES | ENT_HTML5, 'UTF-8'))); if ($a !== '') $chans[] = $a; }
+                }
+                $prog[] = ['ts' => strtotime($t[1]), 'chans' => $chans];
+            }
         }
-        $kick = new DateTime($m['kickoff_utc'], new DateTimeZone('UTC')); $kick->setTimezone(new DateTimeZone('Europe/Paris'));
-        $opp = ((int)$m['home_team_id'] === 524) ? $m['away_name'] : $m['home_name'];
         $by = [];
-        foreach ($prog as $p) {
-            if ($p['jour'] === (int)$kick->format('j') && $p['mois'] === (int)$kick->format('n') && $p['chan'] !== '' && tvMentions(tvNorm($p['home'] . ' ' . $p['away']), $opp)) $by['France'][] = $p['chan'];
+        foreach ($prog as $p) {   // le PSG ne joue qu'un match à la fois : on rapproche par l'heure du coup d'envoi (±3 h)
+            if ($p['chans'] && abs($p['ts'] - strtotime($m['kickoff_utc'] . ' UTC')) <= 3 * 3600) $by['France'] = $p['chans'];
         }
         tvStore($pdo, (int)$m['match_id'], 'footmercato', $by);
     }
