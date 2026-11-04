@@ -115,7 +115,7 @@ try {
         $label = trim($_POST['label'] ?? '');
         $icon = trim($_POST['icon'] ?? '');
         $color = $_POST['color'] ?? '';
-        if ($id <= 0 || $label === '') throw new Exception("Le libellé est obligatoire.");
+        if ($id <= 0 || $label === '') throw new Exception(tr('bs_err_label_required'));
         if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) $color = '#cccccc';
         if ($icon === '') $icon = '📌';
         $stmt = $pdo->prepare("UPDATE pf_budget_categories SET label = ?, icon = ?, color = ? WHERE id = ?");
@@ -151,7 +151,7 @@ try {
         try { $pdo->exec("ALTER TABLE pf_import_rules ADD COLUMN IF NOT EXISTS amount DECIMAL(10,2) DEFAULT NULL AFTER keyword"); } catch (Exception $e) {}
         $check = $pdo->prepare("SELECT COUNT(*) FROM pf_import_rules WHERE keyword = ? AND amount <=> ?");
         $check->execute([$keyword, $amount]);
-        if ($check->fetchColumn() > 0) throw new Exception("Une règle pour ce mot-clé" . ($amount !== null ? " et ce montant" : "") . " existe déjà.");
+        if ($check->fetchColumn() > 0) throw new Exception($amount !== null ? tr('bs_err_rule_exists_amount') : tr('bs_err_rule_exists'));
         $stmt = $pdo->prepare("INSERT INTO pf_import_rules (keyword, amount, category) VALUES (?, ?, ?)");
         $stmt->execute([$keyword, $amount, $category]);
         echo json_encode(['success' => true]);

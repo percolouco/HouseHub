@@ -40,7 +40,7 @@ try {
     }
     if ($action === 'save_key') {
         $k = trim($_POST['key'] ?? '');
-        if (!preg_match('/^[A-Za-z0-9]{16,64}$/', $k)) sErr('Clé invalide (16 à 64 lettres ou chiffres).');
+        if (!preg_match('/^[A-Za-z0-9]{16,64}$/', $k)) sErr(tr('sport_err_invalid_key'));
         $pdo->prepare("REPLACE INTO pf_sport_settings (k, v) VALUES ('football_api_key', ?)")->execute([$k]);
         $pdo->exec("DELETE FROM pf_football_fetch"); // nouvelle clé : on repart d'un appel frais
         $r = sportSync($pdo, false);
@@ -50,7 +50,7 @@ try {
         $pdo->exec("DELETE FROM pf_sport_settings WHERE k = 'football_api_key'");
         sOk();
     }
-    sErr('Action inconnue.');
+    sErr(tr('sport_err_unknown_action'));
 } catch (Throwable $e) {
-    sErr('Erreur serveur : ' . $e->getMessage(), 500);
+    sErr(tr('sport_err_server') . ' ' . $e->getMessage(), 500);
 }

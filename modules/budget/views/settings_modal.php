@@ -134,7 +134,7 @@ if (!defined('CURRENCY')) {
                     <h5 class="bs-section-subtitle"><?= tr('bs_add_rule_title') ?></h5>
                     <form id="form-add-rule" class="bs-form-inline align-center">
                         <input type="text" name="keyword" class="pf-input bs-input-flex" placeholder="<?= tr('bs_rule_keyword_ph') ?>" required>
-                        <input type="text" name="amount" inputmode="decimal" class="pf-input bs-input-fixed" style="max-width:110px" placeholder="Montant (option)" title="Facultatif : la règle ne s'applique que si le montant est exactement celui-ci">
+                        <input type="text" name="amount" inputmode="decimal" class="pf-input bs-input-fixed" style="max-width:110px" placeholder="<?= htmlspecialchars(tr('bs_rule_amount_ph')) ?>" title="<?= htmlspecialchars(tr('bs_rule_amount_title')) ?>">
                         <select name="category" id="select-rule-category" class="pf-input bs-input-fixed" required></select>
                         <button type="submit" class="btn btn-secondary"><?= tr('btn_add') ?></button>
                     </form>
@@ -465,7 +465,7 @@ function renderCategories(categories) {
                     <strong>${esc(cat.label)}</strong> <small class="text-muted">(${esc(cat.code)} — ${typeLabel})</small>
                 </div>
                 <div class="pf-flex-gap-8 bs-cat-actions">
-                    <button type="button" class="btn-icon-action edit" onclick="editBudgetCategory(${cat.id})" title="Modifier">✏️</button>
+                    <button type="button" class="btn-icon-action edit" onclick="editBudgetCategory(${cat.id})" title="${tr('edit')}">✏️</button>
                     <button type="button" class="btn-icon-action" onclick="moveCatUp(this)" title="Monter">⬆️</button>
                     <button type="button" class="btn-icon-action" onclick="moveCatDown(this)" title="Descendre">⬇️</button>
                     <button type="button" class="btn-icon-action delete" onclick="deleteBudgetCategory(${cat.id})" title="${tr('btn_delete')}">🗑️</button>
@@ -484,14 +484,14 @@ function editBudgetCategory(id) {
     const color = /^#[0-9a-fA-F]{6}$/.test(cat.color || '') ? cat.color : '#cccccc';
     row.innerHTML = `
         <div class="pf-flex-gap-8" style="flex:1; align-items:center; flex-wrap:wrap;">
-            <input type="text" class="pf-input js-cat-icon" value="${esc(cat.icon || '📌')}" maxlength="8" style="width:64px; text-align:center;" title="Icône">
-            <input type="text" class="pf-input js-cat-label" value="${esc(cat.label)}" maxlength="100" style="flex:1; min-width:140px;" placeholder="Nom de la catégorie">
-            <input type="color" class="js-cat-color" value="${color}" title="Couleur" style="width:40px; height:40px; padding:0; border:none; background:none;">
+            <input type="text" class="pf-input js-cat-icon" value="${esc(cat.icon || '📌')}" maxlength="8" style="width:64px; text-align:center;" title="${tr('bs_cat_icon_title')}">
+            <input type="text" class="pf-input js-cat-label" value="${esc(cat.label)}" maxlength="100" style="flex:1; min-width:140px;" placeholder="${tr('bs_cat_name_ph')}">
+            <input type="color" class="js-cat-color" value="${color}" title="${tr('color_title')}" style="width:40px; height:40px; padding:0; border:none; background:none;">
             <small class="text-muted">${esc(cat.code)}</small>
         </div>
         <div class="pf-flex-gap-8">
-            <button type="button" class="btn-icon-action" onclick="saveBudgetCategory(${id})" title="Enregistrer">✅</button>
-            <button type="button" class="btn-icon-action" onclick="loadBudgetSettingsData()" title="Annuler">✖️</button>
+            <button type="button" class="btn-icon-action" onclick="saveBudgetCategory(${id})" title="${tr('btn_save')}">✅</button>
+            <button type="button" class="btn-icon-action" onclick="loadBudgetSettingsData()" title="${tr('btn_cancel')}">✖️</button>
         </div>`;
     row.querySelector('.js-cat-label').focus();
     row.querySelector('.js-cat-label').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveBudgetCategory(id); } });
@@ -510,7 +510,7 @@ async function saveBudgetCategory(id) {
         const res = await pachaFetch('/modules/budget/includes/api/settings.php', { method: 'POST', body: fd });
         if (res && res.success === false) throw new Error(res.error || tr('error_occured'));
         await loadBudgetSettingsData();
-        if (typeof showToast === 'function') showToast('Catégorie modifiée (visible dans le suivi après actualisation de la page)', 'success');
+        if (typeof showToast === 'function') showToast(tr('bs_cat_updated'), 'success');
     } catch (err) {
         if (typeof showToast === 'function') showToast(err.message, 'error'); else alert(err.message);
     }

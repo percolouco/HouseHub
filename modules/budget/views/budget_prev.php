@@ -224,7 +224,7 @@ if (count($parentMapping) >= 2) {
             </div>
             <div class="prev-header-actions">
                 <button type="button" class="pf-btn btn-secondary bp-only-mobile" onclick="document.querySelector('.prev-container').classList.toggle('bp-show-old')">
-                    🗓️ Mois précédents
+                    🗓️ <?= tr('bud_prev_previous_months') ?>
                 </button>
                 <button type="button" class="pf-btn btn-secondary" onclick="duplicateMonth()">
                     🔁 <?= tr('bud_sav_add_one_month') ?>

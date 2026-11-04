@@ -3,6 +3,7 @@
 // Bloc-notes d'idées en vrac par enfant : ajout, modification, suppression (réponses JSON).
 require __DIR__ . '/../../includes/auth.php';
 require __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/i18n.php';
 require_login();
 require __DIR__ . '/ensure-schema.php';
 gift_ensure_schema($pdo);
@@ -21,7 +22,7 @@ try {
     if ($action === 'add') {
         $child = trim($_POST['child_name'] ?? '');
         $idea  = trim($_POST['idea'] ?? '');
-        if ($child === '' || $idea === '') throw new Exception('Enfant et idée obligatoires.');
+        if ($child === '' || $idea === '') throw new Exception(tr('gift_err_child_idea'));
         $stmt = $pdo->prepare("INSERT INTO pf_gift_ideas (child_name, idea) VALUES (?, ?)");
         $stmt->execute([mb_substr($child, 0, 100), mb_substr($idea, 0, 500)]);
         echo json_encode(['success' => true, 'id' => (int)$pdo->lastInsertId()]);
@@ -31,7 +32,7 @@ try {
     if ($action === 'update') {
         $id   = (int)($_POST['id'] ?? 0);
         $idea = trim($_POST['idea'] ?? '');
-        if ($id <= 0 || $idea === '') throw new Exception('Idée invalide.');
+        if ($id <= 0 || $idea === '') throw new Exception(tr('gift_err_idea_invalid'));
         $stmt = $pdo->prepare("UPDATE pf_gift_ideas SET idea = ? WHERE id = ?");
         $stmt->execute([mb_substr($idea, 0, 500), $id]);
         echo json_encode(['success' => true]);
@@ -40,7 +41,7 @@ try {
 
     if ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
-        if ($id <= 0) throw new Exception('Idée invalide.');
+        if ($id <= 0) throw new Exception(tr('gift_err_idea_invalid'));
         $stmt = $pdo->prepare("DELETE FROM pf_gift_ideas WHERE id = ?");
         $stmt->execute([$id]);
         echo json_encode(['success' => true]);
