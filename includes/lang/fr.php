@@ -1292,4 +1292,6 @@ return [
     'sport_tv_other'                   => 'Autres pays ({n})',
     'sport_tv_sources'                 => 'Sources : {s}',
 
+    'sport_tv_none_prio'               => 'Pas encore de chaîne ({c})',
+
 ];

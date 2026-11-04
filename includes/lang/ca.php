@@ -1287,4 +1287,6 @@ return [
     'sport_tv_other'                   => 'Altres països ({n})',
     'sport_tv_sources'                 => 'Fonts: {s}',
 
+    'sport_tv_none_prio'               => 'Encara no hi ha canal ({c})',
+
 ];

@@ -67,7 +67,7 @@
     const d = el('details', 'sp-tv');
     const sum = el('summary', null, '\ud83d\udcfa ');
     const lignes = prio.filter((c) => pays[c]).map((c) => flag(c) + ' ' + nomPays(c, brut[c]) + ' : ' + uniq(pays[c]).join(', '));
-    sum.appendChild(document.createTextNode(lignes.length ? lignes.join(' \u00b7 ') : tr('sport_tv_none_france')));
+    sum.appendChild(document.createTextNode(lignes.length ? lignes.join(' \u00b7 ') : fmt(tr('sport_tv_none_prio'), { c: prio.map((c) => nomPays(c, c)).join(' / ') })));
     d.appendChild(sum);
     const autres = Object.keys(pays).filter((c) => !prio.includes(c)).sort((a, b) => nomPays(a, brut[a]).localeCompare(nomPays(b, brut[b]), LOC));
     if (autres.length) {
