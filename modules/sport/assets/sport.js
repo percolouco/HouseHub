@@ -3,7 +3,7 @@
   const API = '/modules/sport/api.php';
   const COMP = { FL1: 'Ligue 1', PD: 'Liga', CL: 'Ligue des champions', FAC: 'Coupe de France', CDR: 'Copa del Rey' };
   const FINIS = ['FINISHED', 'AWARDED'], ANNULES = ['CANCELLED'], EN_COURS = ['IN_PLAY', 'PAUSED', 'LIVE'];
-  let data = null, tab = 'upcoming', team = 'all', rafraichi = false;
+  let data = null, tab = 'upcoming', team = 'all', rafraichi = false, limite = 25;
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
   const fmtJour = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', weekday: 'short', day: 'numeric', month: 'short' });
@@ -23,6 +23,8 @@
     return d;
   }
   const dt = (m) => new Date(m.kickoff);
+  // statut SCHEDULED = date connue mais heure pas encore fixée (l'API renvoie alors minuit UTC)
+  const heure = (m) => m.status === 'SCHEDULED' ? 'horaire \u00e0 confirmer' : fmtHeure.format(dt(m));
   const aVenir = (m) => !FINIS.includes(m.status) && !ANNULES.includes(m.status);
   const visibles = () => data.matches.filter((m) => team === 'all' || String(m.home_team_id) === team || String(m.away_team_id) === team);
 
@@ -35,7 +37,7 @@
   function renderFiltre() {
     const f = $('sp-filter'); f.textContent = '';
     const opts = [['all', 'Tous']].concat(data.teams.map((t) => [String(t.team_id), t.short_name || t.name]));
-    opts.forEach(([v, lab]) => { const b = el('button', 'pf-seg-btn' + (v === team ? ' active' : ''), lab); b.type = 'button'; b.addEventListener('click', () => { team = v; render(); }); f.appendChild(b); });
+    opts.forEach(([v, lab]) => { const b = el('button', 'pf-seg-btn' + (v === team ? ' active' : ''), lab); b.type = 'button'; b.addEventListener('click', () => { team = v; limite = 25; render(); }); f.appendChild(b); });
   }
 
   function renderProchains() {
@@ -58,18 +60,24 @@
     let ms = visibles().filter((m) => tab === 'upcoming' ? aVenir(m) : FINIS.includes(m.status));
     if (tab === 'results') ms = ms.slice().reverse();
     if (!ms.length) { L.appendChild(el('div', 'sp-empty', tab === 'upcoming' ? 'Aucun match à venir.' : 'Aucun résultat pour le moment.')); return; }
+    const total = ms.length; ms = ms.slice(0, limite);
     let mois = '';
     ms.forEach((m) => {
       const d = dt(m), mm = fmtMois.format(d);
       if (mm !== mois) { mois = mm; L.appendChild(el('div', 'sp-month', mm)); }
       const row = el('div', 'sp-row');
-      const date = el('div', 'sp-date'); date.appendChild(el('b', null, fmtJour.format(d))); date.appendChild(document.createTextNode(fmtHeure.format(d)));
+      const date = el('div', 'sp-date'); date.appendChild(el('b', null, fmtJour.format(d))); date.appendChild(document.createTextNode(heure(m)));
       const mt = el('div', 'sp-match'); mt.appendChild(matchLine(m));
       if (m.status === 'POSTPONED') mt.appendChild(el('span', 'sp-badge', 'Reporté'));
       if (EN_COURS.includes(m.status)) mt.appendChild(el('span', 'sp-badge', 'En cours'));
       row.appendChild(date); row.appendChild(mt); row.appendChild(el('span', 'sp-comp', COMP[m.competition_code] || m.competition_name));
       L.appendChild(row);
     });
+    if (total > ms.length) {
+      const more = el('button', 'btn-secondary', 'Afficher plus (' + (total - ms.length) + ' restants)'); more.type = 'button'; more.style.margin = '12px auto'; more.style.display = 'block';
+      more.addEventListener('click', () => { limite += 25; renderListe(); });
+      L.appendChild(more);
+    }
   }
 
   function renderPied() {
@@ -114,7 +122,7 @@
   window.spOpenModal = function () { $('sp-key').value = ''; $('sp-key-state').textContent = data && data.has_key ? 'Une clé est déjà enregistrée (la saisir remplace l’ancienne).' : 'Aucune clé enregistrée.'; $('sp-modal').classList.add('show'); };
   window.spCloseModal = function () { $('sp-modal').classList.remove('show'); };
 
-  document.querySelectorAll('.pf-pill[data-tab]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; render(); }));
+  document.querySelectorAll('.pf-pill[data-tab]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; limite = 25; render(); }));
   $('sp-refresh').addEventListener('click', () => actualiser(true, false));
   $('sp-gear').addEventListener('click', spOpenModal);
   $('sp-key-save').addEventListener('click', async () => {
