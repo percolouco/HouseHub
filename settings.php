@@ -68,6 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        if ($action === 'set_ui_mode') {
+            require_once __DIR__ . '/includes/ui_prefs.php';
+            hhUiPrefs(); // garantit que les colonnes existent
+            $mode = ($_POST['ui_mode'] ?? '') === 'apps' ? 'apps' : 'classic';
+            $meta_pdo->prepare("UPDATE users SET ui_mode = ? WHERE id = ?")->execute([$mode, $user_id]);
+            hhUiPrefs(true);
+            $success = tr('set_success_ui');
+        }
+
         if ($action === 'update_profile') {
             $display_name = trim($_POST['display_name'] ?? '');
             $color        = trim($_POST['color'] ?? '#0891b2');
@@ -405,6 +414,18 @@ require __DIR__ . '/header.php';
         <?= $lang['flag'] ?> <?= $lang['label'] ?>
       </button>
       <?php endforeach; ?>
+    </form>
+  </section>
+
+  <section class="pf-panel-card">
+    <h2 class="pf-card-h2"><?= tr('set_title_ui') ?></h2>
+    <p class="pf-muted-note"><?= tr('set_desc_ui') ?></p>
+    <?php require_once __DIR__ . '/includes/ui_prefs.php'; $uiMode = hhUiPrefs()['mode']; ?>
+    <form method="post" class="pf-lang-form">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="action" value="set_ui_mode">
+      <button type="submit" name="ui_mode" value="classic" class="pf-btn <?= $uiMode === 'classic' ? 'pf-btn--current-lang' : 'btn-secondary' ?>">☰ <?= tr('set_ui_classic') ?></button>
+      <button type="submit" name="ui_mode" value="apps" class="pf-btn <?= $uiMode === 'apps' ? 'pf-btn--current-lang' : 'btn-secondary' ?>">▦ <?= tr('set_ui_apps') ?></button>
     </form>
   </section>
 

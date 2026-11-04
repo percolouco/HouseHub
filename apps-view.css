@@ -1,0 +1,64 @@
+/* Vue « apps » : écran d'accueil façon smartphone (mobile uniquement, activable dans Paramètres) */
+.hh-appgrid, .hh-home-fab, .hh-apps-bar { display: none; }
+
+@media (max-width: 768px) {
+  body.hh-apps .pf-burger-btn,
+  body.hh-apps .pf-mobile-menu,
+  body.hh-apps .pf-mobile-overlay { display: none !important; }
+  body.hh-apps .pf-main { padding-bottom: 96px; }
+
+  /* Bouton Accueil flottant, accessible depuis n'importe quelle page */
+  body.hh-apps .hh-home-fab {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    width: 56px; height: 56px; border-radius: 50%; z-index: 900;
+    background: var(--primary, #2563eb); color: #fff; font-size: 30px; line-height: 1; text-decoration: none;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .35); border: 3px solid rgba(255, 255, 255, .85);
+  }
+  body.hh-apps .hh-home-fab:active { transform: translateX(-50%) scale(.92); }
+
+  /* Accueil : on remplace les cartes par la grille d'icônes */
+  body.hh-apps[data-page="home"] .pf-section { display: none; }
+  body.hh-apps[data-page="home"] .pf-hero { margin: 8px 0 18px; text-align: center; }
+  body.hh-apps[data-page="home"] .pf-hero h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  body.hh-apps[data-page="home"] .pf-hero p,
+  body.hh-apps[data-page="home"] .pf-user-info { display: none; }
+
+  body.hh-apps .hh-appgrid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 8px;
+    padding: 6px 4px 24px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  .hh-app {
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    text-decoration: none; color: #fff; min-width: 0; position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .hh-app-ico {
+    width: 62px; height: 62px; border-radius: 15px; display: flex; align-items: center; justify-content: center;
+    font-size: 32px; background: linear-gradient(145deg, var(--c1), var(--c2));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .35);
+    transition: transform .12s;
+  }
+  .hh-app:active .hh-app-ico { transform: scale(.9); }
+  .hh-app-name {
+    font-size: .72rem; font-weight: 600; text-align: center; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+  }
+
+  /* Mode « organiser » : les icônes tremblent et se déplacent au doigt */
+  .hh-appgrid.is-editing .hh-app { touch-action: none; animation: hh-jiggle .28s ease-in-out infinite alternate; }
+  .hh-appgrid.is-editing .hh-app:nth-child(even) { animation-delay: -.14s; }
+  .hh-app.is-dragging { animation: none !important; z-index: 50; transition: none; }
+  .hh-app.is-dragging .hh-app-ico { transform: scale(1.18); box-shadow: 0 12px 26px rgba(0, 0, 0, .5); }
+  @keyframes hh-jiggle { from { transform: rotate(-1.6deg); } to { transform: rotate(1.6deg); } }
+
+  body.hh-apps .hh-apps-bar {
+    display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 0 12px;
+  }
+  .hh-apps-bar button {
+    border: 0; border-radius: 999px; padding: 9px 18px; font-weight: 600; font-size: .85rem; cursor: pointer;
+    background: rgba(255, 255, 255, .22); color: #fff; backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, .4);
+  }
+  .hh-apps-bar .hh-apps-done { background: var(--primary, #2563eb); border-color: transparent; }
+  .hh-apps-hint { width: 100%; text-align: center; color: #e2e8f0; font-size: .78rem; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+}
