@@ -39,20 +39,40 @@
   }
 
 
-  // Bloc « où voir le match » : chaînes en France d'abord, autres pays dans un menu repliable
+  // Pays : noms français ou anglais des sources -> code ISO, pour fusionner les doublons (Spain / Espagne) et traduire dans la langue de l'interface
+  const PAYS = { es: ['spain', 'espagne', 'espana'], fr: ['france'], gb: ['united kingdom', 'uk', 'royaume-uni', 'great britain', 'england'], ie: ['ireland', 'irlande'], us: ['united states', 'usa', 'etats-unis', 'etats unis'],
+    de: ['germany', 'allemagne'], it: ['italy', 'italie'], pt: ['portugal'], br: ['brazil', 'bresil'], ca: ['canada'], au: ['australia', 'australie'], pl: ['poland', 'pologne'], jp: ['japan', 'japon'],
+    cn: ['china', 'chine'], in: ['india', 'inde'], id: ['indonesia', 'indonesie'], nl: ['netherlands', 'pays-bas'], be: ['belgium', 'belgique'], ch: ['switzerland', 'suisse'], mx: ['mexico', 'mexique'],
+    ar: ['argentina', 'argentine'], tr: ['turkey', 'turquie'], ma: ['morocco', 'maroc'], dz: ['algeria', 'algerie'], tn: ['tunisia', 'tunisie'], qa: ['qatar'], sa: ['saudi arabia', 'arabie saoudite'], ae: ['united arab emirates', 'emirats arabes unis'], se: ['sweden', 'suede'], no: ['norway', 'norvege'], dk: ['denmark', 'danemark'], gr: ['greece', 'grece'], ro: ['romania', 'roumanie'], ua: ['ukraine'] };
+  const norm = (x) => String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const CODE = {}; Object.keys(PAYS).forEach((c) => PAYS[c].forEach((n) => { CODE[n] = c; }));
+  let regionNames = null; try { regionNames = new Intl.DisplayNames([LOC], { type: 'region' }); } catch (e) { regionNames = null; }
+  const flag = (c) => c.length === 2 ? String.fromCodePoint(...c.toUpperCase().split('').map((ch) => 127397 + ch.charCodeAt(0))) : '';
+  const nomPays = (cle, brut) => { if (cle.length === 2 && regionNames) { try { return regionNames.of(cle.toUpperCase()); } catch (e) { /* nom brut */ } } return brut; };
+  // pays à afficher en premier : Espagne puis France pour le Barça, France pour les autres équipes
+  const prioritaires = (m) => (String(m.home_team_id) === '81' || String(m.away_team_id) === '81') ? ['es', 'fr'] : ['fr'];
+
+  // Bloc « où voir le match » : pays prioritaires d'abord, autres pays dans un menu repliable
   function tvBlock(m) {
     const rows = (data.tv && data.tv[m.match_id]) || [];
     if (!rows.length) return null;
-    const pays = {}, sources = [];
-    rows.forEach((r) => { (pays[r.country] = pays[r.country] || []).push(...r.channels.split(',').map((x) => x.trim()).filter(Boolean)); if (!sources.includes(SRC[r.source] || r.source)) sources.push(SRC[r.source] || r.source); });
+    const pays = {}, brut = {}, sources = [];
+    rows.forEach((r) => {
+      const cle = CODE[norm(r.country)] || r.country; brut[cle] = brut[cle] || r.country;
+      (pays[cle] = pays[cle] || []).push(...r.channels.split(',').map((x) => x.trim()).filter(Boolean));
+      const sn = SRC[r.source] || r.source; if (!sources.includes(sn)) sources.push(sn);
+    });
     const uniq = (a) => a.filter((v, i) => a.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
-    const fr = pays['France'] ? uniq(pays['France']) : null;
-    const autres = Object.keys(pays).filter((c) => c !== 'France').sort((a, b) => a.localeCompare(b, LOC));
+    const prio = prioritaires(m);
     const d = el('details', 'sp-tv');
-    d.appendChild(el('summary', null, '\ud83d\udcfa ' + (fr ? tr('sport_tv_in_france') + ' : ' + fr.join(', ') : tr('sport_tv_none_france'))));
+    const sum = el('summary', null, '\ud83d\udcfa ');
+    const lignes = prio.filter((c) => pays[c]).map((c) => flag(c) + ' ' + nomPays(c, brut[c]) + ' : ' + uniq(pays[c]).join(', '));
+    sum.appendChild(document.createTextNode(lignes.length ? lignes.join(' \u00b7 ') : tr('sport_tv_none_france')));
+    d.appendChild(sum);
+    const autres = Object.keys(pays).filter((c) => !prio.includes(c)).sort((a, b) => nomPays(a, brut[a]).localeCompare(nomPays(b, brut[b]), LOC));
     if (autres.length) {
       const l = el('div', 'sp-tv-list'); l.appendChild(el('div', 'sp-tv-h', fmt(tr('sport_tv_other'), { n: autres.length })));
-      autres.forEach((c) => { const r = el('div'); r.appendChild(el('b', null, c + ' : ')); r.appendChild(document.createTextNode(uniq(pays[c]).join(', '))); l.appendChild(r); });
+      autres.forEach((c) => { const r = el('div'); r.appendChild(el('b', null, flag(c) + ' ' + nomPays(c, brut[c]) + ' : ')); r.appendChild(document.createTextNode(uniq(pays[c]).join(', '))); l.appendChild(r); });
       d.appendChild(l);
     }
     d.appendChild(el('div', 'sp-tv-src', fmt(tr('sport_tv_sources'), { s: sources.join(', ') })));
