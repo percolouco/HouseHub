@@ -1284,4 +1284,12 @@ return [
     'bud_prev_transfer_dest'           => 'Destination du virement',
     'garage_date'                      => 'Date',
 
+
+    // ─── Sport : chaînes TV ───
+    'sport_tv_where'                   => 'Où voir le match',
+    'sport_tv_in_france'               => 'En France',
+    'sport_tv_none_france'             => 'Chaîne en France : non renseignée',
+    'sport_tv_other'                   => 'Autres pays ({n})',
+    'sport_tv_sources'                 => 'Sources : {s}',
+
 ];

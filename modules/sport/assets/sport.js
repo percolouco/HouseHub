@@ -5,6 +5,7 @@
   const fmt = (s, o) => String(s).replace(/\{(\w+)\}/g, (_, k) => o[k]);
   const compNom = (c, def) => { const k = 'sport_comp_' + c; const v = tr(k); return v && v !== k ? v : (def || c); };
   const FINIS = ['FINISHED', 'AWARDED'], ANNULES = ['CANCELLED'], EN_COURS = ['IN_PLAY', 'PAUSED', 'LIVE'];
+  const SRC = { thesportsdb: 'TheSportsDB', fcbarcelona: 'fcbarcelona.fr', footmercato: 'FootMercato' };
   let data = null, tab = 'upcoming', team = 'all', comp = 'all', rafraichi = false, limite = 25;
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
@@ -37,6 +38,27 @@
     return j === 1 ? tr('sport_tomorrow') : fmt(tr('sport_in_days'), { n: j });
   }
 
+
+  // Bloc « où voir le match » : chaînes en France d'abord, autres pays dans un menu repliable
+  function tvBlock(m) {
+    const rows = (data.tv && data.tv[m.match_id]) || [];
+    if (!rows.length) return null;
+    const pays = {}, sources = [];
+    rows.forEach((r) => { (pays[r.country] = pays[r.country] || []).push(...r.channels.split(',').map((x) => x.trim()).filter(Boolean)); if (!sources.includes(SRC[r.source] || r.source)) sources.push(SRC[r.source] || r.source); });
+    const uniq = (a) => a.filter((v, i) => a.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
+    const fr = pays['France'] ? uniq(pays['France']) : null;
+    const autres = Object.keys(pays).filter((c) => c !== 'France').sort((a, b) => a.localeCompare(b, LOC));
+    const d = el('details', 'sp-tv');
+    d.appendChild(el('summary', null, '\ud83d\udcfa ' + (fr ? tr('sport_tv_in_france') + ' : ' + fr.join(', ') : tr('sport_tv_none_france'))));
+    if (autres.length) {
+      const l = el('div', 'sp-tv-list'); l.appendChild(el('div', 'sp-tv-h', fmt(tr('sport_tv_other'), { n: autres.length })));
+      autres.forEach((c) => { const r = el('div'); r.appendChild(el('b', null, c + ' : ')); r.appendChild(document.createTextNode(uniq(pays[c]).join(', '))); l.appendChild(r); });
+      d.appendChild(l);
+    }
+    d.appendChild(el('div', 'sp-tv-src', fmt(tr('sport_tv_sources'), { s: sources.join(', ') })));
+    return d;
+  }
+
   function renderFiltre() {
     const f = $('sp-filter'); f.textContent = '';
     const opts = [['all', tr('sport_filter_all')]].concat(data.teams.map((t) => [String(t.team_id), t.short_name || t.name]));
@@ -64,6 +86,7 @@
       const d = dt(m); const w = el('div', 'sp-when', fmtJour.format(d) + ' · ' + fmtHeure.format(d) + ' · ' + compNom(m.competition_code, m.competition_name));
       c.appendChild(w); const r = relatif(d); if (r) c.appendChild(el('div', 'sp-when', r));
       if (m.status === 'POSTPONED') c.appendChild(el('span', 'sp-badge', tr('sport_postponed')));
+      const tvb = tvBlock(m); if (tvb) c.appendChild(tvb);
       box.appendChild(c);
     });
   }
@@ -83,6 +106,7 @@
       const mt = el('div', 'sp-match'); mt.appendChild(matchLine(m));
       if (m.status === 'POSTPONED') mt.appendChild(el('span', 'sp-badge', tr('sport_postponed')));
       if (EN_COURS.includes(m.status)) mt.appendChild(el('span', 'sp-badge', tr('sport_live')));
+      const tvr = tvBlock(m); if (tvr) mt.appendChild(tvr);
       row.classList.add('sp-comp--' + m.competition_code);
       row.appendChild(date); row.appendChild(mt); row.appendChild(el('span', 'sp-comp sp-comp--' + m.competition_code, compNom(m.competition_code, m.competition_name)));
       L.appendChild(row);
@@ -118,7 +142,7 @@
       if (!r || r.success === false) throw new Error((r && r.error) || 'Erreur');
       data = r; render();
       // données de plus de 6 h : actualisation en arrière-plan (un seul essai par chargement de page)
-      if (data.has_key && data.stale && !rafraichi) { rafraichi = true; await actualiser(false, true); }
+      if (data.has_key && !rafraichi) { rafraichi = true; await actualiser(false, true); }
     } catch (e) { $('sp-list').textContent = ''; $('sp-list').appendChild(el('div', 'sp-empty', tr('sport_load_error') + ' ' + e.message)); }
   }
 

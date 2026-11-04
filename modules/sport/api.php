@@ -2,6 +2,7 @@
 require_once dirname(__DIR__, 2) . '/includes/auth.php';
 require_once dirname(__DIR__, 2) . '/includes/db.php';
 require_once __DIR__ . '/includes/sport-lib.php';
+require_once __DIR__ . '/includes/tv-lib.php';
 require_login();
 header('Content-Type: application/json; charset=utf-8');
 
@@ -27,7 +28,7 @@ try {
             }
         }
         $last = sportLastFetch($pdo);
-        sOk(['teams' => $teams, 'matches' => $matches, 'has_key' => sportGetKey($pdo) !== '', 'stale' => sportStale($pdo),
+        sOk(['teams' => $teams, 'matches' => $matches, 'tv' => tvLoad($pdo, array_map(fn($m) => (int)$m['match_id'], $matches)), 'has_key' => sportGetKey($pdo) !== '', 'stale' => sportStale($pdo),
              'last_fetch' => $last ? gmdate('Y-m-d\TH:i:s\Z', strtotime($last)) : null]);
     }
 
@@ -36,6 +37,7 @@ try {
 
     if ($action === 'refresh') {
         $r = sportSync($pdo, !empty($_POST['force']));
+        tvSync($pdo); // chaînes : appels limités par le cache (selon la proximité du match)
         sOk(['appels' => $r['appels'], 'erreurs' => $r['erreurs']]);
     }
     if ($action === 'save_key') {
