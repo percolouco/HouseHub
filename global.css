@@ -2033,6 +2033,7 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   background: var(--bg-panel);
   border: 1px solid var(--border-light);
   border-radius: 8px;
+  border-left: 4px solid var(--owner-color, #3b82f6);
 }
 .pf-attached-header {
   display: flex;
@@ -2085,9 +2086,6 @@ details[open].pf-accordion > .pf-accordion-summary::after {
 }
 .pf-mb-md {
   margin-bottom: 1rem;
-}
-.pf-m-0 {
-  margin: 0;
 }
 .pf-label-sm {
   font-size: 0.8rem;
@@ -2181,9 +2179,6 @@ details[open].pf-accordion > .pf-accordion-summary::after {
   align-items: center;
   gap: 12px;
 }
-.pf-m-0 {
-  margin: 0;
-}
 .pf-empty-dashed {
   padding: 10px;
   text-align: center;
@@ -2193,9 +2188,6 @@ details[open].pf-accordion > .pf-accordion-summary::after {
 }
 
 /* --- UTILITAIRES & PROFILS RATTACHÉS (SETTINGS) --- */
-.pf-mt-lg {
-  margin-top: 2rem;
-}
 .pf-mb-md {
   margin-bottom: 1rem;
 }
@@ -2205,17 +2197,10 @@ details[open].pf-accordion > .pf-accordion-summary::after {
 .pf-mb-0 {
   margin-bottom: 0;
 }
-.pf-m-0 {
-  margin: 0;
-}
 
 .pf-profile-color-note {
   display: block;
   margin-top: 8px;
-}
-
-.pf-attached-card {
-  border-left: 4px solid var(--owner-color, #3b82f6);
 }
 
 .pf-attached-actions {
