@@ -67,6 +67,42 @@
     });
   })();
   </script>
+  <script>
+  // Accessibilité : nom accessible des boutons icône (repris du title), rôle des modales, focus gardé dans la modale ouverte
+  (function () {
+    var open = function (m) { return /\b(open|active|show|is-active)\b/.test(m.className) || m.style.display === 'flex'; };
+    var nommer = function () {
+      document.querySelectorAll('button, a, [role="button"]').forEach(function (b) {
+        if (b.hasAttribute('aria-label') || b.hasAttribute('aria-labelledby')) return;
+        if (/[\p{L}\p{N}]/u.test(b.textContent || '')) return; // a déjà un vrai texte
+        var t = b.getAttribute('title') || (b.querySelector('img[alt]') || {}).alt;
+        if (!t && /^[\u00d7\u2715\u2716x]$/i.test(b.textContent.trim())) t = (document.documentElement.lang === 'fr' ? 'Fermer' : 'Close');
+        if (t) b.setAttribute('aria-label', t);
+      });
+      document.querySelectorAll('.pf-modal').forEach(function (m) {
+        if (!m.hasAttribute('role')) m.setAttribute('role', 'dialog');
+        if (!m.hasAttribute('aria-modal')) m.setAttribute('aria-modal', 'true');
+        var h = m.querySelector('.pf-modal-title');
+        if (h && !m.hasAttribute('aria-labelledby') && !m.hasAttribute('aria-label')) m.setAttribute('aria-label', h.textContent.trim());
+      });
+    };
+    var timer = null;
+    var plan = function () { clearTimeout(timer); timer = setTimeout(nommer, 150); };
+    nommer();
+    if (window.MutationObserver) new MutationObserver(plan).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab') return;
+      var ms = Array.prototype.filter.call(document.querySelectorAll('.pf-modal'), open);
+      var m = ms[ms.length - 1];
+      if (!m) return;
+      var f = Array.prototype.filter.call(m.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'), function (x) { return !x.disabled && x.offsetParent !== null && x.type !== 'hidden'; });
+      if (!f.length) return;
+      if (!m.contains(document.activeElement)) { f[0].focus(); e.preventDefault(); }
+      else if (e.shiftKey && document.activeElement === f[0]) { f[f.length - 1].focus(); e.preventDefault(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { f[0].focus(); e.preventDefault(); }
+    });
+  })();
+  </script>
   </div> <!-- FERMETURE pf-page -->
 
 </body>

@@ -2401,3 +2401,31 @@ button.pf-pill.is-active {
 .pf-colorpop-hex { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .pf-colorpop-hex .pf-colorpop-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--c); flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
 .pf-colorpop-hex input { flex: 1; min-width: 0; height: 34px; font-family: ui-monospace, monospace; text-transform: uppercase; }
+
+/* ─── Accessibilité (T-07 / T-08) ─── */
+/* anneau de focus clavier visible partout (la souris et le toucher n'en affichent pas) */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* iOS zoome automatiquement sur un champ de moins de 16 px : on les passe à 16 px là-bas seulement (le zoom manuel reste permis) */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea { font-size: 16px; }
+}
+
+/* ─── Zones de clic sur écran tactile (T-06) ───
+   L'aspect ne change pas : la zone sensible déborde du bouton grâce à un ::after invisible (≈ 44 px). */
+@media (pointer: coarse) {
+  :is(.btn-add-item, .btn-delete-item, .btn-edit-item, .btn-icon-action, .btn-icon-small, .hol-btn-action-icon, .bud-pending-toggle, .liste-tab-add, .liste-tab-btn, .liste-cat-badge, .pf-sum-close, .servings-btn, .ios-agenda-btn, .ios-agenda-today, .ios-agenda-listlink, .pf-burger-btn, .pf-mobile-close-btn, .pf-color-trigger, .suivi-btn-nav, .theme-switch, .pf-gear, .fc-view-button, .fc-today-button, .ios-seg, .pf-seg-btn, .show-done-btn, .bp-resolve, .owner-tab, .btn-nav, .btn-sm, .pf-btn-small, .btn-small) { position: relative; }
+  :is(.btn-add-item, .btn-delete-item, .btn-edit-item, .btn-icon-action, .btn-icon-small, .hol-btn-action-icon, .bud-pending-toggle, .liste-tab-add, .liste-tab-btn, .liste-cat-badge, .pf-sum-close, .servings-btn, .ios-agenda-btn, .ios-agenda-today, .ios-agenda-listlink, .pf-burger-btn, .pf-mobile-close-btn, .pf-color-trigger, .suivi-btn-nav, .theme-switch, .pf-gear, .fc-view-button, .fc-today-button, .ios-seg, .pf-seg-btn, .show-done-btn, .bp-resolve, .owner-tab, .btn-nav, .btn-sm, .pf-btn-small, .btn-small, .bud-kpi-edit-btn, .recipe-fav-btn)::after {
+    content: ""; position: absolute; top: -8px; bottom: -8px; left: -6px; right: -6px;
+  }
+}
