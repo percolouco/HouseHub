@@ -1314,4 +1314,11 @@ return [
     'apps_done' => 'Done',
     'apps_reset' => 'Reset order',
     'apps_hint' => 'Drag the icons to rearrange them.',
+    'a11y_add' => 'Add',
+    'a11y_prev' => 'Previous',
+    'a11y_next' => 'Next',
+    'a11y_view' => 'View',
+    'a11y_edit' => 'Edit',
+    'a11y_delete' => 'Delete',
+    'a11y_close' => 'Close',
 ];
