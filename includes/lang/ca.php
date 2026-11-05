@@ -1300,4 +1300,11 @@ return [
     'apps_done' => 'Fet',
     'apps_reset' => 'Reinicialitzar l’ordre',
     'apps_hint' => 'Arrossega les icones per reorganitzar-les.',
+    'a11y_add' => 'Afegeix',
+    'a11y_prev' => 'Anterior',
+    'a11y_next' => 'Següent',
+    'a11y_view' => 'Mostra',
+    'a11y_edit' => 'Edita',
+    'a11y_delete' => 'Suprimeix',
+    'a11y_close' => 'Tanca',
 ];

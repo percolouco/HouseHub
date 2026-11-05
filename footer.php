@@ -71,12 +71,17 @@
   // Accessibilité : nom accessible des boutons icône (repris du title), rôle des modales, focus gardé dans la modale ouverte
   (function () {
     var open = function (m) { return /\b(open|active|show|is-active)\b/.test(m.className) || m.style.display === 'flex'; };
+    var LABELS = <?= json_encode(['add' => tr('a11y_add'), 'prev' => tr('a11y_prev'), 'next' => tr('a11y_next'), 'view' => tr('a11y_view'), 'edit' => tr('a11y_edit'), 'del' => tr('a11y_delete'), 'close' => tr('a11y_close')], JSON_UNESCAPED_UNICODE) ?>;
+    var SYMBOLES = { add: ['+', '\uff0b'], prev: ['\u25c0', '\u2039', '\u2190', '<'], next: ['\u25b6', '\u203a', '\u2192', '>'], view: ['\ud83d\udc41'], edit: ['\u270f', '\ud83d\udd8a'], del: ['\ud83d\uddd1'], close: ['\u00d7', '\u2715', '\u2716'] };
     var nommer = function () {
       document.querySelectorAll('button, a, [role="button"]').forEach(function (b) {
         if (b.hasAttribute('aria-label') || b.hasAttribute('aria-labelledby')) return;
         if (/[\p{L}\p{N}]/u.test(b.textContent || '')) return; // a déjà un vrai texte
         var t = b.getAttribute('title') || (b.querySelector('img[alt]') || {}).alt;
-        if (!t && /^[\u00d7\u2715\u2716x]$/i.test(b.textContent.trim())) t = (document.documentElement.lang === 'fr' ? 'Fermer' : 'Close');
+        if (!t) {
+          var sym = b.textContent.replace(/[\s\ufe0f]/g, '');
+          for (var k in SYMBOLES) if (sym && SYMBOLES[k].indexOf(sym) !== -1) { t = LABELS[k]; break; }
+        }
         if (t) b.setAttribute('aria-label', t);
       });
       document.querySelectorAll('.pf-modal').forEach(function (m) {

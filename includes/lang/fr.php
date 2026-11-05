@@ -1305,4 +1305,11 @@ return [
     'apps_done' => 'OK',
     'apps_reset' => 'Réinitialiser l’ordre',
     'apps_hint' => 'Glisse les icônes pour les réorganiser.',
+    'a11y_add' => 'Ajouter',
+    'a11y_prev' => 'Précédent',
+    'a11y_next' => 'Suivant',
+    'a11y_view' => 'Voir',
+    'a11y_edit' => 'Modifier',
+    'a11y_delete' => 'Supprimer',
+    'a11y_close' => 'Fermer',
 ];
