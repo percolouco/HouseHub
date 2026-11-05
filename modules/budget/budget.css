@@ -2063,9 +2063,6 @@ body.sum-mode-active .sum-target {
   align-items: center;
   margin-bottom: 15px;
 }
-.pf-mt-40 {
-  margin-top: 40px;
-}
 .pf-card-epargne {
   background: var(--bg-panel);
   border-radius: 16px;
@@ -2184,9 +2181,6 @@ body.sum-mode-active .sum-target {
   padding: 8px;
   border-radius: 8px;
   border: 1px solid var(--border-light);
-}
-.vl-col-name {
-  flex: 2;
 }
 .vl-col-base {
   width: 100px;
@@ -2747,9 +2741,6 @@ body.sum-mode-active .sum-target {
 .pf-switch input:checked + .pf-switch-slider {
   background-color: var(--primary);
 }
-.pf-switch input:checked + .pf-switch-slider:before {
-  transform: translateX(16px);
-}
 
 /* Accordéon Mobile */
 .prop2-container {
@@ -2778,10 +2769,6 @@ body.sum-mode-active .sum-target {
 }
 .prop2-summary:hover {
   background: var(--bg-subtle);
-}
-.prop2-summary-left {
-  flex: 1;
-  min-width: 0;
 }
 .prop2-date {
   font-size: 0.75rem;
