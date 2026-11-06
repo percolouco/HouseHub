@@ -207,7 +207,7 @@ function mealTokens(txt) {
 }
 function checkMealRedundancy() {
     const WARN = <?= json_encode(tr('meal_redundant_warn')) ?>;
-    document.querySelectorAll('.js-meal-input').forEach(i => { i.classList.remove('meal-redundant'); i.removeAttribute('title'); });
+    document.querySelectorAll('.js-meal-input').forEach(i => { i.parentElement.classList.remove('meal-redundant'); i.removeAttribute('title'); });
     const byKey = {};
     document.querySelectorAll('.js-meal-input').forEach(i => {
         (byKey[i.dataset.d + '|' + i.dataset.p] = byKey[i.dataset.d + '|' + i.dataset.p] || {})[i.dataset.s] = i;
@@ -217,7 +217,7 @@ function checkMealRedundancy() {
         const a = mealTokens(g.lunch.value), b = mealTokens(g.dinner.value);
         const common = [...a].filter(t => b.has(t)).map(t => t.replace(/^#/, ''));
         if (common.length) {
-            [g.lunch, g.dinner].forEach(i => { i.classList.add('meal-redundant'); i.title = WARN + ' : ' + common.join(', '); });
+            [g.lunch, g.dinner].forEach(i => { i.parentElement.classList.add('meal-redundant'); i.title = WARN + ' : ' + common.join(', '); });
         }
     });
 }
