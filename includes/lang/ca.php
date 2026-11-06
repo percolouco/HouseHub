@@ -1120,6 +1120,7 @@ return [
     'meals_copy_dinner'   => 'Copiar tot el sopar',
     'meal_lunch'          => 'Migdia',
     'meal_dinner'         => 'Sopar',
+    'meal_redundant_warn' => 'Plat repetit el mateix dia',
     'btn_apply_all'       => 'Tots',
     'btn_copy_to'         => 'Copiar cap a...',
     'modal_copy_title'    => 'Copiar cap a...',

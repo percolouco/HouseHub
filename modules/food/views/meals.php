@@ -183,7 +183,47 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
 </div>
 
 <script>
+// Alerte de redondance : même personne, même jour, midi et soir
+const MEAL_STOP = new Set(['avec','sans','aux','des','les','une','sur','dans','pour','de','du','la','le','et','au','en','sauce','roti','pommes','terre','petit','petits','grand']);
+const MEAL_FAMILIES = {
+    volaille: ['volaille','poulet','dinde','canard','pintade','chapon','poule','coq'],
+    boeuf: ['boeuf','bœuf','steak','bavette','hache','haché','rumsteck'],
+    porc: ['porc','jambon','saucisse','lardon','cote','côte','echine','échine'],
+    poisson: ['poisson','cabillaud','colin','saumon','merlu','thon','lieu','truite','dorade','poissons'],
+    puree: ['puree','purée'],
+    pates: ['pates','pâtes','spaghetti','tagliatelles','coquillettes','macaroni','penne'],
+    riz: ['riz'],
+    pizza: ['pizza'],
+};
+function mealTokens(txt) {
+    const norm = txt.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe');
+    const words = (norm.match(/[a-z]{3,}/g) || []).filter(w => !MEAL_STOP.has(w));
+    const out = new Set(words.map(w => w.replace(/s$/, '')));
+    for (const [fam, list] of Object.entries(MEAL_FAMILIES)) {
+        const l = list.map(x => x.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe').replace(/s$/, ''));
+        if (words.some(w => l.includes(w.replace(/s$/, '')))) out.add('#' + fam);
+    }
+    return out;
+}
+function checkMealRedundancy() {
+    const WARN = <?= json_encode(tr('meal_redundant_warn')) ?>;
+    document.querySelectorAll('.js-meal-input').forEach(i => { i.classList.remove('meal-redundant'); i.removeAttribute('title'); });
+    const byKey = {};
+    document.querySelectorAll('.js-meal-input').forEach(i => {
+        (byKey[i.dataset.d + '|' + i.dataset.p] = byKey[i.dataset.d + '|' + i.dataset.p] || {})[i.dataset.s] = i;
+    });
+    Object.values(byKey).forEach(g => {
+        if (!g.lunch || !g.dinner || !g.lunch.value.trim() || !g.dinner.value.trim()) return;
+        const a = mealTokens(g.lunch.value), b = mealTokens(g.dinner.value);
+        const common = [...a].filter(t => b.has(t)).map(t => t.replace(/^#/, ''));
+        if (common.length) {
+            [g.lunch, g.dinner].forEach(i => { i.classList.add('meal-redundant'); i.title = WARN + ' : ' + common.join(', '); });
+        }
+    });
+}
 document.addEventListener('DOMContentLoaded', () => {
+    checkMealRedundancy();
+    document.querySelectorAll('.js-meal-input').forEach(i => i.addEventListener('input', checkMealRedundancy));
     // 1. Sauvegarde automatique AJAX à chaque modification
     document.querySelectorAll('.js-meal-input').forEach(input => {
         input.addEventListener('change', async function() {
@@ -197,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await pachaFetch('/modules/food/includes/api/save-meals.php', { method: 'POST', body: fd });
                 flashSuccess(this);
+                checkMealRedundancy();
             } catch(e) {
                 console.error("Save error", e);
             }
@@ -399,6 +440,7 @@ window.executeCopy = async function(targetDate, targetService) {
 };
 
 function flashSuccess(input) {
+    checkMealRedundancy();
     input.style.transition = 'background 0.3s';
     input.style.background = 'var(--alert-success-bg)';
     setTimeout(() => input.style.background = 'transparent', 400);
