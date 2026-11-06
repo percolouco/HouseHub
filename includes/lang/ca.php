@@ -1154,7 +1154,7 @@ return [
     'food_err_no_views' => "Cap vista activada per a aquest mòdul. Modifiqueu la vostra configuració d'espai.",
     'food_err_no_views_desc' => 'Heu desactivat totes les funcions d\'aquest mòdul. Aneu a la configuració per reactivar-les.',
     'meal_paste_success' => 'Graella enganxada amb èxit!',
-    'meal_err_filename' => 'Format del nom del fitxer no reconegut. Exemple esperat: "Menus-du-28-septembre-au-4-octobre-2026.pdf".',
+    'meal_err_filename' => 'Format del nom del fitxer no reconegut. Exemples esperats: "Menus-du-28-septembre-au-4-octobre-2026.pdf" o "Menus-du-09-au-15.11.26.pdf".',
 
     'offline_title'      => 'Mode fora de línia',
     'offline_heading'    => 'Estàs fora de línia',

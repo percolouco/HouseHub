@@ -188,7 +188,7 @@ class NativePdfParser {
 try {
     $filename = $_FILES['pdf_file']['name'];
     
-    // 1. Extraction robuste de la date depuis le nom de fichier (Menus-du-14-au-20-septembre-2026.pdf)
+    // 1. Extraction robuste de la date depuis le nom de fichier (Menus-du-14-au-20-septembre-2026.pdf ou Menus-du-09-au-15.11.26.pdf)
     $mondayDate = null;
     if (preg_match('/(?:du[\s-]+)?(\d{1,2})[\s-]+(?:([a-zèéû]+)[\s-]+)?au[\s-]+\d{1,2}[\s-]+([a-zèéû]+)[\s-]+(\d{4})/i', $filename, $m)) {
         $monthsMap = ['janvier'=>'01','fevrier'=>'02','février'=>'02','mars'=>'03','avril'=>'04','mai'=>'05','juin'=>'06','juillet'=>'07','aout'=>'08','août'=>'08','septembre'=>'09','octobre'=>'10','novembre'=>'11','decembre'=>'12','décembre'=>'12'];
@@ -206,6 +206,21 @@ try {
         }
         
         $mondayDate = $startYear . '-' . $startMonthNum . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+    } elseif (preg_match('/(\d{1,2})[\s.\-]+au[\s.\-]+(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4}|\d{2})/i', $filename, $m)) {
+        // Nouveau format : Menus-du-09-au-15.11.26.pdf (jour début, jour fin, mois et année de fin en chiffres)
+        $startDay = (int)$m[1];
+        $endDay   = (int)$m[2];
+        $month    = (int)$m[3];
+        $year     = (int)$m[4];
+        if ($year < 100) $year += 2000;
+        if ($month >= 1 && $month <= 12 && $startDay >= 1 && $startDay <= 31) {
+            // Semaine à cheval sur deux mois (ex : 28-au-03.01.27 -> le lundi est dans le mois précédent)
+            if ($startDay > $endDay) {
+                $month--;
+                if ($month === 0) { $month = 12; $year--; }
+            }
+            $mondayDate = sprintf('%04d-%02d-%02d', $year, $month, $startDay);
+        }
     }
 
     if (!$mondayDate) {
