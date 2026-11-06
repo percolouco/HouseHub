@@ -1119,6 +1119,7 @@ return [
     'meals_copy_dinner'   => 'Copier le soir entier',
     'meal_lunch'          => 'Midi',
     'meal_dinner'         => 'Soir',
+    'meal_redundant_warn' => 'Plat redondant le même jour',
     'btn_apply_all'       => 'Tous',
     'btn_copy_to'         => 'Copier vers...',
     'modal_copy_title'    => 'Copier vers...',

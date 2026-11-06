@@ -1123,6 +1123,7 @@ return [
     'meals_copy_dinner'   => 'Copy entire dinner',
     'meal_lunch'          => 'Lunch',
     'meal_dinner'         => 'Dinner',
+    'meal_redundant_warn' => 'Repeated dish the same day',
     'btn_apply_all'       => 'All',
     'btn_copy_to'         => 'Copy to...',
     'modal_copy_title'    => 'Copy to...',
