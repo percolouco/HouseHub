@@ -1128,51 +1128,56 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Vacances scolaires du Ministère pour une zone et une année scolaire.
+    // Les vacances « classiques » (Toussaint, Noël, Hiver, Printemps, ponts) sont publiées avec population « - » ;
+    // seules les vacances d'été portent « Élèves ». On exclut les lignes « Enseignants ».
+    // Les dates sont des instants UTC (ex. 2026-10-16T22:00Z = samedi 17/10 à Paris) : on les lit à l'heure de Paris.
+    async fetchSchoolRecords(zone, yearStart) {
+      const yearStr = `${yearStart}-${yearStart + 1}`;
+      const whereClause = `annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%' AND (population='-' OR population='Élèves')`;
+      const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=${encodeURIComponent(whereClause)}&limit=100&order_by=start_date`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      const parisDay = (iso) =>
+        new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date(iso));
+      const addDay = (ymd, n) => {
+        const d = new Date(ymd + "T12:00:00Z");
+        d.setUTCDate(d.getUTCDate() + n);
+        return d.toISOString().slice(0, 10);
+      };
+      // dédoublonnage : une même période est répétée par académie
+      const uniq = new Map();
+      (data.results || []).forEach((r) => {
+        if (!r.start_date || !r.end_date) return;
+        const start = parisDay(r.start_date);
+        const key = `${r.description}|${start}`;
+        if (uniq.has(key)) return;
+        let endExcl = parisDay(r.end_date); // jour de reprise
+        if (endExcl <= start) endExcl = addDay(start, 1); // période d'un seul jour (pont)
+        const days = [];
+        for (let d = start; d < endExcl; d = addDay(d, 1)) days.push(d);
+        uniq.set(key, { description: r.description, start, last: addDay(endExcl, -1), days });
+      });
+      return Array.from(uniq.values()).sort((x, y) => (x.start < y.start ? -1 : 1));
+    }
+
     async fetchSchoolHolidays(zone) {
       if (!zone || zone === "Autre") return [];
       try {
-        const yearStr = `${this.currentSchoolYearStart}-${this.currentSchoolYearStart + 1}`;
-
-        const whereClause = `annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%' AND population='Élèves'`;
-        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=${encodeURIComponent(whereClause)}&limit=100`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-        const rawRecords = data.results || [];
-
-        // Ton système de dédoublonnage
-        const uniqueMap = new Map();
-        rawRecords.forEach((r) => {
-          const key = `${r.description}|${r.start_date}`;
-          if (!uniqueMap.has(key)) uniqueMap.set(key, r);
-        });
-
+        const records = await this.fetchSchoolRecords(zone, this.currentSchoolYearStart);
         const holidays = [];
-
-        Array.from(uniqueMap.values()).forEach((r) => {
-          const startDateStr = r.start_date.split("T")[0];
-          const endDateStr = r.end_date.split("T")[0];
-
-          let curr = new Date(startDateStr + "T00:00:00");
-          const end = new Date(endDateStr + "T00:00:00");
-
-          // TA REGLE METIER : Si vendredi, on passe au samedi
-          if (curr.getDay() === 5) {
-            curr.setDate(curr.getDate() + 1);
-          }
-
-          while (curr < end) {
+        records.forEach((r) => {
+          r.days.forEach((date) => {
             holidays.push({
-              id: `sh-${curr.getTime()}`,
-              date: this.getLocalIsoDate(curr),
+              id: `sh-${date}`,
+              date,
               name: r.description,
               type: "VACANCES_SCOLAIRES",
               duration: 1,
             });
-            curr.setDate(curr.getDate() + 1);
-          }
+          });
         });
-
         return holidays;
       } catch (e) {
         console.error("Erreur API Vacances:", e);
@@ -1197,34 +1202,12 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const year = this.modalSelectedYear || this.currentSchoolYearStart;
         const yearStr = `${year}-${year + 1}`;
-
-        const whereClause = `annee_scolaire='${yearStr}' AND zones LIKE '%Zone ${zone}%' AND population='Élèves'`;
-        const url = `https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=${encodeURIComponent(whereClause)}&limit=100&order_by=start_date`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.results && data.results.length > 0) {
-          // Ton système de dédoublonnage pour la modale
-          const uniqueMap = new Map();
-          data.results.forEach((r) => {
-            const key = `${r.description}|${r.start_date}`;
-            if (!uniqueMap.has(key)) uniqueMap.set(key, r);
-          });
-
-          let rows = "";
-          Array.from(uniqueMap.values()).forEach((p) => {
-            // On applique aussi le décalage du vendredi pour l'affichage propre dans la modale
-            let d1Date = new Date(p.start_date.split("T")[0] + "T00:00:00");
-            if (d1Date.getDay() === 5) d1Date.setDate(d1Date.getDate() + 1);
-
-            const d1 = d1Date.toLocaleDateString(window.appLang || "fr-FR");
-            const d2 = new Date(p.end_date.split("T")[0]).toLocaleDateString(
-              window.appLang || "fr-FR",
-            );
-            rows += `<tr><td><strong>${p.description}</strong></td><td>${d1}</td><td>${d2}</td></tr>`;
-          });
-          tbody.innerHTML = rows;
+        const records = await this.fetchSchoolRecords(zone, year);
+        if (records.length > 0) {
+          const fmt = (ymd) => new Date(ymd + "T12:00:00").toLocaleDateString(window.appLang || "fr-FR");
+          tbody.innerHTML = records
+            .map((p) => `<tr><td><strong>${p.description}</strong></td><td>${fmt(p.start)}</td><td>${fmt(p.last)}</td></tr>`)
+            .join("");
         } else {
           tbody.innerHTML = `<tr><td colspan='3' style='text-align:center; padding: 20px;'>Aucune vacance trouvée pour ${yearStr}.</td></tr>`;
         }

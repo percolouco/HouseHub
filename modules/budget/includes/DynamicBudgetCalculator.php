@@ -73,7 +73,7 @@ class DynamicBudgetCalculator {
     }
 
     private function getOffDays(): array {
-        $cacheKey = "offdays_{$this->year}";
+        $cacheKey = "offdays2_{$this->year}"; // v2 : population « - » incluse (les vacances hors été étaient ignorées)
         $stmt = $this->pdo->prepare("SELECT content FROM pf_notes WHERE note_type = 'system_cache' AND reference_id = ?");
         $stmt->execute([$cacheKey]);
         $cached = $stmt->fetchColumn();
@@ -92,7 +92,7 @@ class DynamicBudgetCalculator {
             // 🔥 FIX STATE OF THE ART : On cible uniquement la population "Élèves"
             $prevYear = $this->year - 1;
             $nextYear = $this->year + 1;
-            $where = "(annee_scolaire='{$prevYear}-{$this->year}' OR annee_scolaire='{$this->year}-{$nextYear}') AND zones LIKE '%Zone {$zone}%' AND population = 'Élèves'";
+            $where = "(annee_scolaire='{$prevYear}-{$this->year}' OR annee_scolaire='{$this->year}-{$nextYear}') AND zones LIKE '%Zone {$zone}%' AND (population = '-' OR population = 'Élèves')";
             
             $url = "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records?where=" . urlencode($where) . "&limit=100";
             
@@ -101,11 +101,12 @@ class DynamicBudgetCalculator {
                 $data = json_decode($jsonVacances, true);
                 if (!empty($data['results'])) {
                     foreach ($data['results'] as $r) {
-                        $start = new DateTime(substr($r['start_date'], 0, 10));
-                        $end = new DateTime(substr($r['end_date'], 0, 10));
-                        // Sécurité : si la vacance commence le vendredi soir, on la compte à partir du samedi
-                        if ($start->format('N') == 5) $start->modify('+1 day'); 
-                        
+                        // dates en instants UTC (ex. 22:00Z = minuit à Paris) : lues à l'heure de Paris, jours [début ; reprise[
+                        $paris = new DateTimeZone('Europe/Paris');
+                        $start = (new DateTime($r['start_date']))->setTimezone($paris)->setTime(0, 0);
+                        $end = (new DateTime($r['end_date']))->setTimezone($paris)->setTime(0, 0);
+                        if ($end <= $start) { $end = (clone $start)->modify('+1 day'); } // période d'un seul jour (pont)
+
                         while ($start < $end) {
                             $offDays['vacances'][] = $start->format('Y-m-d');
                             $start->modify('+1 day');
@@ -115,8 +116,12 @@ class DynamicBudgetCalculator {
             }
         } catch (\Throwable $e) {}
 
-        $this->pdo->prepare("INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('system_cache', ?, ?) ON DUPLICATE KEY UPDATE content = VALUES(content)")
-                  ->execute([$cacheKey, json_encode($offDays)]);
+        // on ne garde pas en cache un résultat vide (API injoignable) : il serait figé pour toute l'année
+        if ($offDays['feries'] && $offDays['vacances']) {
+            $offDays['vacances'] = array_values(array_unique($offDays['vacances']));
+            $this->pdo->prepare("INSERT INTO pf_notes (note_type, reference_id, content) VALUES ('system_cache', ?, ?) ON DUPLICATE KEY UPDATE content = VALUES(content)")
+                      ->execute([$cacheKey, json_encode($offDays)]);
+        }
 
         return $offDays;
     }
