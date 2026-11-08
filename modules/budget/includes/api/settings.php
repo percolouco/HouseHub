@@ -29,7 +29,9 @@ try {
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         // 4. Salaires (Année en cours)
+        require_once __DIR__ . '/../budget_year.php';
         $currentYear = (int)date('Y');
+        budgetEnsureSalaryYear($pdo, $currentYear);
         $salaries = $pdo->query("
             SELECT p.name as person, 
                    COALESCE(s.salary, 0) as salary, 

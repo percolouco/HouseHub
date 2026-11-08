@@ -533,7 +533,7 @@ return [
     'budget_page_title'         => 'HouseHub - Pressupost',
     'budget_main_header'        => 'Gestió del Pressupost',
     'budget_tab_tracking'       => 'Seguiment Mensual',
-    'budget_tab_prev'           => 'Pressupost 2026',
+    'budget_tab_prev'           => 'Pressupost',
     'budget_tab_savings'        => 'Estalvis',
     'budget_tab_recap'          => 'Resum',
     'budget_tab_provisions'     => 'Provisions',

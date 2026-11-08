@@ -379,6 +379,8 @@ while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
     }
 }
 
+require_once __DIR__ . '/../includes/budget_year.php';
+budgetEnsureSalaryYear($pdo, (int)$viewY);
 $stmtSalaries = $pdo->query("SELECT id, person, salary FROM pf_salary_config WHERE year = " . $viewY);
 while ($sal = $stmtSalaries->fetch(PDO::FETCH_ASSOC)) {
     $incomeList[] = [

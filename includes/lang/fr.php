@@ -535,7 +535,7 @@ return [
     'budget_page_title'         => 'HouseHub - Budget',
     'budget_main_header'        => 'Gestion du Budget',
     'budget_tab_tracking'       => 'Suivi Mensuel',
-    'budget_tab_prev'           => 'Budget 2026',
+    'budget_tab_prev'           => 'Budget',
     'budget_tab_savings'        => 'Épargne',
     'budget_tab_recap'          => 'Récapitulatif',
     'budget_tab_provisions'     => 'Provisions',
