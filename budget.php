@@ -14,7 +14,9 @@ try {
 // ============================================================================
 // DIAGNOSTIC ONBOARDING (Vérifie si le budget est prêt à être utilisé)
 // ============================================================================
+require_once __DIR__ . '/modules/budget/includes/budget_year.php';
 $currentYear = date('Y');
+budgetEnsureSalaryYear($pdo, (int)$currentYear);
 $hasCategories = ((int)$pdo->query("SELECT COUNT(*) FROM pf_budget_categories")->fetchColumn() > 0);
 $hasSalaries = ((int)$pdo->query("SELECT COUNT(*) FROM pf_salary_config WHERE year = $currentYear")->fetchColumn() > 0);
 $hasAccounts = ((int)$pdo->query("SELECT COUNT(*) FROM pf_bank_accounts")->fetchColumn() > 0);
@@ -68,7 +70,7 @@ require __DIR__ . '/header.php';
             <?php if (in_array('budget_prev', $allowedTabs)): ?>
             <a href="?tab=budget_prev" class="tab-item <?= $tab == 'budget_prev' ? 'active' : '' ?>">
                 <span class="tab-icon">🎯</span> 
-                <span><?= tr('budget_tab_prev') ?></span>
+                <span><?= tr('budget_tab_prev') . ' ' . date('Y') ?></span>
             </a>  
             <?php endif; ?>
 

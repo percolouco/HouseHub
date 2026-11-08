@@ -6,7 +6,9 @@ $stmt = $pdo->query("SELECT id, title, amount, expected_date FROM pf_expected_ex
 $provisions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // --- RÉCUPÉRATION DES APPORTS ET DETTES (CLEARING) ---
+require_once __DIR__ . '/../includes/budget_year.php';
 $currentYear = date('Y');
+budgetEnsureSalaryYear($pdo, (int)$currentYear);
 
 // 1. Apports de base (Eco Family) des parents configurés pour l'année
 $stmtConfig = $pdo->prepare("SELECT person, eco_family FROM pf_salary_config WHERE year = ?");

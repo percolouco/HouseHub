@@ -7,6 +7,8 @@ $dbCategories = $stmtCats->fetchAll(PDO::FETCH_ASSOC);
 
 // 2. Récupération des Salaires/Mensualités configurés (Revenus automatiques)
 $currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y');
+require_once __DIR__ . '/../includes/budget_year.php';
+budgetEnsureSalaryYear($pdo, (int)$currentYear);
 $stmtSalaries = $pdo->prepare("SELECT id, person, mensualite FROM pf_salary_config WHERE year = ?");
 $stmtSalaries->execute([$currentYear]);
 $salaries = $stmtSalaries->fetchAll(PDO::FETCH_ASSOC);
