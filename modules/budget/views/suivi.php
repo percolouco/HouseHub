@@ -635,11 +635,11 @@ $monthName = $monthNames[(int)$viewM] . ' ' . $viewY;
             </div>
 
             <div class="bud-gauge-labels">
-                <div class="bud-label-theo" style="left: <?= $posTheorique ?>%; color: <?= $colorTheo ?>; background: <?= $bgTheoSoft ?>;">
+                <div class="bud-label-theo" style="left: <?= $posTheorique ?>%; --p: <?= $posTheorique ?>%; color: <?= $colorTheo ?>; background: <?= $bgTheoSoft ?>;">
                     <span class="lbl-desktop"><?= tr('bud_bar_theoretical') ?> : </span><?= number_format($solde_theorique, 0, ',', ' ') ?> €
                 </div>
-                <div class="bud-label-zero" style="left: <?= $posZero ?>%;">0 €</div>
-                <div class="bud-label-actual" style="left: <?= $posActuel ?>%;">
+                <div class="bud-label-zero" style="left: <?= $posZero ?>%; --p: <?= $posZero ?>%;">0 €</div>
+                <div class="bud-label-actual" style="left: <?= $posActuel ?>%; --p: <?= $posActuel ?>%;">
                     <span class="lbl-desktop"><?= tr('bud_bar_actual') ?> : </span><?= number_format($solde_actuel, 0, ',', ' ') ?> €
                 </div>
                 <div class="bud-label-max" title="<?= sprintf(tr('bud_capacity_tooltip'), number_format($solde_initial, 0), number_format($salaires_retenus, 0), number_format($rentrees_autres, 0)) ?>">

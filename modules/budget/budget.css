@@ -2446,11 +2446,15 @@ body.sum-mode-active .sum-target {
   cursor: help;
 }
 
-/* Responsive / iOS : Placement en quinconce */
+/* Responsive / iOS : étiquettes sur trois niveaux, sans chevauchement
+   - Théorique : au-dessus de la jauge
+   - Actuel : sous la jauge (ligne 1)
+   - 0 € et capacité max : sous la jauge (ligne 2)
+   Les positions (--p) sont bornées pour que les étiquettes ne sortent pas de l'écran. */
 @media (max-width: 768px) {
   .bud-gauge-wrapper {
-    margin-top: 60px;
-    margin-bottom: 50px;
+    margin-top: 56px;
+    margin-bottom: 24px;
   }
   .bud-gauge-track {
     height: 24px;
@@ -2463,18 +2467,29 @@ body.sum-mode-active .sum-target {
   }
   .bud-gauge-labels {
     font-size: 0.7rem;
+    height: 56px;
+    margin-top: 10px;
+  }
+  .bud-label-theo,
+  .bud-label-zero,
+  .bud-label-actual {
+    left: clamp(34px, var(--p, 50%), calc(100% - 34px)) !important;
   }
   .bud-label-theo {
-    top: -55px;
+    top: -62px;
+    padding: 3px 7px;
   }
   .bud-label-actual {
-    top: -35px;
+    top: 0;
     font-size: 0.8rem;
     font-weight: 800;
   }
   .bud-label-zero,
   .bud-label-max {
-    top: 30px;
+    top: 28px;
+  }
+  .bud-label-zero {
+    transform: translateX(-50%);
   }
   /* On masque le texte "Théorie :" et "Actuel :" sur mobile pour gagner de la place */
   .lbl-desktop {
