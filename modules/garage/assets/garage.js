@@ -357,7 +357,7 @@ function renderVehicleHeader(v) {
     '<div class="meta-item"><span class="k">Nb d\'entretiens</span><br><span class="v">' +
     (v.stats?.cnt || 0) +
     "</span></div>" +
-    '<div class="meta-item" title="Total = main d\'œuvre + pièces (hors prix d\'achat)"><span class="k">Total entretien</span><br><span class="v">' +
+    '<div class="meta-item" title="Total = main d\'œuvre + pièces (hors prix d\'achat)"><span class="k">Total (MO + pièces)</span><br><span class="v">' +
     fmtPrice(totalCost) +
     "</span></div>" +
     '<div class="meta-item" title="Somme des coûts de main d\'œuvre saisis sur les entretiens"><span class="k">dont main d\'œuvre</span><br><span class="v">' +
@@ -409,7 +409,7 @@ function renderMaintenances(list) {
     (s, m) => s + parseFloat(m.cost || 0) + parseFloat(m.parts_cost || 0),
     0,
   );
-  $("#maintenance-total").textContent = fmtPrice(totalCost) + " (MO + pièces)";
+  $("#maintenance-total").textContent = fmtPrice(totalCost) + " (MO + pièces rattachées)";
   if (!list.length) {
     el.innerHTML =
       '<div class="empty-state"><div class="icon">🔧</div><p>Aucun entretien enregistré</p></div>';
