@@ -225,7 +225,10 @@ require __DIR__ . '/header.php';
         </div>
         
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Kilométrage</label><input class="form-control" id="vehicle-current-km" name="current_km" type="number" placeholder="85000"></div>
+          <div class="form-group"><label class="form-label">Km actuel</label><input class="form-control" id="vehicle-current-km" name="current_km" type="number" placeholder="85000"><small style="color:var(--muted)">Mis à jour à chaque entretien ajouté</small></div>
+          <div class="form-group"><label class="form-label">Km à l'achat</label><input class="form-control" id="vehicle-purchase-km" name="purchase_km" type="number" placeholder="60000"></div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Conso. moy. (L/100km)</label>
             <input class="form-control" id="vehicle-consumption" name="consumption" type="number" step="0.1" min="0" placeholder="ex: 6.5">
@@ -269,12 +272,8 @@ require __DIR__ . '/header.php';
         <input type="hidden" id="form-maintenance-id" name="id">
         <input type="hidden" id="maintenance-vehicle-id" name="vehicle_id">
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Type *</label>
-            <select class="form-control" id="maintenance-type" name="type">
-              <option>Vidange</option><option>Révision</option><option>Freins</option><option>Pneus</option>
-              <option>Distribution</option><option>Filtres</option><option>Batterie</option><option>Climatisation</option>
-              <option>Carrosserie</option><option>Diagnostic</option><option>Contrôle technique</option><option>Autre</option>
-            </select>
+          <div class="form-group"><label class="form-label">Type(s) * <small style="font-weight:400;color:var(--muted)">(plusieurs choix possibles)</small></label>
+            <div class="type-chips" id="maintenance-type-box"></div>
           </div>
           <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="maintenance-date" name="date" type="date" required></div>
         </div>
@@ -351,7 +350,7 @@ require __DIR__ . '/header.php';
           <div class="form-group"><label class="form-label">Nom *</label><input class="form-control" id="part-name" name="name" required placeholder="Filtre à huile"></div>
           <div class="form-group"><label class="form-label">Catégorie</label>
             <select class="form-control" id="part-category" name="category">
-              <option>Moteur</option><option>Freinage</option><option>Suspension</option><option>Transmission</option>
+              <option>Moteur</option><option>Freinage</option><option>Suspension</option><option>Transmission</option><option>Embrayage</option><option>Essuyage</option>
               <option>Carrosserie</option><option>Electricite</option><option>Eclairage</option><option>Filtration</option>
               <option>Refroidissement</option><option>Echappement</option><option>Pneumatiques</option><option>Autre</option>
             </select>

@@ -326,9 +326,19 @@ function renderVehicleHeader(v) {
       : "") +
     "</div>" +
     '<div class="meta-grid">' +
-    '<div class="meta-item"><span class="k">Kilométrage</span><br><span class="v">' +
+    '<div class="meta-item"><span class="k">Km actuel</span><br><span class="v">' +
     fmt(v.current_km) +
     " km</span></div>" +
+    (v.purchase_km != null && v.purchase_km !== ""
+      ? '<div class="meta-item"><span class="k">Km à l\'achat</span><br><span class="v">' +
+        fmt(v.purchase_km) +
+        " km</span></div>" +
+        (Number(v.current_km) >= Number(v.purchase_km)
+          ? '<div class="meta-item"><span class="k">Parcourus depuis l\'achat</span><br><span class="v">' +
+            fmt(Number(v.current_km) - Number(v.purchase_km)) +
+            " km</span></div>"
+          : "")
+      : "") +
     // 🔥 L'AJOUT EST ICI : Affichage de la consommation moyenne si elle existe
     (v.consumption
       ? '<div class="meta-item"><span class="k">Conso. moy.</span><br><span class="v">⛽ ' +
@@ -409,9 +419,9 @@ function renderMaintenances(list) {
               "</span>"
             : "") +
           "</td>" +
-          '<td><span class="badge badge-blue">' +
-          escHtml(m.type) +
-          "</span></td>" +
+          "<td>" +
+          typeBadges(m.type, "badge-blue") +
+          "</td>" +
           '<td style="max-width:200px;color:var(--muted)">' +
           (m.description ? escHtml(m.description) : "--") +
           "</td>" +
@@ -447,6 +457,7 @@ function renderMaintenances(list) {
       )
       .join("") +
     "</tbody></table></div>";
+  addTableFilters(el, "maint");
 }
 
 function renderVehicleParts(list) {
@@ -515,6 +526,7 @@ function renderVehicleParts(list) {
       )
       .join("") +
     "</tbody></table></div>";
+  addTableFilters(el, "vparts");
 }
 
 // ─── MAINTENANCE DETAIL ───────────────────────────────────────────────────────
@@ -542,9 +554,7 @@ function renderMaintenanceDetailHeader(m) {
     '<div class="vehicle-detail-header" style="align-items:flex-start">' +
     '<div class="vehicle-meta" style="flex:1">' +
     '<div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">' +
-    '<span class="badge badge-blue" style="font-size:.95rem;padding:.35rem .8rem">' +
-    escHtml(m.type) +
-    "</span>" +
+    typeBadges(m.type, "badge-blue") +
     '<span style="color:var(--muted)">' +
     fmtDate(m.date) +
     " · " +
@@ -684,6 +694,7 @@ function renderMaintenanceParts(list, mid, vid) {
     fmtPrice(total) +
     "</strong></td><td></td></tr>" +
     "</tbody></table></div>";
+  addTableFilters(el, "mparts");
 }
 
 async function deleteMaintPart(id, mid, vid) {
@@ -932,6 +943,7 @@ async function loadParts() {
         "</tbody></table></div></div>";
     }
     el.innerHTML = html;
+    addTableFilters(el, "allparts");
   } catch (e) {
     toast(e.message, "error");
   }
@@ -989,9 +1001,9 @@ async function loadAllMaintenances() {
               "<td>" +
               fmtDate(m.date) +
               "</td>" +
-              '<td><span class="badge badge-gray">' +
-              escHtml(m.type) +
-              "</span></td>" +
+              "<td>" +
+              typeBadges(m.type, "badge-gray") +
+              "</td>" +
               "<td>" +
               (m.description ? escHtml(m.description) : "--") +
               "</td>" +
@@ -1029,6 +1041,7 @@ async function loadAllMaintenances() {
     el.innerHTML =
       html ||
       '<div class="empty-state"><div class="icon">🔧</div><p>Aucun entretien</p></div>';
+    addTableFilters(el, "allmaint");
   } catch (e) {
     console.error(e);
   }
@@ -1080,6 +1093,7 @@ function openEditVehicle(id) {
         "color",
         "purchase_date",
         "purchase_price",
+        "purchase_km",
         "current_km",
         "consumption",
         "notes",
@@ -1146,6 +1160,7 @@ function openAddMaintenance() {
   $("#maintenance-vehicle-id").value = currentVehicleId || "";
   $("#modal-maintenance-title").textContent = "Ajouter un entretien";
   $("#maintenance-date").value = new Date().toISOString().slice(0, 10);
+  buildTypeBox("");
   openModal("modal-maintenance");
 }
 function setSelectVal(elId, val) {
@@ -1164,7 +1179,7 @@ function openEditMaintenance(id) {
       $("#form-maintenance-id").value = m.id;
       $("#maintenance-vehicle-id").value = m.vehicle_id;
       $("#modal-maintenance-title").textContent = "Modifier l'entretien";
-      setSelectVal("maintenance-type", m.type);
+      buildTypeBox(m.type);
       const map = {
         description: "maintenance-description",
         date: "maintenance-date",
@@ -1188,6 +1203,8 @@ async function saveMaintenance() {
   const id = $("#form-maintenance-id").value;
   const d = {};
   new FormData($("#form-maintenance")).forEach((v, k) => (d[k] = v));
+  d.type = selectedTypes().join(", ");
+  if (!d.type) return toast("Choisissez au moins un type d'entretien", "error");
   try {
     if (id) {
       await api("maintenances", "PUT", d, "&id=" + id);
@@ -1549,3 +1566,106 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   navigate("dashboard");
 });
+
+// ─── TYPES D'ENTRETIEN (sélection multiple, stockés « A, B, C ») ──────────────
+const MAINT_TYPES = [
+  "Vidange", "Révision", "Freins", "Pneus", "Distribution", "Filtres", "Batterie",
+  "Climatisation", "Suspension", "Transmission", "Embrayage", "Moteur",
+  "Refroidissement", "Échappement", "Électricité", "Éclairage", "Essuie-glaces",
+  "Géométrie / direction", "Carrosserie", "Diagnostic", "Contrôle technique", "Autre",
+];
+function splitTypes(t) {
+  return String(t || "").split(",").map((x) => x.trim()).filter(Boolean);
+}
+function typeBadges(t, cls) {
+  const l = splitTypes(t);
+  if (!l.length) return "--";
+  return l.map((x) => '<span class="badge ' + (cls || "badge-blue") + '">' + escHtml(x) + "</span>").join(" ");
+}
+function buildTypeBox(selected) {
+  const sel = splitTypes(selected);
+  const all = MAINT_TYPES.concat(sel.filter((x) => !MAINT_TYPES.includes(x)));
+  document.getElementById("maintenance-type-box").innerHTML = all
+    .map(
+      (t) =>
+        '<label class="type-chip"><input type="checkbox" value="' + escHtml(t) + '"' +
+        (sel.includes(t) ? " checked" : "") + "><span>" + escHtml(t) + "</span></label>",
+    )
+    .join("");
+}
+function selectedTypes() {
+  return Array.from(document.querySelectorAll("#maintenance-type-box input:checked")).map((i) => i.value);
+}
+
+// ─── FILTRES DANS LES EN-TÊTES DES TABLEAUX ───────────────────────────────────
+const TF_SELECT_COLS = ["Type", "Catégorie", "Marque", "Entretien", "Mécanicien"];
+const TF_SKIP_COLS = ["", "Photo"];
+const tfState = {};
+function tfNorm(x) {
+  return String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+function addTableFilters(root, keyPrefix) {
+  if (!root) return;
+  root.querySelectorAll("table").forEach((table, ti) => {
+    const head = table.tHead && table.tHead.rows[0];
+    const body = table.tBodies[0];
+    if (!head || !body || body.rows.length < 2) return;
+    const heads = Array.from(head.cells).map((c) => c.textContent.trim());
+    const key = (keyPrefix || "t") + ":" + ti + ":" + heads.join("|");
+    const st = tfState[key] || (tfState[key] = {});
+    const row = document.createElement("tr");
+    row.className = "tf-row";
+    const apply = () => {
+      const f = Array.from(row.cells).map((c) => {
+        const el = c.firstChild;
+        return el ? { v: el.value, sel: el.tagName === "SELECT" } : null;
+      });
+      Array.from(body.rows).forEach((tr) => {
+        let ok = true;
+        f.forEach((fi, i) => {
+          if (!ok || !fi || !fi.v) return;
+          const cell = tr.cells[i];
+          if (!cell) return;
+          if (fi.sel) {
+            const toks = Array.from(cell.querySelectorAll(".badge")).map((b) => b.textContent.trim());
+            const vals = toks.length ? toks : [cell.textContent.trim()];
+            ok = vals.some((x) => tfNorm(x) === tfNorm(fi.v));
+          } else {
+            ok = tfNorm(cell.textContent).includes(tfNorm(fi.v));
+          }
+        });
+        tr.style.display = ok ? "" : "none";
+      });
+    };
+    heads.forEach((h, i) => {
+      const th = document.createElement("th");
+      if (TF_SKIP_COLS.includes(h)) { row.appendChild(th); return; }
+      let el;
+      if (TF_SELECT_COLS.includes(h)) {
+        const set = new Set();
+        Array.from(body.rows).forEach((tr) => {
+          const c = tr.cells[i];
+          if (!c) return;
+          const bs = Array.from(c.querySelectorAll(".badge")).map((b) => b.textContent.trim());
+          (bs.length ? bs : [c.textContent.trim()]).forEach((x) => { if (x && x !== "--") set.add(x); });
+        });
+        el = document.createElement("select");
+        el.innerHTML = '<option value="">Tous</option>' +
+          Array.from(set).sort((a, b) => a.localeCompare(b, "fr")).map((x) => "<option>" + escHtml(x) + "</option>").join("");
+      } else {
+        el = document.createElement("input");
+        el.type = "search";
+        el.placeholder = "Filtrer";
+      }
+      el.className = "tf-input";
+      el.value = st[i] || "";
+      if (el.tagName === "SELECT" && el.value !== (st[i] || "")) el.value = "";
+      el.addEventListener("input", () => { st[i] = el.value; apply(); });
+      el.addEventListener("click", (e) => e.stopPropagation());
+      th.appendChild(el);
+      row.appendChild(th);
+    });
+    table.tHead.appendChild(row);
+    apply();
+  });
+}

@@ -502,3 +502,15 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 .tco-note{margin:.1rem 0 .4rem;padding:.45rem .65rem;border-radius:8px;background:rgba(59,130,246,.1);font-size:.85rem;line-height:1.4}
 .tco-input select.form-control{width:auto;min-width:90px}
 #tco-brand-o,#tco-model-o{margin-top:.35rem}
+
+/* Type d'entretien multiple */
+.type-chips{display:flex;flex-wrap:wrap;gap:.35rem;max-height:140px;overflow:auto;padding:.4rem;border:1px solid var(--border-light,#e2e8f0);border-radius:8px}
+.type-chip{display:inline-flex;align-items:center;cursor:pointer;margin:0}
+.type-chip input{position:absolute;opacity:0;pointer-events:none}
+.type-chip span{display:inline-block;padding:.2rem .6rem;border:1px solid var(--border-light,#cbd5e1);border-radius:999px;font-size:.8rem;user-select:none}
+.type-chip input:checked+span{background:#2563eb;border-color:#2563eb;color:#fff}
+.type-chip input:focus-visible+span{outline:2px solid #2563eb;outline-offset:2px}
+
+/* Filtres dans les en-têtes de tableau */
+.tf-row th{padding:.25rem .35rem;background:transparent;font-weight:400}
+.tf-input{width:100%;min-width:64px;box-sizing:border-box;font-size:.74rem;padding:.2rem .3rem;border:1px solid var(--border-light,#cbd5e1);border-radius:6px;background:var(--bg-panel,#fff);color:inherit}
