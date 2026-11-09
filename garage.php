@@ -350,7 +350,7 @@ require __DIR__ . '/header.php';
           <div class="form-group"><label class="form-label">Nom *</label><input class="form-control" id="part-name" name="name" required placeholder="Filtre à huile"></div>
           <div class="form-group"><label class="form-label">Catégorie</label>
             <select class="form-control" id="part-category" name="category">
-              <option>Moteur</option><option>Freinage</option><option>Suspension</option><option>Transmission</option><option>Embrayage</option><option>Essuyage</option>
+              <option>Moteur</option><option>Freinage</option><option>Suspension</option><option>Transmission</option><option>Embrayage</option>
               <option>Carrosserie</option><option>Electricite</option><option>Eclairage</option><option>Filtration</option>
               <option>Refroidissement</option><option>Echappement</option><option>Pneumatiques</option><option>Autre</option>
             </select>
