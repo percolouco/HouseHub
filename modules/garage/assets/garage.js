@@ -103,6 +103,10 @@ async function loadDashboard() {
     $("#stat-cost").textContent = fmtPrice(
       parseFloat(stats.total_cost) + parseFloat(stats.total_parts_cost),
     );
+    const det = document.getElementById("stat-cost-detail");
+    if (det)
+      det.textContent =
+        "MO " + fmtPrice(stats.total_cost) + " · Pièces " + fmtPrice(stats.total_parts_cost);
     renderDashboardVehicles(vehicles);
     renderReminders(reminders);
   } catch (e) {
@@ -167,9 +171,14 @@ function vehicleCardHTML(v) {
         v.consumption +
         "</strong> L/100</div>"
       : "") +
-    '<div class="vc-stat">💶 <strong>' +
-    fmtPrice(v.total_cost) +
+    '<div class="vc-stat" title="Total = main d\'œuvre + pièces">💶 <strong>' +
+    fmtPrice(parseFloat(v.total_cost || 0) + parseFloat(v.parts_cost || 0)) +
     "</strong></div>" +
+    "</div>" +
+    '<div class="vc-breakdown">MO ' +
+    fmtPrice(v.total_cost) +
+    " · Pièces " +
+    fmtPrice(v.parts_cost) +
     "</div>" +
     "</div>" +
     '<div class="vehicle-card-footer">' +
@@ -295,9 +304,9 @@ function renderVehicleHeader(v) {
     ? '<img src="' + UPLOADS + v.photo + '" alt="">'
     : '<div class="no-photo">🚗</div>';
 
-  const totalCost = (
-    parseFloat(v.stats?.total || 0) + parseFloat(v.parts_stats?.total || 0)
-  ).toFixed(2);
+  const moCost = parseFloat(v.stats?.total || 0);
+  const partsCost = parseFloat(v.parts_stats?.total || 0);
+  const totalCost = (moCost + partsCost).toFixed(2);
 
   $("#vehicle-header").innerHTML =
     '<div class="vehicle-detail-header">' +
@@ -345,11 +354,17 @@ function renderVehicleHeader(v) {
         v.consumption +
         " L/100</span></div>"
       : "") +
-    '<div class="meta-item"><span class="k">Entretiens</span><br><span class="v">' +
+    '<div class="meta-item"><span class="k">Nb d\'entretiens</span><br><span class="v">' +
     (v.stats?.cnt || 0) +
     "</span></div>" +
-    '<div class="meta-item"><span class="k">Coût total</span><br><span class="v">' +
+    '<div class="meta-item" title="Total = main d\'œuvre + pièces (hors prix d\'achat)"><span class="k">Total entretien</span><br><span class="v">' +
     fmtPrice(totalCost) +
+    "</span></div>" +
+    '<div class="meta-item" title="Somme des coûts de main d\'œuvre saisis sur les entretiens"><span class="k">dont main d\'œuvre</span><br><span class="v">' +
+    fmtPrice(moCost) +
+    "</span></div>" +
+    '<div class="meta-item" title="Somme (prix × quantité) de toutes les pièces du véhicule"><span class="k">dont pièces</span><br><span class="v">' +
+    fmtPrice(partsCost) +
     "</span></div>" +
     (v.purchase_date
       ? '<div class="meta-item"><span class="k">Achat</span><br><span class="v">' +
@@ -394,7 +409,7 @@ function renderMaintenances(list) {
     (s, m) => s + parseFloat(m.cost || 0) + parseFloat(m.parts_cost || 0),
     0,
   );
-  $("#maintenance-total").textContent = fmtPrice(totalCost);
+  $("#maintenance-total").textContent = fmtPrice(totalCost) + " (MO + pièces)";
   if (!list.length) {
     el.innerHTML =
       '<div class="empty-state"><div class="icon">🔧</div><p>Aucun entretien enregistré</p></div>';
@@ -466,7 +481,11 @@ function renderVehicleParts(list) {
     (s, p) => s + parseFloat(p.price || 0) * parseInt(p.quantity || 1),
     0,
   );
-  $("#parts-total-vehicle").textContent = fmtPrice(total);
+  const unlinked = list
+    .filter((p) => !p.maintenance_id)
+    .reduce((s, p) => s + parseFloat(p.price || 0) * parseInt(p.quantity || 1), 0);
+  $("#parts-total-vehicle").textContent =
+    fmtPrice(total) + (unlinked > 0 ? " (dont " + fmtPrice(unlinked) + " non rattachées)" : "");
   if (!list.length) {
     el.innerHTML =
       '<div class="empty-state"><div class="icon">🔩</div><p>Aucune pièce enregistrée</p></div>';
@@ -1037,7 +1056,7 @@ async function loadAllMaintenances() {
         "</tbody></table></div></div>";
     }
     $("#all-maint-count").textContent = countAll;
-    $("#all-maint-total").textContent = fmtPrice(totalAll);
+    $("#all-maint-total").textContent = fmtPrice(totalAll) + " (MO + pièces)";
     el.innerHTML =
       html ||
       '<div class="empty-state"><div class="icon">🔧</div><p>Aucun entretien</p></div>';
