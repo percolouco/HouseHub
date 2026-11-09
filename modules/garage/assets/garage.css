@@ -514,3 +514,6 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 /* Filtres dans les en-têtes de tableau */
 .tf-row th{padding:.25rem .35rem;background:transparent;font-weight:400}
 .tf-input{width:100%;min-width:64px;box-sizing:border-box;font-size:.74rem;padding:.2rem .3rem;border:1px solid var(--border-light,#cbd5e1);border-radius:6px;background:var(--bg-panel,#fff);color:inherit}
+
+/* Détail MO / pièces */
+.vc-breakdown{font-size:.74rem;color:var(--text-muted);margin-top:.35rem}

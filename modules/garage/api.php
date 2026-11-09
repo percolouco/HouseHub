@@ -121,7 +121,7 @@ if ($action === 'vehicles') {
             $v = $pdo->prepare("SELECT * FROM pf_vehicles WHERE id = ?"); $v->execute([$id]);
             $vehicle = $v->fetch(); if (!$vehicle) gErr('Véhicule introuvable', 404);
             $s = $pdo->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(cost),0) as total FROM pf_maintenances WHERE vehicle_id = ?"); $s->execute([$id]); $vehicle['stats'] = $s->fetch();
-            $p = $pdo->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(price*quantity),0) as total FROM pf_parts WHERE vehicle_id = ?"); $p->execute([$id]); $vehicle['parts_stats'] = $p->fetch();
+            $p = $pdo->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(price*quantity),0) as total, COALESCE(SUM(CASE WHEN maintenance_id IS NULL THEN price*quantity ELSE 0 END),0) as unlinked FROM pf_parts WHERE vehicle_id = ?"); $p->execute([$id]); $vehicle['parts_stats'] = $p->fetch();
             $dc = $pdo->prepare("SELECT COUNT(*) FROM pf_garage_documents WHERE vehicle_id = ? AND maintenance_id IS NULL");
             $dc->execute([$id]);
             $vehicle['vehicle_docs_count'] = (int) $dc->fetchColumn();
@@ -130,7 +130,7 @@ if ($action === 'vehicles') {
             $vehicle['maint_docs_count'] = (int) $dm->fetchColumn();
             gOk($vehicle);
         }
-        $stmt = $pdo->query("SELECT v.*, (SELECT COUNT(*) FROM pf_maintenances m WHERE m.vehicle_id = v.id) as maintenance_count, (SELECT COALESCE(SUM(cost),0) FROM pf_maintenances m WHERE m.vehicle_id = v.id) as total_cost, (SELECT date FROM pf_maintenances m WHERE m.vehicle_id = v.id ORDER BY date DESC LIMIT 1) as last_maintenance FROM pf_vehicles v ORDER BY v.created_at DESC");
+        $stmt = $pdo->query("SELECT v.*, (SELECT COUNT(*) FROM pf_maintenances m WHERE m.vehicle_id = v.id) as maintenance_count, (SELECT COALESCE(SUM(cost),0) FROM pf_maintenances m WHERE m.vehicle_id = v.id) as total_cost, (SELECT COALESCE(SUM(price*quantity),0) FROM pf_parts pp WHERE pp.vehicle_id = v.id) as parts_cost, (SELECT date FROM pf_maintenances m WHERE m.vehicle_id = v.id ORDER BY date DESC LIMIT 1) as last_maintenance FROM pf_vehicles v ORDER BY v.created_at DESC");
         gOk($stmt->fetchAll());
     }
     if ($method === 'POST') {

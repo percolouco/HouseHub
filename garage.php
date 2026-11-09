@@ -32,7 +32,7 @@ require __DIR__ . '/header.php';
       <div class="stat-pill blue"><div class="label">Véhicules</div><div class="value" id="stat-vehicles">--</div></div>
       <div class="stat-pill green"><div class="label">Entretiens</div><div class="value" id="stat-maintenances">--</div></div>
       <div class="stat-pill amber"><div class="label">Pièces</div><div class="value" id="stat-parts">--</div></div>
-      <div class="stat-pill red"><div class="label">Coût total</div><div class="value" id="stat-cost">--</div></div>
+      <div class="stat-pill red" title="Total = main d'œuvre + pièces, tous véhicules (Polo et pièces sans véhicule compris)"><div class="label">Total tous véhicules</div><div class="value" id="stat-cost">--</div><div class="sub" id="stat-cost-detail" style="font-size:.72rem;color:var(--text-muted);margin-top:.35rem"></div></div>
     </div>
     <div class="garage-dash-layout">
       <div class="garage-dash-main">
