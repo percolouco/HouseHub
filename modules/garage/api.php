@@ -50,6 +50,17 @@ CREATE TABLE IF NOT EXISTS pf_garage_tco (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ");
 
+// Migrations légères (idempotentes) : km à l'achat, type d'entretien multiple (liste séparée par des virgules)
+try {
+    if (!$pdo->query("SHOW COLUMNS FROM pf_vehicles LIKE 'purchase_km'")->fetch()) {
+        $pdo->exec("ALTER TABLE pf_vehicles ADD COLUMN purchase_km INT DEFAULT NULL AFTER purchase_price");
+    }
+    $tcol = $pdo->query("SHOW COLUMNS FROM pf_maintenances LIKE 'type'")->fetch();
+    if ($tcol && stripos((string)$tcol['Type'], 'varchar(100)') !== false) {
+        $pdo->exec("ALTER TABLE pf_maintenances MODIFY type VARCHAR(255) NOT NULL");
+    }
+} catch (\Throwable $e) { /* table absente : créée ailleurs */ }
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -131,7 +142,7 @@ if ($action === 'vehicles') {
         $nullFloat = fn($v) => ($v === '' || $v === null) ? null : (float)$v;
         $nullStr   = fn($v) => ($v === '' || $v === null) ? null : $v;
 
-        $stmt = $pdo->prepare("INSERT INTO pf_vehicles (name,brand,model,year,license_plate,vin,fuel_type,consumption,color,purchase_date,purchase_price,current_km,photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt = $pdo->prepare("INSERT INTO pf_vehicles (name,brand,model,year,license_plate,vin,fuel_type,consumption,color,purchase_date,purchase_price,purchase_km,current_km,photo,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
         $stmt->execute([
             $d['name'] ?? '', 
             $d['brand'] ?? '', 
@@ -144,7 +155,8 @@ if ($action === 'vehicles') {
             $nullStr($d['color'] ?? null), 
             $nullStr($d['purchase_date'] ?? null), 
             $nullFloat($d['purchase_price'] ?? null), 
-            $nullInt($d['current_km'] ?? null) ?? 0, 
+            $nullInt($d['purchase_km'] ?? null), 
+            $nullInt($d['current_km'] ?? null) ?? ($nullInt($d['purchase_km'] ?? null) ?? 0), 
             $photo, 
             $nullStr($d['notes'] ?? null)
         ]);
@@ -152,9 +164,9 @@ if ($action === 'vehicles') {
     }
     if ($method === 'PUT') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant'); $d = gBody();
-        $int_fields = ['year','current_km']; 
+        $int_fields = ['year','current_km','purchase_km']; 
         $float_fields = ['purchase_price', 'consumption'];
-        $fields = ['name','brand','model','year','license_plate','vin','fuel_type','consumption','color','purchase_date','purchase_price','current_km','notes']; 
+        $fields = ['name','brand','model','year','license_plate','vin','fuel_type','consumption','color','purchase_date','purchase_price','purchase_km','current_km','notes']; 
         $sets = array_map(fn($f) => "$f = ?", $fields);
         $vals = array_map(function($f) use ($d, $int_fields, $float_fields) {
             $v = $d[$f] ?? null;
@@ -359,7 +371,7 @@ if ($action === 'maintenances') {
             $nullStr($d['notes'] ?? null),
         ]);
         $mid = $pdo->lastInsertId();
-        if (!empty($d['km'])) { $pdo->prepare("UPDATE pf_vehicles SET current_km = GREATEST(current_km, ?), updated_at = NOW() WHERE id = ?")->execute([$d['km'], $d['vehicle_id']]); }
+        if (!empty($d['km'])) { $pdo->prepare("UPDATE pf_vehicles SET current_km = GREATEST(COALESCE(current_km,0), ?), updated_at = NOW() WHERE id = ?")->execute([$d['km'], $d['vehicle_id']]); }
         gOk(['id' => $mid]);
     }
     if ($method === 'PUT') {
@@ -377,7 +389,11 @@ if ($action === 'maintenances') {
             return $v;
         }, $fields);
         $vals[] = $id;
-        $pdo->prepare("UPDATE pf_maintenances SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals); gOk(['updated' => true]);
+        $pdo->prepare("UPDATE pf_maintenances SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals);
+        if (!empty($d['km'])) {
+            $pdo->prepare("UPDATE pf_vehicles v JOIN pf_maintenances m ON m.vehicle_id = v.id SET v.current_km = GREATEST(COALESCE(v.current_km,0), ?), v.updated_at = NOW() WHERE m.id = ?")->execute([(int)$d['km'], $id]);
+        }
+        gOk(['updated' => true]);
     }
     if ($method === 'DELETE') {
         $id = $_GET['id'] ?? null; if (!$id) gErr('ID manquant');
