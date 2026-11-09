@@ -271,10 +271,10 @@ require __DIR__ . '/header.php';
       <form id="form-maintenance" onsubmit="return false">
         <input type="hidden" id="form-maintenance-id" name="id">
         <input type="hidden" id="maintenance-vehicle-id" name="vehicle_id">
+        <div class="form-group" style="margin-bottom:.75rem"><label class="form-label">Type(s) * <small style="font-weight:400;color:var(--muted)">(plusieurs choix possibles)</small></label>
+          <div class="type-chips" id="maintenance-type-box"></div>
+        </div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Type(s) * <small style="font-weight:400;color:var(--muted)">(plusieurs choix possibles)</small></label>
-            <div class="type-chips" id="maintenance-type-box"></div>
-          </div>
           <div class="form-group"><label class="form-label">Date *</label><input class="form-control" id="maintenance-date" name="date" type="date" required></div>
         </div>
         <div class="form-row">
