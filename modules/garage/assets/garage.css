@@ -504,7 +504,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 #tco-brand-o,#tco-model-o{margin-top:.35rem}
 
 /* Type d'entretien multiple */
-.type-chips{display:flex;flex-wrap:wrap;gap:.35rem;max-height:140px;overflow:auto;padding:.4rem;border:1px solid var(--border-light,#e2e8f0);border-radius:8px}
+.type-chips{display:flex;flex-wrap:wrap;gap:.35rem;padding:.4rem;border:1px solid var(--border-light,#e2e8f0);border-radius:8px}
 .type-chip{display:inline-flex;align-items:center;cursor:pointer;margin:0}
 .type-chip input{position:absolute;opacity:0;pointer-events:none}
 .type-chip span{display:inline-block;padding:.2rem .6rem;border:1px solid var(--border-light,#cbd5e1);border-radius:999px;font-size:.8rem;user-select:none}
