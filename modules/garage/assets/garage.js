@@ -366,6 +366,19 @@ function renderVehicleHeader(v) {
     '<div class="meta-item" title="Somme (prix × quantité) de toutes les pièces du véhicule"><span class="k">dont pièces</span><br><span class="v">' +
     fmtPrice(partsCost) +
     "</span></div>" +
+    (function () {
+      if (!v.purchase_date) return "";
+      const d0 = new Date(v.purchase_date);
+      if (isNaN(d0)) return "";
+      const mois = Math.max(1, (Date.now() - d0.getTime()) / 86400000 / 30.4375);
+      return (
+        '<div class="meta-item" title="Total (MO + pièces) divisé par le nombre de mois depuis la date d\'achat (' +
+        mois.toFixed(1).replace(".", ",") +
+        ' mois, minimum 1)"><span class="k">Coût mensuel</span><br><span class="v">' +
+        fmtPrice(totalCost / mois) +
+        " / mois</span></div>"
+      );
+    })() +
     (v.purchase_date
       ? '<div class="meta-item"><span class="k">Achat</span><br><span class="v">' +
         fmtDate(v.purchase_date) +
