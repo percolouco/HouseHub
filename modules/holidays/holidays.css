@@ -1353,3 +1353,28 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 /* Trajet depuis l'étape précédente (km, durée, carburant estimé) */
 .transit-auto-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 12px 8px; font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px dashed var(--border-light); }
 .hol-transit-add { background: none; border: none; color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; padding: 4px 0; }
+
+/* Bandeau : voile sombre pour rester lisible quelle que soit la photo */
+.hol-hero-overlay { background: linear-gradient(180deg, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.45) 40%, rgba(15, 23, 42, 0.8) 100%); }
+.hol-step-nights { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+
+/* « Payé » en un clic */
+.hol-paid-toggle { background: none; border: 1px solid transparent; border-radius: 8px; min-width: 32px; min-height: 32px; margin-left: 2px; padding: 0 4px; cursor: pointer; font-size: 0.95rem; line-height: 1; }
+.hol-paid-toggle:hover, .hol-paid-toggle:focus-visible { background: var(--bg-subtle); border-color: var(--border-light); }
+.hol-paid-toggle:disabled { opacity: .4; cursor: wait; }
+
+/* Dépenses générales + budget par catégorie */
+.hol-panel-general, .hol-panel-budget { margin-top: 20px; }
+.hol-general-row .hol-expense-main { align-items: center; }
+.hol-general-actions { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.hol-general-paid { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+.hol-general-paid input { width: 18px; height: 18px; accent-color: var(--primary); }
+.hol-budget-perday { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.hol-budget-row { padding: 10px 14px; }
+.hol-budget-row + .hol-budget-row { border-top: 1px solid var(--border-light); }
+.hol-budget-line { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+.hol-budget-amount small { font-weight: 500; color: var(--text-muted); margin-left: 4px; }
+.hol-budget-bar { height: 8px; border-radius: 4px; background: var(--bg-subtle); margin: 6px 0 4px; overflow: hidden; }
+.hol-budget-bar-total { height: 100%; min-width: 4px; border-radius: 4px; background: color-mix(in srgb, var(--primary) 35%, transparent); overflow: hidden; }
+.hol-budget-bar-paid { height: 100%; background: var(--success); }
+.hol-budget-sub { font-size: 0.75rem; color: var(--text-muted); }
