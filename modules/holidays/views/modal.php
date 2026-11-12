@@ -30,8 +30,8 @@
                 </div>
                 <!-- DATES AVEC FLATPICKR -->
                 <div class="hol-flex-2">
-                    <label class="pf-label">📅 Dates du voyage</label>
-                    <input type="text" id="hol_date_range" class="pf-input" placeholder="Sélectionnez les dates..." readonly style="cursor: pointer; background-color: var(--bg-panel); color: var(--primary); font-weight: bold; text-align: center; letter-spacing: 0.5px;">
+                    <label class="pf-label">📅 <?= tr('hol_trip_dates') ?></label>
+                    <input type="text" id="hol_date_range" class="pf-input" placeholder="<?= tr('hol_trip_dates_ph') ?>" readonly style="cursor: pointer; background-color: var(--bg-panel); color: var(--primary); font-weight: bold; text-align: center; letter-spacing: 0.5px;">
                     <!-- Vraies données pour save_holiday.php -->
                     <input type="hidden" name="start_date" id="inp_start">
                     <input type="hidden" name="end_date" id="inp_end">
@@ -39,9 +39,9 @@
             </div>
 
             <div class="form-group" style="margin-top: 15px; padding: 10px; background: var(--bg-subtle); border-radius: 8px; border: 1px solid var(--border-light);">
-                <label class="pf-label" style="margin-bottom: 5px;">🚗 Véhicule utilisé (Optionnel)</label>
+                <label class="pf-label" style="margin-bottom: 5px;">🚗 <?= tr('hol_vehicle') ?></label>
                 <select name="vehicle_id" id="inp_vehicle_id" class="pf-input">
-                    <option value="">-- Aucun / Autre transport --</option>
+                    <option value="">-- <?= tr('hol_vehicle_none') ?> --</option>
                     <?php foreach($garageVehicles as $v): ?>
                         <option value="<?= $v['id'] ?>"><?= htmlspecialchars($v['name']) ?></option>
                     <?php endforeach; ?>
@@ -63,6 +63,7 @@
 
             <div class="modal-footer">
                 <button type="button" onclick="deleteHoliday()" id="btn_delete" class="pf-btn btn-secondary hol-btn-delete"><?= tr('btn_delete') ?></button>
+                <button type="button" onclick="duplicateHoliday()" id="btn_duplicate" class="pf-btn btn-secondary" title="<?= tr('hol_duplicate_hint') ?>">⧉ <?= tr('hol_duplicate') ?></button>
                 <button type="button" onclick="closeHolidayModal()" class="pf-btn btn-secondary"><?= tr('btn_cancel') ?></button>
                 <button type="submit" class="pf-btn"><?= tr('btn_save') ?></button>
             </div>
