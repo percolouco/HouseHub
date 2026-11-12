@@ -11,6 +11,7 @@ if (empty($members)) {
 }
 
 // Calcul des 14 jours (Lundi semaine courante -> Dimanche semaine prochaine)
+$todayStr = date('Y-m-d');
 $start_date = new DateTime();
 $start_date->modify('monday this week');
 $dates = [];
@@ -30,10 +31,10 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
 
 <div class="pf-container meals-container">
     <div class="meals-header-bar">
-        <h1 class="meals-title">
+        <h2 class="meals-title">
             <span class="meals-title-icon">🍽️</span> 
             <span data-i18n="meals_board_title"><?= tr('meals_board_title') ?></span>
-        </h1>
+        </h2>
         <div class="meals-actions">
             <!-- NOUVEAU : Bouton Import PDF -->
             <button type="button" class="pf-btn btn-secondary" onclick="document.getElementById('importMenuModal').classList.add('open'); document.body.classList.add('no-scroll');">
@@ -57,7 +58,7 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
         ?>
             <h2 class="meals-week-title"><?= tr('meal_week') ?> (<?= $startWeekStr ?> - <?= $endWeekStr ?>)</h2>
             <div class="meals-table-container">
-                <table class="meals-table" id="mealsTable_<?= $weekIndex ?>">
+                <table class="meals-table" id="mealsTable_<?= $weekIndex ?>" style="--cols: <?= count($members) ?>">
                     <thead>
                         <tr>
                             <th class="col-sticky"></th>
@@ -73,29 +74,31 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
                             $dayDate = date('d/m', strtotime($dateStr));
                             $fullDayName = tr('day_full_' . $dayKey) . ' ' . $dayDate;
                         ?>
-                            <tr class="row-lunch">
+                            <tr class="row-lunch<?= $dateStr === $todayStr ? ' is-today' : '' ?>">
                                 <td class="col-sticky">
                                     <span class="day-label"><?= $dayName ?> <?= $dayDate ?></span>
-                                    <div class="service-icon" onmousedown="event.preventDefault(); openCopySheetFromRow('<?= $dateStr ?>', 'lunch', '<?= addslashes($fullDayName) ?>')" title="<?= tr('meals_copy_lunch') ?>">☀️</div>
+                                    <span class="svc-label"><?= tr('meal_lunch') ?></span>
+                                    <div class="service-icon" role="button" onmousedown="event.preventDefault(); openCopySheetFromRow('<?= $dateStr ?>', 'lunch', '<?= addslashes($fullDayName) ?>')" title="<?= tr('meals_copy_lunch') ?>" aria-label="<?= tr('meals_copy_lunch') ?>">☀️</div>
                                 </td>
                                 <?php foreach ($members as $m): 
                                     $val = $mealsData[$dateStr]['lunch'][$m['id']] ?? '';
                                 ?>
-                                    <td class="meal-input-cell">
+                                    <td class="meal-input-cell" data-name="<?= htmlspecialchars($m['name']) ?>">
                                         <textarea class="meal-input js-meal-input" data-d="<?= $dateStr ?>" data-s="lunch" data-p="<?= $m['id'] ?>" placeholder="-"><?= htmlspecialchars($val) ?></textarea>
                                     </td>
                                 <?php endforeach; ?>
                             </tr>
                             
-                            <tr class="row-dinner">
+                            <tr class="row-dinner<?= $dateStr === $todayStr ? ' is-today' : '' ?>">
                                 <td class="col-sticky">
                                     <span class="day-label invisible"><?= $dayName ?> <?= $dayDate ?></span>
-                                    <div class="service-icon" onmousedown="event.preventDefault(); openCopySheetFromRow('<?= $dateStr ?>', 'dinner', '<?= addslashes($fullDayName) ?>')" title="<?= tr('meals_copy_dinner') ?>">🌙</div>
+                                    <span class="svc-label"><?= tr('meal_dinner') ?></span>
+                                    <div class="service-icon" role="button" onmousedown="event.preventDefault(); openCopySheetFromRow('<?= $dateStr ?>', 'dinner', '<?= addslashes($fullDayName) ?>')" title="<?= tr('meals_copy_dinner') ?>" aria-label="<?= tr('meals_copy_dinner') ?>">🌙</div>
                                 </td>
                                 <?php foreach ($members as $m): 
                                     $val = $mealsData[$dateStr]['dinner'][$m['id']] ?? '';
                                 ?>
-                                    <td class="meal-input-cell">
+                                    <td class="meal-input-cell" data-name="<?= htmlspecialchars($m['name']) ?>">
                                         <textarea class="meal-input js-meal-input" data-d="<?= $dateStr ?>" data-s="dinner" data-p="<?= $m['id'] ?>" placeholder="-"><?= htmlspecialchars($val) ?></textarea>
                                     </td>
                                 <?php endforeach; ?>
