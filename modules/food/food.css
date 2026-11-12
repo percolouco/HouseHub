@@ -620,7 +620,7 @@
 }
 .meals-title {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   color: var(--text-main);
   display: flex;
   align-items: center;
@@ -862,57 +862,16 @@
   gap: 12px;
 }
 
-.meal-dropzone {
-  border: 2px dashed var(--border-strong);
-  border-radius: 12px;
-  padding: 30px;
-  text-align: center;
-  background: var(--bg-subtle);
-  color: var(--text-muted);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
 
-.meal-dropzone:hover {
-  border-color: var(--primary);
-  background: var(--bg-soft);
-  color: var(--primary);
-}
 
 .meal-dropzone-icon {
   font-size: 2.5rem;
   display: block;
   margin-bottom: 12px;
 }
-.meals-actions {
-  display: flex;
-  gap: 12px;
-}
 
-.meal-dropzone {
-  border: 2px dashed var(--border-strong);
-  border-radius: 12px;
-  padding: 30px;
-  text-align: center;
-  background: var(--bg-subtle);
-  color: var(--text-muted);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
 
-.meal-dropzone:hover {
-  border-color: var(--primary);
-  background: var(--bg-soft);
-  color: var(--primary);
-}
 
-.meal-dropzone-icon {
-  font-size: 2.5rem;
-  display: block;
-  margin-bottom: 12px;
-}
 
 .meal-dropzone.drag-over {
   border-color: var(--primary);
@@ -1223,4 +1182,64 @@
   width: 2px; border-radius: 2px;
   background: #f59e0b; opacity: .7;
   pointer-events: none;
+}
+
+
+/* ── Menu de la semaine : mobile (cartes par jour au lieu d'un tableau minuscule) ── */
+.svc-label { display: none; }
+
+@media (max-width: 768px) {
+  .meals-container { padding: 0 0 calc(90px + env(safe-area-inset-bottom)) 0; }
+  .meals-header-bar { margin-bottom: 12px; gap: 8px; }
+  .meals-actions .pf-btn { min-height: 44px; padding: 0 14px; font-size: 0.9rem; white-space: nowrap; }
+  .meals-week-title {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--bg-page); margin: 0 0 10px; padding: 8px 2px;
+    font-size: 0.95rem;
+  }
+  .meals-table-container { background: transparent; border: none; box-shadow: none; overflow: visible; margin-bottom: 24px; }
+  .meals-table, .meals-table tbody { display: block; width: 100%; }
+  .meals-table thead { display: none; }
+  .meals-table tr {
+    display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border-strong); border-right: 1px solid var(--border-strong);
+  }
+  .meals-table tr.row-lunch { margin-top: 12px; border-top: 1px solid var(--border-strong); border-radius: 12px 12px 0 0; overflow: hidden; }
+  .meals-table tr.row-dinner { border-bottom: 1px solid var(--border-strong); border-radius: 0 0 12px 12px; overflow: hidden; }
+  .meals-table tr.row-lunch:first-child { margin-top: 0; }
+  .meals-table td { border: none; }
+  .meals-table td.col-sticky {
+    grid-column: 1 / -1; width: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    padding: 8px 10px !important; text-align: left;
+    background: var(--bg-subtle); border-right: none !important; border-bottom: 1px solid var(--border-light);
+  }
+  .row-dinner td.col-sticky { border-top: 1px dashed var(--border-light); }
+  .day-label, .day-label.invisible { font-size: 0.95rem; margin: 0; }
+  .day-label { flex: 1 0 100%; color: var(--primary); }
+  .day-label.invisible { display: none; }
+  .svc-label { display: block; flex: 1; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+  .service-icon { margin: 0; width: 44px; height: 36px; font-size: 1rem; background: var(--bg-panel); }
+  .meal-input-cell { display: flex; flex-direction: column; border-top: 1px solid var(--border-light) !important; }
+  .meal-input-cell:not(:first-of-type) { border-left: 1px solid var(--border-light) !important; }
+  .meal-input-cell::before {
+    content: attr(data-name); display: block; padding: 6px 8px 0;
+    font-size: 0.65rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); text-align: left;
+  }
+  .meal-input { height: 64px; font-size: 16px; text-align: left; padding: 4px 8px 8px; }
+  .meal-input-cell.meal-redundant::before { content: attr(data-name); position: static; width: auto; height: auto; box-shadow: none; background: none; border-radius: 0; color: #b45309; }
+  .meal-input-cell.meal-redundant::after { top: 0; bottom: 0; }
+  .context-toolbar { height: calc(64px + env(safe-area-inset-bottom)); padding: 0 12px env(safe-area-inset-bottom); gap: 10px; }
+  .context-toolbar .ctx-btn { flex: 1; min-height: 44px; font-size: 0.95rem; }
+  .copy-days-grid { grid-template-columns: repeat(2, 1fr); }
+  .btn-target-service { width: 44px; height: 44px; }
+  .copy-day-actions { gap: 10px; }
+}
+
+/* ── Menu de la semaine : jour en cours (discret) ── */
+.meals-table tr.is-today td { background: color-mix(in srgb, var(--primary, #4361ee) 7%, transparent); }
+.meals-table tr.is-today td.col-sticky { box-shadow: inset 3px 0 0 var(--primary, #4361ee); }
+.meals-table tr.is-today .day-label { color: var(--primary, #4361ee); }
+@media (max-width: 768px) {
+  .meals-table tr.is-today td.col-sticky { background: color-mix(in srgb, var(--primary, #4361ee) 14%, var(--bg-subtle)); }
 }
