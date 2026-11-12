@@ -149,6 +149,10 @@ if (!empty($stepList)) {
         }
         $prev = ['name' => $name, 'end' => $ed];
     }
+    // Fin du voyage après la dernière étape datée : des jours restent sans étape
+    if ($prev && $tStart && $prev['end'] < $tEnd) {
+        $alerts[] = ['warn', sprintf(tr('hol_al_tail_gap'), (int)round((strtotime($tEnd) - strtotime($prev['end'])) / 86400), $prev['name'], $fmtD($prev['end']), $fmtD($tEnd))];
+    }
 }
 if ($tripPhase === 'before' && $leftToPay > 0 && (strtotime($tStart) - strtotime($today)) / 86400 <= 30) {
     $alerts[] = ['warn', sprintf(tr('hol_al_unpaid'), number_format($leftToPay, 0, ',', ' '))];
@@ -163,7 +167,7 @@ if ($tStart && $tripDays > 0 && $tripDays <= 60) {
         foreach ($stepList as $st) {
             $sd = $st['step_start_date']; $ed = $st['step_end_date'] ?: $sd;
             if (!$sd || $d < $sd || $d > $ed) continue;
-            $here[] = $st['location_name'];
+            if (end($here) !== $st['location_name']) $here[] = $st['location_name']; // même lieu deux fois de suite : une seule mention
             if ($d < $ed) $night = $st['location_name'];
             foreach ($st['items'] as $it) {
                 if ($it['name'] === 'PF_TECHNICAL_POINT' || $it['item_date'] !== $d) continue;
@@ -171,7 +175,7 @@ if ($tStart && $tripDays > 0 && $tripDays <= 60) {
             }
         }
         usort($acts, fn($a, $b) => strcmp($a['time'], $b['time']));
-        $dayRows[] = ['date' => $d, 'here' => array_values(array_unique($here)), 'night' => $night, 'acts' => $acts];
+        $dayRows[] = ['date' => $d, 'here' => $here, 'night' => $night, 'acts' => $acts];
     }
 }
 
