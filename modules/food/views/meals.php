@@ -43,108 +43,76 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
         </div>
     </div>
 
-    <!-- Barre contextuelle (Fixe en bas) -->
-    <div class="context-toolbar" id="contextToolbar">
-        <button class="ctx-btn" onmousedown="event.preventDefault(); applyToAllInRow()">➡️ <span data-i18n="btn_apply_all"><?= tr('btn_apply_all') ?></span></button>
-        <button class="ctx-btn primary" onmousedown="event.preventDefault(); openCopySheetFromCell()">🔄 <span data-i18n="btn_copy_to"><?= tr('btn_copy_to') ?></span></button>
-    </div>
+    <div class="meals-wrapper" id="mealsBoard">
+        <!-- Bandeau du mode « copie » : on touche ensuite les repas de destination -->
+        <div class="meal-paste-banner" id="mealPasteBanner" hidden>
+            <span class="meal-paste-text" id="mealPasteText"></span>
+            <button type="button" class="pf-btn meal-paste-done" onclick="endMealCopy()"><?= tr('meal_paste_done') ?></button>
+        </div>
 
-    <div class="meals-wrapper">
-        <?php 
+        <?php
+        $svcDefs = ['lunch' => ['☀️', tr('meal_lunch')], 'dinner' => ['🌙', tr('meal_dinner')]];
         $weeks = array_chunk($dates, 7);
-        foreach ($weeks as $weekIndex => $weekDates): 
+        foreach ($weeks as $weekIndex => $weekDates):
             $startWeekStr = date('d/m', strtotime($weekDates[0]));
             $endWeekStr = date('d/m', strtotime(end($weekDates)));
         ?>
             <h2 class="meals-week-title"><?= tr('meal_week') ?> (<?= $startWeekStr ?> - <?= $endWeekStr ?>)</h2>
-            <div class="meals-table-container">
-                <table class="meals-table" id="mealsTable_<?= $weekIndex ?>" style="--cols: <?= count($members) ?>">
-                    <thead>
-                        <tr>
-                            <th class="col-sticky"></th>
-                            <?php foreach ($members as $m): ?>
-                                <th><?= htmlspecialchars(strtoupper($m['name'])) ?></th>
+            <div class="meals-week">
+                <?php foreach ($weekDates as $dateStr):
+                    $ts = strtotime($dateStr);
+                    $dayKey = strtolower(date('D', $ts));
+                    $dayName = tr('day_' . $dayKey);
+                    $fullDayName = tr('day_full_' . $dayKey) . ' ' . date('d/m', $ts);
+                    $dayCls = $dateStr === $todayStr ? ' is-today' : ($dateStr < $todayStr ? ' is-past' : '');
+                ?>
+                    <section class="meal-day<?= $dayCls ?>" data-d="<?= $dateStr ?>" aria-label="<?= htmlspecialchars($fullDayName) ?>">
+                        <div class="meal-day-rail" title="<?= htmlspecialchars($fullDayName) ?>">
+                            <span class="meal-day-name"><?= $dayName ?></span>
+                            <span class="meal-day-num"><?= date('j', $ts) ?></span>
+                            <span class="meal-day-month"><?= date('d/m', $ts) ?></span>
+                        </div>
+                        <div class="meal-day-slots">
+                            <?php foreach ($svcDefs as $svc => [$svcIcon, $svcLabel]):
+                                $vals = [];
+                                foreach ($members as $m) { $vals[] = trim($mealsData[$dateStr][$svc][$m['id']] ?? ''); }
+                                $isSplit = count(array_unique($vals)) > 1;
+                            ?>
+                                <div class="meal-slot<?= $isSplit ? ' is-split is-mixed' : '' ?>" data-d="<?= $dateStr ?>" data-s="<?= $svc ?>" data-label="<?= htmlspecialchars($fullDayName . ' · ' . $svcLabel) ?>">
+                                    <span class="meal-slot-icon" title="<?= $svcLabel ?>" aria-hidden="true"><?= $svcIcon ?></span>
+                                    <div class="meal-slot-body">
+                                        <textarea class="meal-input js-meal-common" rows="1" aria-label="<?= htmlspecialchars($fullDayName . ' · ' . $svcLabel . ' · ' . tr('meal_all_family')) ?>" placeholder="<?= $svcLabel ?> · <?= mb_strtolower(tr('meal_all_family')) ?>"><?= $isSplit ? '' : htmlspecialchars($vals[0]) ?></textarea>
+                                        <div class="meal-persons">
+                                            <?php foreach ($members as $m):
+                                                $val = $mealsData[$dateStr][$svc][$m['id']] ?? '';
+                                            ?>
+                                                <div class="meal-person<?= trim($val) === '' ? ' is-empty' : '' ?>">
+                                                    <span class="meal-person-name"><?= htmlspecialchars($m['name']) ?></span>
+                                                    <textarea class="meal-input js-meal-input" rows="1" data-d="<?= $dateStr ?>" data-s="<?= $svc ?>" data-p="<?= $m['id'] ?>" aria-label="<?= htmlspecialchars($fullDayName . ' · ' . $svcLabel . ' · ' . $m['name']) ?>" placeholder="-"><?= htmlspecialchars($val) ?></textarea>
+                                                    <button type="button" class="meal-icon-btn js-apply-all" title="<?= tr('meal_apply_all') ?>" aria-label="<?= tr('meal_apply_all') ?>">
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h9M10 8l4 4-4 4M17 6v12M21 6v12"/></svg>
+                                                    </button>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                    <div class="meal-slot-actions">
+                                        <?php if (count($members) > 1): ?>
+                                        <button type="button" class="meal-icon-btn js-toggle-split" data-t-split="<?= tr('meal_split') ?>" data-t-merge="<?= tr('meal_merge') ?>" title="<?= tr('meal_split') ?>" aria-label="<?= tr('meal_split') ?>">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3 2.7-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.3"/><path d="M16.5 14.2c2.7.2 4.5 1.9 4.5 4.3"/></svg>
+                                        </button>
+                                        <?php endif; ?>
+                                        <button type="button" class="meal-icon-btn js-copy-slot" title="<?= tr('meal_copy_slot') ?>" aria-label="<?= tr('meal_copy_slot') ?>">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
                             <?php endforeach; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($weekDates as $dateStr): 
-                            $dayKey = strtolower(date('D', strtotime($dateStr)));
-                            $dayName = tr('day_' . $dayKey);
-                            $dayDate = date('d/m', strtotime($dateStr));
-                            $fullDayName = tr('day_full_' . $dayKey) . ' ' . $dayDate;
-                        ?>
-                            <tr class="row-lunch<?= $dateStr === $todayStr ? ' is-today' : '' ?>">
-                                <td class="col-sticky">
-                                    <span class="day-label"><?= $dayName ?> <?= $dayDate ?></span>
-                                    <span class="svc-label"><?= tr('meal_lunch') ?></span>
-                                    <div class="service-icon" role="button" onmousedown="event.preventDefault(); openCopySheetFromRow('<?= $dateStr ?>', 'lunch', '<?= addslashes($fullDayName) ?>')" title="<?= tr('meals_copy_lunch') ?>" aria-label="<?= tr('meals_copy_lunch') ?>">☀️</div>
-                                </td>
-                                <?php foreach ($members as $m): 
-                                    $val = $mealsData[$dateStr]['lunch'][$m['id']] ?? '';
-                                ?>
-                                    <td class="meal-input-cell" data-name="<?= htmlspecialchars($m['name']) ?>">
-                                        <textarea class="meal-input js-meal-input" data-d="<?= $dateStr ?>" data-s="lunch" data-p="<?= $m['id'] ?>" placeholder="-"><?= htmlspecialchars($val) ?></textarea>
-                                    </td>
-                                <?php endforeach; ?>
-                            </tr>
-                            
-                            <tr class="row-dinner<?= $dateStr === $todayStr ? ' is-today' : '' ?>">
-                                <td class="col-sticky">
-                                    <span class="day-label invisible"><?= $dayName ?> <?= $dayDate ?></span>
-                                    <span class="svc-label"><?= tr('meal_dinner') ?></span>
-                                    <div class="service-icon" role="button" onmousedown="event.preventDefault(); openCopySheetFromRow('<?= $dateStr ?>', 'dinner', '<?= addslashes($fullDayName) ?>')" title="<?= tr('meals_copy_dinner') ?>" aria-label="<?= tr('meals_copy_dinner') ?>">🌙</div>
-                                </td>
-                                <?php foreach ($members as $m): 
-                                    $val = $mealsData[$dateStr]['dinner'][$m['id']] ?? '';
-                                ?>
-                                    <td class="meal-input-cell" data-name="<?= htmlspecialchars($m['name']) ?>">
-                                        <textarea class="meal-input js-meal-input" data-d="<?= $dateStr ?>" data-s="dinner" data-p="<?= $m['id'] ?>" placeholder="-"><?= htmlspecialchars($val) ?></textarea>
-                                    </td>
-                                <?php endforeach; ?>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </div>
+                    </section>
+                <?php endforeach; ?>
             </div>
         <?php endforeach; ?>
-    </div>
-</div>
-
-<!-- Bottom Sheet de Copie (Format Grille Ultra-compacte) -->
-<div id="copyModal" class="pf-modal">
-    <div class="pf-modal-content pf-modal-md copy-modal-large">
-        <div class="pf-modal-header">
-            <h3 class="pf-modal-title">🔄 <span data-i18n="modal_copy_title"><?= tr('modal_copy_title') ?></span></h3>
-            <button class="pf-modal-close" onclick="closeCopyModal()">&times;</button>
-        </div>
-        <div id="copySourceLabel" class="meals-copy-source">Source : ...</div>
-        
-        <div class="week-section-title" data-i18n="week_current"><?= tr('week_current') ?></div>
-        <div class="copy-days-grid">
-            <?php for($i=0; $i<7; $i++): $dStr = $dates[$i]; $dName = tr('day_full_' . strtolower(date('D', strtotime($dStr)))) . ' ' . date('d/m', strtotime($dStr)); ?>
-                <div class="copy-day-card">
-                    <div class="copy-day-name"><?= $dName ?></div>
-                    <div class="copy-day-actions">
-                        <button type="button" class="btn-target-service" onmousedown="event.preventDefault(); executeCopy('<?= $dStr ?>', 'lunch')" title="<?= tr('meal_lunch') ?>">☀️</button>
-                        <button type="button" class="btn-target-service" onmousedown="event.preventDefault(); executeCopy('<?= $dStr ?>', 'dinner')" title="<?= tr('meal_dinner') ?>">🌙</button>
-                    </div>
-                </div>
-            <?php endfor; ?>
-        </div>
-
-        <div class="week-section-title week-section-mt" data-i18n="week_next"><?= tr('week_next') ?></div>
-        <div class="copy-days-grid">
-            <?php for($i=7; $i<14; $i++): $dStr = $dates[$i]; $dName = tr('day_full_' . strtolower(date('D', strtotime($dStr)))) . ' ' . date('d/m', strtotime($dStr)); ?>
-                <div class="copy-day-card">
-                    <div class="copy-day-name"><?= $dName ?></div>
-                    <div class="copy-day-actions">
-                        <button type="button" class="btn-target-service" onmousedown="event.preventDefault(); executeCopy('<?= $dStr ?>', 'lunch')" title="<?= tr('meal_lunch') ?>">☀️</button>
-                        <button type="button" class="btn-target-service" onmousedown="event.preventDefault(); executeCopy('<?= $dStr ?>', 'dinner')" title="<?= tr('meal_dinner') ?>">🌙</button>
-                    </div>
-                </div>
-            <?php endfor; ?>
-        </div>
     </div>
 </div>
 
@@ -208,9 +176,60 @@ function mealTokens(txt) {
     }
     return out;
 }
+// ── Utilitaires de la vue « cartes » : un créneau (.meal-slot) = un jour + un service ──
+const MEAL_API = '/modules/food/includes/api/save-meals.php';
+const MEAL_T = (k, d) => (window.I18N && window.I18N[k]) || d;
+const mealSlotOf = el => el.closest('.meal-slot');
+const mealSlotInputs = slot => Array.from(slot.querySelectorAll('.js-meal-input'));
+const MEAL_AUTOSIZE_JS = !(window.CSS && CSS.supports && CSS.supports('field-sizing', 'content'));
+
+function mealAutosize(el) {
+    if (!MEAL_AUTOSIZE_JS || !el.offsetParent) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+}
+function mealNotify(msg, type) {
+    if (window.showToast) showToast(msg, type || 'success');
+}
+async function mealSaveBulk(updates) {
+    if (!updates.length) return;
+    const fd = new FormData();
+    fd.append('action', 'save_bulk');
+    fd.append('updates', JSON.stringify(updates));
+    try {
+        await pachaFetch(MEAL_API, { method: 'POST', body: fd });
+    } catch (e) {
+        console.error('Save error', e);
+        mealNotify(MEAL_T('error_occured', 'Erreur'), 'error');
+    }
+}
+// Synchronise l'affichage d'un créneau : champ commun si tout le monde mange pareil, détail sinon.
+// mode 'auto' : replie/déplie selon les valeurs ; sinon on ne force que le dépliage si les repas diffèrent.
+function refreshMealSlot(slot, mode) {
+    const inputs = mealSlotInputs(slot);
+    const first = inputs[0].value.trim();
+    const uniform = inputs.every(i => i.value.trim() === first);
+    if (mode === 'auto') slot.classList.toggle('is-split', !uniform);
+    else if (!uniform) slot.classList.add('is-split');
+    slot.classList.toggle('is-mixed', !uniform);
+    // Détail replié et plus aucune différence (ex. exception effacée) : retour au champ commun
+    if (uniform && !slot.classList.contains('is-open') && !slot.contains(document.activeElement)) slot.classList.remove('is-split');
+    if (!slot.classList.contains('is-split')) slot.classList.remove('is-open');
+    inputs.forEach(i => i.parentElement.classList.toggle('is-empty', i.value.trim() === ''));
+    const common = slot.querySelector('.js-meal-common');
+    if (uniform && document.activeElement !== common) common.value = inputs[0].value;
+    const tg = slot.querySelector('.js-toggle-split');
+    if (tg) {
+        const t = (slot.classList.contains('is-open') && uniform) ? tg.dataset.tMerge : tg.dataset.tSplit;
+        tg.title = t; tg.setAttribute('aria-label', t);
+        tg.setAttribute('aria-pressed', slot.classList.contains('is-open') ? 'true' : 'false');
+    }
+    slot.querySelectorAll('.meal-input').forEach(mealAutosize);
+}
 function checkMealRedundancy() {
     const WARN = <?= json_encode(tr('meal_redundant_warn')) ?>;
-    document.querySelectorAll('.js-meal-input').forEach(i => { i.parentElement.classList.remove('meal-redundant'); i.removeAttribute('title'); });
+    document.querySelectorAll('.meal-redundant').forEach(el => el.classList.remove('meal-redundant'));
+    document.querySelectorAll('.js-meal-input, .js-meal-common, .meal-slot-icon').forEach(i => i.removeAttribute('title'));
     const byKey = {};
     document.querySelectorAll('.js-meal-input').forEach(i => {
         (byKey[i.dataset.d + '|' + i.dataset.p] = byKey[i.dataset.d + '|' + i.dataset.p] || {})[i.dataset.s] = i;
@@ -220,15 +239,28 @@ function checkMealRedundancy() {
         const a = mealTokens(g.lunch.value), b = mealTokens(g.dinner.value);
         const common = [...a].filter(t => b.has(t)).map(t => t.replace(/^#/, ''));
         if (common.length) {
-            [g.lunch, g.dinner].forEach(i => { i.parentElement.classList.add('meal-redundant'); i.title = WARN + ' : ' + common.join(', '); });
+            const msg = WARN + ' : ' + common.join(', ');
+            [g.lunch, g.dinner].forEach(i => {
+                const slot = mealSlotOf(i);
+                i.parentElement.classList.add('meal-redundant');
+                slot.classList.add('meal-redundant');
+                i.title = msg;
+                slot.querySelector('.js-meal-common').title = msg;
+                slot.querySelector('.meal-slot-icon').title = msg;
+            });
         }
     });
 }
 document.addEventListener('DOMContentLoaded', () => {
     checkMealRedundancy();
-    document.querySelectorAll('.js-meal-input').forEach(i => i.addEventListener('input', checkMealRedundancy));
-    // 1. Sauvegarde automatique AJAX à chaque modification
+    document.querySelectorAll('.meal-slot').forEach(s => refreshMealSlot(s));
+
+    // 1. Sauvegarde automatique AJAX à chaque modification (champ d'une personne)
     document.querySelectorAll('.js-meal-input').forEach(input => {
+        input.addEventListener('input', function() {
+            refreshMealSlot(mealSlotOf(this));
+            checkMealRedundancy();
+        });
         input.addEventListener('change', async function() {
             const fd = new FormData();
             fd.append('action', 'save_cell');
@@ -238,14 +270,39 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('meal_name', this.value);
 
             try {
-                await pachaFetch('/modules/food/includes/api/save-meals.php', { method: 'POST', body: fd });
+                await pachaFetch(MEAL_API, { method: 'POST', body: fd });
                 flashSuccess(this);
+                refreshMealSlot(mealSlotOf(this));
                 checkMealRedundancy();
             } catch(e) {
                 console.error("Save error", e);
             }
         });
     });
+
+    // 1 bis. Champ commun « toute la famille » : une saisie = le même repas pour chaque membre
+    document.querySelectorAll('.js-meal-common').forEach(common => {
+        common.addEventListener('input', function() {
+            mealSlotInputs(mealSlotOf(this)).forEach(i => { i.value = this.value; });
+            mealAutosize(this);
+            checkMealRedundancy();
+        });
+        common.addEventListener('change', async function() {
+            const val = this.value;
+            const updates = mealSlotInputs(mealSlotOf(this)).map(i => {
+                i.value = val;
+                return { plan_date: i.dataset.d, service: i.dataset.s, person_id: i.dataset.p, meal_name: val };
+            });
+            await mealSaveBulk(updates);
+            flashSuccess(this);
+        });
+    });
+
+    // Sur téléphone : on arrive directement sur le jour en cours
+    const today = document.querySelector('.meal-day.is-today');
+    if (today && window.matchMedia('(max-width: 768px)').matches && today.getBoundingClientRect().bottom > window.innerHeight) {
+        today.scrollIntoView({ block: 'start' });
+    }
 
     // 2. NOUVEAU : Initialisation du Drag & Drop pour l'import PDF
     const dropzone = document.getElementById('mealDropzone');
@@ -302,151 +359,104 @@ window.updateDropzoneState = function(file) {
 };
 
 // ============================================================================
-// Focus Context Bar & Gestion dynamique du clavier (Mobile)
+// Actions des créneaux : détailler / regrouper, appliquer à tous, copier vers…
+// (boutons intégrés à chaque repas : plus de barre flottante ni de modale)
 // ============================================================================
-let copyState = { type: null, sourceDate: null, service: null, personIdx: null, sourceElements: [], fullDayName: '' };
+let mealCopyState = null; // { slot, values: [{ p, v }] }
 
-// Fonction de calcul pour maintenir la barre au-dessus du clavier virtuel
-const updateToolbarPosition = () => {
-    const toolbar = document.getElementById('contextToolbar');
-    if (toolbar && toolbar.classList.contains('active') && window.visualViewport) {
-        const layoutHeight = document.documentElement.clientHeight;
-        const visualHeight = window.visualViewport.height;
-        const offsetTop = window.visualViewport.offsetTop;
-        
-        // Calcul exact de l'espace masqué par le clavier
-        const bottomOffset = layoutHeight - (visualHeight + offsetTop);
-        toolbar.style.bottom = Math.max(0, bottomOffset) + 'px';
+document.addEventListener('click', (e) => {
+    const board = document.getElementById('mealsBoard');
+    if (!board || !board.contains(e.target)) return;
+    const slot = e.target.closest('.meal-slot');
+
+    // Mode copie : chaque repas touché reçoit la copie
+    if (mealCopyState) {
+        if (e.target.closest('.meal-paste-banner')) return;
+        e.preventDefault();
+        if (slot && slot !== mealCopyState.slot) pasteMealInto(slot);
+        return;
     }
-};
+    if (!slot) return;
 
-// Écouteurs pour s'adapter au redimensionnement (ouverture clavier) et au scroll
-if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', updateToolbarPosition);
-    window.visualViewport.addEventListener('scroll', updateToolbarPosition);
-}
-
-document.addEventListener('focusin', (e) => {
-    if(e.target.classList.contains('js-meal-input')) {
-        copyState = {
-            type: 'cell',
-            sourceDate: e.target.getAttribute('data-d'),
-            service: e.target.getAttribute('data-s'),
-            personIdx: e.target.getAttribute('data-p'),
-            sourceElements: [e.target],
-            fullDayName: ''
-        };
-        document.getElementById('contextToolbar').classList.add('active');
-        
-        // On déclenche le repositionnement avec un léger délai pour laisser le clavier monter
-        setTimeout(updateToolbarPosition, 150); 
+    if (e.target.closest('.js-toggle-split')) {
+        // Repas commun -> détail ; détail identique -> regroupé ; repas différents -> affiche/masque les personnes sans plat
+        const wasCommon = !slot.classList.contains('is-split');
+        if (slot.classList.contains('is-mixed')) {
+            slot.classList.toggle('is-open');
+        } else if (wasCommon) {
+            slot.classList.add('is-split', 'is-open');
+        } else {
+            slot.classList.remove('is-split', 'is-open');
+        }
+        refreshMealSlot(slot);
+        if (wasCommon) slot.querySelector('.js-meal-input').focus();
+    } else if (e.target.closest('.js-apply-all')) {
+        applyMealToAll(e.target.closest('.meal-person').querySelector('.js-meal-input'));
+    } else if (e.target.closest('.js-copy-slot')) {
+        startMealCopy(slot);
     }
 });
 
-document.addEventListener('focusout', (e) => {
-    setTimeout(() => {
-        if(document.activeElement && !document.activeElement.classList.contains('js-meal-input')) {
-            const toolbar = document.getElementById('contextToolbar');
-            if (toolbar) {
-                toolbar.classList.remove('active');
-                toolbar.style.bottom = ''; // On retire le style JS pour redonner le contrôle au CSS (-80px)
-            }
-        }
-    }, 150);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mealCopyState) endMealCopy();
 });
 
-// Actions Toolbar
-window.applyToAllInRow = async function() {
-    if(copyState.type !== 'cell' || !copyState.sourceElements[0].value.trim()) return;
-    const val = copyState.sourceElements[0].value;
-    const inputs = document.querySelectorAll(`.js-meal-input[data-d="${copyState.sourceDate}"][data-s="${copyState.service}"]`);
-    
-    let updates = [];
-    inputs.forEach(inp => {
-        if(inp !== copyState.sourceElements[0]) {
-            inp.value = val;
-            flashSuccess(inp);
-            updates.push({ plan_date: inp.dataset.d, service: inp.dataset.s, person_id: inp.dataset.p, meal_name: val });
-        }
+// « Appliquer à tous » : le plat de cette personne devient le repas de toute la famille
+window.applyMealToAll = async function(source) {
+    const val = source.value;
+    if (!val.trim()) return;
+    const slot = mealSlotOf(source);
+    const updates = mealSlotInputs(slot).map(inp => {
+        inp.value = val;
+        return { plan_date: inp.dataset.d, service: inp.dataset.s, person_id: inp.dataset.p, meal_name: val };
     });
-
-    if (updates.length > 0) {
-        const fd = new FormData();
-        fd.append('action', 'save_bulk');
-        fd.append('updates', JSON.stringify(updates));
-        await pachaFetch('/modules/food/includes/api/save-meals.php', { method: 'POST', body: fd });
-    }
+    refreshMealSlot(slot, 'auto');
+    flashSuccess(slot.querySelector('.js-meal-common'));
+    await mealSaveBulk(updates);
 };
 
-window.openCopySheetFromCell = function() {
-    if(!copyState.sourceElements[0] || !copyState.sourceElements[0].value.trim()) return;
-    if(document.activeElement) document.activeElement.blur();
-    
-    const svcLabel = copyState.service === 'lunch' ? (window.I18N['meal_lunch'] || 'Midi') : (window.I18N['meal_dinner'] || 'Soir');
-    const dObj = new Date(copyState.sourceDate);
-    const dayKey = dObj.toLocaleDateString('en-US', {weekday: 'short'}).toLowerCase();
-    const dayName = window.I18N['day_full_' + dayKey] || dObj.toLocaleDateString();
-    
-    document.getElementById('copySourceLabel').innerText = `Source : ${window.I18N['source_individual'] || 'Individuel'} (${dayName} ${svcLabel})`;
-    
-    document.getElementById('copyModal').classList.add('open');
-    document.body.classList.add('no-scroll');
+// « Copier vers… » : on mémorise le repas, puis on touche les repas de destination dans la page
+window.startMealCopy = function(slot) {
+    const values = mealSlotInputs(slot).map(i => ({ p: i.dataset.p, v: i.value })).filter(x => x.v.trim() !== '');
+    if (!values.length) { mealNotify(MEAL_T('meal_copy_empty', 'Rien à copier'), 'error'); return; }
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+
+    mealCopyState = { slot, values };
+    const names = [...new Set(values.map(x => x.v.trim()))];
+    const summary = names[0] + (names.length > 1 ? ' (+' + (names.length - 1) + ')' : '');
+    document.getElementById('mealPasteText').textContent =
+        `${MEAL_T('meal_copy_of', 'Copie de')} « ${summary} » (${slot.dataset.label}) : ${MEAL_T('meal_paste_hint', 'touchez les repas où le coller')}`;
+    document.getElementById('mealPasteBanner').hidden = false;
+    document.getElementById('mealsBoard').classList.add('is-pasting');
+    slot.classList.add('is-copy-source');
 };
 
-window.openCopySheetFromRow = function(dateStr, service, fullDayName) {
-    const inputs = document.querySelectorAll(`.js-meal-input[data-d="${dateStr}"][data-s="${service}"]`);
-    if (!Array.from(inputs).some(inp => inp.value.trim() !== '')) return;
-
-    copyState = { type: 'row', sourceDate: dateStr, service: service, sourceElements: Array.from(inputs), fullDayName: fullDayName };
-    const svcLabel = service === 'lunch' ? (window.I18N['meal_lunch'] || 'Midi') : (window.I18N['meal_dinner'] || 'Soir');
-    document.getElementById('copySourceLabel').innerText = `Source : ${window.I18N['source_row'] || 'Repas commun'} (${fullDayName} ${svcLabel})`;
-    
-    document.getElementById('copyModal').classList.add('open');
-    document.body.classList.add('no-scroll');
+window.pasteMealInto = async function(target) {
+    const updates = [];
+    mealCopyState.values.forEach(({ p, v }) => {
+        const inp = target.querySelector(`.js-meal-input[data-p="${p}"]`);
+        if (!inp) return;
+        inp.value = v;
+        updates.push({ plan_date: inp.dataset.d, service: inp.dataset.s, person_id: p, meal_name: v });
+    });
+    refreshMealSlot(target, 'auto');
+    target.classList.add('is-pasted');
+    checkMealRedundancy();
+    await mealSaveBulk(updates);
 };
 
-window.closeCopyModal = function() {
-    document.getElementById('copyModal').classList.remove('open');
-    document.body.classList.remove('no-scroll');
-};
-
-window.executeCopy = async function(targetDate, targetService) {
-    let updates = [];
-
-    if(copyState.type === 'cell') {
-        const val = copyState.sourceElements[0].value;
-        const targetInput = document.querySelector(`.js-meal-input[data-d="${targetDate}"][data-s="${targetService}"][data-p="${copyState.personIdx}"]`);
-        if(targetInput) {
-            targetInput.value = val;
-            flashSuccess(targetInput);
-            updates.push({ plan_date: targetDate, service: targetService, person_id: copyState.personIdx, meal_name: val });
-        }
-    } else if (copyState.type === 'row') {
-        const targetInputs = document.querySelectorAll(`.js-meal-input[data-d="${targetDate}"][data-s="${targetService}"]`);
-        copyState.sourceElements.forEach((inp, idx) => {
-            if(inp.value.trim() !== '') {
-                targetInputs[idx].value = inp.value;
-                flashSuccess(targetInputs[idx]);
-                updates.push({ plan_date: targetDate, service: targetService, person_id: targetInputs[idx].dataset.p, meal_name: inp.value });
-            }
-        });
-    }
-
-    closeCopyModal();
-
-    if (updates.length > 0) {
-        const fd = new FormData();
-        fd.append('action', 'save_bulk');
-        fd.append('updates', JSON.stringify(updates));
-        await pachaFetch('/modules/food/includes/api/save-meals.php', { method: 'POST', body: fd });
-    }
+window.endMealCopy = function() {
+    mealCopyState = null;
+    document.getElementById('mealPasteBanner').hidden = true;
+    document.getElementById('mealsBoard').classList.remove('is-pasting');
+    document.querySelectorAll('.is-copy-source, .is-pasted').forEach(el => el.classList.remove('is-copy-source', 'is-pasted'));
 };
 
 function flashSuccess(input) {
     checkMealRedundancy();
     input.style.transition = 'background 0.3s';
     input.style.background = 'var(--alert-success-bg)';
-    setTimeout(() => input.style.background = 'transparent', 400);
+    setTimeout(() => input.style.background = '', 400);
 }
 
 // Fonction Javascript d'Import PDF mise à jour
@@ -484,8 +494,9 @@ window.importPdfMenu = async function(e) {
 
 // NOUVEAU : Interception du collage depuis Excel / Google Sheets
 document.addEventListener('paste', async function(e) {
-    // On ne s'active que si on colle dans un textarea de repas
-    if (!e.target.classList.contains('js-meal-input')) return;
+    // On ne s'active que si on colle dans un champ de repas (commun ou d'une personne)
+    const isCommon = e.target.classList.contains('js-meal-common');
+    if (!isCommon && !e.target.classList.contains('js-meal-input')) return;
 
     const clipboardData = e.clipboardData || window.clipboardData;
     const pastedText = clipboardData.getData('text/plain');
@@ -497,46 +508,39 @@ document.addEventListener('paste', async function(e) {
     // C'est une grille ! On bloque le comportement par défaut
     e.preventDefault();
 
+    // Lignes de la grille = créneaux successifs (Midi, Soir, Midi du lendemain…),
+    // colonnes = membres de la famille, à partir du champ où l'on colle.
     const rows = pastedText.split(/\r?\n/);
-    const startTd = e.target.closest('td');
-    const startTr = e.target.closest('tr');
-    const startColIndex = Array.from(startTr.children).indexOf(startTd);
-
-    let currentTr = startTr;
+    const slots = Array.from(document.querySelectorAll('.meal-slot'));
+    const startSlot = mealSlotOf(e.target);
+    const startColIndex = isCommon ? 0 : mealSlotInputs(startSlot).indexOf(e.target);
+    let slotIdx = slots.indexOf(startSlot);
     let updates = [];
 
-    for (let i = 0; i < rows.length; i++) {
-        if (!currentTr) break; // Fin du tableau visuel atteinte
-        
+    for (let i = 0; i < rows.length; i++, slotIdx++) {
+        const slot = slots[slotIdx];
+        if (!slot) break; // Fin du planning atteinte
+
         // Ignorer la dernière ligne vide souvent générée par les tableurs lors d'une copie
         if (rows[i].trim() === '' && i === rows.length - 1) continue;
 
         const cells = rows[i].split('\t');
-        const trChildren = Array.from(currentTr.children);
+        const inputs = mealSlotInputs(slot);
+        // Une seule colonne collée dans un champ commun : le plat vaut pour toute la famille
+        const targets = (isCommon && cells.length === 1)
+            ? inputs.map(inp => [inp, cells[0]])
+            : cells.map((c, j) => [inputs[startColIndex + j], c]);
 
-        for (let j = 0; j < cells.length; j++) {
-            const targetTd = trChildren[startColIndex + j];
-            if (!targetTd) continue; // Fin de la colonne visuelle atteinte
-
-            const targetTextarea = targetTd.querySelector('.js-meal-input');
-            if (targetTextarea) {
-                const val = cells[j].trim();
-                targetTextarea.value = val;
-                
-                // Animation de succès visuel
-                if (typeof flashSuccess === 'function') flashSuccess(targetTextarea);
-                
-                // Préparation pour le Bulk Save
-                updates.push({
-                    plan_date: targetTextarea.dataset.d,
-                    service: targetTextarea.dataset.s,
-                    person_id: targetTextarea.dataset.p,
-                    meal_name: val
-                });
-            }
-        }
-        // Descendre d'une ligne dans le tableau (ex: passer de Midi à Soir, ou de Soir au Midi du lendemain)
-        currentTr = currentTr.nextElementSibling;
+        targets.forEach(([inp, raw]) => {
+            if (!inp) return; // Fin des colonnes atteinte
+            const val = raw.trim();
+            inp.value = val;
+            updates.push({ plan_date: inp.dataset.d, service: inp.dataset.s, person_id: inp.dataset.p, meal_name: val });
+        });
+        const common = slot.querySelector('.js-meal-common');
+        if (document.activeElement === common) common.blur();
+        refreshMealSlot(slot, 'auto');
+        flashSuccess(slot.classList.contains('is-split') ? inputs[0] : common);
     }
 
     // Sauvegarde groupée optimisée
