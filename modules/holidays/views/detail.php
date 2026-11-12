@@ -203,7 +203,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
 
     <!-- 1. HERO HEADER IMMERSIF -->
     <div class="hol-hero-banner">
-        <img src="<?= $bgImage ?>" class="hol-hero-bg-img" alt="">
+        <img src="<?= $bgImage ?>" class="hol-hero-bg-img" alt="" data-remote="<?= (empty($holiday['image_url']) || strpos($holiday['image_url'], '/modules/holidays/') !== 0) ? '1' : '0' ?>">
         <div class="hol-hero-overlay"></div>
         <div class="hol-hero-content">
             

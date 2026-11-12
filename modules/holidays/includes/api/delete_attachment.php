@@ -3,6 +3,7 @@
 require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
 require_login();
+require dirname(__DIR__) . '/hol_files.php';
 
 header('Content-Type: application/json');
 
@@ -25,10 +26,10 @@ $stmt->execute([$file_id, $holiday_id]);
 $file = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($file) {
-    $absolutePath = dirname(__DIR__, 4) . '/' . $file['file_path'];
+    $absolutePath = hol_attachment_path((string)$file['file_path']);
     
     // 2. On supprime physiquement le fichier s'il existe
-    if (file_exists($absolutePath)) {
+    if ($absolutePath && is_file($absolutePath)) {
         unlink($absolutePath);
     }
     
