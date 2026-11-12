@@ -1294,6 +1294,7 @@ return [
     'hol_step_expenses_empty'          => 'Nothing planned yet: accommodation, activity, transport… Add a line if needed (optional).',
     'hol_step_toast_name'              => 'Give the stop a name.',
     'hol_step_toast_dates'             => 'The departure date is before the arrival date.',
+    'hol_step_toast_place'             => 'Pick a place from the search first.',
     'hol_step_position'                => 'Position of the stop',
     'hol_step_opt_end'                 => '-- At the end of the trip --',
     'hol_step_opt_after'               => 'After:',

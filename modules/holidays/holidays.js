@@ -1,7 +1,12 @@
 window.PLANNING_MODIFIED = false;
 
-// Variable globale pour Flatpickr
-let cpDateRangePicker = null;
+// Échappement pour injecter une valeur dans du HTML (noms de lieux, de dépenses, notes…)
+function holEsc(v) {
+  return String(v ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+  );
+}
 
 // Écouteur pour activer le thème sombre de Flatpickr selon le thème global HouseHub
 document.addEventListener("DOMContentLoaded", () => {
@@ -38,23 +43,12 @@ function toggleTripMap() {
   if (mapWrapper.classList.contains("hol-hidden")) {
     mapWrapper.classList.remove("hol-hidden");
     if (typeof detailMap !== "undefined" && detailMap !== null) {
-      setTimeout(() => detailMap.invalidateSize(), 100);
+      // Première ouverture : la carte était invisible, il faut la recadrer sur l'itinéraire
+      setTimeout(() => (window.holFitMap ? window.holFitMap() : detailMap.invalidateSize()), 100);
     }
   } else {
     mapWrapper.classList.add("hol-hidden");
   }
-}
-
-function switchHolTab(tabId, btn) {
-  document
-    .querySelectorAll(".hol-tab-btn")
-    .forEach((b) => b.classList.remove("active"));
-  document
-    .querySelectorAll(".hol-tab-content")
-    .forEach((c) => (c.style.display = "none"));
-  if (btn) btn.classList.add("active");
-  const tab = document.getElementById(tabId);
-  if (tab) tab.style.display = "block";
 }
 
 function closeCheckpointModal() {
@@ -293,7 +287,7 @@ function initDetailMap() {
     marker.bindPopup(`
         <div style="text-align:center;">
             <div style="font-size:0.75rem; color:#64748b; margin-bottom:2px; font-weight:bold;">${stepLabel} ${index + 1}</div>
-            <strong style="font-size:1rem; color:#0f172a;">${pt.location_name}</strong><br>
+            <strong style="font-size:1rem; color:#0f172a;">${holEsc(pt.location_name)}</strong><br>
             <span style="font-weight:bold; color:#2563eb;">${parseFloat(pt.total_amount).toFixed(2)} €</span>
         </div>
     `);
@@ -440,7 +434,7 @@ function initDetailMap() {
             <div style="padding: 12px 0; border-bottom: 1px dashed var(--border-light); display: flex; justify-content: space-between; align-items: flex-end;">
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">
-                        📍 ${startPt.location_name} ➔ ${endPt.location_name}
+                        📍 ${holEsc(startPt.location_name)} ➔ ${holEsc(endPt.location_name)}
                     </div>
                     <div style="font-size: 0.8rem; color: var(--text-muted);">
                         🚗 ${Math.round(distanceKm)} km &nbsp;•&nbsp; ⏱️ ${formatDuration(durationSec)}
@@ -462,21 +456,23 @@ function initDetailMap() {
               .querySelectorAll(".transit-auto-info")
               .forEach((el) => el.remove());
             const rawLocationName = startPt.location_name;
-            const safeLocationName = rawLocationName.replace(/'/g, "\\'");
             const expenseDesc = `Essence depuis ${rawLocationName}`;
+            // Une seule ligne « trajet » par étape : déjà ajoutée si elle existe, quel que soit son libellé
             const isAlreadyAdded = endPt.items.some(
-              (it) => it.name === expenseDesc,
+              (it) => it.expense_context === "transit" || it.name === expenseDesc,
             );
 
             const summaryHtml = `
-              <div class="transit-auto-info" style="font-size: 0.8rem; color: var(--text-muted); padding: 4px 0 10px 42px; display: flex; align-items: center; gap: 8px;">
-                  🚗 ${Math.round(distanceKm)} km 
+              <div class="transit-auto-info">
+                  🚗 ${holEsc(rawLocationName)} ➔ ${Math.round(distanceKm)} km
+                  <span style="opacity: 0.5;">|</span>
+                  ⏱️ ${formatDuration(durationSec)}
                   <span style="opacity: 0.5;">|</span> 
                   <strong>⛽ ~${cost.toFixed(2)} €</strong>
-                  ${!isAlreadyAdded ? `<button type="button" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.8rem; padding:0; margin-left: 5px;" onclick="addQuickTransitExpense(${document.querySelector('input[name="holiday_id"]').value}, ${endPt.sort_order}, ${cost.toFixed(2)}, 'Essence depuis ${safeLocationName}', this, ${durationSec})">+ Ajouter</button>` : `<span style="color:var(--success); font-weight:bold; margin-left: 5px;" title="Dépense déjà ajoutée à cette étape">✓ Ajouté</span>`}
+                  ${!isAlreadyAdded ? `<button type="button" class="hol-transit-add" data-sort="${endPt.sort_order}" data-cost="${cost.toFixed(2)}" data-desc="${holEsc(expenseDesc)}" data-sec="${Math.round(durationSec)}" onclick="addQuickTransitExpense(document.querySelector('input[name=holiday_id]').value, +this.dataset.sort, +this.dataset.cost, this.dataset.desc, this, +this.dataset.sec)">+ Ajouter</button>` : `<span style="color:var(--success); font-weight:bold; margin-left: 5px;" title="Dépense déjà ajoutée à cette étape">✓ Ajouté</span>`}
               </div>`;
 
-            const cpHeader = targetCard.querySelector(".hol-cp-header");
+            const cpHeader = targetCard.querySelector(".hol-step-header");
             if (cpHeader) cpHeader.insertAdjacentHTML("afterend", summaryHtml);
           }
         } else {
@@ -493,7 +489,7 @@ function initDetailMap() {
       if (distEl && timeEl && distBlock) {
         distEl.innerText = Math.round(totalTripDistance);
         timeEl.innerText = formatDuration(totalTripDuration);
-        distBlock.style.display = "block";
+        distBlock.classList.remove("hol-hidden");
       }
 
       if (globalFuelCostEl) {
@@ -509,19 +505,6 @@ function initDetailMap() {
       }
     });
 
-    // 5. Fix Leaflet Resize
-    setTimeout(() => {
-      if (detailMap) {
-        detailMap.invalidateSize(); // Force Leaflet à prendre la vraie taille de la fenêtre
-
-        if (latlngs.length === 1) {
-          detailMap.setView(latlngs[0], 12);
-        } else if (latlngs.length > 1) {
-          detailMap.fitBounds(bounds, { padding: mapPadding });
-        }
-      }
-    }, 300);
-
     function drawFallbackLine(coords, color, weight) {
       L.polyline(coords, {
         color: color,
@@ -531,10 +514,25 @@ function initDetailMap() {
       }).addTo(detailMap);
     }
   }
+
+  // 5. Cadrage (aussi avec une seule étape) une fois la carte à sa vraie taille
+  window.holFitMap = () => {
+    if (!detailMap) return;
+    detailMap.invalidateSize();
+    if (latlngs.length === 1) detailMap.setView(latlngs[0], 12);
+    else if (latlngs.length > 1) detailMap.fitBounds(bounds, { padding: mapPadding });
+  };
+  setTimeout(window.holFitMap, 300);
 }
 
 function panMapTo(lat, lng) {
   if (detailMap) {
+    // La carte est repliée par défaut : on l'ouvre pour montrer l'étape demandée
+    const mapWrapper = document.getElementById("tripMapWrapper");
+    if (mapWrapper && mapWrapper.classList.contains("hol-hidden")) {
+      mapWrapper.classList.remove("hol-hidden");
+      detailMap.invalidateSize();
+    }
     detailMap.setView([lat, lng], 12, { animate: true });
 
     if (window.innerWidth < 768) {
@@ -550,218 +548,125 @@ function panMapTo(lat, lng) {
 // 5. LOGIQUE DE LA MODALE CHECKPOINT (ÉTAPES)
 // ============================================================================
 function openCheckpointModal(mode, data = null) {
-  const searchBlock = document.getElementById("cpSearchBlock");
-  const formBlock = document.getElementById("formCheckpoint");
-  const container = document.getElementById("cpExpensesContainer");
-  const btnDel = document.getElementById("btnDeleteCp");
-  const insertGroup = document.getElementById("cp_insert_group");
-  const insertSelect = document.getElementById("cp_insert_after");
+  const el = (id) => document.getElementById(id);
+  const searchBlock = el("cpSearchBlock");
+  const formBlock = el("formCheckpoint");
+  const container = el("cpExpensesContainer");
+  const btnDel = el("btnDeleteCp");
+  const modalTitle = el("cpModalTitle");
+  const cpTabs = el("cpTabs");
+  const insertGroup = el("cp_insert_group");
+  const insertSelect = el("cp_insert_after");
+  if (!formBlock) return;
 
   if (container) container.innerHTML = "";
+  el("cp_start_date").value = "";
+  el("cp_end_date").value = "";
+  el("searchPlaceInput").value = "";
+  el("searchResults").innerHTML = "";
+  formBlock.querySelectorAll('input[name="action_delete"]').forEach((i) => i.remove());
+  const favBox = formBlock.querySelector('input[name="save_favorite"]');
+  if (favBox) favBox.checked = false;
 
-  if (document.getElementById("cp_start_date"))
-    document.getElementById("cp_start_date").value = "";
-  if (document.getElementById("cp_end_date"))
-    document.getElementById("cp_end_date").value = "";
-  if (document.getElementById("searchPlaceInput"))
-    document.getElementById("searchPlaceInput").value = "";
-  if (document.getElementById("searchResults"))
-    document.getElementById("searchResults").innerHTML = "";
+  switchCpTab("info");
 
-  if (searchBlock) searchBlock.style.display = "block";
-  if (insertGroup) insertGroup.style.display = "block";
-
-  // Sécurisation de la lecture du JSON (Empêche un crash sur la vue "Liste")
-  const holidayDataJsonEl = document.getElementById("holidayDataJson");
-  let tripStartDate = new Date().toISOString().split("T")[0];
-  if (holidayDataJsonEl) {
-    try {
-      const parsed = JSON.parse(holidayDataJsonEl.textContent);
-      tripStartDate = parsed.main.start_date || tripStartDate;
-    } catch (e) {}
-  }
-
-  // ==========================================
-  // CONFIGURATION DES DATES FLATPICKR
-  // ==========================================
-  let defaultStart = "";
-  let defaultEnd = "";
-
+  const chgBtn = el("cpChangePlaceBtn");
   if (mode === "add") {
-    if (document.getElementById("cpModalTitle"))
-      document.getElementById("cpModalTitle").innerText =
-        tr("hdl_btn_add_step");
-    if (formBlock) formBlock.style.display = "none";
-    if (btnDel) btnDel.style.display = "none";
+    modalTitle.innerText = "📍 " + tr("hdl_btn_add_step");
+    searchBlock.style.display = "block";
+    formBlock.style.display = "none"; // affiché par selectPlace() une fois le lieu choisi
+    btnDel.style.display = "none";
+    insertGroup.style.display = "block";
+    cpTabs.style.display = "none";
+    if (chgBtn) chgBtn.style.display = "";
 
-    if (document.getElementById("cp_old_sort_order"))
-      document.getElementById("cp_old_sort_order").value = "";
-    if (document.getElementById("cp_name"))
-      document.getElementById("cp_name").value = "";
+    let tripStart = new Date().toISOString().split("T")[0];
+    try {
+      tripStart =
+        JSON.parse(el("holidayDataJson").textContent).main.start_date ||
+        tripStart;
+    } catch (e) {}
+    const pts = window.MAP_POINTS || [];
+    const lastPt = pts[pts.length - 1];
+    const lastDate = lastPt
+      ? lastPt.step_end_date || lastPt.step_start_date || tripStart
+      : tripStart;
 
-    switchCpTab("info");
+    insertSelect.innerHTML = "";
+    const optEnd = document.createElement("option");
+    optEnd.value = "end";
+    optEnd.dataset.enddate = lastDate;
+    optEnd.textContent = tr("hol_step_opt_end");
+    insertSelect.appendChild(optEnd);
+    pts.forEach((st) => {
+      const o = document.createElement("option");
+      o.value = st.sort_order;
+      o.dataset.enddate = st.step_end_date || st.step_start_date || tripStart;
+      o.textContent = tr("hol_step_opt_after") + " " + st.location_name;
+      insertSelect.appendChild(o);
+    });
 
-    if (document.getElementById("cp_step_type")) {
-      document.getElementById("cp_step_type").value = "stop";
-      if (typeof toggleStepDates === "function") toggleStepDates("stop");
-    }
-
-    if (document.getElementById("cp_set_as_return")) {
-      document.getElementById("cp_set_as_return").checked = false;
-    }
-
-    let lastDate = tripStartDate;
-    if (
-      typeof window.MAP_POINTS !== "undefined" &&
-      window.MAP_POINTS.length > 0
-    ) {
-      const lastStep = window.MAP_POINTS[window.MAP_POINTS.length - 1];
-      lastDate =
-        lastStep.step_end_date || lastStep.step_start_date || tripStartDate;
-    }
-
-    if (insertSelect) {
-      insertSelect.innerHTML = `<option value="end" data-enddate="${lastDate}">-- À la fin du voyage --</option>`;
-      if (
-        typeof window.MAP_POINTS !== "undefined" &&
-        window.MAP_POINTS.length > 0
-      ) {
-        window.MAP_POINTS.forEach((step) => {
-          let dateStr = "";
-          if (
-            step.step_start_date &&
-            step.step_end_date &&
-            step.step_start_date !== step.step_end_date
-          ) {
-            dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })} > ${new Date(step.step_end_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
-          } else if (step.step_start_date) {
-            dateStr = ` (${new Date(step.step_start_date).toLocaleDateString(window.appLang, { day: "2-digit", month: "2-digit" })})`;
-          }
-          insertSelect.innerHTML += `<option value="${step.sort_order}" data-enddate="${step.step_end_date || step.step_start_date || tripStartDate}">Après : ${step.location_name}${dateStr}</option>`;
-        });
-      }
-    }
-
-    defaultStart = lastDate;
-    defaultEnd = lastDate;
-    addCpExpenseLine();
+    el("cp_start_date").value = lastDate;
+    el("cp_end_date").value = lastDate;
+    el("cp_old_sort_order").value = "";
+    el("cp_name").value = "";
+    el("cp_lat").value = "";
+    el("cp_lng").value = "";
+    // Premier point du voyage = départ par défaut, sinon étape classique
+    const defaultType = pts.length === 0 ? "origin" : "stop";
+    el("cp_step_type").value = defaultType;
+    toggleStepDates(defaultType);
+    el("cp_set_as_return").checked = false;
+    el("cpPlaceChipName").textContent = "";
+    setTimeout(() => el("searchPlaceInput").focus(), 50);
   } else if (mode === "edit" && data) {
-    if (document.getElementById("cpModalTitle"))
-      document.getElementById("cpModalTitle").innerText =
-        tr("hdl_js_edit_step");
-    if (formBlock) formBlock.style.display = "block";
-    if (btnDel) btnDel.style.display = "block";
-    if (searchBlock) searchBlock.style.display = "none";
-    if (insertGroup) insertGroup.style.display = "none";
+    modalTitle.innerText = "✏️ " + tr("hdl_js_edit_step");
+    searchBlock.style.display = "none";
+    insertGroup.style.display = "none";
+    formBlock.style.display = "block";
+    btnDel.style.display = "block";
+    cpTabs.style.display = "flex";
+    if (chgBtn) chgBtn.style.display = "";
 
-    switchCpTab("prog");
+    el("cpPlaceChipName").textContent = data.location_name || "";
+    el("cp_lat").value = data.lat;
+    el("cp_lng").value = data.lng;
+    el("cp_old_sort_order").value = data.sort_order;
+    el("cp_name").value = data.location_name;
+    el("cp_start_date").value = data.step_start_date || "";
+    el("cp_end_date").value = data.step_end_date || "";
 
-    if (document.getElementById("cp_lat"))
-      document.getElementById("cp_lat").value = data.lat;
-    if (document.getElementById("cp_lng"))
-      document.getElementById("cp_lng").value = data.lng;
-    if (document.getElementById("cp_old_sort_order"))
-      document.getElementById("cp_old_sort_order").value = data.sort_order;
-    if (document.getElementById("cp_name"))
-      document.getElementById("cp_name").value = data.location_name;
+    const type = data.step_type || "stop";
+    el("cp_step_type").value = type;
+    toggleStepDates(type);
+    el("cp_set_as_return").checked =
+      window.GLOBAL_RETURN_STEP_ID == data.sort_order;
 
-    if (document.getElementById("cp_step_type")) {
-      const type = data.step_type || "stop";
-      document.getElementById("cp_step_type").value = type;
-      if (typeof toggleStepDates === "function") toggleStepDates(type);
-    }
-
-    if (document.getElementById("cp_set_as_return")) {
-      document.getElementById("cp_set_as_return").checked =
-        window.GLOBAL_RETURN_STEP_ID == data.sort_order;
-    }
-
-    defaultStart = data.step_start_date || tripStartDate;
-    defaultEnd = data.step_end_date || tripStartDate;
-
-    if (data.items && data.items.length > 0) {
-      let visibleCount = 0;
-      data.items.forEach((it) => {
-        if (it.name !== "PF_TECHNICAL_POINT") {
-          addCpExpenseLine(
-            it.category,
-            it.name,
-            it.amount,
-            it.is_paid,
-            it.notes || "",
-            it.id || "",
-            it.item_date || "",
-            it.item_time || "",
-            it.duration || 1,
-            it.expense_context || "local",
-            it.lat || "",
-            it.lng || "",
-          );
-          visibleCount++;
-        }
-      });
-      if (visibleCount === 0) addCpExpenseLine();
-    } else {
-      addCpExpenseLine();
-    }
-  }
-
-  // Destruction et ré-instanciation de Flatpickr
-  if (typeof cpDateRangePicker !== "undefined" && cpDateRangePicker) {
-    cpDateRangePicker.destroy();
-  }
-
-  if (document.getElementById("cp_start_date"))
-    document.getElementById("cp_start_date").value = defaultStart;
-  if (document.getElementById("cp_end_date"))
-    document.getElementById("cp_end_date").value = defaultEnd;
-
-  if (typeof flatpickr !== "undefined") {
-    cpDateRangePicker = flatpickr("#cp_date_range", {
-      mode: "range",
-      altInput: true,
-      altFormat: "d/m",
-      dateFormat: "Y-m-d",
-      defaultDate:
-        defaultStart && defaultEnd && defaultStart !== defaultEnd
-          ? [defaultStart, defaultEnd]
-          : [defaultStart],
-      locale: window.appLang === "ca-ES" ? "cat" : "fr",
-      onChange: function (selectedDates, dateStr, instance) {
-        if (selectedDates.length === 2) {
-          if (document.getElementById("cp_start_date"))
-            document.getElementById("cp_start_date").value =
-              instance.formatDate(selectedDates[0], "Y-m-d");
-          if (document.getElementById("cp_end_date"))
-            document.getElementById("cp_end_date").value = instance.formatDate(
-              selectedDates[1],
-              "Y-m-d",
-            );
-        } else if (selectedDates.length === 1) {
-          if (document.getElementById("cp_start_date"))
-            document.getElementById("cp_start_date").value =
-              instance.formatDate(selectedDates[0], "Y-m-d");
-          if (document.getElementById("cp_end_date"))
-            document.getElementById("cp_end_date").value = instance.formatDate(
-              selectedDates[0],
-              "Y-m-d",
-            );
-        } else {
-          if (document.getElementById("cp_start_date"))
-            document.getElementById("cp_start_date").value = "";
-          if (document.getElementById("cp_end_date"))
-            document.getElementById("cp_end_date").value = "";
-        }
-      },
+    (data.items || []).forEach((it) => {
+      if (it.name === "PF_TECHNICAL_POINT") return;
+      // Une dépense garde ses propres coordonnées seulement si elles diffèrent de celles de l'étape
+      const own =
+        it.lat && it.lng && (parseFloat(it.lat) !== parseFloat(data.lat) || parseFloat(it.lng) !== parseFloat(data.lng));
+      addCpExpenseLine(
+        it.category,
+        it.name,
+        it.amount,
+        it.is_paid,
+        it.notes || "",
+        it.id || "",
+        it.item_date || "",
+        it.item_time || "",
+        it.duration || 1,
+        it.expense_context || "local",
+        own ? it.lat : "",
+        own ? it.lng : "",
+      );
     });
   }
 
-  // AFFICHER LA MODALE PROPREMENT
-  const modal = document.getElementById("checkpointModal");
-  if (modal) {
-    modal.style.display = "flex";
-    document.body.classList.add("no-scroll");
-  }
+  const modal = el("checkpointModal");
+  modal.style.display = "flex";
+  document.body.classList.add("no-scroll");
 }
 
 // ==========================================
@@ -819,49 +724,20 @@ function initHolFlatpickr(defaultStart, defaultEnd) {
 }
 
 function switchCpTab(tabId) {
+  const isInfo = tabId === "info";
   const btnInfo = document.getElementById("tabBtnInfo");
   const btnProg = document.getElementById("tabBtnProg");
   const tabInfo = document.getElementById("cpTabInfo");
   const tabProg = document.getElementById("cpTabProg");
-
-  if (tabId === "info") {
-    if (btnInfo) {
-      btnInfo.style.borderBottomColor = "var(--primary)";
-      btnInfo.style.color = "var(--primary)";
-    }
-    if (btnProg) {
-      btnProg.style.borderBottomColor = "transparent";
-      btnProg.style.color = "var(--text-muted)";
-    }
-    if (tabInfo) tabInfo.style.display = "block";
-    if (tabProg) tabProg.style.display = "none";
-  } else {
-    if (btnProg) {
-      btnProg.style.borderBottomColor = "var(--primary)";
-      btnProg.style.color = "var(--primary)";
-    }
-    if (btnInfo) {
-      btnInfo.style.borderBottomColor = "transparent";
-      btnInfo.style.color = "var(--text-muted)";
-    }
-    if (tabProg) tabProg.style.display = "block";
-    if (tabInfo) tabInfo.style.display = "none";
+  if (btnInfo) btnInfo.classList.toggle("active", isInfo);
+  if (btnProg) btnProg.classList.toggle("active", !isInfo);
+  if (tabInfo) {
+    tabInfo.style.display = isInfo ? "block" : "none";
+    tabInfo.classList.toggle("hol-hidden", !isInfo);
   }
-}
-
-function injectDynamicDates(selectEl) {
-  const selectedOpt = selectEl.options[selectEl.selectedIndex];
-  if (selectedOpt && selectedOpt.dataset.enddate) {
-    const dateToSet = selectedOpt.dataset.enddate;
-    if (document.getElementById("cp_start_date"))
-      document.getElementById("cp_start_date").value = dateToSet;
-    if (document.getElementById("cp_end_date"))
-      document.getElementById("cp_end_date").value = dateToSet;
-
-    // On met à jour l'UI du calendrier
-    if (cpDateRangePicker) {
-      cpDateRangePicker.setDate([dateToSet, dateToSet]);
-    }
+  if (tabProg) {
+    tabProg.style.display = isInfo ? "none" : "block";
+    tabProg.classList.toggle("hol-hidden", isInfo);
   }
 }
 
@@ -904,15 +780,95 @@ function searchPlace() {
 }
 
 function selectPlace(lat, lng, fullName) {
-  if (document.getElementById("cp_lat"))
-    document.getElementById("cp_lat").value = lat;
-  if (document.getElementById("cp_lng"))
-    document.getElementById("cp_lng").value = lng;
-  if (document.getElementById("cp_name"))
-    document.getElementById("cp_name").value = fullName.split(",")[0].trim();
-  if (document.getElementById("formCheckpoint"))
-    document.getElementById("formCheckpoint").style.display = "block";
+  const el = (id) => document.getElementById(id);
+  const editing = el("cp_old_sort_order").value !== "";
+  el("cp_lat").value = lat;
+  el("cp_lng").value = lng;
+  // En modification, on garde le nom déjà donné à l'étape : seul l'emplacement change
+  if (!editing || !el("cp_name").value.trim())
+    el("cp_name").value = String(fullName).split(",")[0].trim();
+  el("cpPlaceChipName").textContent = fullName;
+  el("cpSearchBlock").style.display = "none";
+  el("formCheckpoint").style.display = "block";
+  el("cpTabs").style.display = "flex";
+  switchCpTab("info");
+  setTimeout(() => el("cp_name").focus(), 50);
 }
+
+function cpChangePlace() {
+  document.getElementById("formCheckpoint").style.display = "none";
+  document.getElementById("cpTabs").style.display = "none";
+  document.getElementById("cpSearchBlock").style.display = "block";
+  const si = document.getElementById("searchPlaceInput");
+  if (si) si.focus();
+}
+
+// Compteur de l'onglet « Programme & frais » + validation du formulaire d'étape
+document.addEventListener("DOMContentLoaded", () => {
+  const cpContainer = document.getElementById("cpExpensesContainer");
+  const cpForm = document.getElementById("formCheckpoint");
+  if (!cpContainer || !cpForm) return;
+
+  const cpToast = (msg) => {
+    if (typeof showToast === "function") showToast(msg, "error");
+    else alert(msg);
+  };
+  const refreshCpCount = () => {
+    const n = cpContainer.querySelectorAll(".hol-form-row").length;
+    const badge = document.getElementById("cpProgCount");
+    badge.textContent = n;
+    badge.style.display = n ? "inline-block" : "none";
+    document.getElementById("cpExpensesEmpty").style.display = n
+      ? "none"
+      : "block";
+  };
+  new MutationObserver(refreshCpCount).observe(cpContainer, { childList: true });
+  refreshCpCount();
+
+  cpForm.addEventListener("keydown", (e) => {
+    // Entrée dans un champ texte ne doit pas soumettre par erreur
+    if (
+      e.key === "Enter" &&
+      e.target.tagName === "INPUT" &&
+      e.target.type !== "submit" &&
+      e.target.type !== "checkbox"
+    )
+      e.preventDefault();
+  });
+  cpForm.addEventListener("submit", (e) => {
+    if (cpForm.querySelector('input[name="action_delete"]')) return;
+    const lat = document.getElementById("cp_lat").value;
+    const lng = document.getElementById("cp_lng").value;
+    const name = document.getElementById("cp_name").value.trim();
+    if (!lat || !lng) {
+      e.preventDefault();
+      cpToast(tr("hol_step_toast_place"));
+      cpChangePlace();
+      return;
+    }
+    if (!name) {
+      e.preventDefault();
+      switchCpTab("info");
+      cpToast(tr("hol_step_toast_name"));
+      document.getElementById("cp_name").focus();
+      return;
+    }
+    const sd = document.getElementById("cp_start_date").value,
+      ed = document.getElementById("cp_end_date").value;
+    if (sd && ed && ed < sd) {
+      e.preventDefault();
+      switchCpTab("info");
+      cpToast(tr("hol_step_toast_dates"));
+      return;
+    }
+    // Retire les lignes de dépense totalement vides
+    cpContainer.querySelectorAll(".hol-form-row").forEach((row) => {
+      const n = row.querySelector('input[name="items[name][]"]').value.trim();
+      const a = row.querySelector('input[name="items[amount][]"]').value.trim();
+      if (!n && !a) row.remove();
+    });
+  });
+});
 
 function addCpExpenseLine(
   category = "accommodation",
@@ -947,12 +903,12 @@ function addCpExpenseLine(
                 <option value="transport" ${category === "transport" ? "selected" : ""}>🚗</option>
                 <option value="activity" ${category === "activity" ? "selected" : ""}>🎫</option>
             </select>
-            <input type="hidden" name="items[context][]" value="${expenseContext}">
-            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${tr("hdl_js_ph_expense_name")}" value="${name}">
+            <input type="hidden" name="items[context][]" value="${holEsc(expenseContext)}">
+            <input type="text" name="items[name][]" class="pf-input hol-form-text" placeholder="${holEsc(tr("hdl_js_ph_expense_name"))}" value="${holEsc(name)}">
             
             <button type="button" class="btn-icon-action" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-light);border-radius:6px;${pinBtnStyle}" onclick="toggleItemSearch(this)" title="Adresse précise">📍</button>
 
-            <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${amount}">
+            <input type="number" step="0.01" name="items[amount][]" class="pf-input hol-form-number" placeholder="0.00" value="${holEsc(amount)}">
             
             <label class="hol-form-paid-label" title="${tr("hdl_paid")}">
                 <input type="checkbox" ${isChecked} onchange="this.nextElementSibling.value = this.checked ? 1 : 0">
@@ -971,7 +927,7 @@ function addCpExpenseLine(
         </div>
 
         <div class="hol-form-subrow">
-            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${tr("hdl_ph_notes")}" value="${notes}">
+            <input type="text" name="items[notes][]" class="pf-input hol-form-notes-input hol-form-notes-full" placeholder="${holEsc(tr("hdl_ph_notes"))}" value="${holEsc(notes)}">
         </div>
         <input type="hidden" name="items[id][]" value="${itemId}">
         <input type="hidden" name="items[date][]" value="${itemDate}">
@@ -1063,21 +1019,28 @@ function deleteCheckpoint() {
 // 6. REORDONNANCEMENT DES ÉTAPES (DRAG & DROP PC + MOBILE)
 // ============================================================================
 function saveCheckpointOrder() {
-  const locations = [
-    ...document.querySelectorAll(".hol-checkpoint-draggable"),
-  ].map((el) => el.getAttribute("data-location"));
+  // Chaque étape est repérée par sa position d'origine (data-sort), pas par son nom
+  const order = [...document.querySelectorAll(".hol-checkpoint-draggable")].map(
+    (el) => parseInt(el.getAttribute("data-sort"), 10),
+  );
+  // Rien n'a bougé : pas d'enregistrement ni de rechargement
+  if (order.every((v, i) => i === 0 || v > order[i - 1])) return;
   const holidayId = document.querySelector('input[name="holiday_id"]').value;
 
   const formData = new FormData();
   formData.append("holiday_id", holidayId);
-  formData.append("locations", JSON.stringify(locations));
+  formData.append("order", JSON.stringify(order));
 
   pachaFetch("/modules/holidays/includes/api/reorder_checkpoints.php", {
     method: "POST",
     body: formData,
   })
-    .then(() => window.location.reload())
-    .catch(console.error);
+    .then((res) => {
+      if (res && res.success === false && typeof showToast === "function")
+        showToast(res.error || tr("error_occured"), "error");
+      window.location.reload();
+    })
+    .catch(() => window.location.reload());
 }
 
 function moveStepMobile(btn, direction) {

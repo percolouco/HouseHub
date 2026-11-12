@@ -7,21 +7,38 @@ require dirname(__DIR__, 4) . '/includes/db.php';
 require_login(); 
 
 if (isset($_POST['action_delete']) && $_POST['action_delete'] == '1') {
-    $stmt = $pdo->prepare("DELETE FROM pf_holidays WHERE id = ?");
-    $stmt->execute([$_POST['id']]);
+    $delId = (int)($_POST['id'] ?? 0);
+    if ($delId > 0) {
+        // Étapes, dépenses et pièces jointes du voyage (au cas où la base n'a pas les suppressions en cascade)
+        try {
+            $stmtFiles = $pdo->prepare("SELECT file_path FROM pf_holidays_attachments WHERE holiday_id = ?");
+            $stmtFiles->execute([$delId]);
+            foreach ($stmtFiles->fetchAll(PDO::FETCH_COLUMN) as $relPath) {
+                $abs = dirname(__DIR__, 4) . '/' . $relPath;
+                if (strpos($relPath, 'uploads/holidays/') === 0 && strpos($relPath, '..') === false && is_file($abs)) @unlink($abs);
+            }
+            $pdo->prepare("DELETE FROM pf_holidays_attachments WHERE holiday_id = ?")->execute([$delId]);
+        } catch (Throwable $e) {}
+        $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ?")->execute([$delId]);
+        $pdo->prepare("DELETE FROM pf_holidays WHERE id = ?")->execute([$delId]);
+    }
     header("Location: /holidays.php");
     exit;
 }
 
 $id = $_POST['id'] ?? '';
-$title = $_POST['title'];
-$period = $_POST['period_hint'];
+$title = trim($_POST['title'] ?? '');
+if ($title === '') { header("Location: /holidays.php"); exit; }
+$period = $_POST['period_hint'] ?? '';
 $start = !empty($_POST['start_date']) ? $_POST['start_date'] : null;
 $end = !empty($_POST['end_date']) ? $_POST['end_date'] : null;
-$status = $_POST['status'];
+$status = in_array($_POST['status'] ?? '', ['draft', 'planned', 'booked', 'passed', 'archived'], true) ? $_POST['status'] : 'draft';
+if ($start && $end && $end < $start) { [$start, $end] = [$end, $start]; }
 $food = !empty($_POST['budget_food']) ? $_POST['budget_food'] : 0;
 $extra = !empty($_POST['budget_extra']) ? $_POST['budget_extra'] : 0;
-$notes = $_POST['notes'];
+// Les notes ne sont modifiées que si le formulaire les envoie (la modale « Modifier » ne les contient pas)
+$hasNotes = array_key_exists('notes', $_POST);
+$notes = $hasNotes ? $_POST['notes'] : null;
 // 🔥 NOUVEAU : On récupère le véhicule optionnel
 $vehicle_id = !empty($_POST['vehicle_id']) ? (int)$_POST['vehicle_id'] : null;
 
@@ -65,9 +82,12 @@ try {
     // 3. Sauvegarde en Base
     if ($id) {
         // UPDATE
-        $sql = "UPDATE pf_holidays SET title=?, period_hint=?, start_date=?, end_date=?, status=?, budget_food=?, budget_extra=?, notes=?, vehicle_id=?, image_url=? WHERE id=?";
+        $sql = "UPDATE pf_holidays SET title=?, period_hint=?, start_date=?, end_date=?, status=?, budget_food=?, budget_extra=?, vehicle_id=?, image_url=? WHERE id=?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$title, $period, $start, $end, $status, $food, $extra, $notes, $vehicle_id, $image_url, $id]);
+        $stmt->execute([$title, $period, $start, $end, $status, $food, $extra, $vehicle_id, $image_url, $id]);
+        if ($hasNotes) {
+            $pdo->prepare("UPDATE pf_holidays SET notes=? WHERE id=?")->execute([$notes, $id]);
+        }
     } else {
         // INSERT
         $sql = "INSERT INTO pf_holidays (title, period_hint, start_date, end_date, status, budget_food, budget_extra, notes, vehicle_id, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";

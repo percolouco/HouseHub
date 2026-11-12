@@ -1280,6 +1280,7 @@ return [
     'hol_step_expenses_empty'          => 'Rien de prévu pour l’instant : hébergement, activité, transport… Ajoute une ligne si besoin (facultatif).',
     'hol_step_toast_name'              => 'Donne un nom à l’étape.',
     'hol_step_toast_dates'             => 'La date de départ est avant la date d’arrivée.',
+    'hol_step_toast_place'             => 'Choisis d’abord un lieu dans la recherche.',
     'hol_step_position'                => 'Position de l’étape',
     'hol_step_opt_end'                 => '-- À la fin du voyage --',
     'hol_step_opt_after'               => 'Après :',
