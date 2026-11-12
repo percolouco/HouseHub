@@ -399,6 +399,21 @@ function initDetailMap() {
           const startPt = MAP_POINTS[res.index];
           const endPt = MAP_POINTS[res.index + 1];
 
+          // Trajet de plus de 4 h 30 : signalé dans les « points à vérifier »
+          if (durationSec > 4.5 * 3600) {
+            const list = document.getElementById("holAlertsList");
+            if (list) {
+              const li = document.createElement("li");
+              li.className = "hol-alert-info";
+              li.textContent = tr("hol_al_long_leg")
+                .replace("%1", startPt.location_name)
+                .replace("%2", endPt.location_name)
+                .replace("%3", formatDuration(durationSec));
+              list.appendChild(li);
+              document.getElementById("holAlerts").classList.remove("hol-hidden");
+            }
+          }
+
           // 2. ON SAUVEGARDE EN MÉMOIRE ENSUITE (Correction du bug !)
           window.TRANSIT_DATA = window.TRANSIT_DATA || {};
           window.TRANSIT_DATA[endPt.sort_order] = {
