@@ -136,6 +136,8 @@ function openHolidayModal(mode) {
     if (document.getElementById("modalTitle"))
       document.getElementById("modalTitle").innerText = tr("hdl_modal_title");
     if (btnDelete) btnDelete.style.display = "none";
+    if (document.getElementById("btn_duplicate"))
+      document.getElementById("btn_duplicate").style.display = "none";
 
     // Réinitialisation du calendrier global
     if (document.getElementById("inp_start"))
@@ -149,6 +151,8 @@ function openHolidayModal(mode) {
         "hdl_quick_edit_title",
       );
     if (btnDelete) btnDelete.style.display = "block";
+    if (document.getElementById("btn_duplicate"))
+      document.getElementById("btn_duplicate").style.display = "";
   }
 
   if (modal) {
@@ -2380,4 +2384,135 @@ async function deleteGeneralItem() {
   if (!id || !confirm(tr("hol_general_confirm_del"))) return;
   const res = await holItemPost({ action: "delete_general", item_id: id });
   if (res) holReloadKeepScroll();
+}
+
+// ============================================================================
+// DUPLIQUER UN VOYAGE
+// ============================================================================
+function duplicateHoliday() {
+  if (!confirm(tr("hol_duplicate_confirm"))) return;
+  const form = document.getElementById("holidayForm");
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = "action_duplicate";
+  input.value = "1";
+  form.appendChild(input);
+  HTMLFormElement.prototype.submit.call(form); // envoi classique : le serveur redirige vers la copie
+}
+
+// ============================================================================
+// CHECKLIST DU VOYAGE (À FAIRE AVANT LE DÉPART / BAGAGES)
+// ============================================================================
+const HOL_CHECK_API = "/modules/holidays/includes/api/checklist.php";
+
+async function holCheckPost(fields) {
+  const fd = new FormData();
+  fd.append("holiday_id", holTripId());
+  Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
+  try {
+    const res = await pachaFetch(HOL_CHECK_API, { method: "POST", body: fd });
+    if (res && res.success) return res;
+    showToast((res && res.error) || tr("error_occured"), "error");
+  } catch (e) {
+    showToast(tr("error_occured"), "error");
+  }
+  return null;
+}
+
+function holCheckRefresh(col) {
+  const items = col.querySelectorAll(".hol-check-item");
+  col.querySelector(".js-total").textContent = items.length;
+  col.querySelector(".js-done").textContent = col.querySelectorAll(".hol-check-item.is-done").length;
+  col.querySelector(".hol-check-suggest").classList.toggle("hol-hidden", items.length > 0);
+}
+
+function holCheckRender(col, item) {
+  const li = document.createElement("li");
+  li.className = "hol-check-item";
+  li.dataset.id = item.id;
+  li.innerHTML = `<label><input type="checkbox" onchange="holCheckToggle(this)"> <span>${holEsc(item.label)}</span></label>
+    <button type="button" class="hol-check-del" onclick="holCheckDelete(this)" title="${holEsc(tr("btn_delete"))}" aria-label="${holEsc(tr("btn_delete"))}">×</button>`;
+  col.querySelector(".hol-check-list").appendChild(li);
+}
+
+async function holCheckAdd(e, kind) {
+  e.preventDefault();
+  const col = e.target.closest(".hol-check-col");
+  const input = e.target.querySelector("input");
+  const label = input.value.trim();
+  if (!label) return;
+  const res = await holCheckPost({ action: "add", kind, label });
+  if (!res) return;
+  res.items.forEach((it) => holCheckRender(col, it));
+  input.value = "";
+  input.focus();
+  holCheckRefresh(col);
+}
+
+async function holCheckSuggest(kind, btn) {
+  btn.disabled = true;
+  const col = btn.closest(".hol-check-col");
+  const res = await holCheckPost({ action: "add", kind, label: tr(kind === "pack" ? "hol_check_sugg_pack" : "hol_check_sugg_todo").split("|").join("\n") });
+  btn.disabled = false;
+  if (!res) return;
+  res.items.forEach((it) => holCheckRender(col, it));
+  holCheckRefresh(col);
+}
+
+async function holCheckToggle(box) {
+  const li = box.closest(".hol-check-item");
+  const res = await holCheckPost({ action: "toggle", id: li.dataset.id });
+  if (!res) {
+    box.checked = !box.checked;
+    return;
+  }
+  li.classList.toggle("is-done", box.checked);
+  holCheckRefresh(li.closest(".hol-check-col"));
+}
+
+async function holCheckDelete(btn) {
+  const li = btn.closest(".hol-check-item");
+  const col = li.closest(".hol-check-col");
+  const res = await holCheckPost({ action: "delete", id: li.dataset.id });
+  if (!res) return;
+  li.remove();
+  holCheckRefresh(col);
+}
+
+// ============================================================================
+// PÉAGES : ESTIMATION INDICATIVE PAR TRAJET (base de tarifs autoroutiers embarquée)
+// ============================================================================
+async function estimateTolls() {
+  const box = document.getElementById("tollsResult");
+  const btn = document.getElementById("btnEstimateTolls");
+  const pts = window.MAP_POINTS || [];
+  if (pts.length < 2 || !box) return;
+  btn.disabled = true;
+  box.innerHTML = `<p class="hol-empty-text">⏳…</p>`;
+  try {
+    const resp = await fetch("/modules/voyage/api.php?action=estimate", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        stops: pts.map((p) => ({ lat: p.lat, lng: p.lng, name: p.location_name })),
+        fuel_l100: window.VEHICLE_CONSUMPTION || 7,
+        fuel_price: window.FUEL_PRICE || 1.85,
+      }),
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || "");
+    const rows = data.segments
+      .map(
+        (s) => `<div class="hol-tolls-row"><span>${holEsc(s.from)} ➔ ${holEsc(s.to)}${s.entry_plaza ? `<small>${holEsc(s.entry_plaza)} → ${holEsc(s.exit_plaza)}</small>` : ""}</span>
+          <strong>${s.toll > 0 ? "~" + s.toll.toFixed(2) + " €" : holEsc(tr("hol_tolls_none"))}</strong></div>`,
+      )
+      .join("");
+    box.innerHTML = `${rows}<div class="hol-tolls-row hol-tolls-total"><span>${holEsc(tr("hol_tolls_total"))}</span><strong>~${data.total_toll.toFixed(2)} €</strong></div>
+      <p class="hol-tolls-note">${holEsc(tr("hol_tolls_note"))}</p>`;
+  } catch (e) {
+    box.innerHTML = `<p class="hol-empty-text">${holEsc(tr("error_occured"))}</p>`;
+  } finally {
+    btn.disabled = false;
+  }
 }

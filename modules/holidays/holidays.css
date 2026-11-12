@@ -1411,3 +1411,32 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .hol-day-time { display: inline-block; min-width: 3.2em; font-variant-numeric: tabular-nums; color: var(--primary); font-weight: 700; }
 .hol-day-night { color: var(--text-muted); font-size: 0.8rem; }
 .hol-days-footer { padding: 10px 12px; border-top: 1px solid var(--border-light); text-align: right; }
+
+/* Checklist du voyage */
+.hol-panel-checklist { margin-top: 20px; }
+.hol-check-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.hol-check-col { padding: 12px 14px; min-width: 0; }
+.hol-check-col + .hol-check-col { border-left: 1px solid var(--border-light); }
+.hol-check-head { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 0.9rem; color: var(--text-main); margin-bottom: 6px; }
+.hol-check-count { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); background: var(--bg-subtle); padding: 2px 8px; border-radius: 10px; font-variant-numeric: tabular-nums; }
+.hol-check-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.hol-check-item { display: flex; align-items: center; gap: 6px; min-height: 40px; border-bottom: 1px dashed var(--border-light); }
+.hol-check-item label { flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; color: var(--text-main); min-width: 0; padding: 6px 0; }
+.hol-check-item label span { overflow-wrap: anywhere; }
+.hol-check-item input[type="checkbox"] { width: 18px; height: 18px; flex: none; accent-color: var(--primary); }
+.hol-check-item.is-done label span { text-decoration: line-through; color: var(--text-muted); }
+.hol-check-del { flex: none; width: 32px; height: 32px; border: none; background: none; color: var(--text-muted); font-size: 1.2rem; line-height: 1; border-radius: 8px; cursor: pointer; opacity: .6; }
+.hol-check-del:hover, .hol-check-del:focus-visible { opacity: 1; color: var(--danger); background: var(--bg-subtle); }
+.hol-check-add { display: flex; gap: 8px; }
+.hol-check-add .pf-input { flex: 1; min-width: 0; font-size: 16px; }
+.hol-check-suggest { margin-top: 8px; background: none; border: none; padding: 6px 0; color: var(--primary); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+@media (max-width: 768px) { .hol-check-col + .hol-check-col { border-left: none; border-top: 1px solid var(--border-light); } }
+
+/* Estimation des péages */
+.hol-tolls-box { padding: 12px 0 0; border-top: 1px solid var(--border-light); margin-top: 8px; }
+.hol-tolls-result { margin-top: 8px; }
+.hol-tolls-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; font-size: 0.85rem; border-bottom: 1px dashed var(--border-light); color: var(--text-main); }
+.hol-tolls-row small { display: block; color: var(--text-muted); font-size: 0.72rem; }
+.hol-tolls-row strong { white-space: nowrap; }
+.hol-tolls-total { font-weight: 800; border-bottom: none; }
+.hol-tolls-note { font-size: 0.75rem; color: var(--text-muted); margin: 6px 0 0; }

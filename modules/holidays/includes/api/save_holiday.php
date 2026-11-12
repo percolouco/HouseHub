@@ -26,6 +26,31 @@ if (isset($_POST['action_delete']) && $_POST['action_delete'] == '1') {
     exit;
 }
 
+// Duplication : copie le voyage (en brouillon) avec ses étapes et dépenses remises « à payer »
+if (isset($_POST['action_duplicate']) && $_POST['action_duplicate'] == '1') {
+    $srcId = (int)($_POST['id'] ?? 0);
+    $newId = 0;
+    try {
+        $pdo->beginTransaction();
+        $src = $pdo->prepare("SELECT * FROM pf_holidays WHERE id = ?");
+        $src->execute([$srcId]);
+        if ($h = $src->fetch(PDO::FETCH_ASSOC)) {
+            $pdo->prepare("INSERT INTO pf_holidays (title, period_hint, start_date, end_date, status, budget_food, budget_extra, notes, vehicle_id, return_step_id, image_url) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)")
+                ->execute([mb_substr($h['title'] . ' (copie)', 0, 255), $h['period_hint'], $h['start_date'], $h['end_date'], $h['budget_food'], $h['budget_extra'], $h['notes'], $h['vehicle_id'], $h['return_step_id'], $h['image_url']]);
+            $newId = (int)$pdo->lastInsertId();
+            $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes, item_date, item_time, step_type, step_start_date, step_end_date, duration, expense_context)
+                           SELECT ?, category, name, amount, 0, location_name, lat, lng, sort_order, notes, item_date, item_time, step_type, step_start_date, step_end_date, duration, expense_context
+                           FROM pf_holidays_items WHERE holiday_id = ?")->execute([$newId, $srcId]);
+        }
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        die("Erreur base de données : " . $e->getMessage());
+    }
+    header("Location: /holidays.php" . ($newId ? "?tab=holiday_detail&id=" . $newId : ""));
+    exit;
+}
+
 $id = $_POST['id'] ?? '';
 $title = trim($_POST['title'] ?? '');
 if ($title === '') { header("Location: /holidays.php"); exit; }

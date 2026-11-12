@@ -179,6 +179,14 @@ if ($tStart && $tripDays > 0 && $tripDays <= 60) {
     }
 }
 
+// Checklist du voyage (la table est créée à la première utilisation)
+$checklist = ['todo' => [], 'pack' => []];
+try {
+    $stCk = $pdo->prepare("SELECT id, kind, label, is_done FROM pf_holidays_checklist WHERE holiday_id = ? ORDER BY is_done ASC, id ASC");
+    $stCk->execute([$id]);
+    foreach ($stCk->fetchAll(PDO::FETCH_ASSOC) as $ck) { $checklist[$ck['kind'] === 'pack' ? 'pack' : 'todo'][] = $ck; }
+} catch (Throwable $e) {}
+
 // Image de fond (API Pixabay ou fallback par défaut)
 $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url']) : '/modules/home/assets/img/background.jpg';
 ?>
@@ -231,8 +239,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                 <span class="hol-pill">
                     ⛽ <span id="global_fuel_cost"><?= number_format($holiday['total_fuel'], 0) ?></span> € 
                     <span onclick="updateFuelPrice()" class="hol-pill-action" title="Modifier le prix de l'essence">(<span id="display_fuel_price">1.85</span>€/L) ✏️</span>
-                    <?php if ($holiday['total_fuel'] > 0 || $holiday['total_tolls'] > 0): ?>
-                        <span onclick="openTransitModal()" class="hol-pill-action" title="Voir le détail des trajets">👁️</span>
+                    <?php if (count($steps) > 1): ?>
+                        <span onclick="openTransitModal()" class="hol-pill-action" title="<?= tr('hol_routes_see') ?>">👁️</span>
                     <?php endif; ?>
                 </span>
 
@@ -282,6 +290,11 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         <button type="button" class="pf-btn btn-secondary pf-btn-small hol-quick-action-btn" onclick="generateTravelBook()">
             📖 PDF
         </button>
+        <?php if ($tStart): ?>
+        <a class="pf-btn btn-secondary pf-btn-small hol-quick-action-btn" href="/modules/holidays/includes/api/export_ics.php?id=<?= $id ?>" title="<?= tr('hol_ics_hint') ?>">
+            📆 <?= tr('hol_ics') ?>
+        </a>
+        <?php endif; ?>
         <button type="button" class="pf-btn btn-secondary pf-btn-small hol-quick-action-btn" onclick="editHoliday(JSON.parse(document.getElementById('holidayDataJson').textContent))">
             ⚙️ Modifier
         </button>
@@ -541,6 +554,38 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
     </div>
     <?php endif; ?>
 
+    <!-- 7. CHECKLIST : à faire avant le départ + bagages -->
+    <div class="hol-panel hol-panel-checklist">
+        <div class="hol-panel-header hol-timeline-header">
+            <h3>✅ <?= tr('hol_check_title') ?></h3>
+        </div>
+        <div class="hol-panel-body hol-check-grid">
+            <?php foreach (['todo' => ['🧾', tr('hol_check_todo'), tr('hol_check_todo_ph')], 'pack' => ['🧳', tr('hol_check_pack'), tr('hol_check_pack_ph')]] as $kind => [$kIcon, $kLabel, $kPh]):
+                $doneCount = count(array_filter($checklist[$kind], fn($c) => $c['is_done']));
+            ?>
+            <section class="hol-check-col" data-kind="<?= $kind ?>">
+                <div class="hol-check-head">
+                    <span><?= $kIcon ?> <?= $kLabel ?></span>
+                    <span class="hol-check-count"><span class="js-done"><?= $doneCount ?></span>/<span class="js-total"><?= count($checklist[$kind]) ?></span></span>
+                </div>
+                <ul class="hol-check-list">
+                    <?php foreach ($checklist[$kind] as $ck): ?>
+                        <li class="hol-check-item<?= $ck['is_done'] ? ' is-done' : '' ?>" data-id="<?= (int)$ck['id'] ?>">
+                            <label><input type="checkbox" <?= $ck['is_done'] ? 'checked' : '' ?> onchange="holCheckToggle(this)"> <span><?= htmlspecialchars($ck['label']) ?></span></label>
+                            <button type="button" class="hol-check-del" onclick="holCheckDelete(this)" title="<?= tr('btn_delete') ?>" aria-label="<?= tr('btn_delete') ?>">×</button>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+                <form class="hol-check-add" onsubmit="holCheckAdd(event, '<?= $kind ?>')">
+                    <input type="text" class="pf-input" maxlength="255" placeholder="<?= $kPh ?>" aria-label="<?= $kPh ?>">
+                    <button type="submit" class="pf-btn pf-btn-small" aria-label="<?= tr('btn_add') ?>">＋</button>
+                </form>
+                <button type="button" class="hol-check-suggest<?= empty($checklist[$kind]) ? '' : ' hol-hidden' ?>" onclick="holCheckSuggest('<?= $kind ?>', this)">✨ <?= tr('hol_check_suggest') ?></button>
+            </section>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
     <div class="pf-card hol-notes-card">
         <h2 class="pf-card-title">📝 <?= tr('hdl_label_notes') ?></h2>
         <div class="pf-card-body">
@@ -737,6 +782,10 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         <div id="transitDetailsContainer" class="hol-transit-container">
             <p class="hol-empty-text">Calcul en cours...</p>
         </div>
+        <div class="hol-tolls-box">
+            <button type="button" class="pf-btn btn-secondary pf-btn-small" id="btnEstimateTolls" onclick="estimateTolls()">💳 <?= tr('hol_tolls_btn') ?></button>
+            <div id="tollsResult" class="hol-tolls-result"></div>
+        </div>
         <div class="modal-footer">
             <button type="button" onclick="closeTransitModal()" class="pf-btn btn-secondary"><?= tr('btn_close') ?></button>
         </div>
@@ -837,7 +886,13 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         'hol_general_confirm_del': <?= json_encode(tr('hol_general_confirm_del')) ?>,
         'hdl_to_pay': <?= json_encode(tr('hdl_to_pay')) ?>,
         'btn_delete': <?= json_encode(tr('btn_delete')) ?>,
-        'hol_al_long_leg': <?= json_encode(tr('hol_al_long_leg')) ?>
+        'hol_al_long_leg': <?= json_encode(tr('hol_al_long_leg')) ?>,
+        'hol_check_sugg_todo': <?= json_encode(tr('hol_check_sugg_todo')) ?>,
+        'hol_check_sugg_pack': <?= json_encode(tr('hol_check_sugg_pack')) ?>,
+        'hol_tolls_none': <?= json_encode(tr('hol_tolls_none')) ?>,
+        'hol_tolls_total': <?= json_encode(tr('hol_tolls_total')) ?>,
+        'hol_tolls_note': <?= json_encode(tr('hol_tolls_note')) ?>,
+        'hol_duplicate_confirm': <?= json_encode(tr('hol_duplicate_confirm')) ?>
     };
 
     const savedFuelPrice = localStorage.getItem('holidays_fuel_price') || 1.85;
