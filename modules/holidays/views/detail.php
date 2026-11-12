@@ -98,6 +98,83 @@ $tripDays = (!empty($holiday['start_date']) && !empty($holiday['end_date']))
     ? (int)((strtotime($holiday['end_date']) - strtotime($holiday['start_date'])) / 86400) + 1 : 0;
 $catIcon = fn($c) => match($c) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
 
+// ── Suivi du voyage : compte à rebours, étape du jour, points à vérifier, résumé jour par jour ──
+$today = date('Y-m-d');
+$tStart = $holiday['start_date'] ?: null;
+$tEnd   = $holiday['end_date'] ?: $tStart;
+$countdown = null; $tripPhase = 'none';
+if ($tStart) {
+    if ($today < $tStart) {
+        $tripPhase = 'before';
+        $countdown = 'J-' . (int)round((strtotime($tStart) - strtotime($today)) / 86400);
+    } elseif ($today <= $tEnd) {
+        $tripPhase = 'during';
+        $countdown = tr('hol_day') . ' ' . ((int)round((strtotime($today) - strtotime($tStart)) / 86400) + 1) . '/' . $tripDays;
+    } else {
+        $tripPhase = 'after';
+        $countdown = tr('hol_trip_done');
+    }
+}
+$fmtD = fn($d) => date('d/m', strtotime($d));
+$stepList = array_values($steps);
+
+$alerts = [];
+if (!$tStart) {
+    $alerts[] = ['warn', tr('hol_al_no_dates')];
+}
+if (!empty($stepList)) {
+    $types = array_column($stepList, 'step_type');
+    if (!in_array('origin', $types, true)) $alerts[] = ['info', tr('hol_al_no_origin')];
+    if (count($stepList) > 1 && !in_array('destination', $types, true)) $alerts[] = ['info', tr('hol_al_no_destination')];
+    $prev = null;
+    foreach ($stepList as $st) {
+        $name = $st['location_name'];
+        $sd = $st['step_start_date']; $ed = $st['step_end_date'] ?: $sd;
+        if (!$sd) { $alerts[] = ['warn', sprintf(tr('hol_al_step_no_date'), $name)]; $prev = null; continue; }
+        if ($tStart && ($sd < $tStart || $ed > $tEnd)) {
+            $alerts[] = ['warn', sprintf(tr('hol_al_step_outside'), $name, $fmtD($sd) . ($ed !== $sd ? ' → ' . $fmtD($ed) : ''), $fmtD($tStart) . ' → ' . $fmtD($tEnd))];
+        }
+        if ($prev) {
+            if ($sd < $prev['end']) {
+                $alerts[] = ['warn', sprintf(tr('hol_al_step_overlap'), $name, $fmtD($sd), $prev['name'], $fmtD($prev['end']))];
+            } elseif ($sd > $prev['end']) {
+                $gap = (int)round((strtotime($sd) - strtotime($prev['end'])) / 86400);
+                $alerts[] = ['warn', sprintf(tr('hol_al_step_gap'), $gap, $prev['name'], $fmtD($prev['end']), $name, $fmtD($sd))];
+            }
+        }
+        if ($ed > $sd) {
+            $hasBed = false;
+            foreach ($st['items'] as $it) { if ($it['category'] === 'accommodation' && $it['name'] !== 'PF_TECHNICAL_POINT') $hasBed = true; }
+            if (!$hasBed) $alerts[] = ['info', sprintf(tr('hol_al_no_bed'), $name, (int)round((strtotime($ed) - strtotime($sd)) / 86400))];
+        }
+        $prev = ['name' => $name, 'end' => $ed];
+    }
+}
+if ($tripPhase === 'before' && $leftToPay > 0 && (strtotime($tStart) - strtotime($today)) / 86400 <= 30) {
+    $alerts[] = ['warn', sprintf(tr('hol_al_unpaid'), number_format($leftToPay, 0, ',', ' '))];
+}
+
+// Résumé jour par jour (lecture seule ; le placement heure par heure reste dans le Planning)
+$dayRows = [];
+if ($tStart && $tripDays > 0 && $tripDays <= 60) {
+    for ($i = 0; $i < $tripDays; $i++) {
+        $d = date('Y-m-d', strtotime("$tStart +$i day"));
+        $here = []; $night = null; $acts = [];
+        foreach ($stepList as $st) {
+            $sd = $st['step_start_date']; $ed = $st['step_end_date'] ?: $sd;
+            if (!$sd || $d < $sd || $d > $ed) continue;
+            $here[] = $st['location_name'];
+            if ($d < $ed) $night = $st['location_name'];
+            foreach ($st['items'] as $it) {
+                if ($it['name'] === 'PF_TECHNICAL_POINT' || $it['item_date'] !== $d) continue;
+                $acts[] = ['time' => $it['item_time'] ? substr($it['item_time'], 0, 5) : '', 'name' => $it['expense_context'] === 'transit' ? tr('hol_day_drive') : $it['name'], 'icon' => $it['expense_context'] === 'transit' ? '🛣️' : $catIcon($it['category'])];
+            }
+        }
+        usort($acts, fn($a, $b) => strcmp($a['time'], $b['time']));
+        $dayRows[] = ['date' => $d, 'here' => array_values(array_unique($here)), 'night' => $night, 'acts' => $acts];
+    }
+}
+
 // Image de fond (API Pixabay ou fallback par défaut)
 $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url']) : '/modules/home/assets/img/background.jpg';
 ?>
@@ -120,7 +197,10 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             
             <div class="hol-hero-top">
                 <a href="?tab=list" class="hol-hero-back-link">◀ <?= tr('btn_back') ?></a>
-                <span class="hol-hero-status-badge"><?= tr('hdl_status_' . $holiday['status']) ?></span>
+                <span class="hol-hero-badges">
+                    <?php if ($countdown): ?><span class="hol-hero-status-badge hol-hero-countdown hol-phase-<?= $tripPhase ?>"><?= htmlspecialchars($countdown) ?></span><?php endif; ?>
+                    <span class="hol-hero-status-badge"><?= tr('hdl_status_' . $holiday['status']) ?></span>
+                </span>
             </div>
             
             <h1 class="hol-hero-title"><?= htmlspecialchars($holiday['title']) ?></h1>
@@ -203,6 +283,16 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         </button>
     </div>
 
+    <!-- POINTS À VÉRIFIER (cohérence du voyage) -->
+    <div id="holAlerts" class="hol-alerts<?= empty($alerts) ? ' hol-hidden' : '' ?>">
+        <div class="hol-alerts-title">🔎 <?= tr('hol_alerts_title') ?></div>
+        <ul id="holAlertsList">
+            <?php foreach ($alerts as [$lvl, $msg]): ?>
+                <li class="hol-alert-<?= $lvl ?>"><?= htmlspecialchars($msg) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+
     <!-- 3. LA CARTE (Masquée par défaut) -->
     <div id="tripMapWrapper" class="hol-map-wrapper hol-hidden">
         <div class="hol-panel-header hol-map-panel-header">
@@ -229,7 +319,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             <?php else: ?>
 
                 <?php foreach ($steps as $step): ?>
-                    <div id="step-card-<?= $step['sort_order'] ?>" class="hol-checkpoint hol-checkpoint-draggable" draggable="true" data-sort="<?= (int)$step['sort_order'] ?>" data-location="<?= htmlspecialchars($step['location_name']) ?>">
+                    <?php $isCurrentStep = $tripPhase === 'during' && !empty($step['step_start_date']) && $today >= $step['step_start_date'] && $today <= ($step['step_end_date'] ?: $step['step_start_date']); ?>
+                    <div id="step-card-<?= $step['sort_order'] ?>" class="hol-checkpoint hol-checkpoint-draggable<?= $isCurrentStep ? ' is-current' : '' ?>" draggable="true" data-sort="<?= (int)$step['sort_order'] ?>" data-location="<?= htmlspecialchars($step['location_name']) ?>">
                         <div class="hol-step-header">
                             
                             <div class="hol-step-row-top">
@@ -340,6 +431,47 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- RÉSUMÉ JOUR PAR JOUR (lecture seule, complète le Planning) -->
+    <?php if (!empty($dayRows) && !empty($stepList)): ?>
+    <details class="hol-panel hol-panel-days"<?= $tripPhase === 'during' ? ' open' : '' ?>>
+        <summary class="hol-panel-header hol-timeline-header">
+            <h3>🗓️ <?= tr('hol_days_title') ?></h3>
+            <span class="hol-days-hint"><?= $tripDays ?> <?= tr('hol_days_unit') ?></span>
+        </summary>
+        <div class="hol-panel-body">
+            <?php foreach ($dayRows as $i => $dr):
+                $dk = strtolower(date('D', strtotime($dr['date'])));
+            ?>
+                <div class="hol-day-row<?= $dr['date'] === $today ? ' is-today' : '' ?>">
+                    <div class="hol-day-rail">
+                        <span class="hol-day-rail-name"><?= tr('day_' . $dk) ?></span>
+                        <span class="hol-day-rail-num"><?= date('j', strtotime($dr['date'])) ?></span>
+                        <span class="hol-day-rail-idx"><?= tr('hol_day_short') ?><?= $i + 1 ?></span>
+                    </div>
+                    <div class="hol-day-main">
+                        <div class="hol-day-where">
+                            <?php if (empty($dr['here'])): ?>
+                                <span class="hol-day-empty"><?= tr('hol_day_nothing') ?></span>
+                            <?php else: ?>
+                                📍 <?= htmlspecialchars(implode(' ➔ ', $dr['here'])) ?>
+                            <?php endif; ?>
+                        </div>
+                        <?php foreach ($dr['acts'] as $a): ?>
+                            <div class="hol-day-act"><?php if ($a['time']): ?><span class="hol-day-time"><?= $a['time'] ?></span><?php endif; ?><?= $a['icon'] ?> <?= htmlspecialchars($a['name']) ?></div>
+                        <?php endforeach; ?>
+                        <?php if ($dr['night']): ?>
+                            <div class="hol-day-night">🌙 <?= tr('hol_day_night_at') ?> <?= htmlspecialchars($dr['night']) ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+            <div class="hol-days-footer">
+                <button type="button" class="pf-btn btn-secondary pf-btn-small" onclick="openGlobalPlanningModal()">📅 <?= tr('hol_days_open_planning') ?></button>
+            </div>
+        </div>
+    </details>
+    <?php endif; ?>
 
     <!-- 5. RÉSERVATIONS & FRAIS GÉNÉRAUX (hors étape : vol, location, assurance…) -->
     <div class="hol-panel hol-panel-general">
@@ -700,7 +832,8 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         'hol_step_toast_place': <?= json_encode(tr('hol_step_toast_place')) ?>,
         'hol_general_confirm_del': <?= json_encode(tr('hol_general_confirm_del')) ?>,
         'hdl_to_pay': <?= json_encode(tr('hdl_to_pay')) ?>,
-        'btn_delete': <?= json_encode(tr('btn_delete')) ?>
+        'btn_delete': <?= json_encode(tr('btn_delete')) ?>,
+        'hol_al_long_leg': <?= json_encode(tr('hol_al_long_leg')) ?>
     };
 
     const savedFuelPrice = localStorage.getItem('holidays_fuel_price') || 1.85;
