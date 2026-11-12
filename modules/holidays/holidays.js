@@ -2275,3 +2275,94 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// ============================================================================
+// DÉPENSES : « PAYÉ » EN UN CLIC + DÉPENSES GÉNÉRALES (HORS ÉTAPE)
+// ============================================================================
+const HOL_ITEM_API = "/modules/holidays/includes/api/save_item.php";
+
+function holTripId() {
+  const inp = document.querySelector('input[name="holiday_id"]');
+  return inp ? inp.value : "";
+}
+
+// Recharge la page en revenant au même endroit (les totaux du bandeau sont recalculés côté serveur)
+function holReloadKeepScroll() {
+  try {
+    sessionStorage.setItem("hol_scroll", JSON.stringify({ u: location.href, y: window.scrollY }));
+  } catch (e) {}
+  window.location.reload();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    const s = JSON.parse(sessionStorage.getItem("hol_scroll") || "null");
+    sessionStorage.removeItem("hol_scroll");
+    if (s && s.u === location.href) window.scrollTo(0, s.y);
+  } catch (e) {}
+});
+
+async function holItemPost(fields) {
+  const fd = new FormData();
+  fd.append("holiday_id", holTripId());
+  Object.entries(fields).forEach(([k, v]) => fd.append(k, v));
+  try {
+    const res = await pachaFetch(HOL_ITEM_API, { method: "POST", body: fd });
+    if (res && res.success) return res;
+    showToast((res && res.error) || tr("error_occured"), "error");
+  } catch (e) {
+    showToast(tr("error_occured"), "error");
+  }
+  return null;
+}
+
+async function toggleItemPaid(itemId, btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const res = await holItemPost({ action: "toggle_paid", item_id: itemId });
+  if (res) holReloadKeepScroll();
+  else btn.disabled = false;
+}
+
+function openGeneralItemModal(item = null) {
+  const el = (id) => document.getElementById(id);
+  el("gi_id").value = item ? item.id : "";
+  el("gi_name").value = item ? item.name : "";
+  el("gi_category").value = item && ["transport", "accommodation", "activity"].includes(item.category) ? item.category : item ? "other" : "transport";
+  el("gi_amount").value = item && parseFloat(item.amount) > 0 ? item.amount : "";
+  el("gi_notes").value = item ? item.notes || "" : "";
+  el("gi_paid").checked = !!(item && item.is_paid == 1);
+  el("gi_delete").style.display = item ? "" : "none";
+  el("generalItemModal").style.display = "flex";
+  document.body.classList.add("no-scroll");
+  setTimeout(() => el("gi_name").focus(), 50);
+}
+
+function closeGeneralItemModal() {
+  document.getElementById("generalItemModal").style.display = "none";
+  document.body.classList.remove("no-scroll");
+}
+
+async function saveGeneralItem(e) {
+  e.preventDefault();
+  const el = (id) => document.getElementById(id);
+  const btn = el("gi_submit");
+  btn.disabled = true;
+  const res = await holItemPost({
+    action: "save_general",
+    item_id: el("gi_id").value || 0,
+    name: el("gi_name").value.trim(),
+    category: el("gi_category").value,
+    amount: el("gi_amount").value || 0,
+    notes: el("gi_notes").value.trim(),
+    is_paid: el("gi_paid").checked ? 1 : 0,
+  });
+  btn.disabled = false;
+  if (res) holReloadKeepScroll();
+}
+
+async function deleteGeneralItem() {
+  const id = document.getElementById("gi_id").value;
+  if (!id || !confirm(tr("hol_general_confirm_del"))) return;
+  const res = await holItemPost({ action: "delete_general", item_id: id });
+  if (res) holReloadKeepScroll();
+}

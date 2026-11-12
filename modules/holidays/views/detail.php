@@ -78,6 +78,26 @@ $leftToPay = max(0, $cost - $paid);
 $pctPaid = $cost > 0 ? min(100, ($paid / $cost) * 100) : 0;
 $pctSaved = $cost > 0 ? min(100 - $pctPaid, ($saved / $cost) * 100) : 0;
 
+// Répartition du budget par catégorie (prévu / déjà payé)
+$budgetCats = [
+    'accommodation' => ['icon' => '🏨', 'label' => tr('hol_cat_accommodation'), 'total' => 0.0, 'paid' => 0.0],
+    'transport'     => ['icon' => '🚗', 'label' => tr('hol_cat_transport'),     'total' => 0.0, 'paid' => 0.0],
+    'activity'      => ['icon' => '🎫', 'label' => tr('hol_cat_activity'),      'total' => 0.0, 'paid' => 0.0],
+    'other'         => ['icon' => '🏷️', 'label' => tr('hol_cat_other'),         'total' => 0.0, 'paid' => 0.0],
+];
+foreach ($items as $it) {
+    if ($it['name'] === 'PF_TECHNICAL_POINT') continue;
+    $k = isset($budgetCats[$it['category']]) ? $it['category'] : 'other';
+    $budgetCats[$k]['total'] += (float)$it['amount'];
+    if ($it['is_paid']) $budgetCats[$k]['paid'] += (float)$it['amount'];
+}
+$budgetCats['food']  = ['icon' => '🍔', 'label' => tr('hol_cat_food'),   'total' => (float)$holiday['budget_food'],  'paid' => 0.0, 'envelope' => true];
+$budgetCats['extra'] = ['icon' => '🎁', 'label' => tr('hol_cat_extra'), 'total' => (float)$holiday['budget_extra'], 'paid' => 0.0, 'envelope' => true];
+$budgetCats = array_filter($budgetCats, fn($c) => $c['total'] > 0);
+$tripDays = (!empty($holiday['start_date']) && !empty($holiday['end_date']))
+    ? (int)((strtotime($holiday['end_date']) - strtotime($holiday['start_date'])) / 86400) + 1 : 0;
+$catIcon = fn($c) => match($c) { 'transport' => '🚗', 'accommodation' => '🏨', 'activity' => '🎫', default => '🏷️' };
+
 // Image de fond (API Pixabay ou fallback par défaut)
 $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url']) : '/modules/home/assets/img/background.jpg';
 ?>
@@ -245,10 +265,16 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                                         <span class="hol-tag-return">🏁 Retour</span>
                                     <?php endif; ?>
                                     
-                                    <?php if (!empty($step['step_start_date']) && !empty($step['step_end_date'])): ?>
+                                    <?php if (!empty($step['step_start_date'])):
+                                        $sd = $step['step_start_date']; $ed = $step['step_end_date'] ?: $sd;
+                                        $nights = (int)((strtotime($ed) - strtotime($sd)) / 86400);
+                                    ?>
                                         <span class="hol-step-date">
-                                            <?= date('d/m', strtotime($step['step_start_date'])) ?> ➔ <?= date('d/m', strtotime($step['step_end_date'])) ?>
+                                            <?= date('d/m', strtotime($sd)) ?><?php if ($ed !== $sd): ?> ➔ <?= date('d/m', strtotime($ed)) ?><?php endif; ?>
                                         </span>
+                                        <?php if ($nights > 0): ?>
+                                            <span class="hol-step-nights">🌙 <?= $nights ?> <?= $nights > 1 ? tr('hol_nights') : tr('hol_night') ?></span>
+                                        <?php endif; ?>
                                         <div class="hol-weather-info"></div>
                                     <?php endif; ?>
                                 </div>
@@ -294,7 +320,7 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
                                             </span>
                                             <span>
                                                 <strong class="hol-expense-amount"><?= number_format($it['amount'], 2, ',', ' ') ?> €</strong>
-                                                <span class="<?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>" title="<?= $it['is_paid'] ? tr('hdl_paid') : tr('hdl_to_pay') ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></span>
+                                                <button type="button" class="hol-paid-toggle <?= $it['is_paid'] ? 'status-paid' : 'status-pending' ?>" onclick="toggleItemPaid(<?= (int)$it['id'] ?>, this)" title="<?= $it['is_paid'] ? tr('hdl_paid') : tr('hdl_to_pay') ?> — <?= tr('hol_paid_toggle_hint') ?>" aria-label="<?= $it['is_paid'] ? tr('hdl_paid') : tr('hdl_to_pay') ?>"><?= $it['is_paid'] ? '✓' : '⏳' ?></button>
                                             </span>
                                         </div>
                                         <?php if (!empty($it['notes'])): ?>
@@ -314,6 +340,70 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- 5. RÉSERVATIONS & FRAIS GÉNÉRAUX (hors étape : vol, location, assurance…) -->
+    <div class="hol-panel hol-panel-general">
+        <div class="hol-panel-header hol-timeline-header">
+            <h3>🌍 <?= tr('hol_general_title') ?></h3>
+            <button class="pf-btn pf-btn-small" onclick="openGeneralItemModal()">＋ <?= tr('btn_add') ?></button>
+        </div>
+        <div class="hol-panel-body">
+            <?php if (empty($generalItems)): ?>
+                <p class="hol-empty-steps-text"><?= tr('hol_general_empty') ?></p>
+            <?php else: foreach ($generalItems as $gi): ?>
+                <div class="hol-expense-wrapper hol-general-row">
+                    <div class="hol-expense-main">
+                        <span class="hol-expense-name"><?= $catIcon($gi['category']) ?> <?= htmlspecialchars($gi['name']) ?></span>
+                        <span class="hol-general-actions">
+                            <strong class="hol-expense-amount"><?= number_format($gi['amount'], 2, ',', ' ') ?> €</strong>
+                            <button type="button" class="hol-paid-toggle <?= $gi['is_paid'] ? 'status-paid' : 'status-pending' ?>" onclick="toggleItemPaid(<?= (int)$gi['id'] ?>, this)" title="<?= $gi['is_paid'] ? tr('hdl_paid') : tr('hdl_to_pay') ?> — <?= tr('hol_paid_toggle_hint') ?>" aria-label="<?= $gi['is_paid'] ? tr('hdl_paid') : tr('hdl_to_pay') ?>"><?= $gi['is_paid'] ? '✓' : '⏳' ?></button>
+                            <button type="button" class="btn-icon-small hol-btn-action-icon" title="<?= tr('btn_edit') ?>" aria-label="<?= tr('btn_edit') ?>" onclick='openGeneralItemModal(<?= htmlspecialchars(json_encode(['id' => (int)$gi['id'], 'category' => $gi['category'], 'name' => $gi['name'], 'amount' => $gi['amount'], 'is_paid' => (int)$gi['is_paid'], 'notes' => $gi['notes']]), ENT_QUOTES, "UTF-8") ?>)'>✏️</button>
+                        </span>
+                    </div>
+                    <?php if (!empty($gi['notes'])): ?>
+                        <div class="hol-expense-note"><?= htmlspecialchars($gi['notes']) ?></div>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; endif; ?>
+        </div>
+    </div>
+
+    <!-- 6. BUDGET PAR CATÉGORIE -->
+    <?php if (!empty($budgetCats)): ?>
+    <div class="hol-panel hol-panel-budget">
+        <div class="hol-panel-header hol-timeline-header">
+            <h3>💰 <?= tr('hol_budget_title') ?></h3>
+            <?php if ($tripDays > 0 && $cost > 0): ?>
+                <span class="hol-budget-perday">≈ <?= number_format($cost / $tripDays, 0, ',', ' ') ?> € / <?= tr('hol_per_day') ?></span>
+            <?php endif; ?>
+        </div>
+        <div class="hol-panel-body">
+            <?php foreach ($budgetCats as $c):
+                $share = $cost > 0 ? min(100, $c['total'] / $cost * 100) : 0;
+                $paidPct = $c['total'] > 0 ? min(100, $c['paid'] / $c['total'] * 100) : 0;
+            ?>
+                <div class="hol-budget-row">
+                    <div class="hol-budget-line">
+                        <span class="hol-budget-label"><?= $c['icon'] ?> <?= htmlspecialchars($c['label']) ?></span>
+                        <span class="hol-budget-amount"><?= number_format($c['total'], 0, ',', ' ') ?> € <small><?= round($share) ?> %</small></span>
+                    </div>
+                    <div class="hol-budget-bar" title="<?= empty($c['envelope']) ? tr('hdl_paid') . ' : ' . number_format($c['paid'], 0, ',', ' ') . ' €' : tr('hol_budget_envelope') ?>">
+                        <div class="hol-budget-bar-total" style="width: <?= round($share, 1) ?>%;">
+                            <div class="hol-budget-bar-paid" style="width: <?= round($paidPct, 1) ?>%;"></div>
+                        </div>
+                    </div>
+                    <div class="hol-budget-sub">
+                        <?php if (!empty($c['envelope'])): ?>
+                            <?= tr('hol_budget_envelope') ?>
+                        <?php else: ?>
+                            ✓ <?= tr('hdl_paid') ?> <?= number_format($c['paid'], 0, ',', ' ') ?> € · ⏳ <?= tr('hdl_left_to_pay') ?> <?= number_format(max(0, $c['total'] - $c['paid']), 0, ',', ' ') ?> €
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div class="pf-card hol-notes-card">
         <h2 class="pf-card-title">📝 <?= tr('hdl_label_notes') ?></h2>
@@ -445,6 +535,47 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
     </div>
 </div>
 
+<div id="generalItemModal" class="pf-modal">
+    <div class="pf-modal-content pf-modal-md">
+        <div class="pf-modal-header">
+            <h3 class="pf-modal-title" id="generalItemTitle">🌍 <?= tr('hol_general_title') ?></h3>
+            <button type="button" onclick="closeGeneralItemModal()" class="pf-modal-close">&times;</button>
+        </div>
+        <form id="generalItemForm" onsubmit="saveGeneralItem(event)">
+            <input type="hidden" id="gi_id" value="">
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="pf-label" for="gi_name"><?= tr('hol_general_name') ?></label>
+                <input type="text" id="gi_name" class="pf-input" maxlength="255" required placeholder="<?= tr('hol_general_ph') ?>">
+            </div>
+            <div class="form-row" style="margin-bottom:12px;">
+                <div class="hol-flex-1">
+                    <label class="pf-label" for="gi_category"><?= tr('hol_general_category') ?></label>
+                    <select id="gi_category" class="pf-input">
+                        <option value="transport">🚗 <?= tr('hol_cat_transport') ?></option>
+                        <option value="accommodation">🏨 <?= tr('hol_cat_accommodation') ?></option>
+                        <option value="activity">🎫 <?= tr('hol_cat_activity') ?></option>
+                        <option value="other">🏷️ <?= tr('hol_cat_other') ?></option>
+                    </select>
+                </div>
+                <div class="hol-flex-1">
+                    <label class="pf-label" for="gi_amount"><?= tr('hol_general_amount') ?></label>
+                    <input type="number" step="0.01" min="0" id="gi_amount" class="pf-input" placeholder="0.00" inputmode="decimal">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label class="pf-label" for="gi_notes"><?= tr('hdl_label_notes') ?></label>
+                <input type="text" id="gi_notes" class="pf-input" placeholder="<?= tr('hol_general_notes_ph') ?>">
+            </div>
+            <label class="hol-general-paid"><input type="checkbox" id="gi_paid"> <?= tr('hdl_paid') ?></label>
+            <div class="modal-footer">
+                <button type="button" id="gi_delete" class="pf-btn btn-secondary hol-btn-delete" onclick="deleteGeneralItem()"><?= tr('btn_delete') ?></button>
+                <button type="button" class="pf-btn btn-secondary" onclick="closeGeneralItemModal()"><?= tr('btn_cancel') ?></button>
+                <button type="submit" class="pf-btn" id="gi_submit"><?= tr('btn_save') ?></button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="planningModal" data-keep-open class="pf-modal">
     <div class="pf-modal-content hol-modal-planning">
         <div class="pf-modal-header">
@@ -566,7 +697,10 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         'hol_step_opt_after': <?= json_encode(tr('hol_step_opt_after')) ?>,
         'hol_step_toast_name': <?= json_encode(tr('hol_step_toast_name')) ?>,
         'hol_step_toast_dates': <?= json_encode(tr('hol_step_toast_dates')) ?>,
-        'hol_step_toast_place': <?= json_encode(tr('hol_step_toast_place')) ?>
+        'hol_step_toast_place': <?= json_encode(tr('hol_step_toast_place')) ?>,
+        'hol_general_confirm_del': <?= json_encode(tr('hol_general_confirm_del')) ?>,
+        'hdl_to_pay': <?= json_encode(tr('hdl_to_pay')) ?>,
+        'btn_delete': <?= json_encode(tr('btn_delete')) ?>
     };
 
     const savedFuelPrice = localStorage.getItem('holidays_fuel_price') || 1.85;
