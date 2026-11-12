@@ -1432,11 +1432,4 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .hol-check-suggest { margin-top: 8px; background: none; border: none; padding: 6px 0; color: var(--primary); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
 @media (max-width: 768px) { .hol-check-col + .hol-check-col { border-left: none; border-top: 1px solid var(--border-light); } }
 
-/* Estimation des péages */
-.hol-tolls-box { padding: 12px 0 0; border-top: 1px solid var(--border-light); margin-top: 8px; }
-.hol-tolls-result { margin-top: 8px; }
-.hol-tolls-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 6px 0; font-size: 0.85rem; border-bottom: 1px dashed var(--border-light); color: var(--text-main); }
-.hol-tolls-row small { display: block; color: var(--text-muted); font-size: 0.72rem; }
-.hol-tolls-row strong { white-space: nowrap; }
-.hol-tolls-total { font-weight: 800; border-bottom: none; }
-.hol-tolls-note { font-size: 0.75rem; color: var(--text-muted); margin: 6px 0 0; }
+.hol-card-countdown { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 10px; background: var(--bg-soft); color: var(--primary); font-size: 0.75rem; font-weight: 800; font-variant-numeric: tabular-nums; }
