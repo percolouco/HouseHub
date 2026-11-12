@@ -81,7 +81,7 @@ foreach ($active as $h) {
     </section>
 
     <?php if (!empty($history)): ?>
-    <section class="pf-section" style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+    <section class="pf-section" style="margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 20px;">
         <h3 style="color:var(--text-muted);"><?= tr('hdl_history_title') ?></h3>
         <div class="hol-ideas-grid" style="opacity: 0.7;">
             <?php foreach ($history as $h): ?>
@@ -160,11 +160,24 @@ function renderHolidayCard($h, $pdo) {
 
     $statusLabel = tr('hdl_status_' . $h['status']);
 
+    // Compte à rebours sur les voyages à venir ou en cours
+    $countdown = '';
+    $today = date('Y-m-d');
+    if (!empty($h['start_date']) && in_array($h['status'], ['draft', 'planned', 'booked'], true)) {
+        $end = $h['end_date'] ?: $h['start_date'];
+        if ($today < $h['start_date']) {
+            $countdown = 'J-' . (int)round((strtotime($h['start_date']) - strtotime($today)) / 86400);
+        } elseif ($today <= $end) {
+            $countdown = tr('hol_in_progress');
+        }
+    }
+    $countdownHtml = $countdown !== '' ? "<span class='hol-card-countdown'>" . htmlspecialchars($countdown) . "</span>" : '';
+
     echo "
     <div class='hol-idea-card' style='display: flex; flex-direction: column;'>
         <div class='hol-idea-card__head' style='display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;'>
             <div style='flex:1;'>
-                <h3 style='margin:0; font-size:1.15rem; color:#0f172a;'>
+                <h3 style='margin:0; font-size:1.15rem; color:var(--text-main);'>
                     <a href='?tab=holiday_detail&id={$h['id']}' style='text-decoration:none; color:inherit;'>
                         ".htmlspecialchars($h['title'])."
                     </a>
@@ -180,24 +193,24 @@ function renderHolidayCard($h, $pdo) {
         </div>
         
         <div class='hol-idea-meta' style='margin-bottom:15px;'>
-            <span>🗓️ ".($dateDisplay ?: tr('hdl_dates_to_define'))."</span>
+            <span>🗓️ ".($dateDisplay ?: tr('hdl_dates_to_define'))."</span> $countdownHtml
         </div>
         
         <div style='margin-top:auto; padding-top:15px; border-top:1px solid var(--border-light);'>
             <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
-                <span style='font-size:0.85rem; color:#64748b;'>".tr('hdl_total_budget')."</span>
-                <span style='font-size:1.1rem; font-weight:bold; color:#1e293b;'>".number_format($cost, 0, ',', ' ')." €</span>
+                <span style='font-size:0.85rem; color:var(--text-muted);'>".tr('hdl_total_budget')."</span>
+                <span style='font-size:1.1rem; font-weight:bold; color:var(--text-main);'>".number_format($cost, 0, ',', ' ')." €</span>
             </div>
 
-            <div style='width:100%; height:8px; background:#e2e8f0; border-radius:4px; margin-bottom:12px; display:flex; overflow:hidden;'>
-                <div style='width:{$pctPaid}%; background:#10b981; transition:width 0.3s ease;'></div>
-                <div style='width:{$pctSaved}%; background:#3b82f6; transition:width 0.3s ease;'></div>
+            <div style='width:100%; height:8px; background:var(--bg-subtle); border-radius:4px; margin-bottom:12px; display:flex; overflow:hidden;'>
+                <div style='width:{$pctPaid}%; background:var(--success); transition:width 0.3s ease;'></div>
+                <div style='width:{$pctSaved}%; background:var(--primary); transition:width 0.3s ease;'></div>
             </div>
 
             <div style='display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.8rem;'>
-                <div style='color:#10b981; font-weight:600;'>✓ ".tr('hdl_paid')." : ".number_format($paid, 0, ',', ' ')." €</div>
-                <div style='color:#3b82f6; font-weight:600; text-align:right;'>💼 ".tr('hdl_saved')." : ".number_format($saved, 0, ',', ' ')." €</div>
-                <div style='color:#ef4444; font-weight:700; font-size:0.85rem; grid-column: span 2; padding-top: 4px; border-top: 1px dashed #fca5a5;'>
+                <div style='color:var(--success); font-weight:600;'>✓ ".tr('hdl_paid')." : ".number_format($paid, 0, ',', ' ')." €</div>
+                <div style='color:var(--primary); font-weight:600; text-align:right;'>💼 ".tr('hdl_saved')." : ".number_format($saved, 0, ',', ' ')." €</div>
+                <div style='color:var(--danger); font-weight:700; font-size:0.85rem; grid-column: span 2; padding-top: 4px; border-top: 1px dashed var(--border-light);'>
                     ⏳ ".tr('hdl_left_to_pay')." : ".number_format($leftToPay, 0, ',', ' ')." €
                 </div>
             </div>

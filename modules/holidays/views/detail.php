@@ -782,10 +782,6 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         <div id="transitDetailsContainer" class="hol-transit-container">
             <p class="hol-empty-text">Calcul en cours...</p>
         </div>
-        <div class="hol-tolls-box">
-            <button type="button" class="pf-btn btn-secondary pf-btn-small" id="btnEstimateTolls" onclick="estimateTolls()">💳 <?= tr('hol_tolls_btn') ?></button>
-            <div id="tollsResult" class="hol-tolls-result"></div>
-        </div>
         <div class="modal-footer">
             <button type="button" onclick="closeTransitModal()" class="pf-btn btn-secondary"><?= tr('btn_close') ?></button>
         </div>
@@ -889,9 +885,6 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         'hol_al_long_leg': <?= json_encode(tr('hol_al_long_leg')) ?>,
         'hol_check_sugg_todo': <?= json_encode(tr('hol_check_sugg_todo')) ?>,
         'hol_check_sugg_pack': <?= json_encode(tr('hol_check_sugg_pack')) ?>,
-        'hol_tolls_none': <?= json_encode(tr('hol_tolls_none')) ?>,
-        'hol_tolls_total': <?= json_encode(tr('hol_tolls_total')) ?>,
-        'hol_tolls_note': <?= json_encode(tr('hol_tolls_note')) ?>,
         'hol_duplicate_confirm': <?= json_encode(tr('hol_duplicate_confirm')) ?>
     };
 

@@ -67,7 +67,7 @@ Tous les modules sont activables/désactivables par famille depuis `/settings.ph
 | 💰 Budget         | `/budget.php`          | Suivi mensuel, prévisionnel, épargne, import CSV bancaire, analyse graphique    |
 | 📅 Calendrier     | `/family-calendar.php` | Congés (CP/JRA/JA), modes de garde, planning hebdo, vacances scolaires          |
 | 🗓️ Calendrier iOS | `/calendar-ios.php`    | Synchronisation CalDAV avec iPhone/iPad                                         |
-| 🏖️ Voyages        | `/holidays.php`        | Roadtrips, cartographie Leaflet, itinéraires OSRM, météo Open-Meteo             |
+| 🏖️ Voyages        | `/holidays.php`        | Roadtrips, carte Leaflet, itinéraires OSRM, météo, budget par catégorie, checklist, alertes de cohérence, export agenda |
 | 🎁 Cadeaux        | `/gift-list.php`       | Idées par fête, case « acheté », comptes (qui doit quoi), pensé mobile          |
 | 🚗 Garage         | `/garage.php`          | Véhicules, historique entretiens, pièces détachées, comparateur de coût         |
 | 🛒 Courses        | `/groceries.php`       | Liste de courses partagée en temps réel                                         |
@@ -226,6 +226,7 @@ Un *scénario* = marque / modèle / année + mode d'acquisition + tous les frais
 
 | Version | Changements                                                                                                               |
 | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| v3.1.0  | Voyages : audit et correctifs (recherche de lieu avec secours, notes conservées, réordonnancement par position), dépenses générales, « payé » en un clic, budget par catégorie, compte à rebours, points à vérifier, résumé jour par jour, checklist, duplication, export .ics ; Menu de la semaine : refonte mobile en cartes par jour |
 | v3.0.0  | Vue « apps » mobile (Paramètres › Affichage mobile) : accueil en icônes façon smartphone, bouton Accueil flottant, apps réorganisables par glisser-déposer |
 | v2.9.0  | Module Sport : calendrier et résultats PSG / FC Barcelone (football-data.org), cache en base, un appel par équipe toutes les 6 h |
 | v2.8.0  | Comparateur : hybride rechargeable, durée réservée aux locations, prime CEE, packs d'entretien LLD, champs masquables |
