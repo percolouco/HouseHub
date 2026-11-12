@@ -71,8 +71,12 @@ function hol_geocode_get(string $url, int $timeout): ?array {
 }
 
 // 4. Service principal : Photon (Komoot), tolérant sur les adresses
+//    S'il vient de tomber en panne, on l'évite pendant 10 minutes pour ne pas ralentir chaque recherche.
 $results = null;
-$data = hol_geocode_get('https://photon.komoot.io/api/?' . http_build_query(['q' => $q, 'limit' => $limit, 'lang' => 'fr'], '', '&', PHP_QUERY_RFC3986), 4);
+$photonFlag = sys_get_temp_dir() . '/hh_photon_down';
+$photonDown = is_file($photonFlag) && (time() - filemtime($photonFlag)) < 600;
+$data = $photonDown ? null : hol_geocode_get('https://photon.komoot.io/api/?' . http_build_query(['q' => $q, 'limit' => $limit, 'lang' => 'fr'], '', '&', PHP_QUERY_RFC3986), 4);
+if ($data === null && !$photonDown) @touch($photonFlag);
 if ($data !== null && isset($data['features'])) {
     $results = [];
     foreach ($data['features'] as $feature) {
@@ -105,7 +109,13 @@ if ($data !== null && isset($data['features'])) {
 
 // 5. Secours : Nominatim (OpenStreetMap) si Photon est injoignable
 if ($results === null) {
-    $data = hol_geocode_get('https://nominatim.openstreetmap.org/search?' . http_build_query(['q' => $q, 'format' => 'jsonv2', 'limit' => $limit, 'accept-language' => 'fr'], '', '&', PHP_QUERY_RFC3986), 8);
+    $nominatimUrl = 'https://nominatim.openstreetmap.org/search?' . http_build_query(['q' => $q, 'format' => 'jsonv2', 'limit' => $limit, 'accept-language' => 'fr'], '', '&', PHP_QUERY_RFC3986);
+    $data = hol_geocode_get($nominatimUrl, 8);
+    if ($data === null) {
+        // Nominatim limite à une requête par seconde : on patiente puis on retente une fois
+        usleep(1500000);
+        $data = hol_geocode_get($nominatimUrl, 8);
+    }
     if ($data !== null) {
         $results = [];
         foreach ($data as $row) {
