@@ -1294,6 +1294,7 @@ return [
     'hol_al_step_gap' => '%d jour(s) sans étape entre %s (%s) et %s (%s).',
     'hol_al_no_bed' => '%s : %d nuit(s) sans hébergement renseigné.',
     'hol_al_unpaid' => 'Départ dans moins de 30 jours et il reste %s € à payer.',
+    'hol_al_tail_gap' => '%d jour(s) sans étape après %s (%s), alors que le voyage se termine le %s.',
     'hol_al_long_leg' => 'Trajet long : %1 ➔ %2 (%3 de route). Prévoir une pause ou une étape.',
     'hol_days_title' => 'Résumé jour par jour',
     'hol_days_unit' => 'jours',

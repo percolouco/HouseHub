@@ -1284,6 +1284,7 @@ return [
     'hol_al_step_gap' => '%d dia/es sense etapa entre %s (%s) i %s (%s).',
     'hol_al_no_bed' => '%s: %d nit(s) sense allotjament indicat.',
     'hol_al_unpaid' => 'Sortida en menys de 30 dies i queden %s € per pagar.',
+    'hol_al_tail_gap' => '%d dia/es sense etapa després de %s (%s), tot i que el viatge acaba el %s.',
     'hol_al_long_leg' => 'Trajecte llarg: %1 ➔ %2 (%3 de ruta). Preveu una pausa o una etapa.',
     'hol_days_title' => 'Resum dia a dia',
     'hol_days_unit' => 'dies',

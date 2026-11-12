@@ -1308,6 +1308,7 @@ return [
     'hol_al_step_gap' => '%d day(s) with no stop between %s (%s) and %s (%s).',
     'hol_al_no_bed' => '%s: %d night(s) with no accommodation entered.',
     'hol_al_unpaid' => 'Departure in less than 30 days and %s € still to pay.',
+    'hol_al_tail_gap' => '%d day(s) with no stop after %s (%s), while the trip ends on %s.',
     'hol_al_long_leg' => 'Long drive: %1 ➔ %2 (%3 on the road). Plan a break or a stop.',
     'hol_days_title' => 'Day-by-day summary',
     'hol_days_unit' => 'days',
