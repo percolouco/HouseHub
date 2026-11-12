@@ -116,7 +116,21 @@ $old_sort_order = isset($_POST['old_sort_order']) && $_POST['old_sort_order'] !=
 
 // SUPPRESSION DE L'ÉTAPE
 if (isset($_POST['action_delete']) && $_POST['action_delete'] === '1') {
-    $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND sort_order = ?")->execute([$holiday_id, $old_sort_order]);
+    if ($holiday_id > 0 && $old_sort_order !== null) {
+        $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ? AND sort_order = ?")->execute([$holiday_id, $old_sort_order]);
+        // Les documents de l'étape (repérés par sa position) partent avec elle
+        try {
+            $stmtFiles = $pdo->prepare("SELECT id, file_path FROM pf_holidays_attachments WHERE holiday_id = ? AND item_id = ?");
+            $stmtFiles->execute([$holiday_id, $old_sort_order]);
+            foreach ($stmtFiles->fetchAll(PDO::FETCH_ASSOC) as $f) {
+                $abs = dirname(__DIR__, 4) . '/' . $f['file_path'];
+                if (strpos($f['file_path'], 'uploads/holidays/') === 0 && strpos($f['file_path'], '..') === false && is_file($abs)) @unlink($abs);
+                $pdo->prepare("DELETE FROM pf_holidays_attachments WHERE id = ?")->execute([$f['id']]);
+            }
+        } catch (Throwable $e) {}
+        // Si c'était l'étape « retour », on retire le marqueur
+        $pdo->prepare("UPDATE pf_holidays SET return_step_id = NULL WHERE id = ? AND return_step_id = ?")->execute([$holiday_id, $old_sort_order]);
+    }
     header("Location: /holidays.php?tab=holiday_detail&id=" . $holiday_id);
     exit;
 }
@@ -141,6 +155,9 @@ if ($holiday_id > 0 && !empty($location_name)) {
                 $target_order = (int)$insert_after + 1;
                 // On décale toutes les étapes suivantes vers le bas
                 $pdo->prepare("UPDATE pf_holidays_items SET sort_order = sort_order + 1 WHERE holiday_id = ? AND sort_order >= ?")->execute([$holiday_id, $target_order]);
+                // Documents et étape « retour » sont repérés par la position : ils suivent le décalage
+                $pdo->prepare("UPDATE pf_holidays_attachments SET item_id = item_id + 1 WHERE holiday_id = ? AND item_id >= ?")->execute([$holiday_id, $target_order]);
+                $pdo->prepare("UPDATE pf_holidays SET return_step_id = return_step_id + 1 WHERE id = ? AND return_step_id >= ?")->execute([$holiday_id, $target_order]);
             }
         }
 
@@ -148,6 +165,8 @@ if ($holiday_id > 0 && !empty($location_name)) {
         $step_end = !empty($_POST['step_end_date']) ? $_POST['step_end_date'] : null;
         $step_type = $_POST['step_type'] ?? 'stop';
 
+        if (!in_array($step_type, ['origin', 'stop', 'destination'], true)) $step_type = 'stop';
+        if ($step_start && $step_end && $step_end < $step_start) { [$step_start, $step_end] = [$step_end, $step_start]; }
         if ($step_type === 'origin' || $step_type === 'destination') {
             $step_end = null; 
         }
@@ -186,6 +205,9 @@ if ($holiday_id > 0 && !empty($location_name)) {
 
         if (isset($_POST['set_as_return']) && $_POST['set_as_return'] == '1') {
              $pdo->prepare("UPDATE pf_holidays SET return_step_id = ? WHERE id = ?")->execute([$target_order, $holiday_id]);
+        } else {
+            // Case décochée sur l'étape qui était le retour : on retire le marqueur
+            $pdo->prepare("UPDATE pf_holidays SET return_step_id = NULL WHERE id = ? AND return_step_id = ?")->execute([$holiday_id, $target_order]);
         }
 
         if (isset($_POST['save_favorite']) && $_POST['save_favorite'] == '1') {

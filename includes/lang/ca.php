@@ -1270,6 +1270,7 @@ return [
     'hol_step_expenses_empty'          => 'Res previst de moment: allotjament, activitat, transport… Afegeix una línia si cal (opcional).',
     'hol_step_toast_name'              => 'Posa un nom a l\'etapa.',
     'hol_step_toast_dates'             => 'La data de sortida és abans de la data d\'arribada.',
+    'hol_step_toast_place'             => 'Tria primer un lloc a la cerca.',
     'hol_step_position'                => 'Posició de l\'etapa',
     'hol_step_opt_end'                 => '-- Al final del viatge --',
     'hol_step_opt_after'               => 'Després:',

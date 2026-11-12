@@ -36,96 +36,98 @@ try {
     ");
 } catch (Throwable $e) {}
 
-// 3. Vérification du cache
-try {
-    $st = $pdo->prepare("SELECT lat, lng, display_name FROM pf_geocode_cache WHERE q_hash = ?");
-    $st->execute([$qHash]);
-    if ($row = $st->fetch(PDO::FETCH_ASSOC)) {
-        if ($limit === 1) {
+// 3. Vérification du cache (uniquement quand on ne veut qu'un résultat :
+//    la recherche à choix multiples doit toujours proposer plusieurs lieux)
+if ($limit === 1) {
+    try {
+        $st = $pdo->prepare("SELECT lat, lng, display_name FROM pf_geocode_cache WHERE q_hash = ?");
+        $st->execute([$qHash]);
+        if ($row = $st->fetch(PDO::FETCH_ASSOC)) {
             echo json_encode([
                 'lat'          => (float)$row['lat'],
                 'lng'          => (float)$row['lng'],
                 'display_name' => $row['display_name'],
                 'cached'       => true
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        } else {
-            echo json_encode(['results' => [[
-                'lat'          => (float)$row['lat'],
-                'lng'          => (float)$row['lng'],
-                'display_name' => $row['display_name'],
-                'cached'       => true
-            ]]], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
         }
-        exit;
+    } catch (Throwable $e) {}
+}
+
+function hol_geocode_get(string $url, int $timeout): ?array {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT        => $timeout,
+        CURLOPT_USERAGENT      => 'HouseHub-Holidays/1.0',
+    ]);
+    $body = curl_exec($ch);
+    $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($body === false || $http !== 200) return null;
+    $data = json_decode($body, true);
+    return is_array($data) ? $data : null;
+}
+
+// 4. Service principal : Photon (Komoot), tolérant sur les adresses
+$results = null;
+$data = hol_geocode_get('https://photon.komoot.io/api/?' . http_build_query(['q' => $q, 'limit' => $limit, 'lang' => 'fr'], '', '&', PHP_QUERY_RFC3986), 4);
+if ($data !== null && isset($data['features'])) {
+    $results = [];
+    foreach ($data['features'] as $feature) {
+        $prop = $feature['properties'];
+        $coords = $feature['geometry']['coordinates']; // [lng, lat]
+
+        // Construction propre du nom (Nom du lieu + Rue + Ville + Pays)
+        $nameParts = [];
+        if (!empty($prop['name'])) $nameParts[] = $prop['name'];
+
+        if (!empty($prop['housenumber']) && !empty($prop['street'])) {
+            $nameParts[] = $prop['housenumber'] . ' ' . $prop['street'];
+        } elseif (!empty($prop['street'])) {
+            $nameParts[] = $prop['street'];
+        }
+
+        if (!empty($prop['city'])) $nameParts[] = $prop['city'];
+        elseif (!empty($prop['town'])) $nameParts[] = $prop['town'];
+        elseif (!empty($prop['village'])) $nameParts[] = $prop['village'];
+
+        if (!empty($prop['country'])) $nameParts[] = $prop['country'];
+
+        $results[] = [
+            'lat' => round((float)$coords[1], 6),
+            'lng' => round((float)$coords[0], 6),
+            'display_name' => implode(', ', array_unique($nameParts))
+        ];
     }
-} catch (Throwable $e) {}
+}
 
-// 4. NOUVELLE API : Appel à Photon (Komoot) - Beaucoup plus tolérant pour les adresses !
-$endpoint = 'https://photon.komoot.io/api/';
-$params = http_build_query([
-    'q'     => $q,
-    'limit' => $limit,
-    'lang'  => 'fr' // On force les résultats en français
-], '', '&', PHP_QUERY_RFC3986);
+// 5. Secours : Nominatim (OpenStreetMap) si Photon est injoignable
+if ($results === null) {
+    $data = hol_geocode_get('https://nominatim.openstreetmap.org/search?' . http_build_query(['q' => $q, 'format' => 'jsonv2', 'limit' => $limit, 'accept-language' => 'fr'], '', '&', PHP_QUERY_RFC3986), 8);
+    if ($data !== null) {
+        $results = [];
+        foreach ($data as $row) {
+            if (!isset($row['lat'], $row['lon'])) continue;
+            $results[] = [
+                'lat' => round((float)$row['lat'], 6),
+                'lng' => round((float)$row['lon'], 6),
+                'display_name' => (string)($row['display_name'] ?? $q)
+            ];
+        }
+    }
+}
 
-$url = $endpoint . '?' . $params;
-
-$ch = curl_init($url);
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_TIMEOUT        => 10,
-    CURLOPT_USERAGENT      => 'HouseHub-Holidays/1.0',
-    CURLOPT_SSL_VERIFYPEER => false,
-    CURLOPT_SSL_VERIFYHOST => false
-]);
-$body = curl_exec($ch);
-$http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($body === false || $http !== 200) {
-    http_response_code(502); 
+if ($results === null) {
+    http_response_code(502);
     echo json_encode(['error' => 'geocode_failed']);
     exit;
 }
-
-$data = json_decode($body, true);
-
-if (!isset($data['features']) || empty($data['features'])) {
+if (empty($results)) {
     http_response_code(404);
     echo json_encode(['error' => 'not_found']);
     exit;
-}
-
-// 5. Formatage des résultats (Photon renvoie les données différemment de Nominatim)
-$results = [];
-foreach ($data['features'] as $feature) {
-    $prop = $feature['properties'];
-    $coords = $feature['geometry']['coordinates']; // [lng, lat]
-    
-    // Construction propre du nom (Nom du lieu + Rue + Ville + Pays)
-    $nameParts = [];
-    if (!empty($prop['name'])) $nameParts[] = $prop['name'];
-    
-    if (!empty($prop['housenumber']) && !empty($prop['street'])) {
-        $nameParts[] = $prop['housenumber'] . ' ' . $prop['street'];
-    } elseif (!empty($prop['street'])) {
-        $nameParts[] = $prop['street'];
-    }
-    
-    if (!empty($prop['city'])) $nameParts[] = $prop['city'];
-    elseif (!empty($prop['town'])) $nameParts[] = $prop['town'];
-    elseif (!empty($prop['village'])) $nameParts[] = $prop['village'];
-    
-    if (!empty($prop['country'])) $nameParts[] = $prop['country'];
-    
-    $displayName = implode(', ', array_unique($nameParts));
-    
-    $results[] = [
-        'lat' => round((float)$coords[1], 6),
-        'lng' => round((float)$coords[0], 6),
-        'display_name' => $displayName
-    ];
 }
 
 // 6. Mise en cache du premier résultat

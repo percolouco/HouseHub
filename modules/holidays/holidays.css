@@ -1349,3 +1349,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .cp-place-name { flex: 1; min-width: 0; font-size: 0.85rem; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cp-link { background: none; border: none; color: var(--primary); font-weight: 600; font-size: 0.85rem; cursor: pointer; padding: 0; }
 
+
+/* Trajet depuis l'étape précédente (km, durée, carburant estimé) */
+.transit-auto-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 12px 8px; font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px dashed var(--border-light); }
+.hol-transit-add { background: none; border: none; color: var(--primary); cursor: pointer; font-weight: 600; font-size: 0.8rem; padding: 4px 0; }
