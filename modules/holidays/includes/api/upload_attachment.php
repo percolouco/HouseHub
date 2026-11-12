@@ -13,7 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $holiday_id = isset($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : 0;
-$item_id = (isset($_POST['item_id']) && (int)$_POST['item_id'] > 0) ? (int)$_POST['item_id'] : null;
+// L'étape est repérée par sa position, et la première étape est en position 0 : 0 est une valeur valide
+$item_id = (isset($_POST['item_id']) && is_numeric($_POST['item_id']) && (int)$_POST['item_id'] >= 0) ? (int)$_POST['item_id'] : null;
 
 if ($holiday_id === 0 || empty($_FILES['file'])) {
     echo json_encode(['success' => false, 'error' => 'Données manquantes ou fichier invalide']);
