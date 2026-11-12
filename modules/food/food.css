@@ -1241,5 +1241,16 @@
 .meals-table tr.is-today td.col-sticky { box-shadow: inset 3px 0 0 var(--primary, #4361ee); }
 .meals-table tr.is-today .day-label { color: var(--primary, #4361ee); }
 @media (max-width: 768px) {
-  .meals-table tr.is-today td.col-sticky { background: color-mix(in srgb, var(--primary, #4361ee) 14%, var(--bg-subtle)); }
+  .meals-table tr.is-today td.col-sticky { background: color-mix(in srgb, var(--primary, #4361ee) 8%, var(--bg-subtle)); }
+}
+
+/* Mobile : 2 colonnes par ligne (au lieu de 4 très étroites), champs qui s'adaptent au texte */
+@media (max-width: 768px) {
+  .meals-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .meal-input-cell:not(:first-of-type) { border-left: none !important; }
+  .meal-input-cell:nth-of-type(odd) { border-left: 1px solid var(--border-light) !important; }
+  .meal-input { height: 84px; line-height: 1.25; }
+  @supports (field-sizing: content) {
+    .meal-input { field-sizing: content; height: auto; min-height: 52px; }
+  }
 }
