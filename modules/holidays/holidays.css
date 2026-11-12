@@ -1432,4 +1432,4 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .hol-check-suggest { margin-top: 8px; background: none; border: none; padding: 6px 0; color: var(--primary); font-weight: 600; font-size: 0.85rem; cursor: pointer; }
 @media (max-width: 768px) { .hol-check-col + .hol-check-col { border-left: none; border-top: 1px solid var(--border-light); } }
 
-.hol-card-countdown { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 10px; background: var(--bg-soft); color: var(--primary); font-size: 0.75rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.hol-card-countdown { display: inline-block; width: fit-content; align-self: flex-start; margin-left: 0; padding: 2px 8px; border-radius: 10px; background: var(--bg-soft); color: var(--primary); font-size: 0.75rem; font-weight: 800; font-variant-numeric: tabular-nums; }
