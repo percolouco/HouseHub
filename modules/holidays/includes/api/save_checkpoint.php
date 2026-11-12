@@ -3,6 +3,7 @@
 require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
 require_login();
+require dirname(__DIR__) . '/hol_files.php';
 
 // ---------------------------------------------------------------------------
 // INTERCEPTIONS AJAX (Exécution ultra rapide sans rechargement lourd)
@@ -123,8 +124,8 @@ if (isset($_POST['action_delete']) && $_POST['action_delete'] === '1') {
             $stmtFiles = $pdo->prepare("SELECT id, file_path FROM pf_holidays_attachments WHERE holiday_id = ? AND item_id = ?");
             $stmtFiles->execute([$holiday_id, $old_sort_order]);
             foreach ($stmtFiles->fetchAll(PDO::FETCH_ASSOC) as $f) {
-                $abs = dirname(__DIR__, 4) . '/' . $f['file_path'];
-                if (strpos($f['file_path'], 'uploads/holidays/') === 0 && strpos($f['file_path'], '..') === false && is_file($abs)) @unlink($abs);
+                $abs = hol_attachment_path((string)$f['file_path']);
+                if ($abs && is_file($abs)) @unlink($abs);
                 $pdo->prepare("DELETE FROM pf_holidays_attachments WHERE id = ?")->execute([$f['id']]);
             }
         } catch (Throwable $e) {}

@@ -3,6 +3,7 @@
 require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
 require_login();
+require dirname(__DIR__) . '/hol_files.php';
 
 header('Content-Type: application/json');
 
@@ -39,10 +40,10 @@ if (!isset($allowed[$ext]) || $allowed[$ext] !== $mime) {
 }
 
 // On range les fichiers dans un sous-dossier par voyage pour rester propre sur le NAS
-$uploadDir = dirname(__DIR__, 4) . '/uploads/holidays/' . $holiday_id . '/';
+$uploadDir = hol_storage_dir((string)$holiday_id) . '/';
 
 if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0775, true);
+    @mkdir($uploadDir, 0775, true);
 }
 
 // Sécurisation du nom de fichier (retrait des accents et caractères spéciaux)
@@ -54,7 +55,7 @@ $destination = $uploadDir . $uniqueFileName;
 if (move_uploaded_file($file['tmp_name'], $destination)) {
     // Enregistrement en base de données
     $stmt = $pdo->prepare("INSERT INTO pf_holidays_attachments (holiday_id, item_id, file_name, file_path) VALUES (?, ?, ?, ?)");
-    $stmt->execute([$holiday_id, $item_id, $fileName, 'uploads/holidays/' . $holiday_id . '/' . $uniqueFileName]);
+    $stmt->execute([$holiday_id, $item_id, $fileName, $holiday_id . '/' . $uniqueFileName]);
     
     $attachmentId = $pdo->lastInsertId();
     echo json_encode(['success' => true, 'id' => $attachmentId, 'file_name' => $fileName]);

@@ -2049,9 +2049,9 @@ async function openDocsModal(sortOrder) {
       data.files.forEach((f) => {
         const docHtml = `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px;">
-                        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden; cursor: pointer;" onclick="window.open('/${f.file_path}', '_blank')">
+                        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden; cursor: pointer;" onclick="window.open('/modules/holidays/includes/api/file.php?id=${f.id}', '_blank')">
                             <span style="font-size: 1.2rem;">📄</span>
-                            <span style="font-size: 0.9rem; color: var(--primary); font-weight: bold; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="Ouvrir ${f.file_name}">${f.file_name}</span>
+                            <span style="font-size: 0.9rem; color: var(--primary); font-weight: bold; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="Ouvrir ${holEsc(f.file_name)}">${holEsc(f.file_name)}</span>
                         </div>
                         <button type="button" onclick="deleteAttachment(${f.id}, this)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;" title="Supprimer">🗑️</button>
                     </div>
@@ -2084,9 +2084,9 @@ async function handleFileUpload(input) {
   const statusDiv = document.getElementById("uploadStatus");
   const listContainer = document.getElementById("docsListContainer");
 
-  if (file.size > 5 * 1024 * 1024) {
+  if (file.size > 10 * 1024 * 1024) {
     statusDiv.innerHTML =
-      "<span style='color: var(--danger);'>Fichier trop lourd (Max 5Mo).</span>";
+      "<span style='color: var(--danger);'>Fichier trop lourd (10 Mo maximum).</span>";
     input.value = "";
     window.isUploadingDocs = false;
     return;
@@ -2111,9 +2111,9 @@ async function handleFileUpload(input) {
       if (emptyMsg) emptyMsg.remove();
       const docHtml = `
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: var(--bg-page); border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 6px;">
-                    <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                    <div style="display: flex; align-items: center; gap: 10px; overflow: hidden; cursor: pointer;" onclick="window.open('/modules/holidays/includes/api/file.php?id=${data.id}', '_blank')">
                         <span style="font-size: 1.2rem;">📄</span>
-                        <span style="font-size: 0.9rem; color: var(--text-main); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="${data.file_name}">${data.file_name}</span>
+                        <span style="font-size: 0.9rem; color: var(--primary); font-weight: bold; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="${holEsc(data.file_name)}">${holEsc(data.file_name)}</span>
                     </div>
                     <button type="button" onclick="deleteAttachment(${data.id}, this)" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem;" title="Supprimer">🗑️</button>
                 </div>
@@ -2478,3 +2478,36 @@ async function holCheckDelete(btn) {
   li.remove();
   holCheckRefresh(col);
 }
+
+// ============================================================================
+// PHOTO DE COUVERTURE : repli si l'image ne charge pas + récupération d'une copie locale
+// ============================================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const img = document.querySelector(".hol-hero-bg-img");
+  if (!img) return;
+  const fallback = "/modules/home/assets/img/background.jpg";
+  const useFallback = () => {
+    if (!img.src.endsWith(fallback)) img.src = fallback;
+  };
+  img.addEventListener("error", useFallback);
+  if (img.complete && img.naturalWidth === 0) useFallback();
+
+  // Photo encore hébergée ailleurs (lien qui expire) ou absente : le serveur en enregistre une copie
+  if (img.dataset.remote === "1") {
+    // Une seule tentative par session et par voyage, pour ne pas solliciter le service à chaque visite
+    const tryKey = "hol_cover_try_" + holTripId();
+    try {
+      if (sessionStorage.getItem(tryKey)) return;
+      sessionStorage.setItem(tryKey, "1");
+    } catch (e) {}
+    const fd = new FormData();
+    fd.append("action", "refresh_cover");
+    fd.append("id", holTripId());
+    fetch("/modules/holidays/includes/api/save_holiday.php", { method: "POST", body: fd, credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((res) => {
+        if (res && res.success && res.url) img.src = res.url;
+      })
+      .catch(() => {});
+  }
+});

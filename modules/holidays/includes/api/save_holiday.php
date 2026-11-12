@@ -4,7 +4,24 @@
 // On remonte de 4 niveaux pour atteindre la racine
 require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
-require_login(); 
+require_login();
+// Clé du service de photos : variable d'environnement PIXABAY_API_KEY si elle existe, sinon la valeur historique
+define('HOL_PIXABAY_KEY', '56931941-a86fbea4e14b88712cc1e9ed9');
+require dirname(__DIR__) . '/hol_files.php';
+
+// Rafraîchit en arrière-plan la photo d'un voyage dont le lien distant a expiré (appelé par la page de détail)
+if (($_POST['action'] ?? '') === 'refresh_cover') {
+    header('Content-Type: application/json');
+    $hid = (int)($_POST['id'] ?? 0);
+    $st = $pdo->prepare("SELECT title FROM pf_holidays WHERE id = ?");
+    $st->execute([$hid]);
+    $t = $st->fetchColumn();
+    session_write_close();
+    $url = $t ? hol_refresh_cover($hid, (string)$t) : null;
+    if ($url) $pdo->prepare("UPDATE pf_holidays SET image_url = ? WHERE id = ?")->execute([$url, $hid]);
+    echo json_encode(['success' => (bool)$url, 'url' => $url]);
+    exit;
+}
 
 if (isset($_POST['action_delete']) && $_POST['action_delete'] == '1') {
     $delId = (int)($_POST['id'] ?? 0);
@@ -14,9 +31,10 @@ if (isset($_POST['action_delete']) && $_POST['action_delete'] == '1') {
             $stmtFiles = $pdo->prepare("SELECT file_path FROM pf_holidays_attachments WHERE holiday_id = ?");
             $stmtFiles->execute([$delId]);
             foreach ($stmtFiles->fetchAll(PDO::FETCH_COLUMN) as $relPath) {
-                $abs = dirname(__DIR__, 4) . '/' . $relPath;
-                if (strpos($relPath, 'uploads/holidays/') === 0 && strpos($relPath, '..') === false && is_file($abs)) @unlink($abs);
+                $abs = hol_attachment_path((string)$relPath);
+                if ($abs && is_file($abs)) @unlink($abs);
             }
+            @unlink(hol_cover_path($delId));
             $pdo->prepare("DELETE FROM pf_holidays_attachments WHERE holiday_id = ?")->execute([$delId]);
         } catch (Throwable $e) {}
         $pdo->prepare("DELETE FROM pf_holidays_items WHERE holiday_id = ?")->execute([$delId]);
@@ -38,6 +56,9 @@ if (isset($_POST['action_duplicate']) && $_POST['action_duplicate'] == '1') {
             $pdo->prepare("INSERT INTO pf_holidays (title, period_hint, start_date, end_date, status, budget_food, budget_extra, notes, vehicle_id, return_step_id, image_url) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)")
                 ->execute([mb_substr($h['title'] . ' (copie)', 0, 255), $h['period_hint'], $h['start_date'], $h['end_date'], $h['budget_food'], $h['budget_extra'], $h['notes'], $h['vehicle_id'], $h['return_step_id'], $h['image_url']]);
             $newId = (int)$pdo->lastInsertId();
+            if (is_file(hol_cover_path($srcId)) && @copy(hol_cover_path($srcId), hol_cover_path($newId))) {
+                $pdo->prepare("UPDATE pf_holidays SET image_url = ? WHERE id = ?")->execute([hol_cover_url($newId), $newId]);
+            }
             $pdo->prepare("INSERT INTO pf_holidays_items (holiday_id, category, name, amount, is_paid, location_name, lat, lng, sort_order, notes, item_date, item_time, step_type, step_start_date, step_end_date, duration, expense_context)
                            SELECT ?, category, name, amount, 0, location_name, lat, lng, sort_order, notes, item_date, item_time, step_type, step_start_date, step_end_date, duration, expense_context
                            FROM pf_holidays_items WHERE holiday_id = ?")->execute([$newId, $srcId]);
@@ -82,27 +103,8 @@ try {
         }
     }
 
-    // 2. Appel à Pixabay si nouveau voyage ou si le titre a changé
-    if (!$id || strcasecmp($old_title ?? '', $title) !== 0) {
-        $apiKey = '56931941-a86fbea4e14b88712cc1e9ed9'; 
-        $query = urlencode($title);
-        // On force des photos horizontales HD
-        $url = "https://pixabay.com/api/?key={$apiKey}&q={$query}&image_type=photo&orientation=horizontal&min_width=1280&per_page=3";
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 3); // Timeout de 3s max pour ne pas bloquer l'UI
-        $response = curl_exec($ch);
-        curl_close($ch);
-        
-        if ($response) {
-            $data = json_decode($response, true);
-            if (!empty($data['hits'][0]['largeImageURL'])) {
-                $image_url = $data['hits'][0]['largeImageURL'];
-            }
-        }
-    }
+    // 2. Photo de couverture : à chercher si nouveau voyage, titre modifié, ou photo encore hébergée ailleurs (lien qui expire)
+    $needCover = !$id || strcasecmp($old_title ?? '', $title) !== 0 || empty($image_url) || strpos((string)$image_url, '/modules/holidays/') !== 0;
 
     // 3. Sauvegarde en Base
     if ($id) {
@@ -123,8 +125,14 @@ try {
 
     $pdo->commit();
 
+    // La photo est téléchargée et gardée sur le serveur (hors transaction : un service lent ne bloque pas l'enregistrement)
+    if ($needCover) {
+        $localUrl = hol_refresh_cover((int)$id, $title);
+        if ($localUrl) $pdo->prepare("UPDATE pf_holidays SET image_url = ? WHERE id = ?")->execute([$localUrl, $id]);
+    }
+
 } catch (Exception $e) {
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) $pdo->rollBack();
     die("Erreur base de données : " . $e->getMessage());
 }
 
