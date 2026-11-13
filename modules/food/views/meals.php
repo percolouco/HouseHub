@@ -613,8 +613,7 @@ document.addEventListener('paste', async function(e) {
         body.innerHTML = '<p class="meal-shop-empty">' + esc(T('meal_shop_loading', 'Analyse…')) + '</p>';
         addBtn.disabled = true;
         try {
-            const res = await pachaFetch(SHOP_API + '?from=' + $('mealShopFrom').value + '&to=' + $('mealShopTo').value);
-            const data = await res.json();
+            const data = await pachaFetch(SHOP_API + '?from=' + $('mealShopFrom').value + '&to=' + $('mealShopTo').value);
             if (my !== token) return;
             if (!data.success) { body.innerHTML = '<p class="meal-shop-empty">' + esc(data.error || '') + '</p>'; return; }
             const sel = $('mealShopList');
@@ -663,11 +662,11 @@ document.addEventListener('paste', async function(e) {
         addBtn.disabled = true;
         let listId = parseInt($('mealShopList').value, 10) || 0, added = 0, dups = 0;
         try {
-            if (!listId) { const r = await (await pachaFetch(LISTE_API + '?action=lists')).json(); listId = r.default_id; }
+            if (!listId) { const r = await pachaFetch(LISTE_API + '?action=lists'); listId = r.default_id; }
             for (const label of labels) { // un par un : l'API calcule la position et la catégorie
-                const r = await (await pachaFetch(LISTE_API + '?action=items&list_id=' + listId, {
+                const r = await pachaFetch(LISTE_API + '?action=items&list_id=' + listId, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list_id: listId, label })
-                })).json();
+                });
                 if (r.duplicate) dups++; else if (r.id) added++;
             }
             if (window.showToast) showToast('🛒 ' + added + ' ' + T('meal_shop_added', 'ajouté(s)') + (dups ? ' · ' + dups + ' ' + T('meal_shop_dups', 'déjà présent(s)') : ''), 'success');
