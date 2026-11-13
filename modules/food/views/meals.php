@@ -623,7 +623,7 @@ document.addEventListener('paste', async function(e) {
             let h = '';
             if (!data.items.length) h += '<p class="meal-shop-empty">' + esc(T('meal_shop_none', 'Aucun aliment détecté.')) + '</p>';
             data.items.forEach(it => {
-                h += row(it.label, (it.count > 1 ? it.count + ' ' + T('meal_shop_meals', 'repas') + ' · ' : '') + it.meals.slice(0, 3).join(', ') + (it.meals.length > 3 ? '…' : ''), true, false, it.detail.join('\n'));
+                h += row(it.label, it.count + ' ' + T('meal_shop_meals', 'repas'), true, false, it.detail.join('\n'));
             });
             if (data.unknown.length) {
                 h += '<h4 class="meal-shop-sub">' + esc(T('meal_shop_unknown', 'Non reconnus')) + '</h4>';
