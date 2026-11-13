@@ -37,7 +37,7 @@ $totalTime =$recipe['prep_time'] + $recipe['cook_time'] +$recipe['rest_time'];
             <div class="recipe-actions-bar">
                 <button class="pf-btn" onclick="addToGroceries()">🛒 <?= tr('recipe_add_to_cart') ?></button>
                 <button class="pf-btn btn-secondary" onclick="enterCookMode()">👨‍🍳 <?= tr('recipe_cook_mode') ?></button>
-                <button class="pf-btn btn-secondary" onclick="window.location.href='?tab=recipes'">✏️ <?= tr('btn_edit') ?></button>
+                <button class="pf-btn btn-secondary" onclick="window.location.href='?tab=recipes&edit=<?= (int)$id ?>'">✏️ <?= tr('btn_edit') ?></button>
             </div>
         </div>
     </div>

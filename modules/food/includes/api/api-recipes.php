@@ -65,6 +65,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if ($action === 'get_recipe') {
+            $id = (int)($_POST['id'] ?? 0);
+            $r = $pdo->prepare("SELECT * FROM pf_recipes WHERE id = ?"); $r->execute([$id]);
+            $recipe = $r->fetch(PDO::FETCH_ASSOC);
+            if (!$recipe) { echo json_encode(['success' => false, 'error' => 'Recette introuvable']); exit; }
+            $i = $pdo->prepare("SELECT quantity, unit, name FROM pf_recipe_ingredients WHERE recipe_id = ? ORDER BY sort_order, id"); $i->execute([$id]);
+            $st = $pdo->prepare("SELECT step_title, instruction FROM pf_recipe_steps WHERE recipe_id = ? ORDER BY sort_order, id"); $st->execute([$id]);
+            echo json_encode(['success' => true, 'recipe' => $recipe, 'ingredients' => $i->fetchAll(PDO::FETCH_ASSOC), 'steps' => $st->fetchAll(PDO::FETCH_ASSOC)]);
+            exit;
+        }
+
         if ($action === 'delete_recipe') {
             $id = (int)$_POST['id'];
             $pdo->prepare("DELETE FROM pf_recipes WHERE id = ?")->execute([$id]);

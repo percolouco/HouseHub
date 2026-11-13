@@ -224,7 +224,9 @@ function closeRecipeModal() {
     document.body.classList.remove('no-scroll');
 }
 
+const escAttr = v => String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 function addIngRow(qty='', unit='', name='') {
+    qty = escAttr(qty); unit = escAttr(unit); name = escAttr(name);
     const html = `
         <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
             <input type="number" step="0.01" name="ing_qty[]" class="pf-input" style="width:80px;" placeholder="Qté" value="${qty}">
@@ -236,6 +238,7 @@ function addIngRow(qty='', unit='', name='') {
 }
 
 function addStepRow(title='', instruction='') {
+    title = escAttr(title); instruction = escAttr(instruction);
     const html = `
         <div style="background:var(--bg-subtle); padding:10px; border-radius:8px; border:1px solid var(--border-light); margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
@@ -247,29 +250,41 @@ function addStepRow(title='', instruction='') {
     document.getElementById('stepContainer').insertAdjacentHTML('beforeend', html);
 }
 
-function editRecipe(r) {
+// Ouvre la modale d'édition avec la recette complète (ingrédients + étapes chargés côté serveur)
+async function editRecipe(r) {
+    const fd = new FormData(); fd.append('action', 'get_recipe'); fd.append('id', r.id);
+    let data;
+    try { data = await pachaFetch('/modules/food/includes/api/api-recipes.php', { method: 'POST', body: fd }); }
+    catch (err) { console.error(err); return; }
+    if (!data || !data.success) { alert((data && data.error) || 'Erreur'); return; }
+    r = data.recipe;
+    document.getElementById('recipeForm').reset();
     document.getElementById('recipe_id').value = r.id;
-    document.getElementById('recipe_title').value = r.title;
-    document.getElementById('recipe_image').value = r.image_url;
+    document.getElementById('recipe_title').value = r.title || '';
+    document.getElementById('recipe_image').value = r.image_url || '';
     document.getElementById('recipe_prep').value = r.prep_time;
     document.getElementById('recipe_cook').value = r.cook_time;
     document.getElementById('recipe_rest').value = r.rest_time;
     document.getElementById('recipe_servings').value = r.base_servings;
     document.getElementById('recipe_diff').value = r.difficulty;
     document.getElementById('recipe_cost').value = r.cost;
-    document.getElementById('recipe_tip').value = r.chef_tip;
+    document.getElementById('recipe_tip').value = r.chef_tip || '';
     document.getElementById('recipeModalTitle').innerText = window.I18N['recipe_modal_title_edit'] || 'Modifier';
-
     document.getElementById('ingContainer').innerHTML = '';
     document.getElementById('stepContainer').innerHTML = '';
     document.getElementById('magicImportZone').style.display = 'none';
-    
-    // On doit charger les ingrédients via une sous-requête JS rapide ou recharger la page
-    // Pour cet exemple, on recharge la page détaillée pour modifier, ou on fetch
-    // On gère l'édition en redirigeant vers la page détaillée et en modifiant là-bas, 
-    // OU on fetch les inrédients ici. Pour faire simple et robuste :
-    window.location.href = '?tab=recipe_detail&id=' + r.id + '&edit=1';
+    data.ingredients.forEach(i => addIngRow(parseFloat(i.quantity) > 0 ? parseFloat(i.quantity) : '', i.unit || '', i.name));
+    if (!data.ingredients.length) addIngRow();
+    data.steps.forEach(st => addStepRow(st.step_title || '', st.instruction));
+    if (!data.steps.length) addStepRow();
+    document.getElementById('recipeModal').classList.add('open');
+    document.body.classList.add('no-scroll');
 }
+// Arrivée depuis la fiche (?tab=recipes&edit=ID) : ouvre directement l'édition
+(function () {
+    const id = parseInt(new URLSearchParams(location.search).get('edit'), 10);
+    if (id > 0) editRecipe({ id });
+})();
 
 async function saveRecipe(e) {
     e.preventDefault();
