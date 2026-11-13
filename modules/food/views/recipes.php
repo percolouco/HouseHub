@@ -220,6 +220,7 @@ async function executeMagicImport() {
 }
 
 function closeRecipeModal() {
+    if (new URLSearchParams(location.search).has('edit')) { const u = new URL(location.href); u.searchParams.delete('edit'); history.replaceState(null, '', u); }
     document.getElementById('recipeModal').classList.remove('open');
     document.body.classList.remove('no-scroll');
 }
@@ -291,7 +292,7 @@ async function saveRecipe(e) {
     const fd = new FormData(e.target);
     try {
         const res = await pachaFetch('/modules/food/includes/api/api-recipes.php', {method: 'POST', body: fd});
-        if(res.success) window.location.reload();
+        if(res.success) { const u = new URL(location.href); u.searchParams.delete('edit'); window.location.href = u.toString(); }
     } catch(err) { console.error(err); }
 }
 
@@ -299,6 +300,6 @@ async function deleteRecipe(id) {
     if(!confirm(window.I18N['recipe_confirm_delete'] || 'Supprimer ?')) return;
     const fd = new FormData(); fd.append('action', 'delete_recipe'); fd.append('id', id);
     await pachaFetch('/modules/food/includes/api/api-recipes.php', {method: 'POST', body: fd});
-    window.location.reload();
+    const u = new URL(location.href); u.searchParams.delete('edit'); window.location.href = u.toString();
 }
 </script>
