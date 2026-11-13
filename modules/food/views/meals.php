@@ -36,6 +36,10 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
             <span data-i18n="meals_board_title"><?= tr('meals_board_title') ?></span>
         </h2>
         <div class="meals-actions">
+            <!-- Liste de courses depuis le menu -->
+            <button type="button" class="pf-btn btn-secondary" id="mealShopBtn">
+                🛒 <?= tr('meal_shop_btn') ?>
+            </button>
             <!-- NOUVEAU : Bouton Import PDF -->
             <button type="button" class="pf-btn btn-secondary" onclick="document.getElementById('importMenuModal').classList.add('open'); document.body.classList.add('no-scroll');">
                 📄 <?= tr('meal_btn_import_pdf') ?>
@@ -113,6 +117,28 @@ while ($row = $stmtMeals->fetch(PDO::FETCH_ASSOC)) {
                 <?php endforeach; ?>
             </div>
         <?php endforeach; ?>
+    </div>
+</div>
+
+<!-- Modale « Liste de courses » : aperçu des aliments détectés (cantine exclue) -->
+<div id="mealShopModal" class="pf-modal">
+    <div class="pf-modal-content meal-shop">
+        <div class="pf-modal-header meal-shop-head">
+            <h3 class="pf-modal-title" style="margin:0;border:none;padding:0;">🛒 <?= tr('meal_shop_title') ?></h3>
+            <button type="button" class="pf-modal-close meal-shop-close" id="mealShopClose" aria-label="Fermer">&times;</button>
+        </div>
+        <div class="meal-shop-range">
+            <label><?= tr('meal_shop_from') ?> <input type="date" class="pf-input" id="mealShopFrom"></label>
+            <label><?= tr('meal_shop_to') ?> <input type="date" class="pf-input" id="mealShopTo"></label>
+        </div>
+        <p class="meal-shop-hint"><?= tr('meal_shop_hint') ?></p>
+        <div class="meal-shop-body" id="mealShopBody"></div>
+        <div class="meal-shop-foot">
+            <label class="meal-shop-listpick"><?= tr('meal_shop_list') ?>
+                <select class="pf-input" id="mealShopList"></select>
+            </label>
+            <button type="button" class="pf-btn" id="mealShopAdd" disabled><?= tr('meal_shop_add') ?></button>
+        </div>
     </div>
 </div>
 
@@ -558,4 +584,98 @@ document.addEventListener('paste', async function(e) {
         }
     }
 });
+
+// ── Liste de courses depuis le menu ──────────────────────────────────────────
+(function () {
+    const SHOP_API = '/modules/food/includes/api/meals-shopping.php';
+    const LISTE_API = '/modules/food/includes/api/api-liste.php';
+    const T = (k, d) => (window.I18N && window.I18N[k]) || d;
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const modal = $('mealShopModal'), body = $('mealShopBody'), addBtn = $('mealShopAdd');
+    if (!modal) return;
+    const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    let token = 0;
+
+    function setCount() {
+        const n = body.querySelectorAll('.js-shop-check:checked').length;
+        addBtn.disabled = n === 0;
+        addBtn.textContent = T('meal_shop_add', 'Ajouter à la liste') + (n ? ' (' + n + ')' : '');
+    }
+    function row(label, sub, checked, unknown) {
+        return '<label class="meal-shop-row' + (unknown ? ' is-unknown' : '') + '">'
+            + '<input type="checkbox" class="js-shop-check"' + (checked ? ' checked' : '') + '>'
+            + '<span class="meal-shop-main"><input type="text" class="js-shop-label" value="' + esc(label) + '" maxlength="120">'
+            + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></label>';
+    }
+    async function load() {
+        const my = ++token;
+        body.innerHTML = '<p class="meal-shop-empty">' + esc(T('meal_shop_loading', 'Analyse…')) + '</p>';
+        addBtn.disabled = true;
+        try {
+            const res = await pachaFetch(SHOP_API + '?from=' + $('mealShopFrom').value + '&to=' + $('mealShopTo').value);
+            const data = await res.json();
+            if (my !== token) return;
+            if (!data.success) { body.innerHTML = '<p class="meal-shop-empty">' + esc(data.error || '') + '</p>'; return; }
+            const sel = $('mealShopList');
+            if (!sel.options.length) {
+                (data.lists.length ? data.lists : [{ id: 0, name: 'Ma liste' }]).forEach(l => sel.add(new Option(l.name, l.id)));
+            }
+            let h = '';
+            if (!data.items.length) h += '<p class="meal-shop-empty">' + esc(T('meal_shop_none', 'Aucun aliment détecté.')) + '</p>';
+            data.items.forEach(it => {
+                h += row(it.label, (it.count > 1 ? it.count + ' ' + T('meal_shop_meals', 'repas') + ' · ' : '') + it.meals.slice(0, 3).join(', ') + (it.meals.length > 3 ? '…' : ''), true, false);
+            });
+            if (data.unknown.length) {
+                h += '<h4 class="meal-shop-sub">' + esc(T('meal_shop_unknown', 'Non reconnus')) + '</h4>';
+                data.unknown.forEach(u => { h += row(u.meal, u.when, false, true); });
+            }
+            if (data.skipped.length) {
+                h += '<h4 class="meal-shop-sub">' + esc(T('meal_shop_skipped', 'Ignorés')) + '</h4><ul class="meal-shop-skipped">';
+                data.skipped.forEach(s => { h += '<li><b>' + esc(T(s.why === 'canteen' ? 'meal_shop_canteen' : 'meal_shop_out', s.why)) + '</b> ' + esc(s.when) + ' — ' + esc(s.meal) + '</li>'; });
+                h += '</ul>';
+            }
+            body.innerHTML = h;
+            setCount();
+        } catch (e) {
+            if (my === token) body.innerHTML = '<p class="meal-shop-empty">' + esc(T('error_occured', 'Erreur')) + '</p>';
+        }
+    }
+    function open() {
+        const t = new Date(), end = new Date(Array.from(document.querySelectorAll('.meal-day')).pop()?.dataset.d || t);
+        $('mealShopFrom').value = iso(t);
+        $('mealShopTo').value = iso(end < t ? new Date(t.getTime() + 13 * 864e5) : end);
+        modal.classList.add('open'); document.body.classList.add('no-scroll');
+        load();
+    }
+    function close() { modal.classList.remove('open'); document.body.classList.remove('no-scroll'); }
+    $('mealShopBtn').addEventListener('click', open);
+    $('mealShopClose').addEventListener('click', close);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    $('mealShopFrom').addEventListener('change', load);
+    $('mealShopTo').addEventListener('change', load);
+    body.addEventListener('change', e => { if (e.target.classList.contains('js-shop-check')) setCount(); });
+
+    addBtn.addEventListener('click', async () => {
+        const rows = Array.from(body.querySelectorAll('.meal-shop-row')).filter(r => r.querySelector('.js-shop-check').checked);
+        const labels = rows.map(r => r.querySelector('.js-shop-label').value.trim()).filter(Boolean);
+        if (!labels.length) return;
+        addBtn.disabled = true;
+        let listId = parseInt($('mealShopList').value, 10) || 0, added = 0, dups = 0;
+        try {
+            if (!listId) { const r = await (await pachaFetch(LISTE_API + '?action=lists')).json(); listId = r.default_id; }
+            for (const label of labels) { // un par un : l'API calcule la position et la catégorie
+                const r = await (await pachaFetch(LISTE_API + '?action=items&list_id=' + listId, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list_id: listId, label })
+                })).json();
+                if (r.duplicate) dups++; else if (r.id) added++;
+            }
+            if (window.showToast) showToast('🛒 ' + added + ' ' + T('meal_shop_added', 'ajouté(s)') + (dups ? ' · ' + dups + ' ' + T('meal_shop_dups', 'déjà présent(s)') : ''), 'success');
+            close();
+        } catch (e) {
+            if (window.showToast) showToast(T('error_occured', 'Erreur'), 'error');
+            addBtn.disabled = false;
+        }
+    });
+})();
 </script>
