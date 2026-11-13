@@ -67,9 +67,10 @@ try {
         if ($x['skip']) { if ($x['skip'] === 'out') $skipped[] = ['when' => $label, 'meal' => $txt, 'why' => 'out']; continue; }
         foreach ($x['foods'] as $f) {
             $k = meals_norm($f);
-            if (!isset($items[$k])) $items[$k] = ['label' => $f, 'count' => 0, 'meals' => []];
+            if (!isset($items[$k])) $items[$k] = ['label' => $f, 'count' => 0, 'meals' => [], 'detail' => []];
             $items[$k]['count']++;
             $items[$k]['meals'][] = $label;
+            $items[$k]['detail'][] = $label . ' — ' . $txt;
         }
         if (!$x['foods'] || $x['unknown']) $unknown[] = ['when' => $label, 'meal' => $txt, 'partial' => (bool)$x['foods']];
     }

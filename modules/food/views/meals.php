@@ -602,11 +602,11 @@ document.addEventListener('paste', async function(e) {
         addBtn.disabled = n === 0;
         addBtn.textContent = T('meal_shop_add', 'Ajouter à la liste') + (n ? ' (' + n + ')' : '');
     }
-    function row(label, sub, checked, unknown) {
+    function row(label, sub, checked, unknown, detail) {
         return '<label class="meal-shop-row' + (unknown ? ' is-unknown' : '') + '">'
             + '<input type="checkbox" class="js-shop-check"' + (checked ? ' checked' : '') + '>'
             + '<span class="meal-shop-main"><input type="text" class="js-shop-label" value="' + esc(label) + '" maxlength="120">'
-            + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></label>';
+            + (sub ? '<small' + (detail ? ' class="js-shop-sub" title="' + esc(detail) + '" data-detail="' + esc(detail) + '"' : '') + '>' + esc(sub) + '</small>' : '') + '</span></label>';
     }
     async function load() {
         const my = ++token;
@@ -623,7 +623,7 @@ document.addEventListener('paste', async function(e) {
             let h = '';
             if (!data.items.length) h += '<p class="meal-shop-empty">' + esc(T('meal_shop_none', 'Aucun aliment détecté.')) + '</p>';
             data.items.forEach(it => {
-                h += row(it.label, (it.count > 1 ? it.count + ' ' + T('meal_shop_meals', 'repas') + ' · ' : '') + it.meals.slice(0, 3).join(', ') + (it.meals.length > 3 ? '…' : ''), true, false);
+                h += row(it.label, (it.count > 1 ? it.count + ' ' + T('meal_shop_meals', 'repas') + ' · ' : '') + it.meals.slice(0, 3).join(', ') + (it.meals.length > 3 ? '…' : ''), true, false, it.detail.join('\n'));
             });
             if (data.unknown.length) {
                 h += '<h4 class="meal-shop-sub">' + esc(T('meal_shop_unknown', 'Non reconnus')) + '</h4>';
@@ -635,6 +635,7 @@ document.addEventListener('paste', async function(e) {
                 h += '</ul>';
             }
             body.innerHTML = h;
+            body.querySelectorAll('.js-shop-sub').forEach(sm => { sm.dataset.short = sm.textContent; });
             setCount();
         } catch (e) {
             if (my === token) body.innerHTML = '<p class="meal-shop-empty">' + esc(T('error_occured', 'Erreur')) + '</p>';
@@ -653,6 +654,13 @@ document.addEventListener('paste', async function(e) {
     modal.addEventListener('click', e => { if (e.target === modal) close(); });
     $('mealShopFrom').addEventListener('change', load);
     $('mealShopTo').addEventListener('change', load);
+    // survol (ordinateur) = infobulle ; toucher (mobile) = déplie la liste des repas concernés
+    body.addEventListener('click', e => {
+        const sm = e.target.closest('.js-shop-sub'); if (!sm) return;
+        e.preventDefault();
+        const open = sm.classList.toggle('is-open');
+        sm.textContent = open ? sm.dataset.detail : sm.dataset.short;
+    });
     body.addEventListener('change', e => { if (e.target.classList.contains('js-shop-check')) setCount(); });
 
     addBtn.addEventListener('click', async () => {
