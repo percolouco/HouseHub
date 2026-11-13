@@ -1041,8 +1041,12 @@
 }
 .recipe-back-btn {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  z-index: 3;
+  top: 16px;
+  left: 16px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
   color: white;
   text-decoration: none;
   font-weight: 600;
