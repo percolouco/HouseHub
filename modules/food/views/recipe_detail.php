@@ -26,7 +26,7 @@ $totalTime =$recipe['prep_time'] + $recipe['cook_time'] +$recipe['rest_time'];
 <div class="recipe-view-container">
     <div class="recipe-hero" style="background-image: url('<?= $img ?>');">
         <div class="recipe-hero-overlay"></div>
-        <a href="?tab=recipes" class="recipe-back-btn">◀ <?= tr('btn_back') ?></a>
+        <a href="?tab=recipes" class="recipe-back-btn"><?= tr('btn_back') ?></a>
         <div class="recipe-hero-content">
             <h1 class="recipe-title"><?= htmlspecialchars($recipe['title']) ?></h1>
             <div class="recipe-tags">
