@@ -685,6 +685,7 @@ CREATE TABLE IF NOT EXISTS pf_meals_plan (
   service ENUM('lunch', 'dinner') NOT NULL,
   person_id INT NOT NULL,
   meal_name VARCHAR(500) DEFAULT NULL,
+  is_canteen TINYINT(1) NOT NULL DEFAULT 0, -- 1 = repas de cantine importé d'un PDF (pas à préparer)
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_meal_plan (plan_date, service, person_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

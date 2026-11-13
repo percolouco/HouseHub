@@ -3,7 +3,9 @@
 require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
 require dirname(__DIR__, 4) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/meals_lib.php';
 require_login();
+meals_ensure_schema($pdo);
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -239,9 +241,9 @@ try {
     // 3. Insertion en BDD (Lundi au Vendredi)
     $pdo->beginTransaction();
     $stmt = $pdo->prepare("
-        INSERT INTO pf_meals_plan (plan_date, service, person_id, meal_name) 
-        VALUES (?, 'lunch', ?, ?) 
-        ON DUPLICATE KEY UPDATE meal_name = VALUES(meal_name)
+        INSERT INTO pf_meals_plan (plan_date, service, person_id, meal_name, is_canteen) 
+        VALUES (?, 'lunch', ?, ?, 1) 
+        ON DUPLICATE KEY UPDATE meal_name = VALUES(meal_name), is_canteen = 1
     ");
 
     $currentDate = new DateTime($mondayDate);
