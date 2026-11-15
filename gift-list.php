@@ -100,7 +100,7 @@ $glData = [
         'emptyOcc' => tr('gl_empty_occ'), 'noMatch' => tr('gl_no_match'), 'reset' => tr('gl_reset'),
         'confirmDelete' => tr('gift_confirm_delete'), 'matrix' => tr('gift_view_matrix'),
         'debtor' => tr('gift_debtor'), 'creditor' => tr('gift_creditor'), 'per' => tr('gl_per_person'),
-        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'),
+        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'), 'shareWa' => tr('gl_share_wa'), 'shareTitle' => tr('gl_share_title'), 'shareNone' => tr('gl_share_none'), 'shareGo' => tr('gl_share_go'), 'shareHead' => tr('gl_share_head'),
         'sameAsAdult' => tr('gl_same_payer'), 'plannedLeft' => tr('gl_planned_left'), 'markBought' => tr('gl_mark_bought'),
     ],
 ];
@@ -173,6 +173,19 @@ require __DIR__ . '/header.php';
             <button type="submit" class="gl-btn-save"><?= tr('btn_save') ?></button>
         </div>
     </form>
+</div>
+
+<!-- Partage WhatsApp des idées -->
+<div class="pf-modal" id="glShare">
+    <div class="pf-modal-content pf-modal-sm gl-sheet">
+        <div class="pf-modal-header gl-sheet-head">
+            <h3 class="pf-modal-title">📲 <?= tr('gl_share_title') ?></h3>
+            <button type="button" class="pf-modal-close" data-close-share aria-label="<?= tr('btn_cancel') ?>">&times;</button>
+        </div>
+        <div class="gl-chips" id="glShareChips"></div>
+        <p class="gl-note-hint" id="glShareErr" hidden><?= tr('gl_share_none') ?></p>
+        <div class="modal-footer gl-sheet-actions"><button type="button" class="gl-btn-save" id="glShareGo">📲 <?= tr('gl_share_go') ?></button></div>
+    </div>
 </div>
 
 <!-- 2. Modale Paramètres (Occasions & Proches) -->
@@ -436,7 +449,7 @@ const ideasOf = child => GL.ideas.filter(i => i.child === child);
 
 function renderNotes() {
     const kids = [...new Set([...GL.children, ...GL.ideas.map(i => i.child)])];
-    $id('glNotes').innerHTML = `<p class="gl-note-hint">${esc(T.noteHint)}</p>` + kids.map(child => {
+    $id('glNotes').innerHTML = `<p class="gl-note-hint">${esc(T.noteHint)}</p><button type="button" class="gl-wa-btn" id="glShareBtn">📲 ${esc(T.shareWa)}</button>` + kids.map(child => {
         const list = ideasOf(child);
         return `<details class="gl-group gl-notes-group" data-child="${esc(child)}"${closedNotes.has(child) ? '' : ' open'}>
             <summary>${avatar(child)}<span class="gl-gname">${esc(child)}</span>
@@ -499,6 +512,30 @@ document.addEventListener('toggle', e => {
     if (d.open) closedNotes.delete(d.dataset.child); else closedNotes.add(d.dataset.child);
     store.set('gl-notes-closed', [...closedNotes]);
 }, true);
+
+// Partage WhatsApp : choix des enfants puis ouverture de wa.me avec le texte
+const shareModal = $id('glShare');
+function openShare() {
+    const kids = [...new Set([...GL.children, ...GL.ideas.map(i => i.child)])].filter(k => ideasOf(k).length);
+    $id('glShareErr').hidden = true;
+    $id('glShareChips').innerHTML = kids.length
+        ? kids.map(k => `<label class="gl-chip"><input type="checkbox" value="${esc(k)}"><span>${esc(k)} (${ideasOf(k).length})</span></label>`).join('')
+        : `<p class="gl-note-empty">${esc(T.noteEmpty)}</p>`;
+    shareModal.classList.add('open'); document.body.classList.add('no-scroll');
+}
+function closeShare() { shareModal.classList.remove('open'); document.body.classList.remove('no-scroll'); }
+document.addEventListener('click', e => {
+    if (e.target.closest('#glShareBtn')) { openShare(); return; }
+    if (e.target.closest('[data-close-share]') || e.target === shareModal) { closeShare(); return; }
+    if (e.target.closest('#glShareGo')) {
+        const sel = [...$id('glShareChips').querySelectorAll('input:checked')].map(i => i.value);
+        if (!sel.length) { $id('glShareErr').hidden = false; return; }
+        const txt = T.shareHead + '\n\n' + sel.map(k => '*' + k + '*\n' + ideasOf(k).map(i => '• ' + i.text).join('\n')).join('\n\n');
+        window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
+        closeShare();
+    }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && shareModal.classList.contains('open')) closeShare(); });
 
 function setView(v) {
     state.view = v; persist();
