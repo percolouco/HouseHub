@@ -648,3 +648,12 @@ label.gl-chip:has(input:focus-visible) { outline: 2px solid var(--primary); outl
 .gl-note-bar .gl-note-hint { flex: 1; }
 .gl-share-btn { flex: 0 0 auto; width: 36px; height: 36px; margin-top: 2px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border-light); border-radius: 50%; background: transparent; color: var(--text-muted); cursor: pointer; }
 .gl-share-btn:hover, .gl-share-btn:focus-visible { color: var(--primary); border-color: var(--primary); }
+
+.gl-note { flex-wrap: wrap; }
+.gl-note-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; font-size: .8rem; color: var(--text-muted); }
+.gl-note-meta b { color: var(--text-main); }
+.gl-note-edit { flex: 0 0 40px; border: 0; border-left: 1px solid var(--border-light); background: transparent; color: var(--text-muted); font-size: 1rem; cursor: pointer; }
+.gl-note-edit:hover { color: var(--primary); }
+.gl-note-form { flex: 1 0 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--border-light); }
+.gl-note-form[hidden] { display: none; }
+.gl-note-save { align-self: flex-end; min-height: 40px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--primary); color: var(--text-on-primary); font: inherit; font-weight: 700; cursor: pointer; }

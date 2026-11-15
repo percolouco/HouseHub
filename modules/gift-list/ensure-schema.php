@@ -14,6 +14,10 @@ function gift_ensure_schema(PDO $pdo): void
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             KEY idx_child (child_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        // Prix et lien facultatifs (ajoutés après coup)
+        $ic = array_column($pdo->query("SHOW COLUMNS FROM pf_gift_ideas")->fetchAll(PDO::FETCH_ASSOC), 'Field');
+        if (!in_array('price', $ic, true)) $pdo->exec("ALTER TABLE pf_gift_ideas ADD COLUMN price DECIMAL(10,2) DEFAULT NULL");
+        if (!in_array('url', $ic, true))   $pdo->exec("ALTER TABLE pf_gift_ideas ADD COLUMN url VARCHAR(500) DEFAULT NULL");
     } catch (Throwable $e) {
         // droits insuffisants : l'onglet Notes restera vide
     }

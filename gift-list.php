@@ -71,8 +71,8 @@ $giftsJs = array_map(function ($g) {
 // Idées en vrac (onglet Notes)
 $ideasJs = [];
 try {
-    foreach ($pdo->query("SELECT id, child_name, idea FROM pf_gift_ideas ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $ideasJs[] = ['id' => (int)$r['id'], 'child' => $r['child_name'], 'text' => $r['idea']];
+    foreach ($pdo->query("SELECT id, child_name, idea, price, url FROM pf_gift_ideas ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $ideasJs[] = ['id' => (int)$r['id'], 'child' => $r['child_name'], 'text' => $r['idea'], 'price' => $r['price'] !== null ? (float)$r['price'] : null, 'url' => $r['url'] ?: ''];
     }
 } catch (Throwable $e) {}
 
@@ -100,7 +100,7 @@ $glData = [
         'emptyOcc' => tr('gl_empty_occ'), 'noMatch' => tr('gl_no_match'), 'reset' => tr('gl_reset'),
         'confirmDelete' => tr('gift_confirm_delete'), 'matrix' => tr('gift_view_matrix'),
         'debtor' => tr('gift_debtor'), 'creditor' => tr('gift_creditor'), 'per' => tr('gl_per_person'),
-        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'), 'shareWa' => tr('gl_share_wa'), 'shareTitle' => tr('gl_share_title'), 'shareNone' => tr('gl_share_none'), 'shareGo' => tr('gl_share_go'), 'shareHead' => tr('gl_share_head'),
+        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'), 'noteEdit' => tr('gl_note_edit'), 'notePrice' => tr('gl_note_price'), 'noteUrl' => tr('gl_note_url'), 'noteSave' => tr('btn_save'), 'shareWa' => tr('gl_share_wa'), 'shareTitle' => tr('gl_share_title'), 'shareNone' => tr('gl_share_none'), 'shareGo' => tr('gl_share_go'), 'shareHead' => tr('gl_share_head'),
         'sameAsAdult' => tr('gl_same_payer'), 'plannedLeft' => tr('gl_planned_left'), 'markBought' => tr('gl_mark_bought'),
     ],
 ];
@@ -445,6 +445,7 @@ function renderAccounts() {
 // ==========================================
 const IDEAS_API = '/modules/gift-list/ideas-api.php';
 const closedNotes = new Set(store.get('gl-notes-closed', []));
+const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return u; } };
 const ideasOf = child => GL.ideas.filter(i => i.child === child);
 
 function renderNotes() {
@@ -459,8 +460,16 @@ function renderNotes() {
                 <button type="submit" class="gl-note-btn" aria-label="${esc(T.noteAdd)}">＋</button>
             </form>
             <div class="gl-notes">${list.length ? list.map(i => `<div class="gl-note" data-id="${i.id}">
-                <button type="button" class="gl-note-txt" data-act="use">${esc(i.text)}</button>
-                <button type="button" class="gl-note-del" data-act="del" aria-label="${esc(T.noteDel)}">×</button></div>`).join('') : `<p class="gl-note-empty">${esc(T.noteEmpty)}</p>`}</div>
+                <button type="button" class="gl-note-txt" data-act="use">${esc(i.text)}${(i.price != null || i.url) ? `<span class="gl-note-meta">${i.price != null ? `<b>${money(i.price)}</b>` : ''}${i.url ? `<span class="gl-note-host">🔗 ${esc(hostOf(i.url))}</span>` : ''}</span>` : ''}</button>
+                <button type="button" class="gl-note-edit" data-act="edit" aria-label="${esc(T.noteEdit)}">✎</button>
+                <button type="button" class="gl-note-del" data-act="del" aria-label="${esc(T.noteDel)}">×</button>
+                <form class="gl-note-form" hidden>
+                    <input type="text" name="idea" class="gl-note-input" value="${esc(i.text)}" maxlength="500" required>
+                    <input type="text" name="price" class="gl-note-input" inputmode="decimal" placeholder="${esc(T.notePrice)}" value="${i.price != null ? esc(String(i.price).replace('.', ',')) : ''}">
+                    <input type="url" name="url" class="gl-note-input" placeholder="${esc(T.noteUrl)}" value="${esc(i.url || '')}" maxlength="500">
+                    <button type="submit" class="gl-note-save">${esc(T.noteSave)}</button>
+                </form>
+                </div>`).join('') : `<p class="gl-note-empty">${esc(T.noteEmpty)}</p>`}</div>
         </details>`;
     }).join('');
 }
@@ -483,7 +492,7 @@ document.addEventListener('submit', async e => {
     input.disabled = true;
     try {
         const j = await ideasCall({action: 'add', child_name: f.dataset.child, idea: text});
-        GL.ideas.push({id: j.id, child: f.dataset.child, text});
+        GL.ideas.push({id: j.id, child: f.dataset.child, text, price: null, url: ''});
         renderNotes();
         const again = $id('glNotes').querySelector(`.gl-note-add[data-child="${CSS.escape(f.dataset.child)}"] .gl-note-input`);
         if (again) again.focus();
@@ -503,7 +512,23 @@ document.addEventListener('click', async e => {
         } catch (err) { console.error(err); }
         return;
     }
+    if (e.target.closest('[data-act="edit"]')) { const fm = row.querySelector('.gl-note-form'); fm.hidden = !fm.hidden; if (!fm.hidden) fm.querySelector('[name=price]').focus(); return; }
+    if (e.target.closest('.gl-note-form')) return;
     if (e.target.closest('[data-act="use"]')) openSheet(null, {desc: idea.text, child: idea.child});
+});
+
+document.addEventListener('submit', async e => {
+    const fm = e.target.closest('.gl-note-form');
+    if (!fm) return;
+    e.preventDefault();
+    const idea = GL.ideas.find(i => i.id === +fm.closest('.gl-note').dataset.id);
+    if (!idea) return;
+    const fd = new FormData(fm);
+    try {
+        const j = await ideasCall({action: 'update', id: idea.id, idea: fd.get('idea'), price: fd.get('price'), url: fd.get('url')});
+        idea.text = String(fd.get('idea')).trim(); idea.price = j.price; idea.url = j.url || '';
+        renderNotes();
+    } catch (err) { console.error(err); alert(err.message); }
 });
 
 document.addEventListener('toggle', e => {
@@ -530,7 +555,7 @@ document.addEventListener('click', e => {
     if (e.target.closest('#glShareGo')) {
         const sel = [...$id('glShareChips').querySelectorAll('input:checked')].map(i => i.value);
         if (!sel.length) { $id('glShareErr').hidden = false; return; }
-        const txt = T.shareHead + '\n\n' + sel.map(k => '*' + k + '*\n' + ideasOf(k).map(i => '• ' + i.text).join('\n')).join('\n\n');
+        const txt = T.shareHead + '\n\n' + sel.map(k => '*' + k + '*\n' + ideasOf(k).map(i => '• ' + i.text + (i.price != null ? ' – ' + money(i.price) : '') + (i.url ? '\n  ' + i.url : '')).join('\n')).join('\n\n');
         window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
         closeShare();
     }

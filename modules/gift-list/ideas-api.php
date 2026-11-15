@@ -33,9 +33,14 @@ try {
         $id   = (int)($_POST['id'] ?? 0);
         $idea = trim($_POST['idea'] ?? '');
         if ($id <= 0 || $idea === '') throw new Exception(tr('gift_err_idea_invalid'));
-        $stmt = $pdo->prepare("UPDATE pf_gift_ideas SET idea = ? WHERE id = ?");
-        $stmt->execute([mb_substr($idea, 0, 500), $id]);
-        echo json_encode(['success' => true]);
+        $priceRaw = trim(str_replace([',', ' ', "\u{a0}"], ['.', '', ''], $_POST['price'] ?? ''));
+        $price = ($priceRaw !== '' && is_numeric($priceRaw) && (float)$priceRaw >= 0) ? round((float)$priceRaw, 2) : null;
+        $url = trim($_POST['url'] ?? '');
+        if ($url !== '' && !preg_match('#^https?://#i', $url)) $url = 'https://' . $url;
+        if ($url !== '' && !filter_var($url, FILTER_VALIDATE_URL)) throw new Exception('Lien invalide.');
+        $stmt = $pdo->prepare("UPDATE pf_gift_ideas SET idea = ?, price = ?, url = ? WHERE id = ?");
+        $stmt->execute([mb_substr($idea, 0, 500), $price, $url === '' ? null : mb_substr($url, 0, 500), $id]);
+        echo json_encode(['success' => true, 'price' => $price, 'url' => $url === '' ? null : mb_substr($url, 0, 500)]);
         exit;
     }
 
