@@ -449,7 +449,7 @@ const ideasOf = child => GL.ideas.filter(i => i.child === child);
 
 function renderNotes() {
     const kids = [...new Set([...GL.children, ...GL.ideas.map(i => i.child)])];
-    $id('glNotes').innerHTML = `<p class="gl-note-hint">${esc(T.noteHint)}</p><button type="button" class="gl-wa-btn" id="glShareBtn">📲 ${esc(T.shareWa)}</button>` + kids.map(child => {
+    $id('glNotes').innerHTML = `<div class="gl-note-bar"><p class="gl-note-hint">${esc(T.noteHint)}</p><button type="button" class="gl-share-btn" id="glShareBtn" title="${esc(T.shareWa)}" aria-label="${esc(T.shareWa)}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button></div>` + kids.map(child => {
         const list = ideasOf(child);
         return `<details class="gl-group gl-notes-group" data-child="${esc(child)}"${closedNotes.has(child) ? '' : ' open'}>
             <summary>${avatar(child)}<span class="gl-gname">${esc(child)}</span>
