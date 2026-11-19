@@ -797,17 +797,17 @@ $bgImage = !empty($holiday['image_url']) ? htmlspecialchars($holiday['image_url'
         
         <div class="hol-gps-buttons">
             <button onclick="launchGpsApp('waze')" class="pf-btn btn-secondary hol-gps-btn">
-                <img src="https://cdn.simpleicons.org/waze/05C8F0" alt="Waze" class="hol-gps-icon"> 
+                <img src="/assets/icons/waze.svg" alt="Waze" class="hol-gps-icon"> 
                 Waze
             </button>
             
             <button onclick="launchGpsApp('gmaps')" class="pf-btn btn-secondary hol-gps-btn">
-                <img src="https://cdn.simpleicons.org/googlemaps" alt="Google Maps" class="hol-gps-icon"> 
+                <img src="/assets/icons/googlemaps.svg" alt="Google Maps" class="hol-gps-icon"> 
                 Google Maps
             </button>
             
             <button onclick="launchGpsApp('amaps')" class="pf-btn btn-secondary hol-gps-btn">
-                <img src="https://cdn.simpleicons.org/apple/000000" alt="Apple Maps" class="hol-gps-icon"> 
+                <img src="/assets/icons/apple.svg" alt="Apple Maps" class="hol-gps-icon"> 
                 Apple Maps
             </button>
         </div>
