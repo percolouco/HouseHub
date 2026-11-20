@@ -11,9 +11,11 @@ services:
       DB_HOST: househub-db
       DB_NAME: ${DB_NAME:-househub}
       DB_USER: ${DB_USER:-househub}
-      DB_PASS: ${DB_PASS:-changeme}
+      DB_PASS: ${DB_PASS:?DB_PASS manquant dans .env}
       # Clé applicative pour chiffrer les secrets (iCloud, etc.). Optionnel si absent : fichier data/.hh_app_secret ou dérivation DB.
       APP_SECRET_KEY: ${APP_SECRET_KEY:-}
+      DB_ROOT_PASS: ${DB_ROOT_PASS:?DB_ROOT_PASS manquant dans .env}
+      HOL_PIXABAY_KEY: ${HOL_PIXABAY_KEY:-}
     volumes:
       - househub_uploads:/uploads
       - /opt/container/househub:/var/www/html
@@ -33,10 +35,10 @@ services:
     container_name: househub-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-REMOVED}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:?DB_ROOT_PASS manquant dans .env}
       MYSQL_DATABASE: househub_meta
       MYSQL_USER: ${DB_USER:-househub}
-      MYSQL_PASSWORD: ${DB_PASS:-changeme}
+      MYSQL_PASSWORD: ${DB_PASS:?DB_PASS manquant dans .env}
     volumes:
       - househub_db_data:/var/lib/mysql
       - ./docker/init:/docker-entrypoint-initdb.d:ro

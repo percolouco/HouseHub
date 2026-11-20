@@ -9,7 +9,7 @@ if ($envHost === 'househub-db') {
     // Environnement Docker (Ton collègue ou la Prod)
     $meta_host = 'househub-db';
     $meta_user = getenv('DB_USER') ?: 'househub';
-    $meta_pass = getenv('DB_PASS') ?: 'changeme';
+    $meta_pass = getenv('DB_PASS') ?: '';
 } else {
     // Environnement Local XAMPP (Toi)
     $meta_host = '127.0.0.1'; // Plus stable que 'localhost' sous XAMPP

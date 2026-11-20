@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error) {
         $db_host = getenv('DB_HOST') ?: 'househub-db';
         $db_user = getenv('DB_USER') ?: 'househub';
-        $db_pass = getenv('DB_PASS') ?: 'changeme';
+        $db_pass = getenv('DB_PASS') ?: '';
         $hash    = password_hash($password, PASSWORD_BCRYPT);
 
         try {

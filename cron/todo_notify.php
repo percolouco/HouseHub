@@ -10,8 +10,8 @@ date_default_timezone_set('Europe/Paris');
 
 $DB_HOST = getenv('DB_HOST') ?: 'househub-db';
 $DB_USER = getenv('DB_USER') ?: 'househub';
-$DB_PASS = getenv('DB_PASS') ?: 'changeme';
-$DB_ROOT = getenv('DB_ROOT_PASS') ?: 'REMOVED';
+$DB_PASS = getenv('DB_PASS') ?: '';
+$DB_ROOT = getenv('DB_ROOT_PASS') ?: '';
 
 // Load .env if running from CLI outside container
 $env_file = dirname(__DIR__) . '/.env';

@@ -20,7 +20,7 @@ if ($envHost === 'househub-db') {
     // Docker
     $host = 'househub-db';
     $user = getenv('DB_USER') ?: 'househub';
-    $pass = getenv('DB_PASS') ?: 'changeme';
+    $pass = getenv('DB_PASS') ?: '';
 } else {
     // XAMPP
     $host = '127.0.0.1'; // Plus stable que 'localhost' sous XAMPP

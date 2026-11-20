@@ -6,7 +6,7 @@ require dirname(__DIR__, 4) . '/includes/auth.php';
 require dirname(__DIR__, 4) . '/includes/db.php';
 require_login();
 // Clé du service de photos : variable d'environnement PIXABAY_API_KEY si elle existe, sinon la valeur historique
-define('HOL_PIXABAY_KEY', 'REMOVED');
+define('HOL_PIXABAY_KEY', getenv('HOL_PIXABAY_KEY') ?: '');  // clé dans .env
 require dirname(__DIR__) . '/hol_files.php';
 
 // Rafraîchit en arrière-plan la photo d'un voyage dont le lien distant a expiré (appelé par la page de détail)
