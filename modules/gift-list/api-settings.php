@@ -10,7 +10,7 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 try {
     if ($action === 'get_all') {
         $occ = $pdo->query("SELECT * FROM pf_gift_occasions ORDER BY sort_order ASC, id ASC")->fetchAll();
-        $proches = $pdo->query("SELECT * FROM pf_people WHERE role IN ('proche_adulte', 'proche_enfant') ORDER BY name ASC")->fetchAll();
+        $proches = $pdo->query("SELECT * FROM pf_people WHERE role IN ('proche_adulte', 'proche_enfant') ORDER BY (sort_order = 0), sort_order ASC, id ASC")->fetchAll();
         echo json_encode(['success' => true, 'data' => ['occasions' => $occ, 'proches' => $proches]]);
         exit;
     }

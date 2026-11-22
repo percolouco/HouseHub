@@ -9,7 +9,7 @@ require __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/i18n.php';
 
 // 1. Récupération de toutes les personnes
-$stmtPeople = $pdo->query("SELECT id, name, user_id, role, color, care_modes FROM pf_people WHERE is_active = 1 AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY id ASC");
+$stmtPeople = $pdo->query("SELECT id, name, user_id, role, color, care_modes FROM pf_people WHERE is_active = 1 AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY (sort_order = 0), sort_order ASC, id ASC");
 $familyPeople = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
 $parents = [];

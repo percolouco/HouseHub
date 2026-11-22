@@ -2,7 +2,7 @@
 // modules/budget/views/budget_prev.php
 
 // 1. Chargement dynamique des ADULTES de la famille (Exclusion stricte des rôles secondaires)
-$stmtPeople = $pdo->query("SELECT id, name, user_id, role, color FROM pf_people WHERE role IN ('parent') AND is_active = 1 ORDER BY id ASC");
+$stmtPeople = $pdo->query("SELECT id, name, user_id, role, color FROM pf_people WHERE role IN ('parent') AND is_active = 1 ORDER BY (sort_order = 0), sort_order ASC, id ASC");
 $budgetParents = $stmtPeople->fetchAll(PDO::FETCH_ASSOC);
 
 // Sécurité : au cas où aucun adulte n'est trouvé, on évite un crash

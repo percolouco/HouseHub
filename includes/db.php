@@ -53,6 +53,16 @@ try {
     $pdo->exec("SET collation_database = utf8mb4_general_ci");
     $pdo->exec("SET collation_server = utf8mb4_general_ci");
 
+    // Ordre d'affichage des personnes (réglable dans Paramètres) : colonne ajoutée si absente
+    if ($db !== 'househub_meta') {
+        try {
+            if (!$pdo->query("SHOW COLUMNS FROM pf_people LIKE 'sort_order'")->fetch()) {
+                $pdo->exec("ALTER TABLE pf_people ADD COLUMN sort_order INT NOT NULL DEFAULT 0");
+                $pdo->exec("UPDATE pf_people SET sort_order = id");
+            }
+        } catch (\Throwable $e) { /* table absente ou droits insuffisants */ }
+    }
+
 } catch (\PDOException $e) {
     die("Erreur de connexion BDD (Host: $host, DB: $db) : " . $e->getMessage());
 }

@@ -21,11 +21,11 @@ $pageCss    = "/modules/gift-list/gift-list.css";
 
 // --- 2. RÉCUPÉRATION DYNAMIQUE DES DONNÉES ---
 // Enfants du foyer + proches enfants
-$stmt = $pdo->query("SELECT name FROM pf_people WHERE role IN ('enfant', 'proche_enfant') ORDER BY name ASC");
+$stmt = $pdo->query("SELECT name FROM pf_people WHERE role IN ('enfant', 'proche_enfant') ORDER BY (sort_order = 0), sort_order ASC, id ASC");
 $children = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun enfant configuré'];
 
 // Adultes du foyer + proches adultes (sans nounou ni enfants)
-$stmt = $pdo->query("SELECT name FROM pf_people WHERE role NOT IN ('enfant', 'proche_enfant', 'nounou') ORDER BY name ASC");
+$stmt = $pdo->query("SELECT name FROM pf_people WHERE role NOT IN ('enfant', 'proche_enfant', 'nounou') ORDER BY (sort_order = 0), sort_order ASC, id ASC");
 $allAdultsList = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: ['Aucun adulte configuré'];
 
 // Occasions actives (avec icône)
@@ -100,7 +100,7 @@ $glData = [
         'emptyOcc' => tr('gl_empty_occ'), 'noMatch' => tr('gl_no_match'), 'reset' => tr('gl_reset'),
         'confirmDelete' => tr('gift_confirm_delete'), 'matrix' => tr('gift_view_matrix'),
         'debtor' => tr('gift_debtor'), 'creditor' => tr('gift_creditor'), 'per' => tr('gl_per_person'),
-        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'), 'noteEdit' => tr('gl_note_edit'), 'notePrice' => tr('gl_note_price'), 'noteUrl' => tr('gl_note_url'), 'noteSave' => tr('btn_save'), 'shareWa' => tr('gl_share_wa'), 'shareTitle' => tr('gl_share_title'), 'shareNone' => tr('gl_share_none'), 'shareGo' => tr('gl_share_go'), 'shareHead' => tr('gl_share_head'),
+        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'), 'noteToGift' => tr('gl_note_to_gift'), 'noteEdit' => tr('gl_note_edit'), 'notePrice' => tr('gl_note_price'), 'noteUrl' => tr('gl_note_url'), 'noteSave' => tr('btn_save'), 'shareWa' => tr('gl_share_wa'), 'shareTitle' => tr('gl_share_title'), 'shareNone' => tr('gl_share_none'), 'shareGo' => tr('gl_share_go'), 'shareHead' => tr('gl_share_head'),
         'sameAsAdult' => tr('gl_same_payer'), 'plannedLeft' => tr('gl_planned_left'), 'markBought' => tr('gl_mark_bought'),
     ],
 ];
@@ -327,8 +327,9 @@ function chipGroup(label, key, values, selected) {
 
 function renderFilters() {
     const all = giftsOf(state.occ);
-    const children = [...new Set(all.map(g => g.child))];
-    const adults = [...new Set(all.map(g => g.adult))];
+    const byOrder = (ref, seen) => [...new Set([...ref.filter(v => seen.includes(v)), ...seen])];   // ordre réglé dans Paramètres
+    const children = byOrder(GL.children, all.map(g => g.child));
+    const adults = byOrder(GL.adults, all.map(g => g.adult));
     state.fChild = state.fChild.filter(v => children.includes(v));
     state.fAdult = state.fAdult.filter(v => adults.includes(v));
     const statusChips = [['todo', T.toBuy], ['bought', T.bought]].map(([k, l]) =>
@@ -395,7 +396,8 @@ function renderIdeas() { renderTabs(); renderSummary(); renderFilters(); renderL
 function renderAccounts() {
     const bought = GL.gifts.filter(g => g.bought && g.amount > 0);
     const planned = GL.gifts.filter(g => !g.bought).reduce((s, g) => s + g.amount, 0);
-    const people = [...new Set([...GL.adults, ...bought.map(g => g.adult), ...bought.map(g => g.payer)])].filter(Boolean).sort();
+    const people = [...new Set([...GL.adults, ...bought.map(g => g.adult), ...bought.map(g => g.payer)])].filter(Boolean);
+    people.sort((a, b) => { const ia = GL.adults.indexOf(a), ib = GL.adults.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.localeCompare(b); });
     const paid = {}, share = {}, matrix = {};
     people.forEach(p => { paid[p] = 0; share[p] = 0; matrix[p] = {}; people.forEach(q => matrix[p][q] = 0); });
     bought.forEach(g => {
@@ -460,7 +462,8 @@ function renderNotes() {
                 <button type="submit" class="gl-note-btn" aria-label="${esc(T.noteAdd)}">＋</button>
             </form>
             <div class="gl-notes">${list.length ? list.map(i => `<div class="gl-note" data-id="${i.id}">
-                <button type="button" class="gl-note-txt" data-act="use">${esc(i.text)}${(i.price != null || i.url) ? `<span class="gl-note-meta">${i.price != null ? `<b>${money(i.price)}</b>` : ''}${i.url ? `<span class="gl-note-host">🔗 ${esc(hostOf(i.url))}</span>` : ''}</span>` : ''}</button>
+                <button type="button" class="gl-note-txt" data-act="edit">${esc(i.text)}${(i.price != null || i.url) ? `<span class="gl-note-meta">${i.price != null ? `<b>${money(i.price)}</b>` : ''}${i.url ? `<span class="gl-note-host">🔗 ${esc(hostOf(i.url))}</span>` : ''}</span>` : ''}</button>
+                <button type="button" class="gl-note-gift" data-act="use" title="${esc(T.noteToGift)}" aria-label="${esc(T.noteToGift)}">🎁</button>
                 <button type="button" class="gl-note-edit" data-act="edit" aria-label="${esc(T.noteEdit)}">✎</button>
                 <button type="button" class="gl-note-del" data-act="del" aria-label="${esc(T.noteDel)}">×</button>
                 <form class="gl-note-form" hidden>
@@ -568,7 +571,7 @@ function setView(v) {
     $id('glIdeas').hidden = v !== 'ideas';
     $id('glNotes').hidden = v !== 'notes';
     $id('glAccounts').hidden = v !== 'accounts';
-    $id('glFab').hidden = v === 'accounts';
+    $id('glFab').hidden = v !== 'ideas';   // le « + » ajoute un cadeau : seulement sur l'onglet Cadeaux (les idées ont leur champ par enfant)
     if (v === 'ideas') renderIdeas(); else if (v === 'notes') renderNotes(); else renderAccounts();
 }
 

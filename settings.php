@@ -129,6 +129,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // --- ORDRE D'AFFICHAGE DES PERSONNES (flèches ↑ ↓) ---
+        if ($action === 'move_person' && $family_id) {
+            require_once __DIR__ . '/includes/db.php';
+            $pid = (int)($_POST['person_id'] ?? 0);
+            $dir = ($_POST['dir'] ?? '') === 'up' ? -1 : 1;
+            if (isset($pdo) && $pid > 0) {
+                $ids = $pdo->query("SELECT id FROM pf_people ORDER BY (sort_order = 0), sort_order ASC, id ASC")->fetchAll(PDO::FETCH_COLUMN);
+                $i = array_search($pid, array_map('intval', $ids), true);
+                if ($i !== false && isset($ids[$i + $dir])) {
+                    [$ids[$i], $ids[$i + $dir]] = [$ids[$i + $dir], $ids[$i]];
+                }
+                $upd = $pdo->prepare("UPDATE pf_people SET sort_order = ? WHERE id = ?");
+                foreach ($ids as $n => $id) { $upd->execute([$n + 1, (int)$id]); }
+                $success = tr('set_order_saved');
+            }
+        }
+
         if ($action === 'regen_invite' && $family_id) {
             $new_code = bin2hex(random_bytes(8));
             $meta_pdo->prepare("UPDATE families SET invite_code = ? WHERE id = ?")
@@ -365,6 +382,7 @@ if ($family_id) {
     if (isset($pdo)) {
         $stmtAttached = $pdo->query("SELECT id, name, role, color FROM pf_people WHERE user_id IS NULL AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY role ASC, name ASC");
         $attached_profiles = $stmtAttached->fetchAll(PDO::FETCH_ASSOC);
+        $orderPeople = $pdo->query("SELECT id, name, role, color FROM pf_people WHERE COALESCE(role,'') <> 'nounou' AND COALESCE(role,'') <> 'helper' ORDER BY (sort_order = 0), sort_order ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
     }
 }
 
@@ -732,6 +750,25 @@ require __DIR__ . '/header.php';
       </div>
       <?php endforeach; ?>
     </div>
+
+    <?php if (!empty($orderPeople)): ?>
+    <h3 class="pf-members-heading pf-mt-lg">↕️ <?= tr('set_order_title') ?></h3>
+    <p class="pf-muted-note pf-muted-note--tight pf-mb-md"><?= tr('set_order_desc') ?></p>
+    <div class="pf-stack-sm">
+      <?php foreach ($orderPeople as $i => $p): ?>
+      <div class="pf-member-card" style="display:flex; justify-content:space-between; align-items:center; border-left:4px solid <?= htmlspecialchars($p['color'] ?? '#3b82f6') ?>;">
+        <strong><?= htmlspecialchars($p['name']) ?></strong>
+        <form method="post" style="margin:0; display:flex; gap:6px;">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+          <input type="hidden" name="action" value="move_person">
+          <input type="hidden" name="person_id" value="<?= (int)$p['id'] ?>">
+          <button type="submit" name="dir" value="up" class="pf-btn btn-secondary" style="padding:4px 10px;" <?= $i === 0 ? 'disabled' : '' ?> aria-label="↑">↑</button>
+          <button type="submit" name="dir" value="down" class="pf-btn btn-secondary" style="padding:4px 10px;" <?= $i === count($orderPeople) - 1 ? 'disabled' : '' ?> aria-label="↓">↓</button>
+        </form>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <h3 class="pf-members-heading pf-mt-lg">🧸 <?= tr('settings_attached_profiles_title') ?></h3>
     <p class="pf-muted-note pf-muted-note--tight pf-mb-md"><?= tr('settings_attached_profiles_desc') ?></p>

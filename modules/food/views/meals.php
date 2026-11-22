@@ -2,7 +2,7 @@
 // modules/meals/main.php
 
 // Récupération stricte des membres du foyer (Exclusion des intervenants et proches)
-$stmt = $pdo->query("SELECT id, name FROM pf_people WHERE role NOT IN ('helper', 'nounou', 'proche_adulte', 'proche_enfant', 'relative') AND is_active = 1 ORDER BY id ASC");
+$stmt = $pdo->query("SELECT id, name FROM pf_people WHERE role NOT IN ('helper', 'nounou', 'proche_adulte', 'proche_enfant', 'relative') AND is_active = 1 ORDER BY (sort_order = 0), sort_order ASC, id ASC");
 $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($members)) {

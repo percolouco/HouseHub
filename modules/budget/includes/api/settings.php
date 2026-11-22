@@ -53,7 +53,7 @@ try {
         $budgetSettings = $stmtSettings->fetchAll(PDO::FETCH_KEY_PAIR);
 
         // 6. Liste des membres (pour assigner un compte bancaire)
-        $people = $pdo->query("SELECT id, name FROM pf_people WHERE is_active = 1 AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $people = $pdo->query("SELECT id, name FROM pf_people WHERE is_active = 1 AND COALESCE(role,'') NOT IN ('proche_adulte', 'proche_enfant') ORDER BY (sort_order = 0), sort_order ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode([
             'success' => true,
