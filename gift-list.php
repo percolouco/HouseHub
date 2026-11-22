@@ -100,7 +100,7 @@ $glData = [
         'emptyOcc' => tr('gl_empty_occ'), 'noMatch' => tr('gl_no_match'), 'reset' => tr('gl_reset'),
         'confirmDelete' => tr('gift_confirm_delete'), 'matrix' => tr('gift_view_matrix'),
         'debtor' => tr('gift_debtor'), 'creditor' => tr('gift_creditor'), 'per' => tr('gl_per_person'),
-        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'), 'noteToGift' => tr('gl_note_to_gift'), 'noteEdit' => tr('gl_note_edit'), 'notePrice' => tr('gl_note_price'), 'noteUrl' => tr('gl_note_url'), 'noteSave' => tr('btn_save'), 'shareWa' => tr('gl_share_wa'), 'shareTitle' => tr('gl_share_title'), 'shareNone' => tr('gl_share_none'), 'shareGo' => tr('gl_share_go'), 'shareHead' => tr('gl_share_head'),
+        'noteAdd' => tr('gl_note_add'), 'notePh' => tr('gl_note_ph'), 'noteEmpty' => tr('gl_note_empty'), 'noteHint' => tr('gl_note_hint'), 'noteDel' => tr('gl_note_del'), 'noteToGift' => tr('gl_note_to_gift'), 'noteConfirmDel' => tr('gl_note_confirm_del'), 'noteEdit' => tr('gl_note_edit'), 'notePrice' => tr('gl_note_price'), 'noteUrl' => tr('gl_note_url'), 'noteSave' => tr('btn_save'), 'shareWa' => tr('gl_share_wa'), 'shareTitle' => tr('gl_share_title'), 'shareNone' => tr('gl_share_none'), 'shareGo' => tr('gl_share_go'), 'shareHead' => tr('gl_share_head'),
         'sameAsAdult' => tr('gl_same_payer'), 'plannedLeft' => tr('gl_planned_left'), 'markBought' => tr('gl_mark_bought'),
     ],
 ];
@@ -508,6 +508,8 @@ document.addEventListener('click', async e => {
     const idea = GL.ideas.find(i => i.id === +row.dataset.id);
     if (!idea) return;
     if (e.target.closest('[data-act="del"]')) {
+        const ok = typeof pachaConfirm === 'function' ? await pachaConfirm('🗑️', T.noteConfirmDel) : confirm(T.noteConfirmDel);
+        if (!ok) return;
         try {
             await ideasCall({action: 'delete', id: idea.id});
             GL.ideas = GL.ideas.filter(i => i.id !== idea.id);

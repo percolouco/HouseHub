@@ -958,6 +958,7 @@ return [
     'gl_note_ph' => 'Una idea solta…',
     'gl_note_empty' => 'Cap idea encara.',
     'gl_note_hint' => 'Apunta aquí les idees. Toca una idea per editar-la (preu, enllaç); el botó 🎁 la converteix en regal.',
+    'gl_note_confirm_del' => 'Eliminar aquesta idea?',
     'gl_note_to_gift' => 'Convertir en regal',
     'gl_note_del' => 'Suprimeix la idea',
     'gl_note_edit' => 'Edita (preu, enllaç)',

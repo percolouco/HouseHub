@@ -960,6 +960,7 @@ return [
     'gl_note_ph' => 'A loose idea…',
     'gl_note_empty' => 'No ideas yet.',
     'gl_note_hint' => 'Jot down loose ideas here. Tap an idea to edit it (price, link); the 🎁 button turns it into a gift.',
+    'gl_note_confirm_del' => 'Delete this idea?',
     'gl_note_to_gift' => 'Make it a gift',
     'gl_note_del' => 'Delete idea',
     'gl_note_edit' => 'Edit (price, link)',

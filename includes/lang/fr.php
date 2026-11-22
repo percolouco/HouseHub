@@ -957,6 +957,7 @@ return [
     'gl_note_ph' => 'Une idée en vrac…',
     'gl_note_empty' => 'Aucune idée pour l\'instant.',
     'gl_note_hint' => 'Note ici tes idées en vrac. Touche une idée pour la modifier (prix, lien) ; le bouton 🎁 la transforme en cadeau.',
+    'gl_note_confirm_del' => 'Supprimer cette idée ?',
     'gl_note_to_gift' => 'Passer en cadeau',
     'gl_note_del' => 'Supprimer l\'idée',
     'gl_note_edit' => 'Modifier (prix, lien)',
