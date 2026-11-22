@@ -652,7 +652,9 @@ label.gl-chip:has(input:focus-visible) { outline: 2px solid var(--primary); outl
 .gl-note { flex-wrap: wrap; }
 .gl-note-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 3px; font-size: .8rem; color: var(--text-muted); }
 .gl-note-meta b { color: var(--text-main); }
-.gl-note-gift, .gl-note-edit { flex: 0 0 40px; border: 0; border-left: 1px solid var(--border-light); background: transparent; color: var(--text-muted); font-size: 1rem; cursor: pointer; }
+.gl-note-acts { flex: 0 0 40px; display: flex; flex-direction: column; border-left: 1px solid var(--border-light); }
+.gl-note-gift, .gl-note-edit { flex: 1 1 0; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--text-muted); font-size: .85rem; line-height: 1; cursor: pointer; }
+.gl-note-gift { border-bottom: 1px solid var(--border-light); }
 .gl-note-edit:hover, .gl-note-gift:hover { color: var(--primary); }
 .gl-note-form { flex: 1 0 100%; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid var(--border-light); }
 .gl-note-form[hidden] { display: none; }

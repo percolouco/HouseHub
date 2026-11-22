@@ -463,8 +463,8 @@ function renderNotes() {
             </form>
             <div class="gl-notes">${list.length ? list.map(i => `<div class="gl-note" data-id="${i.id}">
                 <button type="button" class="gl-note-txt" data-act="edit">${esc(i.text)}${(i.price != null || i.url) ? `<span class="gl-note-meta">${i.price != null ? `<b>${money(i.price)}</b>` : ''}${i.url ? `<span class="gl-note-host">🔗 ${esc(hostOf(i.url))}</span>` : ''}</span>` : ''}</button>
-                <button type="button" class="gl-note-gift" data-act="use" title="${esc(T.noteToGift)}" aria-label="${esc(T.noteToGift)}">🎁</button>
-                <button type="button" class="gl-note-edit" data-act="edit" aria-label="${esc(T.noteEdit)}">✎</button>
+                <span class="gl-note-acts"><button type="button" class="gl-note-gift" data-act="use" title="${esc(T.noteToGift)}" aria-label="${esc(T.noteToGift)}">🎁</button>
+                <button type="button" class="gl-note-edit" data-act="edit" aria-label="${esc(T.noteEdit)}">✎</button></span>
                 <button type="button" class="gl-note-del" data-act="del" aria-label="${esc(T.noteDel)}">×</button>
                 <form class="gl-note-form" hidden>
                     <input type="text" name="idea" class="gl-note-input" value="${esc(i.text)}" maxlength="500" required>
