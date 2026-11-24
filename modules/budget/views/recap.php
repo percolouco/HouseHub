@@ -113,9 +113,7 @@ $totalRevenus = 0;
                     </td>
                     <td style="padding:15px; color:#64748b; font-weight:bold;">-</td>
                     <td style="padding:15px;">
-                        <?php if ($isInactiveMonth && !$hasMatchingExpense): ?>
-                            <div style="display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #e2e8f0;"><span>—</span> Hors mois</div>
-                        <?php elseif ($isAutoChecked): ?>
+                        <?php if ($isAutoChecked): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #bbf7d0;"><span>✓</span> Reçu</div>
                         <?php elseif ($realPerçu > 0): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#d97706; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #fde68a;"><span>⏳</span> Partiel</div>
@@ -243,7 +241,9 @@ foreach ($items as $item):
                     <td style="padding:15px; color:#64748b; font-weight:bold;"><?= $item['payment_day'] ?: '-' ?></td>
                     
                     <td style="padding:15px;">
-                        <?php if ($isAutoChecked): ?>
+                        <?php if ($isInactiveMonth && !$hasMatchingExpense): ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #e2e8f0;"><span>—</span> Hors mois</div>
+                        <?php elseif ($isAutoChecked): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#f0fdf4; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #bbf7d0;"><span>✓</span> Validé</div>
                         <?php elseif($hasMatchingExpense): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#d97706; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #fde68a;"><span>⏳</span> Partiel</div>
