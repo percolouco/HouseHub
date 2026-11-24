@@ -3783,3 +3783,8 @@ body.ch-picking .ch-qty { outline:2px solid #2563eb; background:#eff6ff; cursor:
   .ch-in, .ch-dims input { font-size:16px; }
   .ch-line { margin-left:0; }
 }
+.ch-modal-row1 { grid-template-columns:1fr; }
+.ch-icon-field { display:flex; flex-direction:column; gap:6px; font-size:.85rem; color:#475569; font-weight:600; }
+.ch-icons { display:grid; grid-template-columns:repeat(auto-fill, minmax(40px, 1fr)); gap:6px; }
+.ch-icon-opt { border:1px solid #e2e8f0; background:#f8fafc; border-radius:10px; font-size:1.3rem; padding:6px 0; cursor:pointer; }
+.ch-icon-opt.active { border-color:#2563eb; background:#eff6ff; box-shadow:0 0 0 2px #bfdbfe; }

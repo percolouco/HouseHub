@@ -22,10 +22,17 @@
   window.chCloseModals = () => document.querySelectorAll('.ch-modal').forEach(m => m.hidden = true);
   document.addEventListener('click', e => { if (e.target.classList && e.target.classList.contains('ch-modal')) chCloseModals(); });
 
+  function setIcon(ic) {
+    $('ch-proj-icon').value = ic;
+    document.querySelectorAll('#ch-icons .ch-icon-opt').forEach(b => b.classList.toggle('active', b.dataset.i === ic));
+  }
+  const iconBox = $('ch-icons');
+  if (iconBox) iconBox.addEventListener('click', e => { const b = e.target.closest('.ch-icon-opt'); if (b) setIcon(b.dataset.i); });
+
   window.chOpenProject = function (p) {
     $('ch-proj-title').textContent = p ? p.name : document.querySelector('.ch-card-new') ? document.querySelector('.ch-card-new').textContent.replace('＋', '').trim() : '';
     $('ch-proj-name').value = p ? p.name : '';
-    $('ch-proj-icon').value = p ? (p.icon || '') : '';
+    setIcon(p ? (p.icon || '🔨') : '🔨');
     $('ch-proj-status').value = p ? p.status : 'idea';
     $('ch-proj-target').value = p && p.target_budget !== null ? p.target_budget : '';
     $('ch-proj-modal').dataset.id = p ? p.id : '';
@@ -35,7 +42,7 @@
   window.chSaveProject = async function () {
     const name = $('ch-proj-name').value.trim();
     if (!name) { $('ch-proj-name').focus(); return; }
-    const j = await post('project_save', { id: $('ch-proj-modal').dataset.id || '', name, icon: $('ch-proj-icon').value.trim(), status: $('ch-proj-status').value, target_budget: $('ch-proj-target').value });
+    const j = await post('project_save', { id: $('ch-proj-modal').dataset.id || '', name, icon: $('ch-proj-icon').value, status: $('ch-proj-status').value, target_budget: $('ch-proj-target').value });
     if (!j) return;
     if ($('ch-proj-modal').dataset.id) location.reload(); else location.href = '?tab=chantiers&p=' + j.id;
   };

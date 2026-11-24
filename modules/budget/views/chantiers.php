@@ -153,10 +153,17 @@ $T = [
         <div class="ch-modal-box">
             <h3 id="ch-proj-title"><?= tr('ch_new') ?></h3>
             <label><?= tr('ch_name') ?><input type="text" id="ch-proj-name" class="pf-input" maxlength="150"></label>
-            <div class="ch-modal-row">
-                <label><?= tr('ch_icon') ?><input type="text" id="ch-proj-icon" class="pf-input" maxlength="8" placeholder="🔨"></label>
+            <div class="ch-modal-row ch-modal-row1">
                 <label><?= tr('ch_status') ?><select id="ch-proj-status" class="pf-input">
                     <?php foreach ($STATUSES as $k => $s2): ?><option value="<?= $k ?>"><?= $s2[0] ?> <?= tr($s2[1]) ?></option><?php endforeach; ?></select></label>
+            </div>
+            <div class="ch-icon-field"><span><?= tr('ch_icon') ?></span>
+                <input type="hidden" id="ch-proj-icon" value="🔨">
+                <div class="ch-icons" id="ch-icons">
+                    <?php foreach (['🔨','🏠','🌳','🌿','🪴','🚪','🪟','🛁','🚿','🚽','🍳','🛋️','🛏️','🧱','🪜','🪚','🎨','💡','🔌','🚰','🔥','❄️','🚗','🏗️','🧰','📦','🐕','🌸'] as $ic): ?>
+                        <button type="button" class="ch-icon-opt" data-i="<?= $ic ?>"><?= $ic ?></button>
+                    <?php endforeach; ?>
+                </div>
             </div>
             <label><?= tr('ch_target_budget') ?><input type="number" step="0.01" min="0" id="ch-proj-target" class="pf-input"></label>
             <div class="ch-modal-btns"><button type="button" class="pf-btn" onclick="chCloseModals()"><?= tr('cancel') ?></button><button type="button" class="pf-btn pf-btn-primary" onclick="chSaveProject()"><?= tr('save') ?></button></div>
