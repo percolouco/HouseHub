@@ -50,6 +50,7 @@ return [
     'settings'          => 'Settings',
 
     // Months & Days
+    'month_short_01' => 'Jan', 'month_short_02' => 'Feb', 'month_short_03' => 'Mar', 'month_short_04' => 'Apr', 'month_short_05' => 'May', 'month_short_06' => 'Jun', 'month_short_07' => 'Jul', 'month_short_08' => 'Aug', 'month_short_09' => 'Sep', 'month_short_10' => 'Oct', 'month_short_11' => 'Nov', 'month_short_12' => 'Dec',
     'month_01' => 'January', 'month_02' => 'February', 'month_03' => 'March', 'month_04' => 'April', 'month_05' => 'May', 'month_06' => 'June',
     'month_07' => 'July', 'month_08' => 'August', 'month_09' => 'September', 'month_10' => 'October', 'month_11' => 'November', 'month_12' => 'December',
     'month_jan' => 'January', 'month_feb' => 'February', 'month_mar' => 'March', 'month_apr' => 'April', 'month_may' => 'May', 'month_jun' => 'June',

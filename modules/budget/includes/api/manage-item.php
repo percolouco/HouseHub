@@ -19,6 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reg_month = !empty($_POST['reg_month']) ? trim($_POST['reg_month']) : null;
             $keywords = trim($_POST['mapping_keywords'] ?? ''); 
             $holiday_id = !empty($_POST['holiday_id']) ? (int)$_POST['holiday_id'] : null;
+            // Mois concernés : liste de 1 à 12 ; tous cochés (ou aucun) = NULL = tous les mois
+            $am = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['active_months'] ?? [])), fn($x) => $x >= 1 && $x <= 12)));
+            sort($am);
+            $active_months = (count($am) === 0 || count($am) === 12) ? null : implode(',', $am);
 
             // 2. Gestion du montant (toujours stocker les dépenses en négatif)
             $amount = abs((float)($_POST['amount'] ?? 0)); 
@@ -27,12 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 3. Exécution de la requête
             if ($id) {
                 // UPDATE
-                $stmt = $pdo->prepare("UPDATE pf_budget_items SET name=?, amount=?, category=?, type=?, payment_day=?, is_estimate=?, reg_month=?, mapping_keywords=?, holiday_id=? WHERE id=?");
-                $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id, $id]);
+                $stmt = $pdo->prepare("UPDATE pf_budget_items SET name=?, amount=?, category=?, type=?, payment_day=?, is_estimate=?, reg_month=?, mapping_keywords=?, holiday_id=?, active_months=? WHERE id=?");
+                $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id, $active_months, $id]);
             } else {
                 // INSERT
-                $stmt = $pdo->prepare("INSERT INTO pf_budget_items (name, amount, category, type, payment_day, is_estimate, reg_month, mapping_keywords, holiday_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id]);
+                $stmt = $pdo->prepare("INSERT INTO pf_budget_items (name, amount, category, type, payment_day, is_estimate, reg_month, mapping_keywords, holiday_id, active_months) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$name, $amount, $category, $type, $payment_day, $is_estimate, $reg_month, $keywords, $holiday_id, $active_months]);
             }
             
             // 4. Réponse appropriée (JSON si appel via JS fetch, Redirection sinon)

@@ -50,6 +50,7 @@ return [
     'settings'          => 'Configuració',
 
     // Mesos & Dies
+    'month_short_01' => 'Gen', 'month_short_02' => 'Febr', 'month_short_03' => 'Març', 'month_short_04' => 'Abr', 'month_short_05' => 'Maig', 'month_short_06' => 'Juny', 'month_short_07' => 'Jul', 'month_short_08' => 'Ag', 'month_short_09' => 'Set', 'month_short_10' => 'Oct', 'month_short_11' => 'Nov', 'month_short_12' => 'Des',
     'month_01' => 'Gener', 'month_02' => 'Febrer', 'month_03' => 'Març', 'month_04' => 'Abril', 'month_05' => 'Maig', 'month_06' => 'Juny',
     'month_07' => 'Juliol','month_08' => 'Agost',  'month_09' => 'Setembre', 'month_10' => 'Octubre','month_11' => 'Novembre','month_12' => 'Desembre',
     'month_jan' => 'Gener', 'month_feb' => 'Febrer', 'month_mar' => 'Març', 'month_apr' => 'Abril', 'month_may' => 'Maig', 'month_jun' => 'Juny',

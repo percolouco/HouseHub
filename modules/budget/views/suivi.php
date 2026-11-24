@@ -296,7 +296,10 @@ $fixedChargesList = []; $incomeList = []; $pending_charges = [];
 $stmt = $pdo->query("SELECT * FROM pf_budget_items WHERE category != 'SAVINGS' ORDER BY name ASC");
 $estimatesList = []; // On prépare la liste pour retenir nos estimations multi-catégories
 
+require_once __DIR__ . '/../includes/budget_months.php';
 while ($item = $stmt->fetch(PDO::FETCH_ASSOC)) {
+    // Ligne sans prélèvement ce mois-ci (ex. taxe foncière en nov.-déc.) : ni budget, ni charge à venir
+    if (!budgetItemActiveIn($item, (int)$viewM)) continue;
     $absAmount = abs((float)$item['amount']); 
     
     // --- 🚀 INTERCEPTION DYNAMIQUE ---

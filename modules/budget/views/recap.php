@@ -8,6 +8,7 @@ $dbCategories = $stmtCats->fetchAll(PDO::FETCH_ASSOC);
 // 2. Récupération des Salaires/Mensualités configurés (Revenus automatiques)
 $currentYear = isset($_GET['y']) ? (int)$_GET['y'] : date('Y');
 require_once __DIR__ . '/../includes/budget_year.php';
+require_once __DIR__ . '/../includes/budget_months.php';
 budgetEnsureSalaryYear($pdo, (int)$currentYear);
 $stmtSalaries = $pdo->prepare("SELECT id, person, mensualite FROM pf_salary_config WHERE year = ?");
 $stmtSalaries->execute([$currentYear]);
@@ -112,7 +113,9 @@ $totalRevenus = 0;
                     </td>
                     <td style="padding:15px; color:#64748b; font-weight:bold;">-</td>
                     <td style="padding:15px;">
-                        <?php if ($isAutoChecked): ?>
+                        <?php if ($isInactiveMonth && !$hasMatchingExpense): ?>
+                            <div style="display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #e2e8f0;"><span>—</span> Hors mois</div>
+                        <?php elseif ($isAutoChecked): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #bbf7d0;"><span>✓</span> Reçu</div>
                         <?php elseif ($realPerçu > 0): ?>
                             <div style="display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#d97706; padding:4px 10px; border-radius:20px; font-size:0.85rem; border:1px solid #fde68a;"><span>⏳</span> Partiel</div>
@@ -148,7 +151,14 @@ foreach ($items as $item):
     // --------------------------------
 
     $amountToAdd = ($item['type'] === 'Annuel') ? $targetAbs / 12 : $targetAbs;
-    $totalDepenses += $amountToAdd;
+    // Ligne sans prélèvement ce mois-ci (ex. taxe foncière en nov.-déc.) : visible mais non comptée
+    $isInactiveMonth = !budgetItemActiveIn($item, (int)$currentMonth);
+    if (!$isInactiveMonth) $totalDepenses += $amountToAdd;
+    $monthsLabel = '';
+    if (!empty($item['active_months'])) {
+        $actifs = budgetItemActiveMonths($item);
+        $monthsLabel = implode(', ', array_map(fn($mm) => tr('month_short_' . str_pad((string)$mm, 2, '0', STR_PAD_LEFT)), $actifs));
+    }
     
     // 2. RÉINITIALISATION STRICTE
     $realSum = 0;
@@ -192,10 +202,13 @@ foreach ($items as $item):
     $isAutoChecked = ($hasMatchingExpense && ($realAbs >= ($targetAbs - 0.10)));
     $rowClass = 'row-expense' . ($item['is_estimate'] ? ' row-estimate' : '');
 ?>
-                <tr class="<?= $rowClass ?>" style="border-bottom:1px solid var(--border-light);">
+                <tr class="<?= $rowClass ?>" style="border-bottom:1px solid var(--border-light);<?= $isInactiveMonth ? ' opacity:.55;' : '' ?>">
                     <td style="padding:15px;">
                         <strong><?= htmlspecialchars($item['name']) ?></strong>
                         <?= $item['is_estimate'] ? ' <small style="color:#64748b;">(Variable)</small>' : '' ?>
+                        <?php if ($monthsLabel !== ''): ?>
+                            <div style="font-size:0.72rem; color:<?= $isInactiveMonth ? '#b45309' : '#64748b' ?>;" title="Mois concernés par cette ligne">📅 <?= $isInactiveMonth ? 'Pas de prélèvement ce mois-ci · ' : '' ?><?= htmlspecialchars($monthsLabel) ?></div>
+                        <?php endif; ?>
                         <?php if(!empty($item['mapping_keywords'])): ?>
                             <span title="Reconnaissance bancaire : <?= htmlspecialchars($item['mapping_keywords']) ?>" style="font-size:0.7rem; cursor:help;">🔗</span>
                         <?php endif; ?>
@@ -325,6 +338,17 @@ foreach ($items as $item):
             </div>
             
             <div class="form-group" style="margin-bottom:15px;">
+                <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Mois concernés <small style="font-weight:normal;">(décochez les mois sans prélèvement)</small></label>
+                <div id="item_months" style="display:grid; grid-template-columns:repeat(6, 1fr); gap:6px;">
+                    <?php for ($mm = 1; $mm <= 12; $mm++): ?>
+                        <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:4px 6px; cursor:pointer;">
+                            <input type="checkbox" name="active_months[]" value="<?= $mm ?>" checked> <?= htmlspecialchars(tr('month_short_' . str_pad((string)$mm, 2, '0', STR_PAD_LEFT))) ?>
+                        </label>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:15px;">
                 <label class="pf-label" style="display:block; margin-bottom:5px; font-weight:600; color:#475569; font-size:0.9rem;">Mots-clés (Reconnaissance Bancaire)</label>
                 <input type="text" name="mapping_keywords" id="item_keywords" class="pf-input" placeholder="ex: NETFLIX, DOMOFINANCE..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; background:#f0f9ff; border-color:#bae6fd;">
                 <small style="color:#64748b; font-size:0.75rem;">Optionnel. Permet au système de lier automatiquement un import CSV à cette ligne.</small>
@@ -372,6 +396,8 @@ function editRecapItem(item) {
     });
     document.getElementById("item_type").value = data.type;
     document.getElementById("item_is_estimate").value = data.is_estimate;
+    const actifs = data.active_months ? data.active_months.split(',') : null; // null = tous les mois
+    document.querySelectorAll('#item_months input').forEach(cb => { cb.checked = !actifs || actifs.includes(cb.value); });
 
     document.getElementById("budgetRecapModal").style.display = "flex";
     document.body.classList.add('no-scroll');

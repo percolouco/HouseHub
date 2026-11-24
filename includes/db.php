@@ -61,6 +61,12 @@ try {
                 $pdo->exec("UPDATE pf_people SET sort_order = id");
             }
         } catch (\Throwable $e) { /* table absente ou droits insuffisants */ }
+        // Budget : mois concernés par une ligne (NULL = tous les mois ; ex. « 1,2,3,4,5,6,7,8,9,10 » pour la taxe foncière)
+        try {
+            if (!$pdo->query("SHOW COLUMNS FROM pf_budget_items LIKE 'active_months'")->fetch()) {
+                $pdo->exec("ALTER TABLE pf_budget_items ADD COLUMN active_months VARCHAR(40) DEFAULT NULL");
+            }
+        } catch (\Throwable $e) { /* table absente ou droits insuffisants */ }
     }
 
 } catch (\PDOException $e) {

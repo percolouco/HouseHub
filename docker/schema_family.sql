@@ -161,7 +161,8 @@ CREATE TABLE IF NOT EXISTS pf_budget_items (
   mapping_keywords TEXT DEFAULT NULL,
   holiday_id INT DEFAULT NULL,
   is_checked TINYINT(1) DEFAULT 0,
-  sort_order INT DEFAULT 0
+  sort_order INT DEFAULT 0,
+  active_months VARCHAR(40) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pf_expenses (
