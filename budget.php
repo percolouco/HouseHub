@@ -28,7 +28,7 @@ $isBudgetSetupOk = ($hasCategories && $hasSalaries && $hasAccounts);
 // ============================================================================
 // GESTION DES VUES (MANDATORY VS OPTIONAL)
 // ============================================================================
-$enabledViews = $_SESSION['enabled_views'] ?? ['budget_prev', 'budget_epargne', 'budget_provisions'];
+$enabledViews = $_SESSION['enabled_views'] ?? ['budget_prev', 'budget_epargne', 'budget_provisions', 'budget_chantiers'];
 
 // Vues obligatoires pour le cœur du budget
 $allowedTabs = ['suivi', 'recap', 'analyse']; 
@@ -36,6 +36,7 @@ $allowedTabs = ['suivi', 'recap', 'analyse'];
 if (in_array('budget_prev', $enabledViews)) $allowedTabs[] = 'budget_prev';
 if (in_array('budget_epargne', $enabledViews)) $allowedTabs[] = 'epargne';
 if (in_array('budget_provisions', $enabledViews)) $allowedTabs[] = 'provisions';
+if (in_array('budget_chantiers', $enabledViews)) $allowedTabs[] = 'chantiers';
 
 // Gestion de l'onglet actif avec fallback de sécurité
 $tab = $_GET['tab'] ?? 'suivi';
@@ -97,12 +98,19 @@ require __DIR__ . '/header.php';
                 <span><?= tr('budget_tab_provisions') ?></span>
             </a>
             <?php endif; ?>
+
+            <?php if (in_array('chantiers', $allowedTabs)): ?>
+            <a href="?tab=chantiers" class="tab-item <?= $tab == 'chantiers' ? 'active' : '' ?>">
+                <span class="tab-icon">🔨</span> 
+                <span><?= tr('budget_tab_chantiers') ?></span>
+            </a>
+            <?php endif; ?>
         </nav>
     </div>
 
     <section class="pf-section">
     <?php 
-    $allowedTabs = ['recap', 'suivi', 'epargne', 'budget_prev', 'provisions', 'analyse'];
+    $allowedTabs = ['recap', 'suivi', 'epargne', 'budget_prev', 'provisions', 'analyse', 'chantiers'];
     
     if (in_array($tab, $allowedTabs)) {
         $viewPath = __DIR__ . "/modules/budget/views/" . $tab . ".php";

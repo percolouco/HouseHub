@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'set_modules' && $family_id) {
             $all = ['calendar', 'budget', 'holidays', 'gifts', 'garage', 'memo', 'todo', 'liste', 'calendar_ios', 'printvault', 'planka', 'food', 'sport'];
-            $allViews = ['food_meals', 'food_liste', 'food_recipes', 'budget_prev', 'budget_epargne', 'budget_provisions'];
+            $allViews = ['food_meals', 'food_liste', 'food_recipes', 'budget_prev', 'budget_epargne', 'budget_provisions', 'budget_chantiers'];
 
             $enabled = array_values(array_filter($all, fn($m) => isset($_POST['mod_' . $m])));
             $enabledViews = array_values(array_filter($allViews, fn($v) => isset($_POST['view_' . $v])));
@@ -453,7 +453,7 @@ require __DIR__ . '/header.php';
     <p class="pf-muted-note"><?= tr('set_desc_modules') ?></p>
     <?php
       $enabledMods = $_SESSION['enabled_modules'] ?? ['calendar','budget','holidays','gifts','calendar_ios'];
-      $enabledViews = $_SESSION['enabled_views'] ?? ['food_meals', 'food_liste', 'food_recipes', 'budget_prev', 'budget_epargne', 'budget_provisions'];
+      $enabledViews = $_SESSION['enabled_views'] ?? ['food_meals', 'food_liste', 'food_recipes', 'budget_prev', 'budget_epargne', 'budget_provisions', 'budget_chantiers'];
       
       $allModules = [
           'calendar' => ['icon' => '📅', 'label' => tr('menu_calendar')],
@@ -464,7 +464,8 @@ require __DIR__ . '/header.php';
               'views' => [
                   'budget_prev' => tr('budget_tab_prev'),
                   'budget_epargne' => tr('budget_tab_savings'),
-                  'budget_provisions' => tr('budget_tab_provisions')
+                  'budget_provisions' => tr('budget_tab_provisions'),
+                  'budget_chantiers' => tr('budget_tab_chantiers')
               ]
           ],
           'holidays' => ['icon' => '🏖️', 'label' => tr('menu_holidays')],

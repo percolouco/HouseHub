@@ -727,3 +727,54 @@ CREATE TABLE IF NOT EXISTS pf_recipe_steps (
   sort_order INT DEFAULT 0,
   FOREIGN KEY (recipe_id) REFERENCES pf_recipes(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Onglet « Chantiers » du budget
+CREATE TABLE IF NOT EXISTS pf_projects (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        icon VARCHAR(16) DEFAULT '🔨',
+        status VARCHAR(20) NOT NULL DEFAULT 'idea',
+        target_budget DECIMAL(12,2) DEFAULT NULL,
+        dim_w DECIMAL(10,3) DEFAULT NULL,
+        dim_l DECIMAL(10,3) DEFAULT NULL,
+        dim_h DECIMAL(10,3) DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        provision_id INT DEFAULT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_project_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        project_id INT NOT NULL,
+        kind VARCHAR(10) NOT NULL DEFAULT 'material',
+        lot VARCHAR(100) DEFAULT '',
+        name VARCHAR(200) NOT NULL DEFAULT '',
+        store VARCHAR(100) DEFAULT '',
+        url VARCHAR(500) DEFAULT '',
+        qty DECIMAL(12,3) NOT NULL DEFAULT 1,
+        unit VARCHAR(20) DEFAULT '',
+        unit_ttc DECIMAL(12,4) NOT NULL DEFAULT 0,
+        unit_ht DECIMAL(12,4) NOT NULL DEFAULT 0,
+        vat_rate DECIMAL(5,2) NOT NULL DEFAULT 20,
+        entered_ht TINYINT(1) NOT NULL DEFAULT 0,
+        note VARCHAR(255) DEFAULT '',
+        is_bought TINYINT(1) NOT NULL DEFAULT 0,
+        sort_order INT NOT NULL DEFAULT 0,
+        INDEX idx_project (project_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_project_tools (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        project_id INT NOT NULL,
+        name VARCHAR(150) NOT NULL DEFAULT '',
+        lender VARCHAR(100) DEFAULT '',
+        INDEX idx_project (project_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS pf_project_links (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        project_id INT NOT NULL,
+        title VARCHAR(200) NOT NULL DEFAULT '',
+        url VARCHAR(500) NOT NULL DEFAULT '',
+        INDEX idx_project (project_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
