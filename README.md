@@ -64,7 +64,7 @@ Tous les modules sont activables/désactivables par famille depuis `/settings.ph
 
 | Module            | Route                  | Description                                                                     |
 | ----------------- | ---------------------- | ------------------------------------------------------------------------------- |
-| 💰 Budget         | `/budget.php`          | Suivi mensuel, prévisionnel, épargne, import CSV bancaire, analyse graphique    |
+| 💰 Budget         | `/budget.php`          | Suivi mensuel, prévisionnel, épargne, import CSV bancaire, analyse graphique, chantiers |
 | 📅 Calendrier     | `/family-calendar.php` | Congés (CP/JRA/JA), modes de garde, planning hebdo, vacances scolaires          |
 | 🗓️ Calendrier iOS | `/calendar-ios.php`    | Synchronisation CalDAV avec iPhone/iPad                                         |
 | 🏖️ Voyages        | `/holidays.php`        | Roadtrips, carte Leaflet, itinéraires OSRM, météo, budget par catégorie, checklist, alertes de cohérence, export agenda |
@@ -195,6 +195,11 @@ Afin de transformer complètement l'application héritée de Pacha Family en un 
 [ ] Cycles de Congés : Rendre configurables les mois de début de calcul des droits aux congés (Août pour les CP, date d'anniversaire personnalisée pour les JA) par profil utilisateur.
 
 ---
+
+### 🔨 Budget — onglet Chantiers
+Vue optionnelle `?tab=chantiers` (`modules/budget/views/chantiers.php`, JS `modules/budget/chantiers.js`, API `modules/budget/includes/api/projects.php`, tables créées au besoin par `includes/projects_schema.php` : `pf_projects`, `pf_project_items`, `pf_project_tools`, `pf_project_links`). À activer dans Paramètres → Modules → Budget.
+- Une carte par chantier (statut, total TTC, main d'œuvre, budget cible, progression « acheté »), page de détail avec lignes matériaux et main d'œuvre (prix TTC par défaut, case « Prix HT » + TVA par ligne : les deux prix sont stockés), calculateur de dimensions (surface / volume cliquables pour remplir une quantité), matériel à emprunter, liens, notes.
+- Bouton « Provision » : crée ou met à jour une ligne dans l'onglet Provisions (par défaut : le reste à acheter).
 
 ### 📈 Budget — onglet Analyse
 
