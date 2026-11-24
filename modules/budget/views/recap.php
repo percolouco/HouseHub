@@ -205,7 +205,7 @@ foreach ($items as $item):
                         <strong><?= htmlspecialchars($item['name']) ?></strong>
                         <?= $item['is_estimate'] ? ' <small style="color:#64748b;">(Variable)</small>' : '' ?>
                         <?php if ($monthsLabel !== ''): ?>
-                            <div style="font-size:0.72rem; color:<?= $isInactiveMonth ? '#b45309' : '#64748b' ?>;" title="Mois concernés par cette ligne">📅 <?= $isInactiveMonth ? 'Pas de prélèvement ce mois-ci · ' : '' ?><?= htmlspecialchars($monthsLabel) ?></div>
+                            <div style="font-size:0.72rem; color:<?= $isInactiveMonth ? '#b45309' : '#64748b' ?>;" title="Mois concernés par cette ligne">📅 <?= $isInactiveMonth ? 'Pas de prélèvement ce mois-ci.' : htmlspecialchars($monthsLabel) ?></div>
                         <?php endif; ?>
                         <?php if(!empty($item['mapping_keywords'])): ?>
                             <span title="Reconnaissance bancaire : <?= htmlspecialchars($item['mapping_keywords']) ?>" style="font-size:0.7rem; cursor:help;">🔗</span>
