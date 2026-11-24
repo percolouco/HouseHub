@@ -51,6 +51,23 @@ $stmtSalariesReal = $pdo->prepare("SELECT salary_id, SUM(amount) as total_salary
 $stmtSalariesReal->execute([$viewMonthDate]);
 $realTotalsBySalary = $stmtSalariesReal->fetchAll(PDO::FETCH_KEY_PAIR);
 
+// Rapprochement automatique : un virement de revenu non lié à une personne, du montant de l'apport (à 0,10 € près),
+// compte pour un apport encore non couvert. Les liens manuels (salary_id) restent prioritaires ; un virement ne sert qu'une fois.
+$stmtOrphInc = $pdo->prepare("SELECT id, amount FROM pf_expenses WHERE gestion_month = ? AND salary_id IS NULL AND budget_item_id IS NULL AND category = 'INCOME' AND amount > 0 ORDER BY date_exp, id");
+$stmtOrphInc->execute([$viewMonthDate]);
+$orphanIncome = $stmtOrphInc->fetchAll(PDO::FETCH_ASSOC);
+foreach ($salaries as $sal) {
+    $cible = (float)$sal['mensualite'];
+    if ((float)($realTotalsBySalary[$sal['id']] ?? 0) >= $cible - 0.10) continue;
+    foreach ($orphanIncome as $k => $o) {
+        if (abs((float)$o['amount'] - $cible) <= 0.10) {
+            $realTotalsBySalary[$sal['id']] = (float)($realTotalsBySalary[$sal['id']] ?? 0) + (float)$o['amount'];
+            unset($orphanIncome[$k]);
+            break;
+        }
+    }
+}
+
 // Récupération des détails pour le mapping par mots-clés (si besoin de précision)
 $stmtLabels = $pdo->prepare("SELECT label, amount, category FROM pf_expenses WHERE gestion_month = ? AND budget_item_id IS NULL");
 $stmtLabels->execute([$viewMonthDate]);
