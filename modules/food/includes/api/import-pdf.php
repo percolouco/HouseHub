@@ -208,6 +208,15 @@ try {
         }
         
         $mondayDate = $startYear . '-' . $startMonthNum . '-' . str_pad($m[1], 2, '0', STR_PAD_LEFT);
+    } elseif (preg_match('/(\d{1,2})[.\/](\d{1,2})[\s\-]+au[\s\-]+(\d{1,2})[.\/](\d{1,2})[.\/](\d{4}|\d{2})/i', $filename, $m)) {
+        // Format : Menu-du-30.11-au-06.12.26.pdf (jour.mois de début, jour.mois.année de fin)
+        $startDay = (int)$m[1]; $startMonth = (int)$m[2]; $endMonth = (int)$m[4];
+        $year = (int)$m[5];
+        if ($year < 100) $year += 2000;
+        if ($startMonth > $endMonth) $year--; // semaine à cheval sur deux années
+        if ($startMonth >= 1 && $startMonth <= 12 && $startDay >= 1 && $startDay <= 31 && checkdate($startMonth, $startDay, $year)) {
+            $mondayDate = sprintf('%04d-%02d-%02d', $year, $startMonth, $startDay);
+        }
     } elseif (preg_match('/(\d{1,2})[\s.\-]+au[\s.\-]+(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4}|\d{2})/i', $filename, $m)) {
         // Nouveau format : Menus-du-09-au-15.11.26.pdf (jour début, jour fin, mois et année de fin en chiffres)
         $startDay = (int)$m[1];
